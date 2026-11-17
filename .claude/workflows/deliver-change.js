@@ -113,7 +113,7 @@ let estimate = ''
 // margin), so a start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
-const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, moved: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 12 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
@@ -209,6 +209,7 @@ const CHECK = {
     verdict: { type: 'string', description: 'the last line tools/run_state.sh check printed, verbatim; empty when it printed none' },
     bench_same: { type: 'boolean', description: 'tools/run_state.sh bench exited 0' }, bench_report: LINES,
     budget: { type: 'string', description: 'the line tools/run_state.sh spent printed, verbatim; empty when the check did not pass' },
+    moved: { type: 'string', description: 'the last line tools/run_state.sh moved printed, verbatim, when the prompt asks for it; empty otherwise' },
   },
   required: ['passed', 'head', 'stages', 'verdict'],
 }
@@ -243,6 +244,7 @@ const MERGE = {
     waited: { type: 'number', description: 'minutes waited for CI in all' },
     step: { type: 'string' }, log_excerpt: { type: 'string' }, checks: { ...LINES, description: 'each check run of the head, oldest first: workflow, name, status, conclusion, the workflow the path of the workflow run of the head holding the check (actions_list, by check suite), or - on green; one form for every result' },
     body_only: { type: 'boolean', description: 'CI is red only on the scan check, and its log names the pull request title or body, no commit or added line' },
+    main_moved: { type: 'boolean', description: 'main moved under the pull request: it conflicts with main, or GitHub refused the merge because the branch is behind main or conflicts with it' },
     merged: { type: 'boolean' }, sha: { type: 'string' }, subject: { type: 'string' }, branch_deleted: { type: 'boolean' }, problem: { type: 'string' },
   },
   required: ['ci', 'head', 'merged'],
@@ -881,6 +883,57 @@ const sameCommit = (a, b) => COMMIT.test(a || '') && COMMIT.test(b || '') && (a.
 let reruns = 0
 let rerunWhy = ''
 
+// A merge refused because main moved (merge-main-path; #169 stopped there
+// and cost a second run): the merger read CI green, and the pull request
+// conflicts with main or GitHub refused the merge, the branch behind main
+// or conflicting with it (main_moved). used, the run state's main_moved
+// plus this start's: the first refusal takes the main-moved path
+// (merge-main, the check again, the reviews again only when the merge
+// changed files of the change, one main-moved push, CI and the merge
+// again); a second is the stop's reason; anything else is ''.
+function mainMoved(m, used) {
+  if (!m || m.merged || m.main_moved !== true || m.ci !== 'green') return ''
+  if (Number(used || 0) >= 1) return `a second merge refused because main moved, at ${m.head}: one main-moved push is allowed a run${m.problem ? `; ${m.problem}` : ''}`
+  return 'merge'
+}
+// The commit both reviews of this start passed at, which tools/run_state.sh
+// moved compares with the merged head; '' when they passed at different
+// commits or not at all, so both run again.
+function carryFrom(records) {
+  const q = String(records['review.quality'] || '').split(' ')
+  const s = String(records['review.security'] || '').split(' ')
+  return q[0] === 'pass' && s[0] === 'pass' && COMMIT.test(q[1] || '') && q[1] === s[1] ? q[1] : ''
+}
+// The moved line the checker returns verbatim stands the reviews only
+// when it says the change is the same at the head as at the reviewed
+// commit (from); any other line, or none, runs them again.
+const CARRIED = /^moved: the change is the same at ([0-9a-f]{7,40}) as at ([0-9a-f]{7,40}):/
+function carried(line, head, from) {
+  const m = CARRIED.exec(String(line || '').trim())
+  return !!m && sameCommit(m[1], head) && sameCommit(m[2], from)
+}
+// The main-moved contributor start's task: merge-main, a conflict merged
+// by the push mode's rules, and a conflict both sides changed the same
+// logic in a stop naming its files.
+function movedTask(problem) {
+  return `The merge was refused because main moved: ${problem || 'no reason given'}. Run \`sh tools/run_state.sh merge-main ${state.change}\` in the worktree. On the conflicts it names, merge origin/main by hand by your push mode's conflict rules and commit the merge with the trailer; where both sides changed the same logic, return stopped, with the question naming each such file. Commit nothing else and push nothing: the workflow reruns the check, and the reviews when the merge changed files of the change, before the main-moved push.`
+}
+// The reviewed commit tools/run_state.sh moved compares with the head the
+// check after a main-moved merge passes at; '' once compared.
+let movedFrom = ''
+let mainMovedPushes = 0
+// After the check passed at the merged head: both reviews carried to it
+// when the moved line says the merge changed no file of the change, else
+// they run again (reviews() finds no pass at the head).
+function carryReviews(line) {
+  const from = movedFrom
+  movedFrom = ''
+  const text = String(line || '').trim()
+  if (!carried(text, head, from)) { note(`after the merge of main: ${text || 'no moved line returned'}; the reviews run again at ${head}`); return }
+  for (const k of ['quality', 'security']) reviewed(k, true, head, { blocking: 0, carried: 1 })
+  note(`after the merge of main: ${text}; the quality and security reviews of ${from} stand at ${head}`)
+}
+
 // The fix rounds of the run, review and CI fixes alike, counted across
 // starts: at most ROUNDS plus the extra rounds granted. A resume of a run
 // that already spent rounds gets one extra round, once per start, when the
@@ -1049,7 +1102,8 @@ async function rounds(fixes = true) {
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); run it again: a check still running at this commit is rejoined.` : ''
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK) })), callCap('checker'))
+      const moved = movedFrom ? ` Once the check passed, run \`sh tools/run_state.sh moved ${state.change} ${movedFrom}\` and return its last line, verbatim, as moved.` : ''
+      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${moved}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK) })), callCap('checker'))
       if (!c) { stopped = 'the checker returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
@@ -1072,6 +1126,7 @@ async function rounds(fixes = true) {
         budgetAtCheck(c.budget, head)
         benchSameAt = c.bench_same ? head : ''
         benchReport = c.bench_report || []
+        if (movedFrom) carryReviews(c.moved)
       } else blocked = v.stage === 'refused' ? `The check refused to run: ${v.log}` : `The stage ${v.stage} failed; its log, ${v.log}:\n${c.log_excerpt || ''}`
     }
     if (!blocked) {
@@ -1364,6 +1419,23 @@ if (!stopped && !state.merged) {
         if (!(await contributor('body', `CI is red only on the scan of the pull request's title or body; its log:\n${m.log_excerpt || ''}`))) break
         continue
       }
+      // Main moved under a green pull request: merge-main, the check (the
+      // reviews only when the merge changed files of the change), and one
+      // main-moved push a run, then CI and the merge again, no fix round;
+      // first.ci keeps the green before the move.
+      const moved = mainMoved(m, Number(state.main_moved || 0) + mainMovedPushes)
+      if (moved === 'merge') {
+        mainMovedPushes++
+        note(`the merge at ${m.head} was refused because main moved: ${m.problem || 'no reason given'}; merge-main, the check, and one main-moved push`)
+        const from = carryFrom(ran)
+        if (!(await contributor('moved', movedTask(m.problem)))) break
+        movedFrom = from
+        if (!(await verify())) break
+        phase('Merge')
+        if (!(await contributor('push', `Push the merge of the moved main with \`sh tools/run_state.sh push ${state.change} --main-moved\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state at the close, not appended.`))) break
+        continue
+      }
+      if (moved) { stopped = moved; break }
       if (m.ci !== 'red' || !mayFix()) {
         stopped = m.ci === 'green' ? `not merged: ${m.problem || 'no reason given'}` : `CI ${m.ci}${m.step ? ' at ' + m.step : ''}${m.problem ? ': ' + m.problem : ''}${m.ci === 'red' ? ` after ${rework} fix rounds` : ''}`
         break

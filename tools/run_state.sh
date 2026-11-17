@@ -136,19 +136,29 @@
 #                               matches TEST_ONLY, so the quality review of a
 #                               fix reads only its diff; "branch: ..." and
 #                               exit 1 otherwise or when nothing changed
+#   moved CHANGE COMMIT         after merge-main took in a moved main (BASE,
+#                               origin/main), print "moved: the change is the
+#                               same ..." and exit 0 when no file of the change
+#                               (outside the records-only paths) differs from
+#                               COMMIT, the reviewed commit, to HEAD, so its
+#                               reviews stand; "moved: the merge changed files
+#                               of the change: FILES ..." and exit 1 otherwise
 #   bench CHANGE                record the metrics stage's measurement and
 #                               compare it with main's through make
 #                               metrics-compare: the newest merged change
 #                               without a history row, else the last row;
 #                               exit 0 when allocations and rounds equal
 #                               them, 1 otherwise
-#   push CHANGE [--ci-fix|--review-fix]
+#   push CHANGE [--ci-fix|--review-fix|--main-moved]
 #                               run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red) plus
 #                               one review fix a run (a resume past the push
 #                               fixing a blocking review: a recorded push other
-#                               than HEAD), push the branch with upstream
-#                               tracking, and count it
+#                               than HEAD) plus one main-moved push a run (a
+#                               merge refused because main moved: a recorded
+#                               push other than HEAD that does not hold BASE,
+#                               origin/main, and a HEAD that does), push the
+#                               branch with upstream tracking, and count it
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
 #   metrics CHANGE FILE         record each "name<TAB>value" line of a
@@ -1177,6 +1187,7 @@ push_branch() {
   pushes=$(count pushes)
   fixes=$(count ci_fixes)
   reviews=$(count review_fixes)
+  moved=$(count main_moved)
   case "${1:-}" in
     --ci-fix)
       case "$(read_key ci)" in
@@ -1189,9 +1200,20 @@ push_branch() {
       [ -n "$pushed" ] && [ "$pushed" != "$(git rev-parse HEAD)" ] ||
         die "push: refused: a review fix push needs a recorded push other than HEAD (pushed)"
       reviews=1 ;;
+    --main-moved)
+      [ "$moved" -eq 0 ] || die "push: refused: $moved main-moved push(es) made; one is allowed a run"
+      pushed=$(read_key pushed)
+      [ -n "$pushed" ] && [ "$pushed" != "$(git rev-parse HEAD)" ] ||
+        die "push: refused: a main-moved push needs a recorded push other than HEAD (pushed)"
+      base=${BASE:-origin/main}
+      git merge-base --is-ancestor "$base" HEAD && ! git merge-base --is-ancestor "$base" "$pushed" ||
+        die "push: refused: a main-moved push needs a HEAD holding $base that the recorded push does not (run merge-main)"
+      moved=1 ;;
+    "") ;;
+    *) die "push: unknown push kind: $1 (--ci-fix, --review-fix, or --main-moved)" ;;
   esac
-  if [ "$pushes" -ge $((1 + fixes + reviews)) ]; then
-    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes) and one review fix ($reviews)"
+  if [ "$pushes" -ge $((1 + fixes + reviews + moved)) ]; then
+    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes), one review fix ($reviews), and one main-moved push ($moved)"
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
@@ -1203,6 +1225,7 @@ push_branch() {
   write_key pushes $((pushes + 1))
   write_key ci_fixes "$fixes"
   [ "$reviews" -eq 0 ] || write_key review_fixes "$reviews"
+  [ "$moved" -eq 0 ] || write_key main_moved "$moved"
   write_key pushed "$(git rev-parse HEAD)"
   # A new head needs the merge gates again, and a marker branch code
   # planted in this run state before the push is gone; the merge gates
@@ -2721,6 +2744,32 @@ merge_main() {
   exit 1
 }
 
+# moved_change COMMIT: after merge_main took in a moved main, whether the
+# merge changed a file of the change: the files the change touches at
+# COMMIT (the reviewed commit) or at HEAD, each against its merge base with
+# BASE (origin/main), outside the records-only paths (RECORDS_RE), compared
+# from COMMIT to HEAD. None changed: the change's reviews stand at HEAD and
+# only the check runs again (merge-main-path); else they run again.
+moved_change() {
+  at=$(git rev-parse -q --verify --end-of-options "$1^{commit}") || die "moved: not a commit: $1"
+  git merge-base --is-ancestor "$at" HEAD || die "moved: $1 is not an ancestor of HEAD"
+  base=${BASE:-origin/main}
+  old_base=$(git merge-base "$base" "$at") || die "moved: $1 shares no history with $base"
+  new_base=$(git merge-base "$base" HEAD) || die "moved: HEAD shares no history with $base"
+  files=$( { git diff --no-renames --name-only "$old_base" "$at"; git diff --no-renames --name-only "$new_base" HEAD; } |
+    grep -v -E "^($RECORDS_RE)" | sort -u)
+  changed=$( (set -f; IFS='
+'; [ -z "$files" ] || git diff --no-renames --name-only "$at" HEAD -- $files) | tr '\n' ' ')
+  short_at=$(git rev-parse --short=12 "$at")
+  short_head=$(git rev-parse --short=12 HEAD)
+  if [ -z "$changed" ]; then
+    echo "moved: the change is the same at $short_head as at $short_at: the merge of $base changed no file of the change, so its reviews stand"
+    return 0
+  fi
+  echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
+  exit 1
+}
+
 [ $# -ge 1 ] || usage
 command=$1
 shift
@@ -2869,6 +2918,9 @@ case "$command" in
   merge-main)
     [ $# -eq 0 ] || usage
     merge_main ;;
+  moved)
+    [ $# -eq 1 ] || usage
+    moved_change "$1" ;;
   usage)
     [ $# -eq 2 ] || usage
     add_usage "$1" "$2" ;;

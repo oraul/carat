@@ -788,13 +788,47 @@ state phase pushing check > /dev/null
 state review pushing security pass "no finding" > /dev/null
 expect "run_state: a review fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
-expect "gates: pushes allow one review fix" 0 "3 push[(]es[)], 1 CI fix[(]es[)], 1 review fix" gates pushes
+expect "gates: pushes allow one review fix" 0 "3 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 0 main-moved" gates pushes
 echo again >> README.md
 commit "chore: a second review fix"
 expect "run_state: a second review fix push is refused" 1 "refused: 1 review fix push" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
 state set pushing review_fixes 2 > /dev/null
 expect "gates: pushes refuse a second review fix" 1 "2 review fix pushes; one is allowed a run" gates pushes
+state set pushing review_fixes 1 > /dev/null
+# A merge refused because main moved (merge-main-path): merge-main, the
+# check, and one main-moved push a run, counted by push and the gates.
+expect "run_state: a push of an unknown kind is refused" 1 "unknown push kind: --force" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --force
+pushing_branch=$(git symbolic-ref --short HEAD)
+main_moves() {
+  git_q checkout -q main && echo "$1" > "$1.txt" && commit "chore: main moved" && git_q checkout -q "$pushing_branch"
+}
+main_moves main-one
+expect "run_state: a main-moved push needs a head holding the moved main" 1 "needs a HEAD holding main that the recorded push does not" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --main-moved
+reviewed_at=$(git rev-parse HEAD)
+expect "run_state: merge-main takes in the moved main before the main-moved push" 0 "^merge-main: merged main into $pushing_branch" \
+  env BASE=main sh "$here/run_state.sh" merge-main pushing
+expect "run_state: moved keeps the reviews when the merge changed no file of the change" 0 "^moved: the change is the same at [0-9a-f]{12} as at [0-9a-f]{12}: .*its reviews stand$" \
+  env BASE=main sh "$here/run_state.sh" moved pushing "$reviewed_at"
+state stage pushing lint true > /dev/null
+state phase pushing check > /dev/null
+state review pushing security pass "no finding" > /dev/null
+expect "run_state: a moved-main merge is pushed once as a main-moved push" 0 "ok   pushes|ok   stages" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --main-moved
+expect "run_state: a main-moved push is counted" 0 "^1$" state get pushing main_moved
+expect "gates: pushes allow one main-moved push" 0 "4 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 1 main-moved push" gates pushes
+echo changed >> README.md
+commit "chore: an edit of a file of the change"
+expect "run_state: moved reruns the reviews when a file of the change changed" 1 "^moved: the merge changed files of the change: README[.]md; the reviews run again" \
+  env BASE=main sh "$here/run_state.sh" moved pushing "$reviewed_at"
+main_moves main-two
+env BASE=main sh "$here/run_state.sh" merge-main pushing > /dev/null
+expect "run_state: a second main-moved push in one run is refused" 1 "refused: 1 main-moved push[(]es[)] made; one is allowed a run" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --main-moved
+state set pushing main_moved 2 > /dev/null
+expect "gates: pushes refuse a second main-moved push" 1 "2 main-moved pushes; one is allowed a run" gates pushes
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
@@ -2076,7 +2110,9 @@ expect "guard: the contributor refuses open_pr wait past a number" 2 "tools/open
 expect "guard: the merger refuses open_pr" 2 "tools/open_pr.sh" guard merger 'sh tools/open_pr.sh wait c'
 expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
 expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --review-fix'
-expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix\]" guard contributor 'sh tools/run_state.sh push c --force'
+expect "guard: contributor pushes the merge of a moved main" 0 "^$" guard contributor 'sh tools/run_state.sh push c --main-moved'
+expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix [|] --main-moved\]" guard contributor 'sh tools/run_state.sh push c --force'
+expect "guard: checker compares the change's files after a main-moved merge" 0 "^$" guard read 'sh tools/run_state.sh moved c abc1234'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
 expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'
@@ -3822,6 +3858,24 @@ expect "workflow: a passed resume at the pushed head pushes nothing" 0 '^\["",""
 expect "workflow: a head past the push after the review fix push stops with its reason" 0 '^true$' \
   js "$wf" "pushedHead resumePush" "/is not the pushed head .* one review fix push was made/.test(resumePush('$full', 'bbcdef012345', '1'))"
 expect "workflow: the resume asks for the push from the run state, not this start's rounds" 0 "^1$" grep -c -F "const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)" "$wf"
+# A merge refused because main moved takes one path a run (merge-main-path).
+expect "workflow: a green merge refused because main moved takes the main-moved path once" 0 '^\["merge",true\]$' \
+  js "$wf" "mainMoved" "[mainMoved({ ci: 'green', merged: false, main_moved: true, head: 'abc1234' }, 0), /^a second merge refused because main moved, at abc1234: one main-moved push is allowed a run; 405$/.test(mainMoved({ ci: 'green', merged: false, main_moved: true, head: 'abc1234', problem: '405' }, '1'))]"
+expect "workflow: no main-moved path without a green refusal for a moved main" 0 '^\["","",""\]$' \
+  js "$wf" "mainMoved" "[mainMoved({ ci: 'green', merged: false, problem: 'gates' }, 0), mainMoved({ ci: 'red', merged: false, main_moved: true }, 0), mainMoved({ ci: 'green', merged: true, main_moved: true }, 0)]"
+expect "workflow: the merge loop counts the run state's main-moved pushes and this start's" 0 "^1$" grep -c -F "const moved = mainMoved(m, Number(state.main_moved || 0) + mainMovedPushes)" "$wf"
+expect "workflow: the moved-main merge is pushed with --main-moved, then CI and the merge run again" 0 "^1$" \
+  grep -c "await contributor('push', .Push the merge of the moved main with .*sh tools/run_state.sh push [\$]{state.change} --main-moved" "$wf"
+expect "workflow: the reviews carry over only at one commit both passed at" 0 '^\["abc1234","",""\]$' \
+  js "$wf" "COMMIT carryFrom" "[carryFrom({ 'review.quality': 'pass abc1234', 'review.security': 'pass abc1234' }), carryFrom({ 'review.quality': 'pass abc1234', 'review.security': 'pass bbc1234' }), carryFrom({ 'review.quality': 'blocked abc1234', 'review.security': 'pass abc1234' })]"
+expect "workflow: the reviews stand only on a moved line naming the head and the reviewed commit" 0 '^\[true,false,false,false\]$' \
+  js "$wf" "COMMIT sameCommit CARRIED carried" "[carried('moved: the change is the same at abcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('moved: the merge changed files of the change: a.rb; the reviews run again at abcdef012345', 'abcdef012345', '111111222222'), carried('moved: the change is the same at bbcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('', 'abcdef012345', '111111222222')]"
+expect "workflow: the check after a main-moved merge asks for the moved line and carries only on a pass" 0 "^2$" \
+  sh -c 'grep -c -F -e "run \\\`sh tools/run_state.sh moved \${state.change} \${movedFrom}\\\`" -e "        if (movedFrom) carryReviews(c.moved)" "$1"' _ "$wf"
+expect "workflow: a conflict merge-main cannot resolve stops naming its files" 0 '^true$' \
+  js "$wf" "movedTask" "(() => { globalThis.state = { change: 'mm' }; const t = movedTask('405'); return /run_state.sh merge-main mm/.test(t) && /both sides changed the same logic, return stopped, with the question naming each such file/.test(t) })()"
+expect "workflow: first.ci keeps the green read before main moved" 0 '^1$' \
+  js "$wf" "firstPass verdict" "(() => { verdict('ci', true); verdict('ci', false); return firstPass.ci })()"
 expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \
   grep -c "await contributor('push', .Push the review fix of this resume past the push with .*sh tools/run_state.sh push [\$]{state.change} --review-fix" "$wf"
 expect "workflow: the review fix round reviews security over the whole diff" 0 "^1$" grep -c -F "const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)" "$wf"
