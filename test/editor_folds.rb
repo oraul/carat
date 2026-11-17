@@ -98,6 +98,10 @@ module EditorFoldsTest
     h.type("jzfjgg3G")
     t.assert_equal(h.state.window.row + 1, h.frame.cursor_row, "a cursor moved into a closed fold is drawn on the fold row")
 
+    h = editor("one\ntwo\nthree\nfour\n", "")
+    h.type("zfjoX")
+    t.assert_equal([[[0, 1, true]], [fold_row("+--  2 lines: one"), "X", "three"], [2, 1], h.state.window.row + 1], [folds_of(h), shown(h, 3), h.cursor, h.frame.cursor_row], "o on a closed fold opens below it, the insert cursor drawn on the row below the fold")
+
     h = editor("  one\ntwo\nthree\n", "")
     h.type("zfj")
     t.assert_equal(fold_row("+--  2 lines: one"), shown(h, 1)[0], "the fold text drops the leading blanks of the first line")
@@ -112,6 +116,8 @@ module EditorFoldsTest
       ["yy on a closed fold yanks its lines", "zfjyyGp", [[[0, 1, true]], ["a", "b", "c", "d", "e", "a", "b"], [5, 0], :normal]],
       ["A fold moves down with a line put above it", "jzfjggyyP", [[[2, 3, true]], ["a", "a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["a line opened inside an open fold extends it", "zfjzooX<Esc>", [[[0, 2, false]], ["a", "X", "b", "c", "d", "e"], [1, 0], :normal]],
+      ["o on a closed fold opens a line below its last line", "zfjoX<Esc>", [[[0, 1, true]], ["a", "b", "X", "c", "d", "e"], [2, 0], :normal]],
+      ["O on a closed fold opens a line above its first line", "jjzfjOX<Esc>", [[[3, 4, true]], ["a", "b", "X", "c", "d", "e"], [2, 0], :normal]],
       ["a line deleted inside an open fold shrinks it", "zf2jzojdd", [[[0, 1, false]], ["a", "c", "d", "e"], [1, 0], :normal]],
       ["zf in linewise visual mode folds the selection", "Vjjzf", [[[0, 2, true]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["zf in visual mode folds the selected lines", "jvjzf", [[[1, 2, true]], ["a", "b", "c", "d", "e"], [1, 0], :normal]],

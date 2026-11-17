@@ -58,8 +58,8 @@ Differences from Neovim: a different operator after a pending one cancels silent
 | `a` | `mode.insert_after` | Insert after the cursor | `editor_normal` |
 | `I` | `mode.insert_line_start` | Insert at the first non-blank character | `editor_normal` |
 | `A` | `mode.insert_line_end` | Insert after the last character | `editor_normal` |
-| `o` | `mode.insert_open_below` | Open a line below, with autoindent | `editor_normal`, `editor_insert` |
-| `O` | `mode.insert_open_above` | Open a line above, with autoindent | `editor_normal` |
+| `o` | `mode.insert_open_below` | Open a line below, with autoindent; on a closed fold below its last line | `editor_normal`, `editor_insert`, `editor_folds` |
+| `O` | `mode.insert_open_above` | Open a line above, with autoindent; on a closed fold above its first line | `editor_normal`, `editor_folds` |
 | `:` | `mode.cmdline` | Enter command-line mode | `editor_cmdline` |
 | `<C-c>` | `message.quit_hint` | Show how to quit with unsaved changes | `editor_normal` |
 | `[count]<leader>ws`, `[count]<leader>wv`, `[count]<leader>wh`, `wj`, `wk`, `wl`, `[count]<leader>wc`, `<leader>wo` | `window.*` | Carat's window group: as `<C-w>` with the same last key | `editor_leader`, `domain_keymap` |
@@ -443,7 +443,7 @@ Differences from Neovim: the view never scrolls past the last line, so the windo
 
 ## Folding
 
-Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them and showing another buffer drops them, and they move with the lines edited above or inside them, a fold whose lines are all deleted going with them. A closed fold is drawn as one row, Neovim's default fold text `+--  N lines: text` (a dash more per nesting level, the first line's leading blanks removed and its tabs made spaces) filled with `·`; `j`, `k`, and the scrolling that keeps the cursor in view count it as one line, a cursor any other command (`G`, `gg`, a search, a mark) leaves inside it moves to its first line outside insert mode, and a linewise operator whose range starts or ends on one acts on all its lines, so `dd` deletes the fold and `2dd` the fold and the line after it.
+Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them and showing another buffer drops them, and they move with the lines edited above or inside them, a fold whose lines are all deleted going with them. A closed fold is drawn as one row, Neovim's default fold text `+--  N lines: text` (a dash more per nesting level, the first line's leading blanks removed and its tabs made spaces) filled with `·`; `j`, `k`, and the scrolling that keeps the cursor in view count it as one line, a cursor any other command (`G`, `gg`, a search, a mark) leaves inside it moves to its first line outside insert mode, and a linewise operator whose range starts or ends on one acts on all its lines, so `dd` deletes the fold and `2dd` the fold and the line after it. `o` and `O` on a closed fold open the new line below its last line or above its first, leaving the fold closed over its lines.
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |

@@ -71,3 +71,14 @@ A linewise operator whose range starts or ends on a closed fold SHALL act on eve
 #### Scenario: A fold moves down with a line put above it
 - **WHEN** "jzfjggyyP" is typed on the lines "a", "b", "c", "d"
 - **THEN** the fold covers rows 2 and 3
+
+### Requirement: o and O on a closed fold open a line outside it
+`o` on a closed fold SHALL open the new line below the fold's last line and `O` above its first line, as Neovim does, so the fold keeps its lines and the inserted text is shown.
+
+#### Scenario: o on a closed fold opens a line below its last line
+- **WHEN** "zfjoX<Esc>" is typed on the first of the lines "a", "b", "c"
+- **THEN** the lines are "a", "b", "X", "c", the fold covers rows 0 and 1, closed, and the cursor is on row 2
+
+#### Scenario: O on a closed fold opens a line above its first line
+- **WHEN** "jjzfjOX<Esc>" is typed on the lines "a", "b", "c", "d", "e"
+- **THEN** the lines are "a", "b", "X", "c", "d", "e", the fold covers rows 3 and 4, closed, and the cursor is on row 2

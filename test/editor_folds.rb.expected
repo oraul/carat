@@ -13,6 +13,7 @@ ok   a fold below the first line
 ok   a count G into a closed fold lands on its first line
 ok   G into a closed fold at the end lands on its first line
 ok   a cursor moved into a closed fold is drawn on the fold row
+ok   o on a closed fold opens below it, the insert cursor drawn on the row below the fold
 ok   the fold text drops the leading blanks of the first line
 ok   dd on a closed fold deletes its lines
 ok   2dd on a closed fold deletes the fold and the next line
@@ -21,6 +22,8 @@ ok   dj onto a closed fold deletes all its lines
 ok   yy on a closed fold yanks its lines
 ok   A fold moves down with a line put above it
 ok   a line opened inside an open fold extends it
+ok   o on a closed fold opens a line below its last line
+ok   O on a closed fold opens a line above its first line
 ok   a line deleted inside an open fold shrinks it
 ok   zf in linewise visual mode folds the selection
 ok   zf in visual mode folds the selected lines
@@ -43,4 +46,4 @@ ok   dd on the other window's closed fold deletes its lines
 ok   showing another buffer drops the window's folds, untracked, and draws the new buffer's lines
 ok   a syntax-highlighted line below a closed fold, past top plus the height
 ok   a float opens below a cursor under a closed fold where the rows below have room
-editor_folds: 45 passed, 0 failed
+editor_folds: 48 passed, 0 failed

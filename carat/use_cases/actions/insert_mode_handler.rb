@@ -8,7 +8,8 @@ module Carat
     # i a I A o O: enter insert mode at the positions Vim uses, before the
     # cursor, after it, at the first non-blank, at the end of the line, or
     # on a new line below or above that takes the line's indent when
-    # autoindent is on.
+    # autoindent is on; o and O on a closed fold open below its last line
+    # or above its first, as Neovim's n_opencmd does.
     class InsertModeHandler < ActionHandler
       # @rbs @where: Symbol
 
@@ -31,13 +32,15 @@ module Carat
         when :line_end
           cursor.move_to(cursor.row, state.current_line.length)
         when :open_below
-          indent = state.options.autoindent ? buffer.indent_of(cursor.row) : ""
-          buffer.set_lines(cursor.row + 1, cursor.row + 1, [indent])
-          cursor.move_to(cursor.row + 1, indent.length)
+          row = state.window.folds.last_row(cursor.row)
+          indent = state.options.autoindent ? buffer.indent_of(row) : ""
+          buffer.set_lines(row + 1, row + 1, [indent])
+          cursor.move_to(row + 1, indent.length)
         when :open_above
-          indent = state.options.autoindent ? buffer.indent_of(cursor.row) : ""
-          buffer.set_lines(cursor.row, cursor.row, [indent])
-          cursor.move_to(cursor.row, indent.length)
+          row = state.window.folds.first_row(cursor.row)
+          indent = state.options.autoindent ? buffer.indent_of(row) : ""
+          buffer.set_lines(row, row, [indent])
+          cursor.move_to(row, indent.length)
         end
         state.mode = Domain::Mode::INSERT
         Outcome.none
