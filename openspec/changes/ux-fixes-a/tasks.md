@@ -4,7 +4,7 @@
 
 ## 2. The finder keeps a query with no match
 
-- [ ] 2.1 `Carat::Plugins::Finder::Plugin#on_input` reopens its live prompt on the typed text when Enter comes with no match, proved by `test/editor_finder.rb` "Enter with no match keeps the finder open" and "The query is kept for a correction"
+- [x] 2.1 `Carat::Plugins::Finder::Plugin#on_input` reopens its live prompt on the typed text when Enter comes with no match, proved by `test/editor_finder.rb` "Enter with no match keeps the finder open" and "The query is kept for a correction"
 
 ## 3. The palette row
 

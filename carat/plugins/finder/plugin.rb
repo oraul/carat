@@ -12,7 +12,8 @@ module Carat
       # float titled with the counts, the highlighted row marked; a screen
       # of PREVIEW_COLUMNS or more also previews the highlighted file in a
       # second float. Enter opens the file in the editing window (it
-      # arrives as the prompt's answer); the prompt's own keys move the
+      # arrives as the prompt's answer, and with no match the prompt opens
+      # again on the same text); the prompt's own keys move the
       # highlight and open it in a split, a vertical split, or a tab page;
       # Esc closes it. Each change closes the floats and opens them again,
       # as the command palette does.
@@ -131,12 +132,15 @@ module Carat
           refresh(host)
         end
 
-        # Enter opens the highlighted file; a cancel opens nothing.
+        # Enter opens the highlighted file; a cancel opens nothing. Enter
+        # with no match opens the prompt again on the typed text, the list
+        # and its floats kept, so a typo costs only its correction.
         #: (Carat::PluginApi::Input) -> void
         def on_input(input)
           host = @host
           return if host.nil? || !@open || input.id != PROMPT_ID
           path = selected_path
+          return if !input.cancelled && path.empty? && host.live_prompt(PROMPT_ID, PROMPT, input.text, KEYS).ok
           close(host)
           return if input.cancelled || path.empty?
           open_path(host, path, :edit)

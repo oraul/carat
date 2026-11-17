@@ -121,6 +121,10 @@ module EditorFinderTest
       ["A wide screen shows the preview", ["<Space>ffbet", 120], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb", "lib/beta.rb|b = 2"]]],
       ["the preview follows the highlight", ["<Space>ff<C-n>", 120], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n> lib/alpha.rb\n  lib/beta.rb", "lib/alpha.rb|a = 1"]]],
       ["no match shows no preview", ["<Space>ffzzz", 120], [:cmdline, "> zzz", ["Files 0/3|No match"]]],
+      # Enter with no match keeps the finder open
+      ["Enter with no match keeps the finder open", ["<C-p>zzqx<CR>", 80], [:cmdline, "> zzqx", ["Files 0/3|No match"]]],
+      ["Enter with no match on a wide screen still shows no preview", ["<C-p>zzqx<CR>", 120], [:cmdline, "> zzqx", ["Files 0/3|No match"]]],
+      ["typing after Enter with no match filters again", ["<C-p>zzqx<CR><BS><BS><BS><BS>bet", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
       # A narrow screen shows no preview
       ["A narrow screen shows no preview", ["<Space>ffbet", 99], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]]
     ]) do |row|
@@ -140,7 +144,10 @@ module EditorFinderTest
       # Ctrl-T opens it in a tab page
       ["Ctrl-T opens it in a tab page", "<Space>ffbet<C-t>", [:normal, "lib/beta.rb", [0], 2, 2, 0]],
       # Enter with no match opens nothing
-      ["Enter with no match opens nothing", "<Space>ffzzz<CR>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
+      ["Enter with no match opens nothing", "<Space>ffzzz<CR>", [:cmdline, "lib/alpha.rb", [0], 1, 1, 1]],
+      # The query is kept for a correction
+      ["The query is kept for a correction", "<C-p>zzqx<CR><BS><BS><BS><BS>bet<CR>", [:normal, "lib/beta.rb", [0], 1, 1, 0]],
+      ["Esc after Enter with no match closes the finder", "<C-p>zzqx<CR><Esc>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
       ["Esc opens nothing", "<Space>ffbet<Esc>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
       ["the finder opens again after a pick", "<Space>ffbet<CR><Space>ffgu<CR>", [:normal, "docs/guide.md", [0], 1, 1, 0]]
     ]) do |keys|

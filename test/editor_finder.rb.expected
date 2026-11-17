@@ -13,6 +13,9 @@ ok   a backspace on the empty prompt closes it
 ok   A wide screen shows the preview
 ok   the preview follows the highlight
 ok   no match shows no preview
+ok   Enter with no match keeps the finder open
+ok   Enter with no match on a wide screen still shows no preview
+ok   typing after Enter with no match filters again
 ok   A narrow screen shows no preview
 ok   Enter opens the file
 ok   Ctrl-X opens it in a split
@@ -20,6 +23,8 @@ ok   Ctrl-S opens it in a split too
 ok   Ctrl-V opens it in a vertical split
 ok   Ctrl-T opens it in a tab page
 ok   Enter with no match opens nothing
+ok   The query is kept for a correction
+ok   Esc after Enter with no match closes the finder
 ok   Esc opens nothing
 ok   the finder opens again after a pick
 ok   Ignored directories are not listed
@@ -33,4 +38,4 @@ ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
 ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
 ok   The finder boxes share an edge without a border: the host's frame closes the gap
-editor_finder: 35 passed, 0 failed
+editor_finder: 40 passed, 0 failed
