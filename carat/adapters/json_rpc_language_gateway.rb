@@ -22,7 +22,9 @@ module Carat
     # threads queued, only when the editor is idle (InputController's tick),
     # so a key never waits on a server or pays for one. A server starts for
     # the current buffer's file type when language.<type>.lsp names a
-    # command and the working directory is under a trusted root (trusted?),
+    # command (or a language.<type>.lsp.root line whose root covers the
+    # working directory names one, words_of) and the working directory is
+    # under a trusted root (trusted?),
     # since a server such as ruby-lsp runs the project's own code; in any
     # other directory the lsp slot reads untrusted until :LspStart. Once a
     # server answered initialize it is told about each buffer of its file
@@ -89,6 +91,8 @@ module Carat
       DIAGNOSTIC_LIMIT = 1000
       METHOD_NOT_FOUND = -32_601
       FILE_SCHEME = "file:"
+      # What follows language.<type>.lsp in the key of a root's command.
+      ROOT_SUFFIX = ".root"
       # Server requests answered with a null result; any other gets
       # METHOD_NOT_FOUND.
       NULL_REQUESTS = ["window/workDoneProgress/create", "client/registerCapability", "client/unregisterCapability"]
@@ -315,10 +319,34 @@ module Carat
         !language.empty? && !words_of(language).empty?
       end
 
+      # The command of a language's server: the words after the root of
+      # the last language.<type>.lsp.root line whose root covers the
+      # working directory, else the words of language.<type>.lsp. The
+      # words go to the process port as the argv, no shell.
       #: (String) -> Array[String]
       def words_of(language)
-        line = @config.last("language.#{language}.lsp")
+        key = "language.#{language}.lsp"
+        rooted = root_line(key)
+        return rooted.words.drop(1) unless rooted.nil?
+        line = @config.last(key)
         line.nil? ? [] : line.words
+      end
+
+      # The last line of the key plus .root whose root covers the working
+      # directory, or nil. The key is compared in place, so a
+      # configuration with no root line allocates nothing here.
+      #: (String) -> Domain::RcLine?
+      def root_line(key)
+        size = key.bytesize + ROOT_SUFFIX.bytesize
+        i = @config.settings.length - 1
+        while i >= 0
+          line = @config.line_at(i)
+          i -= 1
+          name = line.key
+          next unless name.bytesize == size && name.start_with?(key) && name.end_with?(ROOT_SUFFIX)
+          return line if Domain::TrustedRoots.under?(line.words[0].to_s, @files.cwd, @files.home)
+        end
+        nil
       end
 
       # Whether servers may start on their own in the working directory:

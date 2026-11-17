@@ -11,4 +11,12 @@ ok   the root directory trusts every absolute directory
 ok   a relative working directory is never trusted
 ok   any of several roots
 ok   none of several roots
-domain_trusted_roots: 13 passed, 0 failed
+ok   one word covers itself
+ok   one word covers a directory below it
+ok   one word does not cover a sibling sharing its prefix
+ok   one word under the home
+ok   a relative word covers nothing
+ok   a word with a . segment covers nothing
+ok   the root directory covers every absolute directory
+ok   a relative directory is under nothing
+domain_trusted_roots: 21 passed, 0 failed

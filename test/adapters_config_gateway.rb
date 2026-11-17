@@ -85,11 +85,18 @@ module AdaptersConfigGatewayTest
     t.assert_equal([2, ["~/.config/carat/caratrc:2: unknown setting editor.size", ".caratrc:1: unknown setting editor.font"]], tabstop(files), "the user file's problems come before the project file's")
 
     # Language commands: the user file may set them, the project file not.
+    # Scenarios: Language command in the project file,
+    # Language command in the user file, Root command in the project file.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "language.ruby.lsp ruby-lsp --debug\n")
     files.put(PROJECT, "language.ruby.lsp ./evil\n")
     config = load(files)
     t.assert_equal([["ruby-lsp", "--debug"], [".caratrc:1: language commands are not read from a project file"]], [config.last("language.ruby.lsp").words, config.report], "a project file cannot choose a program to run")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "language.ruby.lsp.root /work docker compose exec app ruby-lsp\n")
+    files.put(PROJECT, "language.ruby.lsp.root / ./evil\n")
+    config = load(files)
+    t.assert_equal([["/work", "docker", "compose", "exec", "app", "ruby-lsp"], [".caratrc:1: language commands are not read from a project file"]], [config.last("language.ruby.lsp.root").words, config.report], "a project file cannot choose a root command")
 
     # Key sequences: the user file may bind them, the project file not,
     # since a replay can write any file with :w.

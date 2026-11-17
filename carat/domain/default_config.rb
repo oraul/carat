@@ -751,6 +751,10 @@ module Carat
       # A server starts on its own only in a directory under a root of
       # language.trusted_roots, set in the user file, as
       # language.trusted_roots ~/src /work; elsewhere :LspStart starts it.
+      # language.<name>.lsp.root ROOT COMMAND..., in the user file, runs
+      # COMMAND as written, no shell, as the server when Carat runs in ROOT
+      # or under it, as language.ruby.lsp.root /work docker compose exec app
+      # ruby-lsp; the later covering line wins, language.<name>.lsp elsewhere.
       language.ruby.lsp ruby-lsp
 
       # Plugins: plugin.<name>.enabled and plugin.<name>.<option>.

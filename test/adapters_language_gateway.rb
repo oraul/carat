@@ -42,6 +42,23 @@ module AdaptersLanguageGatewayTest
     "#{h.processes.spawned.join(",")}|#{label(h)}"
   end
 
+  # What opening a.rb in a directory starts under a user file, with
+  # ruby-lsp, docker, and podman installed: the commands spawned, each
+  # as its words joined, and the slot.
+  def self.served(cwd, user)
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(cwd.to_s)
+    files.put("a.rb", "x = 1\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with_user(user.to_s), rows: 10, cols: 60, plugins: [])
+    h.processes.install("ruby-lsp")
+    h.processes.install("docker")
+    h.processes.install("podman")
+    h.open("a.rb")
+    h.wait
+    h.wait
+    "#{h.processes.spawned.join(",")}|#{label(h)}"
+  end
+
   # An editor whose server answered initialize.
   def self.ready
     ready_with(INIT)
@@ -233,6 +250,28 @@ module AdaptersLanguageGatewayTest
     h.open("a.rb")
     h.wait
     t.assert_equal([[], "ruby-lsp untrusted :LspStart"], [h.processes.spawned, label(h)], "a project file cannot trust its own directory")
+
+    # A root's command: language.ruby.lsp.root ROOT COMMAND... names the
+    # server for a working directory under ROOT, run as its words, the
+    # default elsewhere. Rows are [label, "cwd|user file", what opening
+    # a.rb starts].
+    trust = "language.trusted_roots /\n"
+    docker = "language.ruby.lsp.root /work docker compose exec app ruby-lsp\n"
+    t.table([
+      ["a root's command runs under its root", "/work/app|#{trust}#{docker}", "docker compose exec app ruby-lsp|docker starting"],
+      ["a root's command runs in its root itself", "/work|#{trust}#{docker}", "docker compose exec app ruby-lsp|docker starting"],
+      ["the default command runs outside every root", "/project|#{trust}#{docker}", "ruby-lsp|ruby-lsp starting"],
+      ["a sibling sharing the root's prefix runs the default", "/workshop|#{trust}#{docker}", "ruby-lsp|ruby-lsp starting"],
+      ["the later root line wins", "/work/app|#{trust}#{docker}language.ruby.lsp.root /work/app podman run app ruby-lsp\n", "podman run app ruby-lsp|podman starting"],
+      ["a later root line elsewhere leaves the covering one", "/work/app|#{trust}#{docker}language.ruby.lsp.root /other podman run app ruby-lsp\n", "docker compose exec app ruby-lsp|docker starting"],
+      ["a root under the home", "/home/user/src/app|#{trust}language.ruby.lsp.root ~/src docker compose exec app ruby-lsp\n", "docker compose exec app ruby-lsp|docker starting"],
+      ["a root that is no root covers nothing", "/work|#{trust}language.ruby.lsp.root work docker compose exec app ruby-lsp\n", "ruby-lsp|ruby-lsp starting"],
+      ["an untrusted root waits for :LspStart with the root's command", "/work/app|#{docker}", "|docker untrusted :LspStart"]
+    ]) do |row|
+      text = row.to_s
+      bar = text.index("|").to_i
+      served(text[0, bar].to_s, text[bar + 1, text.length - bar - 1].to_s)
+    end
 
     # Change, save, close. Scenario: Open, change, save, close (a server
     # announcing sync kind 1).

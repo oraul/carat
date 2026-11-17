@@ -98,12 +98,15 @@ module DomainRcParserTest
       ["the trusted roots", "language.trusted_roots ~/src /work\n", [["1 language|trusted_roots [\"~/src\", \"/work\"]"], []]],
       ["an unknown language setting", "language.ruby.linter rubocop\nlanguage.ruby x\n", [[], [".caratrc:1: unknown language setting linter", ".caratrc:2: unknown setting language.ruby"]]],
       ["a language setting not supported yet", "language.ruby.formatter rubocop\n", [[], [".caratrc:1: language setting formatter is not supported yet"]]],
+      ["a root command in the user file", "language.ruby.lsp.root /work docker compose exec app ruby-lsp\n", [["1 language|ruby.lsp.root [\"/work\", \"docker\", \"compose\", \"exec\", \"app\", \"ruby-lsp\"]"], []]],
+      ["a root command without a command", "language.ruby.lsp.root /work\nlanguage.ruby.lsp.root\n", [[], [".caratrc:1: language.ruby.lsp.root needs a root and a command", ".caratrc:2: language.ruby.lsp.root needs a root and a command"]]],
       ["an illegal byte in each scope", "option.theme caf\xE9\nkeymap.normal x a\xFF.b\nplugin.hello.greeting \xC0\xAF\nlanguage.ruby.lsp ruby-lsp\xFE\noption.tabstop 4\n", [["5 option|tabstop [\"4\"]"], [".caratrc:1: illegal byte", ".caratrc:2: illegal byte", ".caratrc:3: illegal byte", ".caratrc:4: illegal byte"]]]
     ]) do |text|
       config_of(text.to_s, true)
     end
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp ./evil\n", false), "an untrusted file cannot set language commands")
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.trusted_roots /\n", false), "an untrusted file cannot trust a directory")
+    t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp.root / ./evil\n", false), "a root command in the project file is refused")
     t.assert_equal([["1 keymap|normal [\"x\", \"cursor.down\"]", "2 keymap|normal [\"y\", \"none\"]", "4 keymap|leader [\",\"]", "5 keymap|normal [\"z\"]"], [".caratrc:3: key sequences are not read from a project file"]], config_of("keymap.normal x cursor.down\nkeymap.normal y none\nkeymap.normal q :e<Space>.git/config<CR>\nkeymap.leader ,\nkeymap.normal z\n", false), "an untrusted file binds actions and none but no key sequence")
     t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
     t.assert_equal([["1 option|tabstop [\"3\"]"], []], config_of("option.tabstop 3\n", false), "an untrusted file sets anything else")

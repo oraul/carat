@@ -17,8 +17,13 @@ module Carat
       SCOPES = ["option", "keymap", "plugin", "language"]
 
       # The settings of a language: the commands the language services
-      # run, each a list of words.
-      LANGUAGE_SETTINGS = ["lsp"]
+      # run, each a list of words; lsp.root is a root and the server
+      # command for a working directory under it.
+      LANGUAGE_SETTINGS = ["lsp", "lsp.root"]
+
+      # The language setting whose first word is a root, so it holds at
+      # least a root and a command word.
+      ROOTED_SETTING = "lsp.root"
 
       # The settings of a language the roadmap plans but no service reads
       # yet (formatting, roadmap item 14): a line setting one is answered
@@ -185,8 +190,9 @@ module Carat
 
       # Whether a language line may be kept: from a trusted file, as
       # language.<name>.<setting> with a known setting or as
-      # language.trusted_roots. Notes why not, a planned setting as not
-      # supported yet.
+      # language.trusted_roots, a root's command with a root and a
+      # command word. Notes why not, a planned setting as not supported
+      # yet.
       #: (RcLine, bool) -> bool
       def language?(line, trusted)
         unless trusted
@@ -207,6 +213,10 @@ module Carat
         end
         unless LANGUAGE_SETTINGS.include?(setting)
           note(line, "unknown language setting #{setting}")
+          return false
+        end
+        if setting == ROOTED_SETTING && line.words.length < 2
+          note(line, "#{line.key} needs a root and a command")
           return false
         end
         true

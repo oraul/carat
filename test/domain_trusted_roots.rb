@@ -23,6 +23,15 @@ module DomainTrustedRootsTest
     Carat::Domain::TrustedRoots.cover?(config, cwd, HOME)
   end
 
+  # Whether the directory is under one root word; the input is
+  # "WORD|CWD".
+  #: (untyped) -> bool
+  def self.under(value)
+    text = value.to_s
+    bar = text.index("|").to_i
+    Carat::Domain::TrustedRoots.under?(text[0, bar].to_s, text[bar + 1, text.length - bar - 1].to_s, HOME)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_trusted_roots")
 
@@ -43,6 +52,21 @@ module DomainTrustedRootsTest
       ["none of several roots", "/elsewhere ~/src|/project", false]
     ]) do |input|
       covered(input)
+    end
+
+    # One root word, the rule a language.<name>.lsp.root line's root
+    # follows. Rows are [label, "WORD|CWD", under].
+    t.table([
+      ["one word covers itself", "/work|/work", true],
+      ["one word covers a directory below it", "/work/|/work/app/lib", true],
+      ["one word does not cover a sibling sharing its prefix", "/work|/workshop", false],
+      ["one word under the home", "~/src|/home/user/src/app", true],
+      ["a relative word covers nothing", "work|/work", false],
+      ["a word with a . segment covers nothing", "/work/.|/work", false],
+      ["the root directory covers every absolute directory", "/|/anything", true],
+      ["a relative directory is under nothing", "/|work", false]
+    ]) do |input|
+      under(input)
     end
 
     t.finish
