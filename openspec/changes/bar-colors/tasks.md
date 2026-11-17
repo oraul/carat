@@ -12,7 +12,7 @@
 
 ## 3. Docs and checks
 
-- [ ] 3.1 Update README.md (the theme paragraph), `docs/architecture.md` and `docs/codebase-map.md` (60 UI groups), and `docs/compatibility.md` (the status bar's twelve groups), checked by `make docs-lint`
+- [x] 3.1 Update README.md (the theme paragraph), `docs/architecture.md` and `docs/codebase-map.md` (60 UI groups), and `docs/compatibility.md` (the status bar's twelve groups), checked by `make docs-lint`
 - [ ] 3.2 Run `make gates`, `make spec-validate`, and the touched tests through `make test-one`, then the whole suite with `make test`
 
 ## Workflow follow-up
