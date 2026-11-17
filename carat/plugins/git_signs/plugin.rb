@@ -17,7 +17,8 @@ module Carat
       # never the work tree, so no filter or hook a repository configures
       # runs. A focus asks no git while the HEAD key, what .git/HEAD, its
       # branch's ref file, packed-refs, and logs/HEAD read, is the one of
-      # the last git run and the plugin holds the buffer's text at it.
+      # the last git run and the plugin holds the text of the buffer's
+      # path at it, so a buffer renamed under the same id asks git again.
       # After a command runs past the host's deadline no event runs git
       # until the HEAD key changes, so one slow repository stalls one
       # event. Outside a repository, on a detached head, or without git
@@ -50,6 +51,7 @@ module Carat
         # @rbs @stalled_key: String
         # @rbs @buffers: Array[Integer]
         # @rbs @keys: Array[String]
+        # @rbs @paths: Array[String]
         # @rbs @texts: Array[String]
 
         #: () -> void
@@ -61,6 +63,7 @@ module Carat
           @stalled_key = ""
           @buffers = []
           @keys = []
+          @paths = []
           @texts = []
         end
 
@@ -103,6 +106,7 @@ module Carat
           @stalled_key = ""
           @buffers.clear
           @keys.clear
+          @paths.clear
           @texts.clear
         end
 
@@ -122,7 +126,7 @@ module Carat
           end
           if name == "window_focus" && !key.empty? && key == @key
             file = relative_path(host, path)
-            if file.empty? || held?(buffer, key)
+            if file.empty? || held?(buffer, key, file)
               show_signs(host, buffer, held_text(buffer)) unless file.empty?
               return
             end
@@ -139,10 +143,10 @@ module Carat
           end
           file = relative_path(host, path)
           return if file.empty?
-          unless held?(buffer, key)
+          unless held?(buffer, key, file)
             output = run(host, TEXT + ["HEAD:./#{file}"], key)
             return if @stalled
-            keep(buffer, key, output)
+            keep(buffer, key, file, output)
           end
           show_signs(host, buffer, held_text(buffer))
         end
@@ -251,11 +255,12 @@ module Carat
           lines
         end
 
-        # Whether the plugin holds the buffer's text at the HEAD key.
-        #: (Integer, String) -> bool
-        def held?(buffer, key)
+        # Whether the plugin holds the buffer's text at the HEAD key for
+        # the relative path, which a rename of the buffer changes.
+        #: (Integer, String, String) -> bool
+        def held?(buffer, key, file)
           at = @buffers.index(buffer)
-          !at.nil? && !key.empty? && @keys[at] == key
+          !at.nil? && !key.empty? && @keys[at] == key && @paths[at] == file
         end
 
         # The buffer's text at HEAD the plugin holds, "" for none.
@@ -265,15 +270,17 @@ module Carat
           at.nil? ? "" : @texts[at]
         end
 
-        #: (Integer, String, String) -> void
-        def keep(buffer, key, text)
+        #: (Integer, String, String, String) -> void
+        def keep(buffer, key, file, text)
           at = @buffers.index(buffer)
           if at.nil?
             @buffers << buffer
             @keys << key
+            @paths << file
             @texts << text
           else
             @keys[at] = key
+            @paths[at] = file
             @texts[at] = text
           end
         end
@@ -285,6 +292,7 @@ module Carat
           return if at.nil?
           @buffers.delete_at(at)
           @keys.delete_at(at)
+          @paths.delete_at(at)
           @texts.delete_at(at)
           host = @host
           host.clear_signs(buffer) unless host.nil?

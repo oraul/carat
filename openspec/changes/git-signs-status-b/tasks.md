@@ -12,7 +12,7 @@
 ## 3. The plugin
 
 - [x] 3.1 Place the signs from the text at HEAD in `Carat::Plugins::GitSigns::Plugin`; prove with `test/editor_git_signs.rb` ("Each sign kind shows on its lines", "Lines removed at the top mark the first line", "A file git does not hold shows no sign", "The text capture refuses ext:: and fsmonitor")
-- [x] 3.2 Gate a focus on the HEAD key and back off after a timeout in `Carat::Plugins::GitSigns::Plugin`; prove with `test/editor_git_signs.rb` ("A focus with HEAD and the file unchanged runs no git", "The signs follow an unsaved edit on focus", "A focus after HEAD moved asks git again", "A timed-out capture stalls no later event", "git runs again after HEAD moves", and part a's segment scenarios)
+- [x] 3.2 Gate a focus on the HEAD key and back off after a timeout in `Carat::Plugins::GitSigns::Plugin`; prove with `test/editor_git_signs.rb` ("A focus with HEAD and the file unchanged runs no git", "The signs follow an unsaved edit on focus", "A focus after HEAD moved asks git again", "A renamed buffer asks git for its new path", "A timed-out capture stalls no later event", "git runs again after HEAD moves", and part a's segment scenarios)
 
 ## 4. Docs and checks
 

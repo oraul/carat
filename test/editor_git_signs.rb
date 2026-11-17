@@ -16,6 +16,7 @@ module EditorGitSignsTest
   COUNTS = "#{SAFE} rev-list --left-right --count HEAD...@{upstream}"
   TEXT_A = "#{SAFE} cat-file blob HEAD:./a.txt"
   TEXT_B = "#{SAFE} cat-file blob HEAD:./b.txt"
+  TEXT_C = "#{SAFE} cat-file blob HEAD:./c.txt"
 
   # The plugin's segment, "" for none.
   #: (Carat::Doubles::EditorHarness) -> String
@@ -209,6 +210,19 @@ module EditorGitSignsTest
     h.files.put(".git/refs/heads/main", "2222222\n")
     h.type("<C-w>w")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured.drop(5), "a focus after HEAD moved asks git for the branch, the counts, and the text again")
+
+    # Scenario "A renamed buffer asks git for its new path".
+    h = repository("one\nTWO\n", "one\ntwo\n")
+    h.processes.script(TEXT_C, "one\nTWO\n")
+    h.open("a.txt")
+    t.assert_equal(["", "┇"], signs(h, 2), "before the rename a.txt differs from its text at HEAD")
+    renamed = h.assembly.plugins.rename_path.call("/project", "a.txt", "c.txt")
+    t.assert_equal([true, "c.txt"], [renamed.ok, h.buffer.path.to_s], "the open buffer follows the rename")
+    h.type("<C-w>s")
+    t.assert_equal([BRANCH, COUNTS, TEXT_C], h.processes.captured.drop(3), "a renamed buffer asks git for its new path on focus, .git unchanged")
+    t.assert_equal(["", ""], signs(h, 2), "and the signs compare with the new path's text at HEAD")
+    h.type(":w<CR>")
+    t.assert_equal([BRANCH, COUNTS], h.processes.captured.drop(6), "a save after it holds the new path's text")
 
     # A HEAD naming a ref outside refs/ gives no key: a focus asks git.
     h = repository("one\n", "one\n")

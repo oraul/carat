@@ -43,6 +43,13 @@ When the working directory holds a `.git` directory whose `HEAD`, branch ref, `p
 - **WHEN** the branch's ref file changes and the focus moves
 - **THEN** git is asked for the branch, the counts, and the text at HEAD again
 
+### Requirement: A renamed buffer reads its new path at HEAD
+The text at HEAD the plugin keeps for a buffer SHALL belong to the buffer's path when it was read: after an open buffer's path changes, as a rename of its file does, the next focus or save SHALL ask git for the text at HEAD of the new path, even with `.git` unchanged, and the signs SHALL compare with that text.
+
+#### Scenario: A renamed buffer asks git for its new path
+- **WHEN** an open buffer's file is renamed, `.git` unchanged, and the focus moves
+- **THEN** git is asked for the branch, the counts, and the text at HEAD of the new path, and the signs compare with that text
+
 ### Requirement: A timed-out git command stalls no later event
 After a git command of the plugin runs past the host's deadline, the plugin SHALL run no git on any later event until the working directory's `.git` state reads differently, and SHALL keep its segment and signs as they were.
 
