@@ -14,4 +14,4 @@
 
 ## 4. Documents and checks
 
-- [ ] 4.1 Update `docs/plugins.md` and the `FileRequests` entry of `docs/codebase-map.md`; `make gates`, `make spec-validate`, `make lint`, `make docs-lint`, and the touched tests pass
+- [x] 4.1 Update `docs/plugins.md` and the `FileRequests` entry of `docs/codebase-map.md`; `make gates`, `make spec-validate`, `make lint`, `make docs-lint`, and the touched tests pass
