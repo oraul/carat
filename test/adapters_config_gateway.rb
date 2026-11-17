@@ -90,6 +90,11 @@ module AdaptersConfigGatewayTest
     files.put(PROJECT, "language.ruby.lsp ./evil\n")
     config = load(files)
     t.assert_equal([["ruby-lsp", "--debug"], [".caratrc:1: language commands are not read from a project file"]], [config.last("language.ruby.lsp").words, config.report], "a project file cannot choose a program to run")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "language.ruby.lsp.root /work docker compose exec app ruby-lsp\n")
+    files.put(PROJECT, "language.ruby.lsp.root / ./evil\n")
+    config = load(files)
+    t.assert_equal([["/work", "docker", "compose", "exec", "app", "ruby-lsp"], [".caratrc:1: language commands are not read from a project file"]], [config.last("language.ruby.lsp.root").words, config.report], "a project file cannot choose a root command")
 
     # Key sequences: the user file may bind them, the project file not,
     # since a replay can write any file with :w.
