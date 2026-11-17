@@ -1,6 +1,9 @@
 ok   one file window shows a winbar only with always
 ok   two file windows show winbars but with never
 ok   a window on a scratch buffer, a slot's or a plugin's, is not a file window
+ok   a window on a scratch buffer outside a slot, as a reading view is, is not a side window
+ok   the window of a shown slot is a side window
+ok   a slot window that took a file is no longer a side window
 ok   the one rule of the modes: auto with two or more file windows, always, never
 ok   one window has no winbar
 ok   two windows have winbars over their text
@@ -42,4 +45,4 @@ ok   stop forgets the symbol request in flight
 ok   a restart drops the held symbols and the winbar shows the path
 ok   the restarted server is asked for the same text once it is ready
 ok   A restart keeps the new outline: the old server's late answer changes nothing
-editor_breadcrumbs: 44 passed, 0 failed
+editor_breadcrumbs: 47 passed, 0 failed

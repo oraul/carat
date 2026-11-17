@@ -170,6 +170,13 @@ module EditorBreadcrumbsTest
     tab.layout.window_at(other).buffer = D::Buffer.from_text("tree\n", nil)
     tab.layout.window_at(other).buffer.owner = "explorer"
     t.assert_equal([1, false], [tab.file_window_count, tab.winbar?("auto")], "a window on a scratch buffer, a slot's or a plugin's, is not a file window")
+    leaves = tab.layout.leaves
+    file_leaf = leaves[0] == other ? leaves[1] : leaves[0]
+    t.assert_equal([false, false], [tab.side_window?(file_leaf), tab.side_window?(other)], "a window on a scratch buffer outside a slot, as a reading view is, is not a side window")
+    tab.slot(:left).attach(tab.layout.window_at(other), "explorer", 20)
+    t.assert_equal([false, true], [tab.side_window?(file_leaf), tab.side_window?(other)], "the window of a shown slot is a side window")
+    tab.layout.window_at(other).buffer = D::Buffer.from_text("x\n", "x.txt")
+    t.assert_equal(false, tab.side_window?(other), "a slot window that took a file is no longer a side window")
     t.assert_equal([false, true, true, true, false], [tab.winbar_with?("auto", 1), tab.winbar_with?("auto", 2), tab.winbar_with?("always", 0), tab.winbar_with?("always", 1), tab.winbar_with?("never", 3)], "the one rule of the modes: auto with two or more file windows, always, never")
 
     # The winbar rows: rows are [label, [user lines, keys], [row 0, row 1]].
