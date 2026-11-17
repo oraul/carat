@@ -1,6 +1,8 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/display_width"
+require_relative "../../domain/control_text"
+require_relative "../../domain/tab_list"
 require_relative "../outcome"
 
 module Carat
@@ -22,10 +24,12 @@ module Carat
       private_constant :NAME_END, :NO_NAME, :UNMATCHED
 
       attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
 
-      #: (buffers: Domain::BufferList) -> void
-      def initialize(buffers:)
+      #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
+      def initialize(buffers:, tabs:)
         @buffers = buffers
+        @tabs = tabs
       end
 
       #: (Domain::EditorState, String, bool) -> Outcome
@@ -67,7 +71,7 @@ module Carat
         return false if tabless && !bang && !unlisted
         return false if unlisted && !tabless
         return false if flags.include?("+") && !(buffer.modified? && !scratch)
-        shown = @buffers.tabs.shown?(buffer)
+        shown = @tabs.shown?(buffer)
         return false if flags.include?("a") && !shown
         return false if flags.include?("h") && shown
         return false if flags.include?("%") && !buffer.equal?(state.buffer)
@@ -85,7 +89,7 @@ module Carat
         current = buffer.equal?(state.buffer)
         number = buffer.id.to_s
         head = number.length < 3 ? " " * (3 - number.length) + number : number
-        flags = (buffer.tabless? ? "u" : " ") + (current ? "%" : " ") + (@buffers.tabs.shown?(buffer) ? "a" : "h") + (buffer.readonly ? "=" : " ") + (buffer.modified? && !buffer.scratch? ? "+" : " ")
+        flags = (buffer.tabless? ? "u" : " ") + (current ? "%" : " ") + (@tabs.shown?(buffer) ? "a" : "h") + (buffer.readonly ? "=" : " ") + (buffer.modified? && !buffer.scratch? ? "+" : " ")
         out = head + flags + " \"" + name_of(buffer) + "\""
         pad = NAME_END - Domain::DisplayWidth.column(out, out.bytesize, 8)
         pad = 1 if pad < 1
@@ -93,12 +97,13 @@ module Carat
         out + " " * pad + "line #{row + 1}"
       end
 
-      # The path, a scratch buffer's title, or [No Name].
+      # The path, a scratch buffer's title, or [No Name], its control
+      # characters in caret notation so a name adds no line.
       #: (Domain::Buffer) -> String
       def name_of(buffer)
         path = buffer.path
-        return path unless path.nil?
-        buffer.title.empty? ? NO_NAME : buffer.title
+        return Domain::ControlText.caret(path) unless path.nil?
+        buffer.title.empty? ? NO_NAME : Domain::ControlText.caret(buffer.title)
       end
     end
   end

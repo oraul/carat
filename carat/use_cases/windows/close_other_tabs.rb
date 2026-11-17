@@ -6,9 +6,9 @@ require_relative "../outcome"
 module Carat
   module UseCases
     # :tabonly: closes every other tab page, after going to tab page
-    # number (1-based) when it is not 0, which the caller checked. A
-    # modified buffer shown only in a closed tab page stays listed,
-    # hidden.
+    # number (1-based) when it is not 0, which the caller checked. A file
+    # buffer shown only in a closed tab page stays listed, hidden; a
+    # scratch buffer no window shows goes.
     class CloseOtherTabs
       ONLY_ONE = "Already only one tab page"
       private_constant :ONLY_ONE

@@ -47,7 +47,7 @@ module UseCasesExTest
     quit = U::Quit.new(buffers: buffers, tabs: tabs)
     quit_all = U::QuitAll.new(buffers: buffers)
     U::FileCommandHandler.register(commands, save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, buffers: buffers)
-    U::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window, close_other_windows: U::CloseOtherWindows.new(buffers: buffers))
+    U::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window, close_other_windows: U::CloseOtherWindows.new(buffers: buffers, tabs: tabs))
     U::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: U::CloseTab.new(buffers: buffers, tabs: tabs), close_other_tabs: U::CloseOtherTabs.new(buffers: buffers, tabs: tabs), switch_tab: U::SwitchTab.new(tabs: tabs))
     U::PluginCommandHandler.register(commands, plugins: plugins)
     World.new(state: state, buffers: buffers, tabs: tabs, ex: ex)

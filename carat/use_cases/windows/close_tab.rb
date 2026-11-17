@@ -7,8 +7,8 @@ module Carat
   module UseCases
     # :tabclose: closes the current tab page, or tab page number (1-based)
     # when it is not 0, which the caller checked; the last one stays
-    # (E784). A modified buffer shown only in the closed tab page stays
-    # listed, hidden.
+    # (E784). A file buffer shown only in the closed tab page stays
+    # listed, hidden; a scratch buffer no window shows goes.
     class CloseTab
       E784 = "E784: Cannot close last tab page"
       private_constant :E784

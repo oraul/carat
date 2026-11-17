@@ -191,6 +191,20 @@ module EditorBuffersTest
     h = session(":sp b.txt<CR>x<C-w>cx:q!<CR>")
     t.assert_equal([["b.txt"], "b.txt", false], [h.buffer_paths, path(h), h.quit?], ":q! over a hidden buffer discards the current buffer's changes")
 
+    # A newline in a file name is ^J, so the name adds no line to either
+    # message. Scenarios "A newline in a name in the listing" and "A
+    # newline in a name in E162".
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("x\ny.txt", "one\n")
+    h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    h.open("x\ny.txt")
+    h.type(":ls<CR>")
+    t.assert_equal("  1 %a   \"x^Jy.txt\"" + " " * 21 + "line 1", h.message, "A newline in a name in the listing: :ls shows it as ^J on one line")
+    h.type("x:qa<CR>")
+    t.assert_equal([unsaved("x^Jy.txt"), false], [h.message, h.quit?], "A newline in a name in E162: :qa names it with ^J")
+    t.assert_equal("a^Ib^?c^@", Carat::Domain::ControlText.caret("a\tb\x7Fc\x00"), "a tab, DEL, and NUL in caret notation")
+    t.assert_equal("ä.txt", Carat::Domain::ControlText.caret("ä.txt"), "a UTF-8 name is kept")
+
     t.finish
   end
 end

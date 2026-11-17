@@ -5,8 +5,8 @@ module Carat
     # side by side (made by :vsplit), or a free slot a closed node left for
     # the next allocation. parent and children are node ids into the
     # layout's table, size is the node's extent along its parent's axis
-    # (rows including the status line under a column, columns without the
-    # separator under a row), and row, col, height, and width are the
+    # (rows including the separator row under a column, columns without
+    # the separator under a row), and row, col, height, and width are the
     # rectangle the last arrange gave it. A Struct record: mutable, with a
     # reader and a writer per member.
     class LayoutNode < Struct.new(:kind, :parent, :children, :window, :size, :row, :col, :height, :width, keyword_init: true)

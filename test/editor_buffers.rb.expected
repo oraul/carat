@@ -95,4 +95,8 @@ ok   :q! twice ends the editor
 ok   :x names a hidden buffer
 ok   :wq names a hidden buffer
 ok   :q! over a hidden buffer discards the current buffer's changes
-editor_buffers: 97 passed, 0 failed
+ok   A newline in a name in the listing: :ls shows it as ^J on one line
+ok   A newline in a name in E162: :qa names it with ^J
+ok   a tab, DEL, and NUL in caret notation
+ok   a UTF-8 name is kept
+editor_buffers: 101 passed, 0 failed
