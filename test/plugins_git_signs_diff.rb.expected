@@ -1,3 +1,18 @@
-ok   an empty line has no characters
-ok   a word counts its characters
-plugins_git_signs_diff: 2 passed, 0 failed
+ok   each sign kind on its lines: changed, added, and deleted on the line above
+ok   lines removed at the top mark the first line
+ok   equal texts mark nothing
+ok   lines added at the top
+ok   lines added at the end
+ok   lines removed at the end mark the last kept line
+ok   lines removed in the middle mark the line above
+ok   a replaced run is changed on its inserted lines
+ok   a change and a removal apart
+ok   every line replaced
+ok   an empty buffer against text at HEAD marks its one line deleted
+ok   a file empty at HEAD marks every line added
+ok   both empty mark nothing
+ok   a line moved reads as a removal at the top and an addition
+ok   past the edit cap the whole middle reads as one changed run
+ok   within the cap the trimmed head and tail stay unmarked
+ok   one removal in a long file marks one line
+plugins_git_signs_diff: 17 passed, 0 failed

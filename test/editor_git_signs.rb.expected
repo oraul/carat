@@ -1,6 +1,6 @@
 ok   the branch and both counts show as the plugin's segment
 ok   and the status bar shows it
-ok   git is asked for the branch, then the counts
+ok   git is asked for the branch, then the counts, then the file's text at HEAD
 ok   the segment under ascii icons is all ASCII
 ok   every character of it
 ok   the segment follows a branch change on save, no zero count shown
@@ -21,4 +21,20 @@ ok   outside a trusted root no git runs, with roots that do not cover the direct
 ok   a promisor remote with a command runs nothing: the segment shows the branch alone
 ok   each command refuses the ext:: transport and the fsmonitor hook on its command line
 ok   and runs with lazy fetching off
-editor_git_signs: 23 passed, 0 failed
+ok   each sign kind shows on its lines: changed, added, and deleted on the line above
+ok   and the gutter draws them
+ok   the text capture refuses ext:: and fsmonitor: the branch, the counts, then cat-file blob HEAD:./a.txt
+ok   each with lazy fetching off
+ok   a focus with HEAD and the file unchanged runs no git and the signs stay
+ok   a save asks for the branch and counts, not the text it holds
+ok   the signs follow an unsaved edit on focus: the added line has the added sign
+ok   with no git run
+ok   a focus after HEAD moved asks git for the branch, the counts, and the text again
+ok   lines removed at the top mark the first line
+ok   a file git does not hold shows no sign
+ok   a text at HEAD a capture may have cut shows no sign
+ok   a timed-out capture stalls no later event: no git runs after the one that timed out
+ok   and the segment stays, nothing said
+ok   a timed-out text capture stalls the save after it too
+ok   git runs again after HEAD moves
+editor_git_signs: 39 passed, 0 failed

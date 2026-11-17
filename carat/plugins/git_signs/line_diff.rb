@@ -37,7 +37,7 @@ module Carat
           return marks if old_count == 0 && new_count == 0
           kept = Array.new(new_count, false)
           removed = Array.new(new_count + 1, 0)
-          removed[new_count] = old_count unless align(old_lines, new_lines, head, old_count, new_count, kept, removed)
+          removed[new_count] = old_count if align(old_lines, new_lines, head, old_count, new_count, kept, removed) < 0
           place(marks, head, kept, removed)
           marks
         end
@@ -49,9 +49,9 @@ module Carat
         end
 
         # Marks in kept each middle line of new_lines that stays and counts
-        # in removed the lines removed before each, true when the search
-        # ended within MAX_EDITS steps; false leaves both untouched.
-        #: (Array[String], Array[String], Integer, Integer, Integer, Array[bool], Array[Integer]) -> bool
+        # in removed the lines removed before each, and answers the number
+        # of edit steps; -1 past MAX_EDITS steps leaves both untouched.
+        #: (Array[String], Array[String], Integer, Integer, Integer, Array[bool], Array[Integer]) -> Integer
         def self.align(old_lines, new_lines, head, old_count, new_count, kept, removed)
           limit = old_count + new_count
           limit = MAX_EDITS if limit > MAX_EDITS
@@ -81,9 +81,8 @@ module Carat
             end
             d += 1
           end
-          return false if edits < 0
-          backtrack(trace, edits, old_count, new_count, kept, removed)
-          true
+          backtrack(trace, edits, old_count, new_count, kept, removed) if edits >= 0
+          edits
         end
 
         # Appends the frontier as step d starts, the diagonals
