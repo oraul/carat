@@ -4,6 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 16
 
+The user-approved exception: `sprint-size-six` (T1 pipeline, user request, estimated small, beyond the sprint, the user-approved exception), Sprint 16's backlog-lane exemption.
+
 ## Pool
 
 1. `explorer-tidy` (T6 with a correctness bug, estimated medium, pushed back 2, reason: backlog-pick order): the tree cursor drifts when follow expands above it; 9 explorer tidy entries.
