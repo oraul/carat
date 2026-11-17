@@ -3,6 +3,9 @@ require_relative "../../domain/command"
 require_relative "../../domain/registers"
 require_relative "../../domain/history"
 require_relative "../../domain/last_search"
+require_relative "../../domain/last_substitute"
+require_relative "../../domain/delimited_pattern"
+require_relative "../../domain/search_prompt"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
 require_relative "../../domain/search_budget"
@@ -27,14 +30,16 @@ module Carat
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :registers #: Domain::Registers
       attr_reader :search_history #: Domain::History
+      attr_reader :last_substitute #: Domain::LastSubstitute
 
       # @rbs @budget: Domain::SearchBudget
 
-      #: (last_search: Domain::LastSearch, registers: Domain::Registers, search_history: Domain::History) -> void
-      def initialize(last_search:, registers:, search_history:)
+      #: (last_search: Domain::LastSearch, registers: Domain::Registers, search_history: Domain::History, last_substitute: Domain::LastSubstitute) -> void
+      def initialize(last_search:, registers:, search_history:, last_substitute:)
         @last_search = last_search
         @registers = registers
         @search_history = search_history
+        @last_substitute = last_substitute
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::SEARCH)
       end
 
@@ -65,16 +70,17 @@ module Carat
       # "/" or "?" with what was typed at the prompt.
       #: (Domain::EditorState, String, bool, Integer) -> Domain::SearchHit
       def typed(state, text, forward, count)
-        stop = Domain::VimPattern.pattern_end(text, forward ? 47 : 63)
-        source = text.byteslice(0, stop).to_s
-        offset = text.byteslice(stop + 1, text.bytesize - stop).to_s
+        cut = Domain::DelimitedPattern.typed(text, forward)
+        source = cut.pattern
+        offset = cut.rest
         return refuse(state, "Not implemented: search offset #{offset}") unless offset.empty?
         if source.empty?
           return refuse(state, Domain::Search::NO_PREVIOUS) unless @last_search.any?
           source = @last_search.pattern
         end
         options = state.options
-        compiled = Domain::VimPattern.compile(source, options.ignorecase, options.smartcase)
+        memory = @last_substitute
+        compiled = Domain::VimPattern.compile_search(source, options.ignorecase, options.smartcase, memory.previous, memory.previous_kept)
         return refuse(state, compiled.error) unless compiled.ok?
         remember(compiled, forward)
         cursor = state.cursor
@@ -156,7 +162,7 @@ module Carat
         hit = Domain::Search.find(state.buffer, compiled, row, col, forward, count, budget)
         case hit.status
         when :found
-          hit.message = hit.wrapped ? (forward ? Domain::Search::BOTTOM : Domain::Search::TOP) : "#{forward ? "/" : "?"}#{compiled.source}"
+          hit.message = hit.wrapped ? (forward ? Domain::Search::BOTTOM : Domain::Search::TOP) : "#{Domain::SearchPrompt.prefix_of(forward)}#{compiled.source}"
         when :stopped
           hit.message = Domain::Search::STOPPED
         else

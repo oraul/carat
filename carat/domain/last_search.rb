@@ -1,4 +1,5 @@
 require_relative "options"
+require_relative "last_substitute"
 require_relative "search_pattern"
 require_relative "vim_pattern"
 
@@ -61,11 +62,12 @@ module Carat
         touch
       end
 
-      # Compiles the last pattern again under changed case options.
-      #: (Options) -> void
-      def recompile(options)
+      # Compiles the last pattern again under changed case options, its ~
+      # the last substitute's replacement string.
+      #: (Options, LastSubstitute) -> void
+      def recompile(options, memory)
         return if pattern.empty?
-        self.compiled = VimPattern.compile(pattern, options.ignorecase, options.smartcase)
+        self.compiled = VimPattern.compile_search(pattern, options.ignorecase, options.smartcase, memory.previous, memory.previous_kept)
         touch
       end
 

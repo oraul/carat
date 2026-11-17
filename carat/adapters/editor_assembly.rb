@@ -360,10 +360,10 @@ module Carat
         @config_errors = []
 
         @move = UseCases::Move.new(last_find: @last_find)
-        @find_match = UseCases::FindMatch.new(last_search: @last_search, registers: @registers, search_history: @search_history)
+        @find_match = UseCases::FindMatch.new(last_search: @last_search, registers: @registers, search_history: @search_history, last_substitute: @last_substitute)
         @jump_to_match = UseCases::JumpToMatch.new(find_match: @find_match)
         @open_search_prompt = UseCases::OpenSearchPrompt.new(search_prompt: @search_prompt, search_history: @search_history)
-        @preview_search = UseCases::PreviewSearch.new(search_prompt: @search_prompt, last_search: @last_search)
+        @preview_search = UseCases::PreviewSearch.new(search_prompt: @search_prompt, last_search: @last_search, last_substitute: @last_substitute)
         @substitute_lines = UseCases::SubstituteLines.new(last_substitute: @last_substitute, last_search: @last_search, registers: @registers, search_history: @search_history)
         @global_command = UseCases::GlobalCommand.new(runner: @runner, last_search: @last_search, last_substitute: @last_substitute, registers: @registers, search_history: @search_history)
         @delete_lines = UseCases::DeleteLines.new(registers: @registers)
@@ -449,7 +449,7 @@ module Carat
         UseCases::HistoryCommandHandler.register(@commands, undo_step: @undo_step, redo_step: @redo_step, undo_to_state: @undo_to_state, travel_history: @travel_history, list_undo: @list_undo)
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::SyntaxCommandHandler.register(@commands)
-        UseCases::SetCommandHandler.register(@commands, last_search: @last_search)
+        UseCases::SetCommandHandler.register(@commands, last_search: @last_search, last_substitute: @last_substitute)
         UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
