@@ -1,3 +1,7 @@
+## Purpose
+
+Collapses lines of a window into manual folds, as Neovim's foldmethod=manual does: the fold keys create, open, close, and delete them, a closed fold is drawn as one row, and motions and operators treat it as one line.
+
 ## ADDED Requirements
 
 ### Requirement: zf creates a closed manual fold over the lines of a motion or a selection
