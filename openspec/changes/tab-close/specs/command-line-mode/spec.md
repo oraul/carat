@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Quit leaves the editor unless changes are unsaved
-":q" and ":quit" SHALL close the current window when another window exists in any tab page, its tab page closing with its last window and its buffer staying hidden in the list. On the last window, under `option.gt buffers` while another listed file buffer exists, they SHALL close the current buffer's tab as the buffer-tab rule says. Otherwise, on the last window, they SHALL end the editor unless a listed file buffer is modified: the current one SHALL be refused with "E37: No write since last change (add ! to override)", another one as the unsaved-changes refusal says. ":q!" and ":quit!" SHALL skip the current buffer and refuse only over a modified hidden one.
+":q" and ":quit" SHALL close the current window when another window exists in any tab page, its buffer staying hidden. On the last window they SHALL close the buffer tab as the buffer-tab rule says when it applies, and otherwise end the editor unless a listed file buffer is modified: the current one SHALL be refused with "E37: No write since last change (add ! to override)", another one as the unsaved-changes refusal says. ":q!" SHALL skip the current buffer.
 
 #### Scenario: Quit a clean buffer
 - **WHEN** ":q" is run on an unmodified buffer in the only window

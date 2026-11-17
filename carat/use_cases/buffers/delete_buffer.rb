@@ -7,13 +7,16 @@ require_relative "../outcome"
 module Carat
   module UseCases
     # :bd and :bd N: removes the current buffer, or the one numbered N,
-    # from the list in the order of Neovim's do_buffer. A modified buffer
-    # is E89 without the bang. When the current window shows it and no
-    # other listed file buffer exists, the other windows showing it close
-    # and the window shows a new empty buffer; otherwise the current
-    # window closes while it shows the buffer and another window exists,
-    # every other window showing it closes, and a last window still
-    # showing it shows the next listed file buffer, or the one before. A
+    # from the list. A modified buffer is E89 without the bang. Under
+    # option.gt buffers no window closes: every window showing it shows
+    # the next listed file buffer, or the one before, or a new empty
+    # buffer when none is left (BufferList#withdraw). Under option.gt
+    # tabpages the order of Neovim's do_buffer holds: the current window
+    # closes while it shows the buffer and another window exists, unless
+    # no other listed file buffer exists, every other window showing it
+    # closes, and a window still showing it shows that replacement; a
+    # file window that is the last of its tab page beside side windows
+    # never closes, so no tab page is left with only side windows. A
     # number of no listed file buffer, or a scratch buffer, deletes
     # nothing: E516 with the command as typed.
     class DeleteBuffer
@@ -32,18 +35,30 @@ module Carat
         return Outcome.failure("E516: No buffers were deleted: #{typed}") if target.nil? || target.scratch?
         return Outcome.failure("E89: No write since last change for buffer #{target.id} (add ! to override)") if target.modified? && !bang
         other = @buffers.replacement_for(target)
-        if other.nil? && @tabs.window.buffer.equal?(target)
-          @buffers.close_windows_of(target)
-          @buffers.load(Domain::Buffer.from_text("", nil))
+        close_windows(target, other.nil?) unless state.options.gt_follows_buffers?
+        if @tabs.windows_showing(target) > 0
+          @buffers.withdraw(target, other.nil? ? Domain::Buffer.from_text("", nil) : other)
         else
-          while @tabs.window.buffer.equal?(target) && @tabs.total_windows > 1
+          @buffers.remove(target)
+        end
+        Outcome.none
+      end
+
+      private
+
+      # The window closing of option.gt tabpages: the current window
+      # closes while it shows target, another window exists, and it is
+      # not the last file window of its tab page beside side windows,
+      # unless target is the last listed file buffer; then every other
+      # window showing target closes.
+      #: (Domain::Buffer, bool) -> void
+      def close_windows(target, last)
+        unless last
+          while @tabs.window.buffer.equal?(target) && @tabs.total_windows > 1 && !@buffers.lone_file_window?(@tabs.tab)
             @buffers.close_window(@tabs.tab_index, @tabs.tab.current)
           end
-          @buffers.close_windows_of(target)
-          @buffers.load(other) if !other.nil? && @tabs.window.buffer.equal?(target)
         end
-        @buffers.remove(target)
-        Outcome.none
+        @buffers.close_windows_of(target)
       end
     end
   end

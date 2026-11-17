@@ -134,4 +134,10 @@ ok   the listed empty buffer keeps the row, without tab-page numbers
 ok   one file in one tab page has no tabs row
 ok   a tab shows the file name without its directory
 ok   the path is untouched
-editor_tabs: 136 passed, 0 failed
+ok   A file opened in a tab page retires the startup buffer
+ok   and :ls no longer lists it
+ok   A file opened in a split retires the startup buffer
+ok   a file opened over it in its window takes its number, as before
+ok   an empty buffer of :tabnew stays: only the startup buffer leaves
+ok   Under tab pages the startup buffer stays
+editor_tabs: 142 passed, 0 failed

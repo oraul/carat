@@ -1,7 +1,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Deleting a buffer from the list
-`:bd`, `:bdelete`, `:bd N`, and `<leader>bd` SHALL remove the current buffer or buffer number N from the list. Under `option.gt buffers`, the default, every window showing it SHALL stay and show the next listed file buffer after it, or the one before it when it was last, or a new empty buffer with a new number when no other listed file buffer exists; side windows SHALL stay as they are. Under `option.gt tabpages` every window showing it SHALL close, a tab page closing with its last window, except that the current window SHALL stay while it is the editor's last window, and a file window that is the last of its tab page beside side windows SHALL stay; a window that stays SHALL show the replacement as above.
+`:bd`, `:bdelete`, `:bd N`, and `<leader>bd` SHALL remove the current buffer or buffer N from the list. Under `option.gt buffers` every window showing it SHALL stay and show the next listed file buffer, or the one before, or a new empty buffer when none is left, side windows untouched. Under `option.gt tabpages` those windows SHALL close, but the current window while it is the last one, and the last file window of a tab page beside side windows, SHALL stay and show that replacement.
 
 #### Scenario: Delete the current buffer
 - **WHEN** "a.txt" and "b.txt" are listed, "a.txt" is current in the only window, and ":bd" is run

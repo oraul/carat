@@ -71,6 +71,21 @@ module EditorExplorerTest
     []
   end
 
+  # The paths of the listed file buffers, the tree's scratch buffer left
+  # out, "" for an unnamed one.
+  def self.file_paths(h)
+    s = h.assembly.buffers
+    out = []
+    i = 0
+    while i < s.count
+      b = s.buffer_at(i)
+      path = b.path
+      out << (path.nil? ? "" : path) unless b.tabless?
+      i += 1
+    end
+    out
+  end
+
   # Every window as [col, columns, name].
   def self.shape(h)
     layout = h.state.tab.layout
@@ -143,6 +158,34 @@ module EditorExplorerTest
     t.assert_equal(["explorer", "30"], [h.status_row[9, 8], h.plugins.option("explorer", "width")], "the status bar shows the tree's title and the width option is 30")
     h.type("<C-w>l:q<CR>")
     t.assert_equal(true, h.quit?, "quitting the last file window ends the editor with the tree open")
+
+    # Buffer tabs beside the tree, under option.gt buffers. Scenario "Quit
+    # beside the explorer closes the buffer tab": started on no file, as
+    # `carat .`, a file opened in a tab page from the tree, gT, :q.
+    h = Carat::Doubles::EditorHarness.new(files: disk, config: config_with("ascii", ""), rows: 24, cols: 80, plugins: Carat::Plugins::Registry.all)
+    h.type(" eGkt")
+    t.assert_equal([["a.md"], 2, false], [file_paths(h), h.tab_count, h.row(0).include?("[No Name]")], "a file opened in a tab page from the tree retires the startup buffer")
+    h.type("gT:q<CR>")
+    t.assert_equal([false, ["a.md"], 1, [[0, 30, "explorer"], [31, 49, "a.md"]]], [h.quit?, file_paths(h), h.tab_count, shape(h)], "Quit beside the explorer closes the buffer tab")
+    h = session(":e b.rb<CR> e<C-w>l:q<CR>")
+    t.assert_equal([false, ["a.md"], [[0, 30, "explorer"], [31, 49, "a.md"]]], [h.quit?, file_paths(h), shape(h)], ":q beside the tree closes the buffer tab and the tree stays")
+    # Scenario "Delete beside the explorer keeps every file window".
+    h = session(":e b.rb<CR>:b 1<CR> e<C-w>l:tabe a.md<CR>:bd<CR>")
+    t.assert_equal([2, "b.rb", false], [h.tab_count, h.buffer.path, h.buffer_paths.include?("a.md")], "Delete beside the explorer keeps every file window: the tab page stays, showing b.rb")
+    h.type(":tabfir<CR>")
+    t.assert_equal([[0, 30, "explorer"], [31, 49, "b.rb"]], shape(h), "and the first tab page keeps the tree and its file window, showing b.rb")
+    # Scenario "Delete the last buffer beside the explorer".
+    h = session(" e:bd 1<CR>")
+    t.assert_equal([[""], 2, ""], [file_paths(h), h.state.tab.layout.leaf_count, h.message], "Delete the last buffer beside the explorer: the file window shows a new empty buffer")
+    h.type(" e")
+    t.assert_equal([1, "", ""], [h.state.tab.layout.leaf_count, h.buffer.path.to_s, h.message], "and the tree then closes without E444")
+    # Scenario "Delete under tab pages keeps the last file window beside the explorer".
+    h = editor_on("a.md", config_with("ascii", "option.gt tabpages\n"))
+    h.type(":e b.rb<CR>:b 1<CR> e<C-w>l:bd<CR>")
+    t.assert_equal([[[0, 30, "explorer"], [31, 49, "b.rb"]], ["b.rb"]], [shape(h), file_paths(h)], "Delete under tab pages keeps the last file window beside the explorer")
+    # Scenario "The explorer toggle in a lone tree opens a file window".
+    h = session(" e:only<CR> e")
+    t.assert_equal([[[0, 80, "a.md"]], "a.md", ""], [shape(h), h.buffer.path.to_s, h.message], "The explorer toggle in a lone tree opens a file window")
 
     # The configuration: the right side, and disabled.
     config = config_with("ascii", "plugin.explorer.side right\n")

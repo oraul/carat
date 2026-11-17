@@ -117,7 +117,10 @@ module Carat
         buffer = @buffers.scratch_for(name, title)
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
         return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
-        return PluginApi::Response.failure(Domain::Messages::E444) if @tabs.total_windows <= 1
+        if @tabs.total_windows <= 1
+          refused = open_file_window(leaf)
+          return PluginApi::Response.failure(refused) unless refused.empty?
+        end
         @buffers.close_window(@tabs.tab_index, leaf)
         PluginApi::Response.success("", 0)
       end
@@ -271,6 +274,24 @@ module Carat
       end
 
       private
+
+      # Opens a file window beside the scratch window leaf, the editor's
+      # last, so closing the scratch window leaves it: it shows the first
+      # listed file buffer, or a new empty one, and takes the focus. E36
+      # when there is no room for it, "" otherwise.
+      #: (Integer) -> String
+      def open_file_window(leaf)
+        tab = @state.tab
+        tab.floats.leave
+        id = tab.layout.split(leaf, true, 0, 1)
+        return Domain::Messages::E36 if id < 0
+        @tabs.adopt(tab.layout.window_at(id))
+        tab.layout.window_at(id).unfix_size
+        tab.focus(id)
+        shown = @buffers.file_at(1)
+        @buffers.load(shown.nil? ? Domain::Buffer.from_text("", nil) : shown)
+        ""
+      end
 
       # The index of the tab page holding the float with the id, 0 for the
       # current window, when the plugin opened it; -1 otherwise.

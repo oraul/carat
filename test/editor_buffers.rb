@@ -11,11 +11,25 @@ module EditorBuffersTest
   # A 24 by 80 editor on "a.txt" (three lines) with "b.txt" and "c.txt"
   # on disk, after typing keys.
   def self.session(keys)
+    h = Carat::Doubles::EditorHarness.default(disk, 24, 80)
+    h.open("a.txt")
+    h.type(keys.to_s)
+    h
+  end
+
+  # "a.txt" (three lines), "b.txt", and "c.txt".
+  def self.disk
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\nthree\n")
     files.put("b.txt", "zz\n")
     files.put("c.txt", "c1\nc2\n")
-    h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    files
+  end
+
+  # The session under option.gt tabpages, where the top row shows tab
+  # pages and :q and :bd keep Neovim's window rules.
+  def self.tabpages(keys)
+    h = Carat::Doubles::EditorHarness.new(files: disk, config: Carat::Doubles::FixedConfig.with("option.gt tabpages\n"), rows: 24, cols: 80, plugins: [])
     h.open("a.txt")
     h.type(keys.to_s)
     h
@@ -131,18 +145,23 @@ module EditorBuffersTest
     t.assert_equal([["ne", "two", "three"], true], [h.lines, h.buffer.modified?], "its changes come back with it")
 
     # Deleting: rows are [label, keys, [listed paths, path, windows, tab pages, message]].
+    # Under option.gt buffers no window closes. Scenarios "Delete the
+    # current buffer", "Delete the last buffer", "Delete a hidden buffer
+    # by number", "Delete keeps the windows showing the buffer", and
+    # "Delete in a split keeps the window".
     t.table([
       [":bd shows the next buffer", ":e b.txt<CR>:b 1<CR>:bd<CR>", [["b.txt"], "b.txt", 1, 1, ""]],
       [":bd of the last in the list shows the one before", ":e b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
       [":bdelete", ":e b.txt<CR>:bdelete<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
       [":bd of the only buffer shows a new empty one", ":bd<CR>", [[""], "", 1, 1, ""]],
       [":bd N of a hidden buffer", ":e b.txt<CR>:bd 1<CR>", [["b.txt"], "b.txt", 1, 1, ""]],
-      [":bd N closes the windows showing it", ":sp b.txt<CR><C-w>j:bd 2<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
-      [":bd in a split closes the window", ":sp b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
-      [":bd of a buffer two windows show closes both but the last", ":sp b.txt<CR>:sp<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
-      [":bd of the only buffer in a split leaves one empty window", ":sp<CR>:bd<CR>", [[""], "", 1, 1, ""]],
-      [":bd closes a tab page with its last window", ":tabe b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
-      [":bd N closes another tab page showing it", ":tabe b.txt<CR>:tabfir<CR>:bd 2<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
+      [":bd N keeps the windows showing it", ":sp b.txt<CR><C-w>j:bd 2<CR>", [["a.txt"], "a.txt", 2, 1, ""]],
+      [":bd in a split keeps the window", ":sp b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 2, 1, ""]],
+      [":bd of a buffer two windows show keeps both", ":sp b.txt<CR>:sp<CR>:bd<CR>", [["a.txt"], "a.txt", 3, 1, ""]],
+      [":bd of the only buffer in a split shows an empty one in both", ":sp<CR>:bd<CR>", [[""], "", 2, 1, ""]],
+      [":bd keeps a tab page", ":tabe b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 2, ""]],
+      [":bd N keeps another tab page showing it", ":tabe b.txt<CR>:tabfir<CR>:bd 2<CR>", [["a.txt"], "a.txt", 1, 2, ""]],
+      [":bd shows the replacement in every window showing it", ":sp b.txt<CR><C-w>j:bd 2<CR><C-w>k", [["a.txt"], "a.txt", 2, 1, ""]],
       [":bd of a modified buffer is refused", "x:bd<CR>", [["a.txt"], "a.txt", 1, 1, "E89: No write since last change for buffer 1 (add ! to override)"]],
       [":bd! discards the changes", "x:bd!<CR>", [[""], "", 1, 1, ""]],
       [":bd N of no buffer", ":bd 9<CR>", [["a.txt"], "a.txt", 1, 1, "E516: No buffers were deleted: bd 9"]],
@@ -150,6 +169,20 @@ module EditorBuffersTest
       [":bd with a name", ":bd a.txt<CR>", [["a.txt"], "a.txt", 1, 1, "Not implemented: :bdelete a.txt"]]
     ]) do |keys|
       h = session(keys)
+      [h.buffer_paths, path(h), h.window_count, h.tab_count, h.message]
+    end
+    # Under option.gt tabpages the windows close as in Neovim. Scenarios
+    # "Delete closes the windows showing the buffer" and "Delete in a
+    # split closes the window".
+    t.table([
+      [":bd N closes the windows showing it", ":sp b.txt<CR><C-w>j:bd 2<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
+      [":bd in a split closes the window", ":sp b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
+      [":bd of a buffer two windows show closes both but the last", ":sp b.txt<CR>:sp<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
+      [":bd of the only buffer in a split leaves one empty window", ":sp<CR>:bd<CR>", [[""], "", 1, 1, ""]],
+      [":bd closes a tab page with its last window", ":tabe b.txt<CR>:bd<CR>", [["a.txt"], "a.txt", 1, 1, ""]],
+      [":bd N closes another tab page showing it", ":tabe b.txt<CR>:tabfir<CR>:bd 2<CR>", [["a.txt"], "a.txt", 1, 1, ""]]
+    ]) do |keys|
+      h = tabpages(keys)
       [h.buffer_paths, path(h), h.window_count, h.tab_count, h.message]
     end
     h = session(":bd<CR>")
@@ -179,15 +212,52 @@ module EditorBuffersTest
       [":qa names an unnamed buffer", ":new<CR>ix<Esc>:q!<CR>:qa<CR>", [unsaved("[No Name]"), false, "", 1]],
       [":qa! ends the editor", "x:qa!<CR>", ["", true, "a.txt", 1]],
       [":q on a modified current buffer keeps one line", "x:q<CR>", [E37, false, "a.txt", 1]],
-      [":q names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
-      [":q! names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q!<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
       [":q! twice ends the editor", ":sp b.txt<CR>x<C-w>c:q!<CR>:q!<CR>", ["", true, "b.txt", 1]],
-      [":x names a hidden buffer", ":sp b.txt<CR>x<C-w>c:x<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
-      [":wq names a hidden buffer", ":sp b.txt<CR>x<C-w>c:wq<CR>", [unsaved("b.txt"), false, "b.txt", 1]]
+      [":q closes the buffer tab and a modified hidden buffer is shown", ":sp b.txt<CR>x<C-w>c:q<CR>", ["", false, "b.txt", 1]]
     ]) do |keys|
       h = session(keys)
       [h.message, h.quit?, path(h), h.tab_index]
     end
+    # Under option.gt tabpages the quit rule is Neovim's. Scenarios "Quit
+    # refused by a hidden buffer", "Forced quit shows the hidden buffer",
+    # and "Under tab pages quit on the last window ends the editor".
+    t.table([
+      [":q names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
+      [":q! names a hidden buffer", ":sp b.txt<CR>x<C-w>c:q!<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
+      [":x names a hidden buffer", ":sp b.txt<CR>x<C-w>c:x<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
+      [":wq names a hidden buffer", ":sp b.txt<CR>x<C-w>c:wq<CR>", [unsaved("b.txt"), false, "b.txt", 1]],
+      ["Under tab pages quit on the last window ends the editor", ":e b.txt<CR>:b 1<CR>:q<CR>", ["", true, "a.txt", 1]],
+      ["under tab pages :q closes one of two windows as before", ":sp b.txt<CR>:q<CR>", ["", false, "a.txt", 1]]
+    ]) do |keys|
+      h = tabpages(keys)
+      [h.message, h.quit?, path(h), h.tab_index]
+    end
+
+    # :q on the last window closes the buffer tab while another listed
+    # file buffer exists: rows are [label, keys, [message, quit, path,
+    # listed paths]]. Scenarios "Quit closes the buffer tab and shows the
+    # next", "Quit on the last listed buffer ends the editor", "Quit on a
+    # modified buffer with others listed is refused", and "Forced quit
+    # closes the buffer tab discarding its changes"; with "Quit a clean
+    # buffer", "Quit refused", "Forced quit", "Quit one of two windows",
+    # and "Quit the last window showing a modified buffer" above and in
+    # test/use_cases_ex.rb.
+    t.table([
+      ["Quit closes the buffer tab and shows the next", ":e b.txt<CR>:b 1<CR>:q<CR>", ["", false, "b.txt", ["b.txt"]]],
+      ["the last in the list shows the one before", ":e b.txt<CR>:q<CR>", ["", false, "a.txt", ["a.txt"]]],
+      ["Quit on the last listed buffer ends the editor", ":e b.txt<CR>:q<CR>:q<CR>", ["", true, "a.txt", ["a.txt"]]],
+      ["Quit on a modified buffer with others listed is refused", ":e b.txt<CR>:b 1<CR>x:q<CR>", [E37, false, "a.txt", ["a.txt", "b.txt"]]],
+      ["Forced quit closes the buffer tab discarding its changes", ":e b.txt<CR>:b 1<CR>x:q!<CR>", ["", false, "b.txt", ["b.txt"]]],
+      [":wq closes the buffer tab after its write", ":e b.txt<CR>:b 1<CR>x:wq<CR>", ["", false, "b.txt", ["b.txt"]]],
+      [":x closes the buffer tab after its write", ":e b.txt<CR>:b 1<CR>x:x<CR>", ["", false, "b.txt", ["b.txt"]]],
+      ["Ctrl-W q on the last window closes the buffer tab", ":e b.txt<CR>:b 1<CR><C-w>q", ["", false, "b.txt", ["b.txt"]]],
+      [":q in a split closes only the window", ":sp b.txt<CR>:q<CR>", ["", false, "a.txt", ["a.txt", "b.txt"]]]
+    ]) do |keys|
+      h = session(keys)
+      [h.message, h.quit?, path(h), h.buffer_paths]
+    end
+    h = session(":e b.txt<CR>:b 1<CR>x:wq<CR>")
+    t.assert_equal("ne\ntwo\nthree\n", h.files.read("a.txt", 100), ":wq wrote the buffer before closing its tab")
     h = session(":sp b.txt<CR>x<C-w>cx:q!<CR>")
     t.assert_equal([["b.txt"], "b.txt", false], [h.buffer_paths, path(h), h.quit?], ":q! over a hidden buffer discards the current buffer's changes")
 

@@ -29,9 +29,9 @@ None.
 - `carat/use_cases/files/quit.rb`, `carat/use_cases/buffers/delete_buffer.rb`, `carat/use_cases/files/open_file.rb`, `carat/use_cases/plugins/window_requests.rb`, `carat/domain/buffer_list.rb`.
 - Tests: `test/editor_buffers.rb`, `test/editor_tabs.rb`, `test/editor_explorer.rb`, and other tests whose sessions depended on the old `:bd` and `:q` rules under the default `option.gt`, with their snapshots.
 - README.md: unchanged, it describes neither the quit nor the buffer-delete rules.
-- docs/architecture.md: unchanged, it names neither the `:q` nor the `:bd` window rules; the buffer list's keep-or-release policy it describes still holds.
+- docs/architecture.md: unchanged, its `BufferList` entry's keep-or-release policy still holds and the file is at its byte budget; the codebase map names `withdraw` and `retire_startup`.
 - CLAUDE.md: unchanged, no process change.
-- docs/codebase-map.md: unchanged, no file is added, moved, or removed and the touched entries still describe their files.
+- docs/codebase-map.md: changed, the entries of `buffer_list.rb`, `delete_buffer.rb`, `quit.rb`, `open_file.rb`, and `window_requests.rb`; no file is added, moved, or removed.
 - docs/compatibility.md: changed, the `:q` and `:bd` rows. docs/actions.md: unchanged, no action is added.
 
 Outside the roadmap of `docs/architecture.md` section 12: a user-reported bug fix of Sprint 13's backlog lane.
