@@ -19,7 +19,8 @@ module Carat
     # caller names the caps: a file's reading view (ToggleReading) reads
     # up to MarkdownText::READING_RAW_LIMIT bytes into READING_ROW_LIMIT
     # rows, the documentation floats (ShowHover, ShowCompletionDocs)
-    # RAW_LIMIT bytes into ROW_LIMIT rows.
+    # RAW_LIMIT bytes into ROW_LIMIT rows; the reading view asks for its
+    # fenced blocks framed, the floats keep them indented.
     class FormatDocs
       INDENT = 2
       private_constant :INDENT
@@ -31,12 +32,12 @@ module Carat
         @syntax = syntax
       end
 
-      #: (Domain::EditorState, String, Integer, Integer, Integer) -> Domain::DocsText
-      def call(state, text, width, raw_limit, row_limit)
+      #: (Domain::EditorState, String, Integer, Integer, Integer, bool) -> Domain::DocsText
+      def call(state, text, width, raw_limit, row_limit, framed)
         set = state.options.icons
         doc = Domain::MarkdownText.parse(text, set, raw_limit, row_limit, width)
         highlight(doc) if state.options.syntax_on
-        Domain::MarkdownText.wrap(doc, width, set, row_limit)
+        Domain::MarkdownText.wrap(doc, width, set, row_limit, framed)
       end
 
       private

@@ -6,11 +6,11 @@ Show a Markdown file in its window as reading text, headings, lists, quotes, and
 ## Requirements
 
 ### Requirement: The reading toggle shows a Markdown buffer as reading text
-In normal mode `<leader>dr` (`docs.toggle_reading`) SHALL, in a window showing a buffer whose path ends in `.md` or `.markdown`, show in that window a scratch buffer titled `[reading] PATH` holding the file laid out as the documentation float lays out markdown, with the same styles, every row at most the window's width and at most 80 columns. A buffer that is not Markdown SHALL be refused with the message `Not a Markdown buffer` and nothing else changes.
+In normal mode `<leader>dr` (`docs.toggle_reading`) SHALL, in a window showing a buffer whose path ends in `.md` or `.markdown`, show in that window a scratch buffer titled `[reading] PATH` holding the file laid out as the documentation float lays out markdown, in the same styles, its fenced code framed, every row at most the window's width and at most 80 columns. A buffer that is not Markdown SHALL be refused with the message `Not a Markdown buffer` and nothing else changes.
 
 #### Scenario: Toggling a Markdown buffer into the reading view
 - **WHEN** a window shows `notes.md` holding a heading, a paragraph, a list, a quote, and a fenced block, and `<leader>dr` is typed
-- **THEN** the window shows `[reading] notes.md` with the heading's text, the paragraph without markers, bullet rows, bar rows, and the code indented by two columns, no row wider than 80 columns
+- **THEN** the window shows `[reading] notes.md` with the heading's text, the paragraph without markers, bullet rows, bar rows, and the code inside a frame, no row wider than 80 columns
 
 #### Scenario: A buffer that is not Markdown
 - **WHEN** a window shows `main.rb` and `<leader>dr` is typed
@@ -64,7 +64,7 @@ When a table at its natural width is wider than the reading view's measure, its 
 - **THEN** no row is wider than 60 columns, the long cells wrap onto further lines of their row, and every row keeps its borders and its column alignment
 
 ### Requirement: The reading view flows paragraphs and quotes to the measure
-The lines of a paragraph SHALL show in the reading view as one text wrapped at the window's measure, and the lines of a block quote at one depth and indentation as one quote text wrapped at the measure, each row after the first keeping the quote's bars. A heading, a thematic break, a list item, fenced code, an indented code line, a table, a blank line, or a line ending in two spaces SHALL end the flowing text, and lines of different quote depths SHALL not flow together.
+The lines of a paragraph SHALL show in the reading view as one text wrapped at the window's measure, and the lines of a block quote at one depth and indentation as one quote text wrapped at the measure, each later row keeping its bars. A heading, a thematic break, a list item, fenced code, an indented code line, in a quote too, a table, a blank line, or a line ending in two spaces SHALL end the flowing text, and lines of different quote depths SHALL not flow together.
 
 #### Scenario: A two-line paragraph at 60 columns
 - **WHEN** the reading view of a Markdown file holding a paragraph written on two short lines shows in a 60-column window
@@ -82,9 +82,39 @@ The lines of a paragraph SHALL show in the reading view as one text wrapped at t
 - **WHEN** the reading view of a Markdown file holding two consecutive lines each indented four spaces shows in a 60-column window
 - **THEN** each line keeps its own row, as code, and the two do not flow into one
 
+#### Scenario: Two indented code lines in a quote
+- **WHEN** the reading view of a Markdown file holding the quote lines `>     x = 1` and `>     y = 2` shows in a 60-column window
+- **THEN** each line keeps its own row behind the quote's bar, indented as code, and the two do not flow into one
+
+#### Scenario: A quote line mixing spaces and markers
+- **WHEN** the reading view of a Markdown file holding the line ` >  >  b`, alone or after the quote line `> > a`, shows in a 60-column window
+- **THEN** it reads `b` behind two bars, the same text whether it starts its own row or joins `a`'s row
+
 ### Requirement: A table ends where another block starts
 The rows of a table SHALL end at a blank line, a line holding no `|`, or a line that opens another block (a heading, a block quote, a list item, or a fence) even when it holds a `|`; that line SHALL show as its own row after the table.
 
 #### Scenario: A heading with a pipe right after a table
 - **WHEN** the reading view of a Markdown file holding a table directly followed by a heading line holding a `|` shows
 - **THEN** the table's bottom border is followed by the heading's text as its own row, not by another table row
+
+### Requirement: The reading view draws headings in their style
+In the reading view a heading SHALL read as its text without its markers, drawn in `@markup.heading`.
+
+#### Scenario: A heading in the reading view
+- **WHEN** the reading view of a Markdown file holding the line `## Title` shows
+- **THEN** its row reads `Title`, drawn in `@markup.heading`
+
+### Requirement: The reading view frames fenced code
+In the reading view a fenced code block SHALL be drawn in a frame from the icon set, one framed row per code line, the frame as wide as the block's widest line and never wider than the measure, a longer line continued on the next framed row. The code's text SHALL be drawn in `@markup.raw.block`, under the tokens of the fence's language when a plugin tokenizes it.
+
+#### Scenario: A framed code block
+- **WHEN** the reading view of a Markdown file holding a fenced block of the lines `x = 1` and `yy = 22` shows in a 60-column window
+- **THEN** the block reads as a top border, the rows `│ x = 1   │` and `│ yy = 22 │`, and a bottom border, each code line's text drawn in `@markup.raw.block`
+
+#### Scenario: A code line wider than the measure
+- **WHEN** the reading view of a Markdown file holding a fenced block with a line longer than the measure shows in a 20-column window
+- **THEN** every row of the frame is 20 columns wide and the line continues on the next framed row
+
+#### Scenario: A framed code block under ascii
+- **WHEN** `option.icons ascii` is set and the reading view of a Markdown file holding a fenced block shows
+- **THEN** the frame is drawn with `+`, `-`, and `|`, and no character above code point 127
