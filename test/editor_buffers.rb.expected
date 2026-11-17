@@ -15,6 +15,9 @@ ok   - keeps none
 ok   u keeps only scratch buffers
 ok   other characters are ignored
 ok   a long name is followed by one space
+ok   Tab edit a listed file leaves no empty buffer: the row lists a.txt and b.txt only
+ok   and :ls lists no empty buffer
+ok   :tabe with no name keeps opening an empty buffer
 ok   a scratch buffer is left out
 ok   :ls! lists it, flagged u, by its title
 ok   :ls u lists only it
@@ -119,4 +122,4 @@ ok   A newline in a name in the listing: :ls shows it as ^J on one line
 ok   A newline in a name in E162: :qa names it with ^J
 ok   a tab, DEL, and NUL in caret notation
 ok   a UTF-8 name is kept
-editor_buffers: 121 passed, 0 failed
+editor_buffers: 124 passed, 0 failed

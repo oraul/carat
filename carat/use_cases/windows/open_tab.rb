@@ -11,6 +11,9 @@ module Carat
     # fresh unnamed buffer, or the given file opened as :e does, and makes
     # it current. The window starts with a copy of the jump list and the
     # alternate buffer of the window it was opened from, as Neovim's does.
+    # While a file opens the empty buffer stays out of the list, so a
+    # file already listed leaves no extra [No Name] behind; it is listed
+    # when the window still shows it, as after a failed open.
     class OpenTab
       attr_reader :open_file #: OpenFile
       attr_reader :buffers #: Domain::BufferList
@@ -26,13 +29,17 @@ module Carat
       #: (Domain::EditorState, String) -> Outcome
       def call(state, path)
         buffer = Domain::Buffer.from_text("", nil)
-        @buffers.add(buffer)
         window = Domain::Window.new(buffer: buffer)
         window.jumps.restore_from(state.window.jumps)
         window.alternate = state.window.alternate
         @tabs.add_tab(Domain::TabPage.new(window: window))
-        return Outcome.success("") if path.empty?
-        @open_file.call(state, path)
+        if path.empty?
+          @buffers.add(buffer)
+          return Outcome.success("")
+        end
+        outcome = @open_file.call(state, path)
+        @buffers.add(buffer) if window.buffer.equal?(buffer)
+        outcome
       end
     end
   end
