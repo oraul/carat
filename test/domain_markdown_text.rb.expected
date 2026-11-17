@@ -95,6 +95,7 @@ ok   a table after a gap at a cap of two rows keeps the parsed rows at the cap
 ok   a two-line paragraph flows as one row at 60 columns
 ok   a two-line quote flows as one row at 60 columns
 ok   an indented paragraph flows at its indentation
+ok   lines indented four spaces keep their rows as code
 ok   a line ending in two spaces breaks the flow
 ok   a heading after a paragraph is its own row
 ok   a list item after a paragraph is its own row
@@ -110,4 +111,4 @@ ok   a flowed quote wider than 60 columns keeps its bar on every row:
 │ bar starting every row.
 ok   a megabyte line is gathered only to the 262,144-byte cap
 ok   lines under the cap are joined whole, a crossing line cut to the cap on a character boundary
-domain_markdown_text: 88 passed, 0 failed
+domain_markdown_text: 89 passed, 0 failed

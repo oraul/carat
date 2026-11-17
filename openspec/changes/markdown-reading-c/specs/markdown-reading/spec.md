@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The reading view flows paragraphs and quotes to the measure
-The lines of a paragraph SHALL show in the reading view as one text wrapped at the window's measure, and the lines of a block quote at one depth and indentation as one quote text wrapped at the measure, each row after the first keeping the quote's bars. A heading, a thematic break, a list item, fenced code, a table, a blank line, or a line ending in two spaces SHALL end the flowing text, and lines of different quote depths SHALL not flow together.
+The lines of a paragraph SHALL show in the reading view as one text wrapped at the window's measure, and the lines of a block quote at one depth and indentation as one quote text wrapped at the measure, each row after the first keeping the quote's bars. A heading, a thematic break, a list item, fenced code, an indented code line, a table, a blank line, or a line ending in two spaces SHALL end the flowing text, and lines of different quote depths SHALL not flow together.
 
 #### Scenario: A two-line paragraph at 60 columns
 - **WHEN** the reading view of a Markdown file holding a paragraph written on two short lines shows in a 60-column window
@@ -14,6 +14,10 @@ The lines of a paragraph SHALL show in the reading view as one text wrapped at t
 #### Scenario: A flowed quote wider than the measure
 - **WHEN** the reading view of a Markdown file holding a block quote whose lines together are wider than 60 columns shows in a 60-column window
 - **THEN** every row of the quote starts with its bar and no row is wider than 60 columns
+
+#### Scenario: Two lines indented four spaces
+- **WHEN** the reading view of a Markdown file holding two consecutive lines each indented four spaces shows in a 60-column window
+- **THEN** each line keeps its own row, as code, and the two do not flow into one
 
 ### Requirement: A table ends where another block starts
 The rows of a table SHALL end at a blank line, a line holding no `|`, or a line that opens another block (a heading, a block quote, a list item, or a fence) even when it holds a `|`; that line SHALL show as its own row after the table.

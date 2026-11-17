@@ -231,6 +231,8 @@ module DomainMarkdownTextTest
       ["a two-line paragraph flows as one row at 60 columns", "The reading view joins\nthe lines of a paragraph.", "The reading view joins the lines of a paragraph."],
       ["a two-line quote flows as one row at 60 columns", "> A quote written\n> on two lines.", "│ A quote written on two lines."],
       ["an indented paragraph flows at its indentation", "  one\n  two", "  one two"],
+      # markdown-reading-c, scenario "Two lines indented four spaces".
+      ["lines indented four spaces keep their rows as code", "    x = 1\n    y = 2", "    x = 1|    y = 2"],
       ["a line ending in two spaces breaks the flow", "one  \ntwo", "one|two"],
       ["a heading after a paragraph is its own row", "text\n# Head\nmore", "text|Head|more"],
       ["a list item after a paragraph is its own row", "text\n- item\nmore", "text|• item|more"],

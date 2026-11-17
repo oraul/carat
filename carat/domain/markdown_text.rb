@@ -146,13 +146,16 @@ module Carat
       # indentation, both capped at NEST_LIMIT, as one number, so that a
       # line with the key of the paragraph or quote row before it joins
       # that row; -1 for a line that takes no part in a flow (blank or a
-      # bare quote marker, a thematic break, a heading, or a list item).
+      # bare quote marker, a thematic break, a heading, a list item, or a
+      # line indented four or more spaces, an indented code block or a
+      # verbatim example, which keeps its rows).
       #: (String) -> Integer
       def self.flow_key(line)
         len = line.bytesize
         i = 0
         i += 1 while i < len && line.getbyte(i).to_i == 0x20
         indent = i / 2
+        return -1 if indent >= 2
         depth = 0
         while i < len && line.getbyte(i).to_i == 0x3E
           depth += 1
