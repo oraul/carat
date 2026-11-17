@@ -3,6 +3,7 @@ require_relative "../../domain/command"
 require_relative "../../domain/registers"
 require_relative "../../domain/history"
 require_relative "../../domain/last_search"
+require_relative "../../domain/last_substitute"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
 require_relative "../../domain/search_budget"
@@ -27,14 +28,16 @@ module Carat
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :registers #: Domain::Registers
       attr_reader :search_history #: Domain::History
+      attr_reader :last_substitute #: Domain::LastSubstitute
 
       # @rbs @budget: Domain::SearchBudget
 
-      #: (last_search: Domain::LastSearch, registers: Domain::Registers, search_history: Domain::History) -> void
-      def initialize(last_search:, registers:, search_history:)
+      #: (last_search: Domain::LastSearch, registers: Domain::Registers, search_history: Domain::History, last_substitute: Domain::LastSubstitute) -> void
+      def initialize(last_search:, registers:, search_history:, last_substitute:)
         @last_search = last_search
         @registers = registers
         @search_history = search_history
+        @last_substitute = last_substitute
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::SEARCH)
       end
 
@@ -74,7 +77,8 @@ module Carat
           source = @last_search.pattern
         end
         options = state.options
-        compiled = Domain::VimPattern.compile(source, options.ignorecase, options.smartcase)
+        memory = @last_substitute
+        compiled = Domain::VimPattern.compile_search(source, options.ignorecase, options.smartcase, memory.previous, memory.previous_kept)
         return refuse(state, compiled.error) unless compiled.ok?
         remember(compiled, forward)
         cursor = state.cursor

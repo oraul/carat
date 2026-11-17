@@ -22,6 +22,8 @@ ok   empty count is a star
 ok   lazy count
 ok   caret anchors at the start
 ok   caret inside is literal
+ok   a second caret is literal
+ok   a caret after a bar anchors again
 ok   dollar anchors at the end
 ok   dollar inside is literal
 ok   dollar before a bar anchors
@@ -78,6 +80,13 @@ ok   backslash C matches case
 ok   an uppercase letter in a collection counts
 ok   a slash in a collection does not end the pattern
 ok   a collection of a multibyte character ends after it
+ok   an escaped bracket in a collection does not end it
+ok   a bracket first in a collection is a member
+ok   a bracket first after a caret is a member
+ok   a POSIX class does not end the collection
+ok   tilde in a search is the previous replacement
+ok   the previous replacement matches literally
+ok   tilde in a search before any substitute
 ok   escape for a literal search
 ok   an escaped text matches itself
-domain_vim_pattern: 82 passed, 0 failed
+domain_vim_pattern: 91 passed, 0 failed

@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/search_prompt"
 require_relative "../../domain/last_search"
+require_relative "../../domain/last_substitute"
 require_relative "../../domain/vim_pattern"
 require_relative "../../domain/search"
 require_relative "../../domain/search_budget"
@@ -17,13 +18,15 @@ module Carat
     class PreviewSearch
       attr_reader :search_prompt #: Domain::SearchPrompt
       attr_reader :last_search #: Domain::LastSearch
+      attr_reader :last_substitute #: Domain::LastSubstitute
 
       # @rbs @budget: Domain::SearchBudget
 
-      #: (search_prompt: Domain::SearchPrompt, last_search: Domain::LastSearch) -> void
-      def initialize(search_prompt:, last_search:)
+      #: (search_prompt: Domain::SearchPrompt, last_search: Domain::LastSearch, last_substitute: Domain::LastSubstitute) -> void
+      def initialize(search_prompt:, last_search:, last_substitute:)
         @search_prompt = search_prompt
         @last_search = last_search
+        @last_substitute = last_substitute
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::SEARCH)
       end
 
@@ -39,7 +42,8 @@ module Carat
           @last_search.end_preview
           return Outcome.none
         end
-        compiled = Domain::VimPattern.compile(source, options.ignorecase, options.smartcase)
+        memory = @last_substitute
+        compiled = Domain::VimPattern.compile_search(source, options.ignorecase, options.smartcase, memory.previous, memory.previous_kept)
         unless compiled.ok?
           @last_search.end_preview
           return Outcome.none
@@ -53,7 +57,7 @@ module Carat
         end
         cursor = state.cursor
         cursor.row = hit.row
-        cursor.col = hit.col
+        cursor.col = state.clamp_col(hit.row, hit.col)
         @last_search.preview_at(compiled, hit.row, hit.col, hit.end_col)
         Outcome.none
       end

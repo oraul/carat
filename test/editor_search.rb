@@ -142,6 +142,24 @@ module EditorSearchTest
     t.assert_equal([0, 2], h.cursor, "a visual search previews too")
     h.type("<Esc>")
     t.assert_equal([:visual, [0, 0]], [h.mode, h.cursor], "escape returns to visual mode")
+    h = editor("abc\n", 0, 0)
+    h.type("/$")
+    t.assert_equal([0, 2], h.cursor, "incsearch on a match at the line end")
+    h.type("<Esc>")
+
+    # ~, a second ^, and a collection holding the delimiter, as Neovim
+    # reads them.
+    h = editor("a\nb xy\n", 0, 0)
+    h.type("/~<CR>")
+    t.assert_equal("E33: No previous substitute regular expression", h.message, "Tilde with no substitute")
+    h.type(":s/a/xy/<CR>/~<CR>")
+    t.assert_equal([1, 2], h.cursor, "Tilde after a substitute")
+    h = editor("^a\nb\n^c\n", 0, 0)
+    h.type("/^^<CR>")
+    t.assert_equal([2, 0], h.cursor, "A second caret is literal")
+    h = editor("a\nx/\n", 0, 0)
+    h.type("/[\\]/]<CR>")
+    t.assert_equal([1, 1], h.cursor, "An escaped bracket in a collection")
 
     # hlsearch and :noh.
     h = editor("a b a\n", 0, 0)

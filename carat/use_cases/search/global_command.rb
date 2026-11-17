@@ -61,7 +61,8 @@ module Carat
         typed = !args.pattern.empty?
         source = typed ? args.pattern : @last_search.pattern
         return Outcome.failure(Domain::Search::NO_PREVIOUS) if source.empty?
-        compiled = Domain::VimPattern.compile(source, state.options.ignorecase, state.options.smartcase)
+        memory = @last_substitute
+        compiled = Domain::VimPattern.compile_search(source, state.options.ignorecase, state.options.smartcase, memory.previous, memory.previous_kept)
         return Outcome.failure(compiled.error) unless compiled.ok?
         remember(compiled, typed)
         @budget.reset(Domain::SearchBudget::SEARCH)

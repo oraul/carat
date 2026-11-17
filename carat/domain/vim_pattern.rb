@@ -23,9 +23,9 @@ module Carat
     # \t \e \r, and \c \C. Everything else Vim has answers Not
     # implemented, and a malformed pattern Vim's error. A substitute's
     # pattern is translated the same way except that \( captures, at most
-    # nine times as in Vim, for \1 to \9 of the replacement, and ~ matches
-    # the previous replacement string. A plain class built once per
-    # compile.
+    # nine times as in Vim, for \1 to \9 of the replacement. In a
+    # substitute's or a search's pattern ~ matches the previous replacement
+    # string. A plain class built once per compile.
     class VimPattern
       MAX_SIZE = 2000
       MAX_BYTES = 4096
@@ -51,6 +51,7 @@ module Carat
       # @rbs @can_multi: bool
       # @rbs @after_multi: bool
       # @rbs @at_start: bool
+      # @rbs @caret_seen: bool
       # @rbs @code: Integer
       # @rbs @kind: Integer
       # @rbs @capture: bool
@@ -79,6 +80,7 @@ module Carat
         @can_multi = false
         @after_multi = false
         @at_start = true
+        @caret_seen = false
         @code = 0
         @kind = LITERAL
       end
@@ -97,6 +99,14 @@ module Carat
       #: (String, bool, bool, String, bool) -> SearchPattern
       def self.compile_substitute(source, ignorecase, smartcase, previous, previous_kept)
         VimPattern.new(source: source, capture: true, tilde: previous, tilde_known: previous_kept).build(ignorecase, smartcase)
+      end
+
+      # The pattern of a "/" or "?" search or a :g: as compile, with ~ as
+      # previous, the last replacement string, when previous_kept, and
+      # E33 otherwise, as in Vim.
+      #: (String, bool, bool, String, bool) -> SearchPattern
+      def self.compile_search(source, ignorecase, smartcase, previous, previous_kept)
+        VimPattern.new(source: source, capture: false, tilde: previous, tilde_known: previous_kept).build(ignorecase, smartcase)
       end
 
       # The pattern that matches text literally, for "*" and "#": every
@@ -118,7 +128,8 @@ module Carat
 
       # The byte where the pattern typed at a prompt ends: the first
       # delimiter ("/" or "?") that no backslash escapes and no collection
-      # holds, or the end of the text. What follows it is an offset.
+      # holds, the collection read as the compiler reads it, or the end of
+      # the text. What follows it is an offset.
       #: (String, Integer) -> Integer
       def self.pattern_end(text, delimiter)
         n = text.bytesize
@@ -129,13 +140,50 @@ module Carat
           if byte == 92
             i += 2
           elsif byte == 91
-            close = i + 2 < n ? text.byteindex("]", Utf8.boundary(text, i + 2)) : nil
-            i = close.nil? ? i + 1 : close + 1
+            close = collection_close(text, i + 1)
+            i = close < 0 ? i + 1 : close + 1
           else
             i += 1
           end
         end
         n
+      end
+
+      # The byte of the ] that closes a collection whose [ is just before
+      # from, -1 when none does: a ] first, after an optional ^, is a
+      # member, and so is one after a backslash; a [:name:] class is
+      # skipped whole. The compiler and pattern_end both read it, so the
+      # prompt ends a pattern where the compiler ends its collection.
+      #: (String, Integer) -> Integer
+      def self.collection_close(text, from)
+        n = text.bytesize
+        i = from
+        i += 1 if i < n && text.getbyte(i) == 94
+        i += 1 if i < n && text.getbyte(i) == 93
+        while i < n
+          byte = text.getbyte(i).to_i
+          return i if byte == 93
+          if byte == 92 && i + 1 < n
+            i += 2
+          elsif byte == 91 && posix_class_close(text, i) > 0
+            i = posix_class_close(text, i)
+          else
+            i += 1
+          end
+        end
+        -1
+      end
+
+      # The byte after a [:name:] class at i in text, 0 when there is none
+      # there.
+      #: (String, Integer) -> Integer
+      def self.posix_class_close(text, i)
+        return 0 unless i + 1 < text.bytesize && text.getbyte(i + 1) == 58
+        close = text.byteindex(":]", Utf8.boundary(text, i + 2))
+        return 0 if close.nil?
+        name = text.byteslice(i + 2, close - i - 2).to_s
+        return 0 unless POSIX.include?(name)
+        close + 2
       end
 
       #: (bool, bool) -> SearchPattern
@@ -275,15 +323,19 @@ module Carat
         end
       end
 
+      # ^ anchors where a branch starts, once: a second ^ right after it
+      # is a literal, as in Vim; @at_start stays set so ^* keeps a
+      # literal star.
       #: () -> void
       def caret
-        unless @at_start
+        if !@at_start || @caret_seen
           literal(94)
           return
         end
         @out << "^"
         @can_multi = false
         @after_multi = false
+        @caret_seen = true
       end
 
       # $ anchors at the end of the pattern and before \| or \).
@@ -392,7 +444,7 @@ module Carat
       # ~: the previous replacement string, matched literally as one atom.
       #: () -> void
       def tilde
-        return refuse("E33: No previous substitute regular expression") unless @capture && @tilde_known
+        return refuse("E33: No previous substitute regular expression") unless @tilde_known
         codes = Utf8.codes(@tilde)
         text = +"(?:"
         i = 0
@@ -416,6 +468,7 @@ module Carat
         end
         @starts << @size
         @at_start = true
+        @caret_seen = false
         @can_multi = false
         @after_multi = false
       end
@@ -436,6 +489,7 @@ module Carat
       def alternative
         @out << "|"
         @at_start = true
+        @caret_seen = false
         @can_multi = false
         @after_multi = false
       end
@@ -554,7 +608,7 @@ module Carat
       # otherwise, as in Vim.
       #: () -> void
       def collection
-        stop = collection_end
+        stop = VimPattern.collection_close(@source, @pos)
         if stop < 0
           literal(91)
           return
@@ -568,8 +622,8 @@ module Carat
         previous = -1
         while @error.empty? && @pos < stop
           byte = @source.getbyte(@pos).to_i
-          if byte == 91 && posix_class_end(@pos) > 0
-            finish = posix_class_end(@pos)
+          if byte == 91 && VimPattern.posix_class_close(@source, @pos) > 0
+            finish = VimPattern.posix_class_close(@source, @pos)
             out << @source.byteslice(@pos, finish - @pos).to_s
             @pos = finish
             previous = -1
@@ -636,39 +690,6 @@ module Carat
       #: (Integer) -> String
       def hex(digit)
         "0123456789ABCDEF"[digit, 1].to_s
-      end
-
-      # The byte after the ] that closes the collection opened before
-      # @pos, -1 when none does; a ] first, after an optional ^, is a
-      # member, and so is one after a backslash.
-      #: () -> Integer
-      def collection_end
-        i = @pos
-        i += 1 if i < @bytes && @source.getbyte(i) == 94
-        i += 1 if i < @bytes && @source.getbyte(i) == 93
-        while i < @bytes
-          byte = @source.getbyte(i).to_i
-          return i if byte == 93
-          if byte == 92 && i + 1 < @bytes
-            i += 2
-          elsif byte == 91 && posix_class_end(i) > 0
-            i = posix_class_end(i)
-          else
-            i += 1
-          end
-        end
-        -1
-      end
-
-      # The byte after a [:name:] class at i, 0 when there is none there.
-      #: (Integer) -> Integer
-      def posix_class_end(i)
-        return 0 unless i + 1 < @bytes && @source.getbyte(i + 1) == 58
-        close = @source.byteindex(":]", Utf8.boundary(@source, i + 2))
-        return 0 if close.nil?
-        name = @source.byteslice(i + 2, close - i - 2).to_s
-        return 0 unless POSIX.include?(name)
-        close + 2
       end
 
       POSIX = ["alnum", "alpha", "blank", "cntrl", "digit", "graph", "lower", "print", "punct", "space", "upper", "xdigit"]
