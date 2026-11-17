@@ -253,8 +253,8 @@ module Carat
 
       # Disables a plugin that raised: the message row says so, and
       # everything it left in the editor goes, its status segment, its
-      # prompt, its signs, its scratch buffers with their windows, and its
-      # key bindings.
+      # prompt, its signs, its floats in every tab page, its scratch
+      # buffers with their windows, and its key bindings.
       #: (PluginEntry, String) -> void
       def disable(e, why)
         e.enabled = false
@@ -333,6 +333,7 @@ module Carat
           buffers.buffer_at(i).clear_signs(name)
           i += 1
         end
+        close_floats(name)
         close_scratch_windows(name)
         i = buffers.count - 1
         while i >= 0
@@ -341,6 +342,25 @@ module Carat
           i -= 1
         end
         @keymap.remove_owner(name)
+      end
+
+      # Closes the floats of every tab page whose window shows a buffer
+      # the plugin owns, the ownership the window requests check, from
+      # the top down; a focused one gives the focus back to the layout.
+      #: (String) -> void
+      def close_floats(name)
+        tabs = @tabs
+        t = 0
+        while t < tabs.tab_count
+          floats = tabs.tab_at(t).floats
+          i = floats.count - 1
+          while i >= 0
+            float = floats.at(i)
+            floats.close(float.id) if float.window.buffer.owner == name
+            i -= 1
+          end
+          t += 1
+        end
       end
 
       # Closes every window of every tab page that shows one of the

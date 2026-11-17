@@ -12,6 +12,9 @@ require_relative "../carat/testing"
 # refs/heads/main, which the plugin reads to skip git on a focus.
 module EditorGitSignsTest
   SAFE = "git -c protocol.ext.allow=never -c core.fsmonitor=false"
+  # Every command's environment: lazy fetching off and, an empty list,
+  # no transport allowed whatever the git version.
+  SAFE_ENV = "GIT_NO_LAZY_FETCH=1 GIT_ALLOW_PROTOCOL="
   BRANCH = "#{SAFE} symbolic-ref --short -q HEAD"
   COUNTS = "#{SAFE} rev-list --left-right --count HEAD...@{upstream}"
   TEXT_A = "#{SAFE} cat-file blob HEAD:./a.txt"
@@ -174,6 +177,8 @@ module EditorGitSignsTest
     # fetching is on and ext:: allowed. The double answers the branch and,
     # for the counts as the plugin sends them, nothing; were the command
     # sent without the refusals the canned "fetched" counts would show.
+    # An empty GIT_ALLOW_PROTOCOL allows no transport, so a git older
+    # than 2.44, which ignores GIT_NO_LAZY_FETCH, still fetches nothing.
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
@@ -181,7 +186,7 @@ module EditorGitSignsTest
     h.open("a.txt")
     t.assert_equal("± main", segment(h), "a promisor remote with a command runs nothing: the segment shows the branch alone")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "each command refuses the ext:: transport and the fsmonitor hook on its command line")
-    t.assert_equal(["GIT_NO_LAZY_FETCH=1", "GIT_NO_LAZY_FETCH=1", "GIT_NO_LAZY_FETCH=1"], h.processes.environments, "and runs with lazy fetching off")
+    t.assert_equal([SAFE_ENV, SAFE_ENV, SAFE_ENV], h.processes.environments, "and runs with lazy fetching off and no transport allowed, so a git ignoring GIT_NO_LAZY_FETCH fetches nothing either")
 
     # Scenario "Each sign kind shows on its lines".
     h = repository("one\nTWO\nthree\nnew\nfour\n", "one\ntwo\nthree\nfour\nfive\n")
@@ -191,7 +196,7 @@ module EditorGitSignsTest
 
     # Scenario "The text capture refuses ext:: and fsmonitor".
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "the text capture refuses ext:: and fsmonitor: the branch, the counts, then cat-file blob HEAD:./a.txt")
-    t.assert_equal(["GIT_NO_LAZY_FETCH=1", "GIT_NO_LAZY_FETCH=1", "GIT_NO_LAZY_FETCH=1"], h.processes.environments, "each with lazy fetching off")
+    t.assert_equal([SAFE_ENV, SAFE_ENV, SAFE_ENV], h.processes.environments, "each with lazy fetching off and no transport allowed")
 
     # Scenario "A focus with HEAD and the file unchanged runs no git".
     h.type("<C-w>s")

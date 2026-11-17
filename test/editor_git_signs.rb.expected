@@ -20,11 +20,11 @@ ok   and no message names git or the trust
 ok   outside a trusted root no git runs, with roots that do not cover the directory
 ok   a promisor remote with a command runs nothing: the segment shows the branch alone
 ok   each command refuses the ext:: transport and the fsmonitor hook on its command line
-ok   and runs with lazy fetching off
+ok   and runs with lazy fetching off and no transport allowed, so a git ignoring GIT_NO_LAZY_FETCH fetches nothing either
 ok   each sign kind shows on its lines: changed, added, and deleted on the line above
 ok   and the gutter draws them
 ok   the text capture refuses ext:: and fsmonitor: the branch, the counts, then cat-file blob HEAD:./a.txt
-ok   each with lazy fetching off
+ok   each with lazy fetching off and no transport allowed
 ok   a focus with HEAD and the file unchanged runs no git and the signs stay
 ok   a save asks for the branch and counts, not the text it holds
 ok   the signs follow an unsaved edit on focus: the added line has the added sign

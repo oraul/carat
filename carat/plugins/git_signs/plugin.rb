@@ -27,7 +27,8 @@ module Carat
       # no program. A repository's configuration is untrusted even there:
       # each command refuses the ext:: transport and the fsmonitor hook on
       # its command line, which outranks the repository's, and the host
-      # turns git's lazy fetch off, so a promisor remote runs nothing.
+      # turns git's lazy fetch off and allows git no transport, whatever
+      # the git version, so a promisor remote runs nothing.
       # git's output is untrusted text: for the branch the first line only,
       # control characters dropped, at most NAME_LIMIT characters; a count
       # that is not one to nine digits reads as zero; a file's text longer
