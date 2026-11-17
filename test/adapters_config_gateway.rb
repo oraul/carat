@@ -85,8 +85,8 @@ module AdaptersConfigGatewayTest
     t.assert_equal([2, ["~/.config/carat/caratrc:2: unknown setting editor.size", ".caratrc:1: unknown setting editor.font"]], tabstop(files), "the user file's problems come before the project file's")
 
     # Language commands: the user file may set them, the project file not.
-    # Scenarios: Language command in the project file, Language command in
-    # the user file, and Root command in the project file.
+    # Scenarios: Language command in the project file,
+    # Language command in the user file, Root command in the project file.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "language.ruby.lsp ruby-lsp --debug\n")
     files.put(PROJECT, "language.ruby.lsp ./evil\n")
