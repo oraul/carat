@@ -1985,20 +1985,23 @@ expect "guard: contributor refuses main's merge gates" 2 "is not a command of th
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
 expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 # The green line's fixture origin, on a reserved host, and the blob ids
-# of its forms in the order of ORIGIN_IDS, which replace the pinned ones in
-# the line under test.
+# of its https form in the order of ORIGIN_IDS, which replace the pinned
+# ones in the line under test; its ssh and scp forms are refused.
 inv="https:/""/host.invalid/o/r.x"
 inv_ssh="ssh:/""/git""@host.invalid/o/r.x"
 inv_scp="git""@host.invalid:o/r.x"
-inv_ids=$(for f in "$inv" "$inv_ssh" "$inv_scp" "$inv.git" "$inv_ssh.git" "$inv_scp.git"; do printf %s "$f" | git hash-object --stdin; done | paste -s -d '|' -)
+inv_ids=$(for f in "$inv" "$inv.git"; do printf %s "$f" | git hash-object --stdin; done | paste -s -d '|' -)
 expect "guard: merger hashes stdin" 0 "^$" guard merger 'git hash-object --stdin'
 expect "guard: merger refuses a hash that writes the object" 2 "git hash-object other than --stdin" guard merger 'git hash-object -w --stdin'
 expect "guard: merger refuses a hash through a path's filters" 2 "git hash-object other than --stdin" guard merger 'git hash-object --stdin --path=x'
 expect "guard: read refuses git hash-object" 2 "git hash-object is not a command of this profile" guard read 'git hash-object --stdin'
+expect "guard: merger hashes every object before the merge gates" 0 "^$" guard merger 'git fsck --no-dangling --no-progress origin/main'
+expect "guard: merger refuses another fsck" 2 "git fsck other than" guard merger 'git fsck --lost-found origin/main'
+expect "guard: read refuses git fsck" 2 "git fsck is not a command of this profile" guard read 'git fsck --no-dangling --no-progress origin/main'
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -2209,8 +2212,8 @@ PROJECT=/w
 # no effect until it is merged. Here origin is a hosted-looking address
 # that a local bare repository answers through a command-line insteadOf
 # in the hook's environment (answered), which branch code cannot set; the
-# hook line pins origin by the blob ids of its address's three forms,
-# which pinned replaces with those of the fixture's (pins), so this file
+# hook line pins origin by the blob id of its address's https form, which
+# pinned replaces with the fixture's (pins), so this file
 # names no real address; a second hosted-looking address (fork), which the
 # environment answers from $work/hooks-planted.git, is refused.
 # hook FILE COMMAND: FILE's hook line on a Bash call of COMMAND in $hooks.
@@ -2220,9 +2223,9 @@ answered() {
     GIT_CONFIG_KEY_2="url.$answer.insteadOf" GIT_CONFIG_VALUE_2="$hosted_ssh" \
     GIT_CONFIG_KEY_3="url.$answer.insteadOf" GIT_CONFIG_VALUE_3="$hosted_scp" "$@"
 }
-# pinned FILE N: FILE's Nth hook line, its pinned digests replaced by pins.
+# pinned FILE N: FILE's Nth hook line, its pinned digest replaced by pins.
 pinned() {
-  sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n "$2p" | sed -E "s/ in [0-9a-f]{40}[|][0-9a-f]{40}[|][0-9a-f]{40}[)]/ in $pins)/"
+  sed -n "s/^ *command: '\\(.*\\)'\$/\\1/p" "$1" | sed -n "$2p" | sed -E "s/ in [0-9a-f]{40}[)]/ in $pins)/"
 }
 hook() {
   line=$(pinned "$1" 1)
@@ -2239,9 +2242,9 @@ hooks=$PWD
 hosted="https:/""/host.invalid/o/carat.git"
 hosted_ssh="ssh:/""/git""@host.invalid/o/carat.git"
 hosted_scp="git""@host.invalid:o/carat.git"
-pins=$(for f in "$hosted" "$hosted_ssh" "$hosted_scp"; do printf %s "${f%.git}" | git hash-object --stdin; done | paste -s -d '|' -)
-expect "guard: every hook line carries the three pinned digests" 0 "^10$" \
-  sh -c 'grep -h -c -E "^ *command: .* in [0-9a-f]{40}[|][0-9a-f]{40}[|][0-9a-f]{40}[)];;[*][)]echo origin is not hosted" "$1"/*.md | awk "{ n += \$1 } END { print n }"' _ "$agents"
+pins=$(printf %s "${hosted%.git}" | git hash-object --stdin)
+expect "guard: every hook line carries the one pinned digest" 0 "^10$" \
+  sh -c 'grep -h -c -E "^ *command: .* in [0-9a-f]{40}[)];;[*][)]echo origin is not hosted" "$1"/*.md | awk "{ n += \$1 } END { print n }"' _ "$agents"
 expect "guard: no hook line names an address, host, or path" 1 "^$" sh -c 'grep -h -E "^ *command: .*(://|[.]com|@[a-z])" "$1"/*.md' _ "$agents"
 fork="https:/""/host.invalid/a/fork.git"
 answer="$work/hooks.git"
@@ -2313,11 +2316,13 @@ git_q remote set-url origin "ext::sh -c true"
 expect "guard: a hook refuses a remote helper origin" 2 "origin is not hosted" hook "$f" 'ls'
 git_q remote set-url origin "foo::x@host:path"
 expect "guard: a hook refuses a remote helper origin with an at sign and a colon" 2 "origin is not hosted" hook "$f" 'ls'
-# The pin accepts the address's ssh and scp forms, and refuses a near miss.
+# The pin refuses the address's ssh and scp forms, which the environment
+# answers from the same repository (answered), since the ssh client's own
+# configuration chooses the host they reach, and refuses a near miss.
 git_q remote set-url origin "$hosted_ssh"
-expect "guard: a hook accepts the ssh form of origin" 2 "git push is not" hook "$f" 'git push origin x'
+expect "guard: a hook refuses the ssh form of origin" 2 "origin is not hosted" hook "$f" 'git push origin x'
 git_q remote set-url origin "$hosted_scp"
-expect "guard: a hook accepts the scp form of origin" 2 "git push is not" hook "$f" 'git push origin x'
+expect "guard: a hook refuses the scp form of origin" 2 "origin is not hosted" hook "$f" 'git push origin x'
 git_q remote set-url origin "$hosted/"
 expect "guard: a hook refuses origin with a trailing slash" 2 "origin is not hosted" hook "$f" 'ls'
 git_q remote set-url origin "$hosted"
@@ -3408,6 +3413,34 @@ expect "workflow: two concurrent deliveries' merge-gates paths are distinct" 0 '
   lane_js "[mergeGatesDir('a'), mergeGatesDir('b')]"
 expect "workflow: the green line runs the merge gates in the delivery's worktree" 0 '^\[true,true\]$' \
   lane_js "(g => [g.startsWith('cd tmp/.lane-a && '), g.includes('worktree add -q --detach tmp/.merge-gates origin/main')])(mergeLines().green)"
+expect "workflow: the green line hashes every object after the add and before the merge gates" 0 '^true$' \
+  lane_js "mergeLines().green.includes('worktree add -q --detach tmp/.merge-gates origin/main && ' + PINNED_GIT + ' fsck --no-dangling --no-progress origin/main && CHANGE=a ')"
+# A loose object branch code planted under the id of the blob of a later
+# main's tools/gates.sh, which a small fetch keeps (objplant-lane): the
+# green line from its fetch on, as the workflow builds it, stops at the
+# fsck before main's merge gates, though the worktree add wrote the
+# planted text; over a clean store (objplant-clean) it runs main's gates.
+back=$PWD
+green_tail=$(lane_js "(g => g.slice(g.indexOf(PINNED_GIT + ' fetch')))(mergeLines('abc1234').green)" | sed 's/^"//; s/"$//; s/\\"/"/g')
+cd "$work" || exit 1
+rm -rf objplant-origin.git objplant-lane objplant-clean
+git_q init -q --bare objplant-origin.git
+fresh objplant-main
+git_q push -q "$work/objplant-origin.git" HEAD:refs/heads/main 2>/dev/null
+git_q clone -q "$work/objplant-origin.git" "$work/objplant-lane" 2>/dev/null
+echo "echo main gates" > tools/gates.sh
+commit "chore: gates"
+git_q push -q "$work/objplant-origin.git" HEAD:refs/heads/main 2>/dev/null
+git_q clone -q "$work/objplant-origin.git" "$work/objplant-clean" 2>/dev/null
+cd "$work/objplant-lane" || exit 1
+real=$(printf 'echo main gates\n' | git hash-object --stdin)
+fake=$(printf 'echo planted\n' | git hash-object -w --stdin)
+mkdir -p ".git/objects/$(echo "$real" | cut -c1-2)"
+cp ".git/objects/$(echo "$fake" | cut -c1-2)/$(echo "$fake" | cut -c3-)" ".git/objects/$(echo "$real" | cut -c1-2)/$(echo "$real" | cut -c3-)"
+expect "workflow: the green line runs main's merge gates over a clean store" 0 '^main gates$' sh -c 'cd "$1" && sh -c "$2"' _ "$work/objplant-clean" "$green_tail"
+expect "workflow: a planted loose object stops the green line before the merge gates" 3 'mismatch' sh -c 'cd "$1" && sh -c "$2"' _ "$work/objplant-lane" "$green_tail"
+expect "workflow: the stopped line's worktree add wrote the planted text" 0 '^echo planted$' cat "$work/objplant-lane/tmp/.merge-gates/tools/gates.sh"
+cd "$back" || exit 1
 expect "workflow: every agent start runs its commands in the change's worktree" 0 '^true$' \
   lane_js "intro().includes('cd tmp/.lane-a && ')"
 expect "workflow: an implement or fix start first merges a moved main, a package start does not" 0 '^\[true,true,false\]$' \
@@ -3668,10 +3701,10 @@ expect "workflow: the green line fetches and adds the copy with no global config
 # fetch, whose main would bring its own gates and guard, and main's guard
 # refuses the fetch; the hosted repository passes both.
 expect "workflow: the green line checks origin before its fetch" 0 "originCheck" grep -F '&& ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin' "$wf"
-# The check as the workflow builds it, its six pinned ids replaced by the
+# The check as the workflow builds it, its two pinned ids replaced by the
 # fixture's (inv_ids).
 origin_check=$(js "$wf" "PINNED_GIT ORIGIN_IDS originCheck" "originCheck()" | sed 's/^"//; s/"$//; s/\\\\/\\/g' |
-  sed -E "s/'[0-9a-f]{40}([|][0-9a-f]{40}){5}'\$/'$inv_ids'/")
+  sed -E "s/'[0-9a-f]{40}[|][0-9a-f]{40}'\$/'$inv_ids'/")
 expect "workflow: the origin check under test holds the fixture's ids" 0 "^ok$" sh -c 'case $1 in *" hash-object --stdin | grep -q -x -E '\''$2'\''") echo ok ;; esac' _ "$origin_check" "$inv_ids"
 fresh planted
 git_q remote add origin "$inv.git"
@@ -3681,10 +3714,14 @@ passes_form() {
   expect "workflow: the origin check passes the $1 form" 0 "^ok$" sh -c "$origin_check && echo ok"
 }
 passes_form https "$inv"
-passes_form ssh "$inv_ssh"
-passes_form "ssh .git" "$inv_ssh.git"
-passes_form scp "$inv_scp"
-passes_form "scp .git" "$inv_scp.git"
+fails_form() {
+  git_q remote set-url origin "$2"
+  expect "workflow: the origin check fails the $1 form" 1 "^$" sh -c "$origin_check"
+}
+fails_form ssh "$inv_ssh"
+fails_form "ssh .git" "$inv_ssh.git"
+fails_form scp "$inv_scp"
+fails_form "scp .git" "$inv_scp.git"
 git_q remote set-url origin "$inv/"
 expect "workflow: the origin check fails a trailing slash" 1 "^$" sh -c "$origin_check"
 git_q remote set-url origin "https:/""/u""@host.invalid/o/r.x.git"
@@ -3722,11 +3759,11 @@ git_q config --unset url."$work/planted.git".insteadOf
 git_q remote set-url origin "https:/""/host.invalid/o/rex.git"
 expect "workflow: the origin check fails another repository" 1 "^$" sh -c "$origin_check"
 unset PROJECT
-# ORIGIN_IDS begins with the three ids every hook line pins, the forms
-# without .git, and holds six distinct ids, the same forms with .git last.
-hook_ids=$(sed -n -E "s/^ *command: .* in ([0-9a-f]{40}[|][0-9a-f]{40}[|][0-9a-f]{40})[)].*/\1/p" "$agents"/*.md | sort -u)
-expect "workflow: originCheck's ids are the hook lines' ids, with and without .git" 0 '^true$' \
-  js "$wf" "ORIGIN_IDS" "'$hook_ids'.split('|').length === 3 && ORIGIN_IDS.slice(0, 3).join('|') === '$hook_ids' && ORIGIN_IDS.length === 6 && new Set(ORIGIN_IDS).size === 6 && ORIGIN_IDS.every((i) => /^[0-9a-f]{40}$/.test(i))"
+# ORIGIN_IDS begins with the one id every hook line pins, the https form
+# without .git, and holds two distinct ids, the same form with .git last.
+hook_ids=$(sed -n -E "s/^ *command: .* in ([0-9a-f]{40})[)].*/\1/p" "$agents"/*.md | sort -u)
+expect "workflow: originCheck's ids are the hook lines' id, with and without .git" 0 '^true$' \
+  js "$wf" "ORIGIN_IDS" "'$hook_ids'.split('|').length === 1 && ORIGIN_IDS[0] === '$hook_ids' && ORIGIN_IDS.length === 2 && new Set(ORIGIN_IDS).size === 2 && ORIGIN_IDS.every((i) => /^[0-9a-f]{40}$/.test(i))"
 cd "$work" || exit 1
 areas=$(grep -c -E '^## [0-9]+[.] ' "$here/../docs/codebase-map.md")
 expect "periodic: MAP_AREAS is the map's count of areas" 0 "^const MAP_AREAS = $areas$" grep '^const MAP_AREAS = ' "$pwf"
