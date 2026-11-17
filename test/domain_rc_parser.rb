@@ -100,6 +100,9 @@ module DomainRcParserTest
       ["a language setting not supported yet", "language.ruby.formatter rubocop\n", [[], [".caratrc:1: language setting formatter is not supported yet"]]],
       ["a root command in the user file", "language.ruby.lsp.root /work docker compose exec app ruby-lsp\n", [["1 language|ruby.lsp.root [\"/work\", \"docker\", \"compose\", \"exec\", \"app\", \"ruby-lsp\"]"], []]],
       ["a root command without a command", "language.ruby.lsp.root /work\nlanguage.ruby.lsp.root\n", [[], [".caratrc:1: language.ruby.lsp.root needs a root and a command", ".caratrc:2: language.ruby.lsp.root needs a root and a command"]]],
+      # The config-files scenario of that name.
+      ["A root that is not a root is reported", "language.ruby.lsp.root src docker\nlanguage.ruby.lsp.root /a/./b docker\nlanguage.ruby.lsp.root /a/../b docker\nlanguage.ruby.lsp.root /a/b docker\n", [["4 language|ruby.lsp.root [\"/a/b\", \"docker\"]"], [".caratrc:1: language.ruby.lsp.root src is not a root", ".caratrc:2: language.ruby.lsp.root /a/./b is not a root", ".caratrc:3: language.ruby.lsp.root /a/../b is not a root"]]],
+      ["a root under the home or ending in a slash is a root", "language.ruby.lsp.root ~/src docker\nlanguage.ruby.lsp.root ~ docker\nlanguage.ruby.lsp.root /a/ docker\nlanguage.ruby.lsp.root ~src docker\n", [["1 language|ruby.lsp.root [\"~/src\", \"docker\"]", "2 language|ruby.lsp.root [\"~\", \"docker\"]", "3 language|ruby.lsp.root [\"/a/\", \"docker\"]"], [".caratrc:4: language.ruby.lsp.root ~src is not a root"]]],
       ["an illegal byte in each scope", "option.theme caf\xE9\nkeymap.normal x a\xFF.b\nplugin.hello.greeting \xC0\xAF\nlanguage.ruby.lsp ruby-lsp\xFE\noption.tabstop 4\n", [["5 option|tabstop [\"4\"]"], [".caratrc:1: illegal byte", ".caratrc:2: illegal byte", ".caratrc:3: illegal byte", ".caratrc:4: illegal byte"]]]
     ]) do |text|
       config_of(text.to_s, true)

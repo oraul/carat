@@ -1,6 +1,7 @@
 require_relative "rc_parse"
 require_relative "rc_line"
 require_relative "rc_parser"
+require_relative "root_word"
 
 module Carat
   module Domain
@@ -190,9 +191,9 @@ module Carat
 
       # Whether a language line may be kept: from a trusted file, as
       # language.<name>.<setting> with a known setting or as
-      # language.trusted_roots, a root's command with a root and a
-      # command word. Notes why not, a planned setting as not supported
-      # yet.
+      # language.trusted_roots, a root's command with a root (RootWord)
+      # and a command word. Notes why not, a planned setting as not
+      # supported yet.
       #: (RcLine, bool) -> bool
       def language?(line, trusted)
         unless trusted
@@ -218,6 +219,13 @@ module Carat
         if setting == ROOTED_SETTING && line.words.length < 2
           note(line, "#{line.key} needs a root and a command")
           return false
+        end
+        if setting == ROOTED_SETTING
+          root = line.words[0].to_s
+          unless RootWord.root?(root)
+            note(line, "#{line.key} #{root} is not a root")
+            return false
+          end
         end
         true
       end

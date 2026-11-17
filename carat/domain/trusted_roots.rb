@@ -1,4 +1,5 @@
 require_relative "config"
+require_relative "root_word"
 
 module Carat
   module Domain
@@ -39,7 +40,8 @@ module Carat
       end
 
       # A root word as an absolute path without a trailing slash, "" when
-      # it is not absolute, names no home, or holds a . or .. segment.
+      # it is not absolute, names no home, or holds a . or .. segment:
+      # RootWord's rule, checked on the word with the home expanded.
       #: (String, String) -> String
       def self.root_of(word, home)
         path = word
@@ -47,8 +49,7 @@ module Carat
           return "" if home.empty?
           path = "#{home}#{word[1, word.length - 1]}"
         end
-        return "" unless path.start_with?("/")
-        return "" if "#{path}/".include?("/./") || "#{path}/".include?("/../")
+        return "" unless path.start_with?("/") && RootWord.root?(path)
         while path.length > 1 && path.end_with?("/")
           path = path[0, path.length - 1].to_s
         end

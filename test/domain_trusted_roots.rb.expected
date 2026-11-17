@@ -19,4 +19,17 @@ ok   a relative word covers nothing
 ok   a word with a . segment covers nothing
 ok   the root directory covers every absolute directory
 ok   a relative directory is under nothing
-domain_trusted_roots: 21 passed, 0 failed
+ok   an absolute path is a root
+ok   the root directory is a root
+ok   a trailing slash is a root
+ok   the home is a root
+ok   a path under the home is a root
+ok   a relative word is no root
+ok   a user's home by name is no root
+ok   a . segment is no root
+ok   a .. segment is no root
+ok   a final .. segment is no root
+ok   a . segment under the home is no root
+ok   dots inside a name are a root
+ok   an empty word is no root
+domain_trusted_roots: 34 passed, 0 failed

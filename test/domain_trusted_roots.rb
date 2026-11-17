@@ -32,6 +32,12 @@ module DomainTrustedRootsTest
     Carat::Domain::TrustedRoots.under?(text[0, bar].to_s, text[bar + 1, text.length - bar - 1].to_s, HOME)
   end
 
+  # Whether a word is a root by RootWord's rule.
+  #: (untyped) -> bool
+  def self.root(value)
+    Carat::Domain::RootWord.root?(value.to_s)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_trusted_roots")
 
@@ -67,6 +73,26 @@ module DomainTrustedRootsTest
       ["a relative directory is under nothing", "/|work", false]
     ]) do |input|
       under(input)
+    end
+
+    # What a root word is, one rule for the configuration reader and the
+    # roots above. Rows are [label, word, root].
+    t.table([
+      ["an absolute path is a root", "/a/b", true],
+      ["the root directory is a root", "/", true],
+      ["a trailing slash is a root", "/a/b/", true],
+      ["the home is a root", "~", true],
+      ["a path under the home is a root", "~/src", true],
+      ["a relative word is no root", "src", false],
+      ["a user's home by name is no root", "~src", false],
+      ["a . segment is no root", "/a/./b", false],
+      ["a .. segment is no root", "/a/../b", false],
+      ["a final .. segment is no root", "/a/..", false],
+      ["a . segment under the home is no root", "~/./src", false],
+      ["dots inside a name are a root", "/a/..b/.c", true],
+      ["an empty word is no root", "", false]
+    ]) do |input|
+      root(input)
     end
 
     t.finish
