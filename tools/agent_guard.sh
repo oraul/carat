@@ -11,12 +11,13 @@
 # the reason on stderr to refuse and 0 to allow.
 #
 # The hook line pins origin by digest, naming no address: it accepts
-# remote.origin.url, .git stripped, only when its git blob id is one of
-# the three it lists, those of the repository's address in its https,
-# ssh (git@host/path), and scp (git@host:path) forms, each computed as
-# printf %s FORM | git hash-object --stdin, and recomputed when the
+# remote.origin.url, .git stripped, only when its git blob id is the one
+# it lists, that of the repository's address in its https form, computed
+# as printf %s FORM | git hash-object --stdin, and recomputed when the
 # repository moves, with ORIGIN_IDS in .claude/workflows/deliver-change.js,
-# the merge gates' green line's pin: the same three, then each with .git.
+# the merge gates' green line's pin: the same, then with .git. The ssh
+# and scp forms are refused, since the ssh client's own configuration,
+# which no pinned git environment reaches, chooses the host they reach.
 #
 # Usage: sh tools/agent_guard.sh PROFILE [DIR] < HOOK-JSON
 #
@@ -40,8 +41,9 @@
 # -fprintf -fls; sed -n with a line-number print script; cd to the project
 # or a worktree tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
 # GIT_CONFIG_NOSYSTEM=1 at most, with the global options -C (the project
-# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null, and --no-pager,
-# and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
+# or a worktree tmp/.NAME), -c core.hooksPath=/dev/null,
+# --no-replace-objects (which only stops git following refs/replace), and
+# --no-pager, and the verbs status log show diff rev-parse merge-base ls-files ls-tree cat-file blame describe shortlog
 # rev-list grep show-ref for-each-ref name-rev (none with a prefix of
 # --output, --ext-diff, --textconv, --filters, --upload-pack,
 # --receive-pack, --exec, or --open-files-in-pager, nor grep with a short
@@ -72,7 +74,10 @@
 #                tools/ci_wait.sh N; git push origin --delete BRANCH, git
 #                checkout -q main, git merge -q --ff-only origin/main, git
 #                branch -D BRANCH, BRANCH a Conventional Branch; git
-#                hash-object --stdin, with no other option
+#                hash-object --stdin, with no other option; git fsck
+#                --no-dangling --no-progress origin/main, which writes
+#                nothing, the green line's hash of every object before
+#                the merge gates
 #   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
 #                rm restore, git merge origin/main; make -s -k TARGET with
 #                the variables of MAKE_VARS, no shell character in a value;
@@ -440,7 +445,7 @@ git_form() {
           *) refuse "a git configuration override: -c $2" ;;
         esac
         shift 2 ;;
-      --no-pager|-P) shift ;;
+      --no-pager|-P|--no-replace-objects) shift ;;
       -*) refuse "the git option $1" ;;
       *) break ;;
     esac
@@ -552,6 +557,11 @@ git_form() {
       # The green line's origin check hashes origin's url, writing nothing.
       only_profiles merger "git hash-object"
       [ "$*" = --stdin ] || refuse "git hash-object other than --stdin" ;;
+    fsck)
+      # The green line hashes every object of the store before the merge
+      # gates, so no object branch code planted reaches them.
+      only_profiles merger "git fsck"
+      [ "$*" = "--no-dangling --no-progress origin/main" ] || refuse "git fsck other than --no-dangling --no-progress origin/main" ;;
     add|commit|mv|rm|restore)
       only_profiles contributor "git $verb" ;;
     *) refuse "git $verb is not a command of this profile" ;;

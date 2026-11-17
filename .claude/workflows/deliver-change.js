@@ -592,6 +592,18 @@ async function flush() {
 // hook, both of which branch code run by the checks can write: a global
 // insteadOf would fetch a forged main, a hook would rewrite the copy.
 // Before the fetch, originCheck holds origin to the hosted repository.
+// After the add and before any gate, fsck hashes every object of the
+// store the lane shares with the main checkout (loose, packed, and
+// alternate) and verifies the commit graph: branch code can plant a loose
+// object under the id of a blob of a later main, which a small fetch
+// keeps and the add writes into the copy, so a planted object fails the
+// line before main's gates run. Given a head, fsck reads no index or
+// reflog, so another lane's work in progress does not fail it.
+// fsck ignores replace refs, so a refs/replace entry pointing main's
+// gates.sh blob at a valid planted one would pass it while the add
+// checked out the planted text: every pinned git runs with
+// --no-replace-objects, and the line stops before the add when any
+// refs/replace entry stands.
 // The line runs in the delivery's worktree, whose HEAD is the branch, so
 // its merge gates are a worktree under the lane's own tmp/ and two
 // deliveries never share one (mergeGatesDir); when the cd fails the rest
@@ -609,13 +621,14 @@ function laneDir(change) {
 function mergeGatesDir(change) {
   return `${laneDir(change)}/${MERGE_GATES}`
 }
-const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git -c core.hooksPath=/dev/null'
+const PINNED_GIT = 'GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null'
 // The git blob ids (printf %s FORM | git hash-object --stdin) of the
-// repository's address in its https, ssh (git@host/path), and scp
-// (git@host:path) forms, the three the hook lines under .claude/agents/
-// pin, then the same three with .git; recomputed when the repository
-// moves.
-const ORIGIN_IDS = ['244706f6059ecef3ab5cd192a3b80eea788e0e2a', '5cd0861f1cf8aa9c1a53cdb6a739247d9577cb90', 'b2da5b5322207a9cca89affa28b5740add3ad2f4', '63b6cf12839e160500c53c6dafc920b56bb92d6b', '15d198e2a7d9d7bfdc3fbe324d57c83feda2d51e', '2a4afd8e4b6f3f7d61b102c6ce270e6ead7bc233']
+// repository's address in its https form, the one the hook lines under
+// .claude/agents/ pin, then the same with .git; recomputed when the
+// repository moves. The ssh and scp forms are refused: their transport
+// runs the ssh client, whose own configuration (a Host alias) no pinned
+// git environment reaches.
+const ORIGIN_IDS = ['244706f6059ecef3ab5cd192a3b80eea788e0e2a', '63b6cf12839e160500c53c6dafc920b56bb92d6b']
 // The green line's origin check, before its fetch: the blob id of
 // origin's url, as git resolves it (insteadOf included) and with its
 // lines joined, is one of ORIGIN_IDS, so the line names no address; a
@@ -634,7 +647,7 @@ function mergeLines(pushed) {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${pushed}"`
   return {
-    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref refs/replace | wc -l | grep -q -x -E ' *0' && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }

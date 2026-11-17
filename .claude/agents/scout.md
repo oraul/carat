@@ -9,7 +9,7 @@ hooks:
     - matcher: "Bash|Write"
       hooks:
         - type: command
-          command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a|5cd0861f1cf8aa9c1a53cdb6a739247d9577cb90|b2da5b5322207a9cca89affa28b5740add3ad2f4);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard read tmp/scout || exit 2'
+          command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard read tmp/scout || exit 2'
 ---
 
 You are a scout for this repository. You read; you never change the repository. Your one product is a context pack: a Markdown file of facts about one area of the code, which a contributor reads instead of searching the codebase itself. `CLAUDE.md` is the source of truth for the rules, which the contributor already holds; you neither restate nor reinterpret it.
