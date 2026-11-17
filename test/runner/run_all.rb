@@ -84,7 +84,6 @@ require_relative "../editor_palette"
 require_relative "../editor_plugins"
 require_relative "../editor_registers"
 require_relative "../editor_repeat"
-require_relative "../editor_ruby_structure"
 require_relative "../editor_screen"
 require_relative "../editor_scroll"
 require_relative "../editor_search"
@@ -197,7 +196,6 @@ when "editor_palette" then EditorPaletteTest.main
 when "editor_plugins" then EditorPluginsTest.main
 when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main
-when "editor_ruby_structure" then EditorRubyStructureTest.main
 when "editor_screen" then EditorScreenTest.main
 when "editor_scroll" then EditorScrollTest.main
 when "editor_search" then EditorSearchTest.main
