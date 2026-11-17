@@ -19,7 +19,7 @@ module DomainMarkdownTextTest
   def self.texts(text, set)
     raw = D::MarkdownText::RAW_LIMIT
     limit = D::MarkdownText::ROW_LIMIT
-    D::MarkdownText.wrap(D::MarkdownText.parse(text, set, raw, limit, 40), 40, set, limit).texts
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, set, raw, limit, 40), 40, set, limit, false).texts
   end
 
   # The rows of a document in the ascii set, joined with "|". A typed
@@ -32,13 +32,18 @@ module DomainMarkdownTextTest
   def self.reading(text)
     raw = D::MarkdownText::READING_RAW_LIMIT
     limit = D::MarkdownText::READING_ROW_LIMIT
-    D::MarkdownText.wrap(D::MarkdownText.parse(text, "unicode", raw, limit, 80), 80, "unicode", limit).texts
+    D::MarkdownText.wrap(D::MarkdownText.parse(text, "unicode", raw, limit, 80), 80, "unicode", limit, false).texts
   end
 
   # The spans of a document wrapped at width cells, each as row:start+
   # length name, joined with spaces. A typed helper, as rows is.
   def self.spans(text, width)
-    doc = D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, width.to_i), width.to_i, "unicode", D::MarkdownText::ROW_LIMIT)
+    span_names(D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, width.to_i), width.to_i, "unicode", D::MarkdownText::ROW_LIMIT, false))
+  end
+
+  # The spans of a document, each as row:start+length name, joined with
+  # spaces.
+  def self.span_names(doc)
     quads = doc.spans
     out = []
     i = 0
@@ -55,13 +60,23 @@ module DomainMarkdownTextTest
   WIDE = "| Option | Default | Meaning |\n|:--|:-:|--:|\n| option.icons | unicode | the glyph set the borders, bullets, and bars are drawn from |\n| option.jumptab | keep | where a jump to a file with no tab opens it |"
 
   # The rows of a document read with the reading caps in an icon set at
-  # width cells, joined with newlines, as a reading view shows them. A
-  # typed helper, as rows is.
+  # width cells, joined with newlines, as a reading view shows them but
+  # for its fenced code, left unframed. A typed helper, as rows is.
   def self.drawn(text, set, width)
     raw = D::MarkdownText::READING_RAW_LIMIT
     limit = D::MarkdownText::READING_ROW_LIMIT
     cells = width.to_i
-    D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, set.to_s, raw, limit, cells), cells, set.to_s, limit).texts.join("\n")
+    D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, set.to_s, raw, limit, cells), cells, set.to_s, limit, false).texts.join("\n")
+  end
+
+  # The document of a text read as the reading view reads it, its
+  # fenced code framed, in an icon set at width cells. A typed helper,
+  # as rows is.
+  def self.framed_doc(text, set, width)
+    raw = D::MarkdownText::READING_RAW_LIMIT
+    limit = D::MarkdownText::READING_ROW_LIMIT
+    cells = width.to_i
+    D::MarkdownText.wrap(D::MarkdownText.parse(text.to_s, set.to_s, raw, limit, cells), cells, set.to_s, limit, true)
   end
 
   # Whether every row of the text, split at newlines, is width
@@ -150,7 +165,7 @@ module DomainMarkdownTextTest
     end
     doc = D::MarkdownText.parse("```ruby\nx = 1\n```\n\n~~~ rb extra\ny\n~~~\n```\nz\n```", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, 40)
     t.assert_equal([4, "ruby", 1, "", 0, "rb", 2, "", 3], [doc.count, doc.syntax(0), doc.block(0), doc.syntax(1), doc.block(1), doc.syntax(2), doc.block(2), doc.syntax(3), doc.block(3)], "a fence's first word is its language, and each fenced block has its number")
-    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, 40), 40, "unicode", D::MarkdownText::ROW_LIMIT)
+    styled = D::MarkdownText.wrap(D::MarkdownText.parse("# T\n\nx", "unicode", D::MarkdownText::RAW_LIMIT, D::MarkdownText::ROW_LIMIT, 40), 40, "unicode", D::MarkdownText::ROW_LIMIT, false)
     buffer = D::Buffer.new(lines: styled.texts, path: nil, line_ending: "\n")
     buffer.styles = styled.styles
     t.assert_equal([true, [0, 1, D::Highlight::MARKUP_HEADING], 0, false], [buffer.styled?, buffer.style_at(0, buffer.line(0)).tokens, buffer.style_at(2, buffer.line(2)).tokens.length, buffer.style_at(0, "T").equal?(buffer.style_at(0, buffer.line(0)))], "styles gives each row its tokens, kept for the row's own string")
@@ -252,6 +267,44 @@ module DomainMarkdownTextTest
     # markdown-reading-c, scenario "A flowed quote wider than the measure".
     quote = drawn("> The reading view flows the lines of a block quote\n> into one text, and wraps it at the measure of the\n> window, its bar starting every row.", "unicode", 60).split("\n")
     t.assert_equal([3, true, true], [quote.length, quote.all? { |row| row.start_with?("│ ") }, quote.all? { |row| row.length <= 60 }], "a flowed quote wider than 60 columns keeps its bar on every row:\n#{quote.join("\n")}")
+
+    # An indented code line in a quote keeps its row, and a quote line's
+    # markers are read once for its row and its join (markdown-reading-d).
+    # Rows are [label, document, rows at 60 joined with "|"].
+    t.table([
+      # markdown-reading-d, scenario "Two indented code lines in a quote".
+      ["two indented code lines in a quote keep their rows", ">     x = 1\n>     y = 2", "│     x = 1|│     y = 2"],
+      ["an indented code line after quote text keeps its row", "> a\n>     x = 1", "│ a|│     x = 1"],
+      # markdown-reading-d, scenario "A quote line mixing spaces and markers".
+      ["a quote line mixing spaces and markers reads its text behind its bars", " >  >  b", "│ │ b"],
+      ["the same line joins the quote row before it at the same byte", "> > a\n >  >  b", "│ │ a b"],
+      ["spaces before a quote marker only place it", "  > a", "│ a"],
+      ["a marker after an indented code line in a quote is text", ">     > x", "│     > x"]
+    ]) do |text|
+      drawn(text, "unicode", 60).split("\n").join("|")
+    end
+    mixed = " >  >  b"
+    t.assert_equal([7, 4, 4, 6, -1], [D::MarkdownText.marker_end(mixed), D::MarkdownText.flow_key("> > a"), D::MarkdownText.flow_key(mixed), D::MarkdownText.marker_end(">     > x"), D::MarkdownText.flow_key(">     > x")], "a line mixing spaces and markers is cut at one byte by all readers, and a marker after an indented code line in a quote is text")
+
+    # markdown-reading-d, scenarios "A heading in the reading view" and
+    # "A framed code block".
+    look = framed_doc("## Title\n\n```ruby\nx = 1\nyy = 22\n```", "unicode", 60)
+    frame = ["Title", "", "┌" + "─" * 9 + "┐", "│ x = 1   │", "│ yy = 22 │", "└" + "─" * 9 + "┘"].join("|")
+    t.assert_equal([frame, "0:0+5 @markup.heading 3:2+5 @markup.raw.block 4:2+7 @markup.raw.block"], [look.texts.join("|"), span_names(look)], "a heading reads in @markup.heading and a fenced block in a frame, its code in @markup.raw.block: #{frame}")
+    # markdown-reading-d, scenario "A code line wider than the measure".
+    long_code = framed_doc("```\n" + "a" * 30 + "\n```", "unicode", 20).texts.join("\n")
+    t.assert_equal([4, true, "│ " + "a" * 14 + "   │"], [long_code.split("\n").length, even?(long_code, 20), long_code.split("\n")[2].to_s], "a code line wider than 20 columns goes on in the next framed row, every row 20 wide:\n#{long_code}")
+    # The edges of a frame. Rows are [label, [document, icon set, width],
+    # rows joined with "|"].
+    t.cases([
+      # markdown-reading-d, scenario "A framed code block under ascii".
+      ["a framed code block under ascii is drawn with +, -, and |", ["```\nx\n```", "ascii", 40], "+---+|| x ||+---+"],
+      ["a blank line inside fenced code is a blank framed row", ["```\na\n\nb\n```", "unicode", 40], "┌───┐|│ a │|│   │|│ b │|└───┘"],
+      ["two fenced blocks are two frames", ["```\na\n```\n\n```\nb\n```", "unicode", 40], "┌───┐|│ a │|└───┘||┌───┐|│ b │|└───┘"],
+      ["a measure under six columns keeps the code indented", ["```\nx\n```", "unicode", 5], "  x"]
+    ]) do |input|
+      framed_doc(input[0], input[1], input[2]).texts.join("|")
+    end
 
     # markdown-reading, scenario "An over-cap line": the gathering reads
     # a line crossing the cap only up to it, on a character boundary.

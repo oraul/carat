@@ -61,6 +61,8 @@ module Carat
       ALIGN_CENTER = 1
       ALIGN_RIGHT = 2
       CELL_MIN = 2
+      MARKER_INDENT = 16
+      FRAME_MIN = 6
 
       # The text read into rows, with their spans, at most row_limit of
       # them, read from at most raw_limit bytes, its markers those of the
@@ -149,42 +151,83 @@ module Carat
         doc
       end
 
-      # The flow key of a line outside code: its quote depth and
-      # indentation, both capped at NEST_LIMIT, as one number, so that a
+      # The flow key of a line outside code: its quote depth, capped at
+      # NEST_LIMIT, and its indentation level, as one number, so that a
       # line with the key of the paragraph or quote row before it joins
       # that row; -1 for a line that takes no part in a flow (blank or a
       # bare quote marker, a thematic break, a heading, a list item, or a
-      # line indented four or more spaces, an indented code block or a
-      # verbatim example, which keeps its rows).
+      # line whose text is indented four or more spaces, inside a quote
+      # or not, an indented code block or a verbatim example, which keeps
+      # its rows). A flowing line's indentation is under four spaces, so
+      # its level is 0 or 1 and needs no cap.
       #: (String) -> Integer
       def self.flow_key(line)
+        scan = markers(line)
+        indent = marker_indent(scan)
+        return -1 if indent >= 4
+        i = marker_stop(scan)
         len = line.bytesize
-        i = 0
-        i += 1 while i < len && line.getbyte(i).to_i == 0x20
-        indent = i / 2
-        return -1 if indent >= 2
-        depth = 0
-        while i < len && line.getbyte(i).to_i == 0x3E
-          depth += 1
-          i += 1
-          i += 1 while i < len && line.getbyte(i).to_i == 0x20
-        end
         return -1 if i >= len
         rest = line.byteslice(i, len - i).to_s
         return -1 if rule?(rest) || heading?(rest) || item?(rest)
-        depth = NEST_LIMIT if depth > NEST_LIMIT
-        indent = NEST_LIMIT if indent > NEST_LIMIT
-        depth * (NEST_LIMIT + 1) + indent
+        marker_depth(scan) * 2 + indent / 2
       end
 
       # The byte after a line's leading spaces and quote markers, each
-      # marker's spaces included.
+      # marker's spaces included: where its text starts, as block and
+      # flow_key read it.
       #: (String) -> Integer
       def self.marker_end(line)
+        marker_stop(markers(line))
+      end
+
+      # A line's leading spaces and quote markers read once, for
+      # flow_key, marker_end, and block: under four leading spaces, each
+      # ">" and the spaces after it, the text's indentation being the
+      # spaces after the last marker less the one the marker takes, and
+      # the scan ending after a marker followed by four or more (an
+      # indented code line in the quote, whose next ">" is text); with no
+      # marker the indentation is the leading spaces, and four or more
+      # read no marker (an indented code line). The byte after the scan,
+      # the depth capped at NEST_LIMIT, and the indentation capped at
+      # MARKER_INDENT - 1 packed in one Integer, read by marker_stop,
+      # marker_depth, and marker_indent, so no line allocates.
+      #: (String) -> Integer
+      def self.markers(line)
         len = line.bytesize
         i = 0
-        i += 1 while i < len && (line.getbyte(i).to_i == 0x20 || line.getbyte(i).to_i == 0x3E)
-        i
+        i += 1 while i < len && line.getbyte(i).to_i == 0x20
+        indent = i
+        depth = 0
+        while indent < 4 && i < len && line.getbyte(i).to_i == 0x3E
+          depth += 1
+          i += 1
+          from = i
+          i += 1 while i < len && line.getbyte(i).to_i == 0x20
+          indent = i > from ? i - from - 1 : 0
+        end
+        depth = NEST_LIMIT if depth > NEST_LIMIT
+        indent = MARKER_INDENT - 1 if indent >= MARKER_INDENT
+        (i * (NEST_LIMIT + 1) + depth) * MARKER_INDENT + indent
+      end
+
+      # The byte after the scan of markers.
+      #: (Integer) -> Integer
+      def self.marker_stop(scan)
+        scan / MARKER_INDENT / (NEST_LIMIT + 1)
+      end
+
+      # The quote depth of the scan of markers, at most NEST_LIMIT.
+      #: (Integer) -> Integer
+      def self.marker_depth(scan)
+        scan / MARKER_INDENT % (NEST_LIMIT + 1)
+      end
+
+      # The spaces the text is indented by in the scan of markers, at
+      # most MARKER_INDENT - 1.
+      #: (Integer) -> Integer
+      def self.marker_indent(scan)
+        scan % MARKER_INDENT
       end
 
       # Whether the text opens a list item: a -, *, or + and a space, or
@@ -211,17 +254,99 @@ module Carat
 
       # The rows of a parsed text wrapped at width cells, their spans cut
       # with them, at most row_limit rows and no empty one at the end, the
-      # prefixes those of the icon set.
-      #: (DocsText, Integer, String, Integer) -> DocsText
-      def self.wrap(doc, width, set, row_limit)
+      # prefixes those of the icon set; when framed (the reading view)
+      # each fenced block is drawn in a frame of the icon set, given a
+      # width of at least FRAME_MIN cells.
+      #: (DocsText, Integer, String, Integer, bool) -> DocsText
+      def self.wrap(doc, width, set, row_limit, framed)
         out = DocsText.new
         row = 0
         while row < doc.count && out.count < row_limit
-          out = wrapped(doc, row, width, out, set, row_limit)
-          row += 1
+          if framed && width >= FRAME_MIN && doc.block(row) > 0
+            row = frame(doc, row, width, out, set, row_limit)
+          else
+            out = wrapped(doc, row, width, out, set, row_limit)
+            row += 1
+          end
         end
         out.trim
         out
+      end
+
+      # Draws the fenced block whose first row is row into out in a frame
+      # of the icon set: a top border, each code row past its two-column
+      # indent cut into pieces of the inner width on a character boundary,
+      # each piece between the sides and padded, its spans moved onto it,
+      # a blank row inside the block a blank framed row, then a bottom
+      # border, no row past row_limit. The inner width is the block's
+      # widest code row, at most width - 4, so every row fits the width
+      # and wrap leaves it whole. Returns the row after the block.
+      #: (DocsText, Integer, Integer, DocsText, String, Integer) -> Integer
+      def self.frame(doc, row, width, out, set, row_limit)
+        fenced = doc.block(row)
+        last = row
+        inner = 1
+        r = row
+        while r < doc.count && (doc.block(r) == fenced || (doc.block(r) == 0 && doc.line(r).empty?))
+          if doc.block(r) == fenced
+            last = r
+            cells = DisplayWidth.text_width(doc.line(r), 2)
+            inner = cells if cells > inner
+          end
+          r += 1
+        end
+        inner = width - 4 if inner > width - 4
+        box = box(set)
+        widths = [inner]
+        out.add_row(border(widths, box, BOX_TOP), "", 0)
+        r = row
+        while r <= last && out.count < row_limit
+          frame_line(doc, r, inner, out, box, row_limit)
+          r += 1
+        end
+        out.add_row(border(widths, box, BOX_BOTTOM), "", 0) if out.count < row_limit
+        last + 1
+      end
+
+      # Adds the row of the document past its two-column indent to out as
+      # framed rows of inner cells between the box's sides, cut on a
+      # character boundary, its spans moved two columns in with each
+      # piece; an empty row is one blank framed row.
+      #: (DocsText, Integer, Integer, DocsText, Array[String], Integer) -> void
+      def self.frame_line(doc, row, inner, out, box, row_limit)
+        text = doc.line(row)
+        syntax = doc.syntax(row)
+        fenced = doc.block(row)
+        side = box[BOX_SIDE]
+        len = text.bytesize
+        i = len < 2 ? len : 2
+        col = i
+        while out.count < row_limit
+          used = 0
+          stop = i
+          stop_col = col
+          while stop < len
+            size = Utf8.size_at(text, stop, len)
+            code = Utf8.code_at(text, stop, size)
+            cells = DisplayWidth.control?(code) ? 1 : DisplayWidth.of(code)
+            break if used + cells > inner && stop > i
+            used += cells
+            stop += size
+            stop_col += 1
+          end
+          piece = +""
+          piece << side
+          piece << " "
+          piece << text.byteslice(i, stop - i).to_s
+          (inner - used).times { piece << " " }
+          piece << " "
+          piece << side
+          at = out.add_row(piece, syntax, fenced)
+          out.copy_spans(doc, row, col, stop_col, at, 2)
+          return if stop >= len
+          i = stop
+          col = stop_col
+        end
       end
 
       # The lines joined by newlines, at most limit bytes of them: a line
@@ -631,16 +756,10 @@ module Carat
       #: (String, DocsText, Integer, String, Integer) -> String
       def self.block(line, doc, at, set, raw_limit)
         len = line.bytesize
-        i = 0
-        i += 1 while i < len && line.getbyte(i).to_i == 0x20
-        indent = i / 2
-        depth = 0
-        while i < len && line.getbyte(i).to_i == 0x3E
-          depth += 1
-          i += 1
-          i += 1 while i < len && line.getbyte(i).to_i == 0x20
-        end
-        depth = NEST_LIMIT if depth > NEST_LIMIT
+        scan = markers(line)
+        i = marker_stop(scan)
+        depth = marker_depth(scan)
+        indent = marker_indent(scan) / 2
         indent = NEST_LIMIT if indent > NEST_LIMIT
         out = +""
         depth.times { out << bar(set) }

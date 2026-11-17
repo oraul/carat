@@ -61,16 +61,31 @@ module UseCasesToggleReadingTest
     most
   end
 
+  # Whether every (start, length, group) triple of the tokens lies in
+  # the columns [from, to).
+  def self.inside?(tokens, from, to)
+    i = 0
+    while i + 2 < tokens.length
+      return false if tokens[i] < from || tokens[i] + tokens[i + 1] > to
+      i += 3
+    end
+    true
+  end
+
   def self.main
     t = Carat::Testing.new("use_cases_toggle_reading")
 
     # markdown-reading, scenario "Toggling a Markdown buffer into the reading view".
     h = session("notes.md", NOTES, 80)
     h.type("<Space>dr")
-    shown = "Notes||Read the guide.||• one|• two||│ quoted|│ │ twice||────────────────────||  x = 1"
+    shown = "Notes||Read the guide.||• one|• two||│ quoted|│ │ twice||────────────────────||┌───────┐|│ x = 1 │|└───────┘"
     t.assert_equal(shown, view(h), "the reading view of notes.md reads #{shown}")
     t.assert_equal(["[reading] notes.md", true, ""], [h.buffer.title, h.buffer.scratch?, path(h)], "the view is a scratch buffer titled [reading] notes.md")
     t.assert_equal([0, 5, D::Highlight::MARKUP_HEADING], h.buffer.style_at(0, h.buffer.line(0)).tokens, "the heading row is drawn in @markup.heading")
+    # markdown-reading-d, scenario "A framed code block": the code's
+    # tokens and its block group stay on the code, inside the frame.
+    code_tokens = h.buffer.style_at(13, h.buffer.line(13)).tokens
+    t.assert_equal([true, true, true], [!code_tokens.empty?, code_tokens.include?(D::Highlight::MARKUP_RAW_BLOCK), inside?(code_tokens, 2, 7)], "the framed code row's spans #{code_tokens} lie on x = 1, columns 2 to 7, none on the frame")
     t.assert_equal("Notes", h.row(0).strip, "the window draws the view's first row with no line number")
 
     wide = session("long.md", "word " * 60 + "\n", 120)
@@ -105,7 +120,7 @@ module UseCasesToggleReadingTest
     a = session("notes.md", NOTES, 80)
     a.state.options.icons = "ascii"
     a.type("<Space>dr")
-    plain_view = "Notes||Read the guide.||* one|* two||| quoted|| | twice||--------------------||  x = 1"
+    plain_view = "Notes||Read the guide.||* one|* two||| quoted|| | twice||--------------------||+-------+|| x = 1 ||+-------+"
     t.assert_equal(plain_view, view(a), "under ascii the view reads #{plain_view}")
     t.assert_equal([true, true], [ascii?(view(a)), ascii?(a.screen.join)], "under ascii the view and the whole screen hold no code point above 127, so no box cell")
 
