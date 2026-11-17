@@ -9,4 +9,4 @@
 ## 2. Docs and checks
 
 - [x] 2.1 `docs/codebase-map.md`: the `tools/rules.sh` and `tools/scan_text.sh` lines name `CONFIG_PATH_RE`, `BARE_ASSIGN_RE`, and the configuration-row check; `make docs-lint` passes.
-- [ ] 2.2 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`, all pass.
+- [x] 2.2 Run `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate`, all pass.
