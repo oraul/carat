@@ -99,7 +99,7 @@ The palette SHALL draw the name column of each shown row in `PmenuExtra`, and in
 
 ### Requirement: A row leads with its label and fits its columns by display cells
 
-Each palette row SHALL show, from the left, the entry's description, its readable label, then its name in a 30-cell column, then its first normal-mode key in a 12-cell column at the row's right end, a control key in caret notation (`^W` for `<C-w>`). Each column SHALL start at the same cell on every row. When the description would get under 20 cells the name SHALL be left out. No key width SHALL stop the editor.
+Each palette row SHALL show, from the left, the entry's description, its readable label, then its name in a 30-cell column, then its first normal-mode key in a 12-cell column at the row's right end, a control key in caret notation (`^W` for `<C-w>`). Each column SHALL start at the same cell on every row. Under 20 description cells the name SHALL be left out, under 12 the key too, so every row shows its label. No key width SHALL stop the editor.
 
 #### Scenario: A key of wide characters
 
@@ -125,6 +125,11 @@ Each palette row SHALL show, from the left, the entry's description, its readabl
 
 - **WHEN** the screen is 46 columns wide under `option.winborder none`, so the palette's text is 42 columns, and the user presses `<Space>p` and types `window.split`
 - **THEN** the `window.split` row reads `Split window` from cell 0 and `^Ws` from 30 cells, without the name, and no cell of the row is drawn in `PmenuExtra` or `PmenuExtraSel`
+
+#### Scenario: A palette at the smallest screen shows a label
+
+- **WHEN** the screen is 8 columns wide, the narrowest the palette opens at, under the default border or `option.winborder none`, or the palette's text is under 24 columns, and the user presses `<Space>p` and types `window.split`
+- **THEN** the `window.split` row starts with the first characters of `Split window` from cell 0 and shows no key, while at 24 columns of text and wider the key `^Ws` starts 12 cells before the row's end
 
 ### Requirement: A cut text is marked
 

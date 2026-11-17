@@ -13,7 +13,7 @@ Goals: a row shows its label at every width the palette opens at; `styles` takes
 - A predicate `keyed?(width)`, true when `width - KEY_WIDTH >= KEY_WIDTH`: the key's column is kept only when the label keeps at least as many cells as the key. Below it `label_room` is the whole width and `rows` appends no key. At 24 cells and up nothing changes. Alternative rejected: shrinking the key to half the width, which at the narrowest float (2 cells) leaves the label one cell, which `kept_bytes` fills with nothing but the padding space, so the label still vanishes.
 - `named?` implies `keyed?` (62 cells against 24), so `styles`, which places the name's column from `label_room`, needs no change beyond the dropped parameter.
 - `styles(top, lines, width)`: the cut mark is never styled, and the limits of the marks come from `kept_bytes`, which does not depend on the mark, so the parameter goes rather than being read.
-- `pad` appends `" " * (width - used)` once when the cell is narrower than the width.
+- `pad` pads in one step with `ljust` to `cell.length + width - used` characters when the cell is narrower than the width, so the cells it lacks are added as spaces at once.
 
 ## Risks / Trade-offs
 
