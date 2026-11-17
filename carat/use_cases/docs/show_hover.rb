@@ -1,6 +1,7 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/hover_request"
 require_relative "../../domain/docs_text"
+require_relative "../../domain/markdown_text"
 require_relative "../../domain/display_width"
 require_relative "../../domain/buffer"
 require_relative "../../domain/window"
@@ -59,7 +60,7 @@ module Carat
         width = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
         width = WIDTH if width > WIDTH
         return if width < 1
-        docs = @format_docs.call(state, text, width, false)
+        docs = @format_docs.call(state, text, width, Domain::MarkdownText::RAW_LIMIT, Domain::MarkdownText::ROW_LIMIT)
         if docs.count == 0
           state.show(NO_INFORMATION, false)
           return

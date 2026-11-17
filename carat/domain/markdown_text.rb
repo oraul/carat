@@ -22,13 +22,19 @@ module Carat
     # character). A table (a header row, a separator row, and the rows
     # holding a pipe after it) is drawn by parse at the width as aligned
     # columns in borders from the icon set, its cells wrapped when it is
-    # wider, so wrap leaves its rows whole. parse keeps a span (Highlight
-    # group) for each heading, strong and emphasized run, code span, link
-    # text, and fenced row; wrap cuts them with the rows. gather joins a
-    # file's lines up to the raw cap. Runs of blank rows read as one, none
-    # leads or trails, and a row wider than the width wraps at its last
-    # space after text, or on a character boundary when it has none, never
-    # inside its prefix. One pass over the bytes, nothing recursive, so
+    # wider, so wrap leaves its rows whole; one the width cannot draw
+    # keeps each of its source lines its own row. The lines of a
+    # paragraph, and those of a quote at one depth and indentation, flow
+    # into one row until a blank line, another block, or a line ending
+    # in two spaces, and a wrapped row's prefix starts each of its
+    # continuation rows.
+    # parse keeps a span (Highlight group) for each heading, strong and
+    # emphasized run, code span, link text, and fenced row; wrap cuts
+    # them with the rows. gather joins a file's lines up to the raw cap.
+    # Runs of blank rows read as one, none leads or trails, and a row
+    # wider than the width wraps at its last space after text, or on a
+    # character boundary when it has none, never inside its prefix. One
+    # pass over the bytes, nothing recursive, so
     # nesting costs nothing beyond its cap.
     module MarkdownText
       RAW_LIMIT = 16_384
@@ -69,6 +75,11 @@ module Carat
         syntax = ""
         fenced = 0
         gap = false
+        flow = -1
+        flow_cols = 0
+        flowing = +""
+        flowing_row = -1
+        source = false
         len = body.bytesize
         start = 0
         while start <= len && doc.count < row_limit
@@ -78,6 +89,8 @@ module Carat
           start = stop + 1
           if fence?(line)
             code = !code
+            flow = -1
+            source = false
             if code
               fenced += 1
               syntax = fence_syntax(line)
@@ -89,18 +102,43 @@ module Carat
             if after >= 0
               start = after
               gap = false
+              flow = -1
               next
             end
+            source = after == -2 || (source && !opens_block?(line))
+          else
+            source = false
+          end
+          key = code || source ? -1 : flow_key(line)
+          if key >= 0 && key == flow && !gap
+            at = doc.count - 1
+            if flowing_row != at
+              flowing = +""
+              flowing << doc.line(at)
+              doc.last_line = flowing
+              flowing_row = at
+            end
+            piece = inline(line.byteslice(marker_end(line), line.bytesize).to_s, flow_cols + 1, doc, at).rstrip
+            unless piece.empty?
+              flowing << " "
+              flowing << piece
+              flow_cols += 1 + char_count(piece)
+            end
+            flow = line.end_with?("  ") ? -1 : key
+            next
           end
           at = gap ? doc.count + 1 : doc.count
           row = code ? "  " + line.rstrip : block(line, doc, at, set, raw_limit).rstrip
           if row.strip.empty?
             doc.drop_spans(at)
             gap = doc.count > 0
+            flow = -1
             next
           end
           doc.add_row("", "", 0) if gap
           gap = false
+          flow = key >= 0 && !line.end_with?("  ") ? key : -1
+          flow_cols = char_count(row) if flow >= 0
           if code
             doc.add_row(row, syntax, fenced)
             doc.add_span(at, 2, char_count(row), Highlight::MARKUP_RAW_BLOCK)
@@ -109,6 +147,66 @@ module Carat
           end
         end
         doc
+      end
+
+      # The flow key of a line outside code: its quote depth and
+      # indentation, both capped at NEST_LIMIT, as one number, so that a
+      # line with the key of the paragraph or quote row before it joins
+      # that row; -1 for a line that takes no part in a flow (blank or a
+      # bare quote marker, a thematic break, a heading, a list item, or a
+      # line indented four or more spaces, an indented code block or a
+      # verbatim example, which keeps its rows).
+      #: (String) -> Integer
+      def self.flow_key(line)
+        len = line.bytesize
+        i = 0
+        i += 1 while i < len && line.getbyte(i).to_i == 0x20
+        indent = i / 2
+        return -1 if indent >= 2
+        depth = 0
+        while i < len && line.getbyte(i).to_i == 0x3E
+          depth += 1
+          i += 1
+          i += 1 while i < len && line.getbyte(i).to_i == 0x20
+        end
+        return -1 if i >= len
+        rest = line.byteslice(i, len - i).to_s
+        return -1 if rule?(rest) || heading?(rest) || item?(rest)
+        depth = NEST_LIMIT if depth > NEST_LIMIT
+        indent = NEST_LIMIT if indent > NEST_LIMIT
+        depth * (NEST_LIMIT + 1) + indent
+      end
+
+      # The byte after a line's leading spaces and quote markers, each
+      # marker's spaces included.
+      #: (String) -> Integer
+      def self.marker_end(line)
+        len = line.bytesize
+        i = 0
+        i += 1 while i < len && (line.getbyte(i).to_i == 0x20 || line.getbyte(i).to_i == 0x3E)
+        i
+      end
+
+      # Whether the text opens a list item: a -, *, or + and a space, or
+      # digits and a . or ) and a space.
+      #: (String) -> bool
+      def self.item?(text)
+        mark = text.getbyte(0).to_i
+        return text.getbyte(1).to_i == 0x20 if mark == 0x2D || mark == 0x2A || mark == 0x2B
+        i = 0
+        i += 1 while i < 9 && text.getbyte(i).to_i >= 0x30 && text.getbyte(i).to_i <= 0x39
+        return false if i == 0
+        stop = text.getbyte(i).to_i
+        (stop == 0x2E || stop == 0x29) && text.getbyte(i + 1).to_i == 0x20
+      end
+
+      # Whether a line after a table's rows opens another block, which
+      # ends the table: after its leading spaces a quote marker, a
+      # heading, a list item, or a fence.
+      #: (String) -> bool
+      def self.opens_block?(line)
+        rest = line.lstrip
+        rest.getbyte(0).to_i == 0x3E || heading?(rest) || item?(rest) || fence?(line)
       end
 
       # The rows of a parsed text wrapped at width cells, their spans cut
@@ -154,9 +252,12 @@ module Carat
       # row starts at byte start of body, its rows drawn into the document
       # at width cells, after a blank row when gap is set; -1, nothing
       # added, when the next line is no separator row of as many cells as
-      # the header or the width cannot give each column CELL_MIN cells.
-      # Its rows are the lines holding a pipe after the separator, at most
-      # row_limit of them counted with the header.
+      # the header, and -2, nothing added, when it is one but the width
+      # cannot give each column CELL_MIN cells, so parse keeps the header
+      # and each line holding a pipe after it its own row, unflowed.
+      # Its rows are the lines holding a pipe after the separator up to one
+      # that opens another block, at most row_limit of them counted with
+      # the header, and no row is added past row_limit.
       #: (String, Integer, String, DocsText, String, Integer, Integer, Integer, bool) -> Integer
       def self.table(body, start, line, doc, set, raw_limit, row_limit, width, gap)
         len = body.bytesize
@@ -164,9 +265,10 @@ module Carat
         stop = line_end(body, start)
         aligns = alignments(ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit))
         cols = aligns.length
-        return -1 if cols == 0 || (CELL_MIN + 3) * cols + 1 > width
+        return -1 if cols == 0
         head = split_cells(line)
         return -1 unless head.length == cols
+        return -2 if (CELL_MIN + 3) * cols + 1 > width
         scratch = DocsText.new
         cells = add_cells(head, cols, Array.new(0, ""), scratch)
         rows = 1
@@ -174,12 +276,12 @@ module Carat
         while start <= len && rows < row_limit
           stop = line_end(body, start)
           text = ControlText.line(body.byteslice(start, stop - start).to_s, raw_limit)
-          break unless text.include?("|")
+          break if !text.include?("|") || opens_block?(text)
           cells = add_cells(split_cells(text), cols, cells, scratch)
           rows += 1
           start = stop + 1
         end
-        doc.add_row("", "", 0) if gap
+        doc.add_row("", "", 0) if gap && doc.count < row_limit
         draw_table(cells, aligns, rows, doc, set, row_limit, width)
         start
       end
@@ -292,7 +394,7 @@ module Carat
         cols = aligns.length
         widths = column_widths(cells, cols, width)
         box = box(set)
-        doc.add_row(border(widths, box, BOX_TOP), "", 0)
+        doc.add_row(border(widths, box, BOX_TOP), "", 0) if doc.count < row_limit
         r = 0
         while r < rows && doc.count < row_limit
           draw_row(cells, r * cols, aligns, widths, doc, box, row_limit)
@@ -784,12 +886,36 @@ module Carat
         i
       end
 
+      # The prefix the continuation rows of a wrapped row start with: the
+      # row's prefix, its leading spaces and bars kept and its bullet read
+      # as two spaces, so the text hangs under its first word.
+      #: (String, String) -> String
+      def self.hang(prefix, set)
+        bullet = bullet(set)
+        out = +""
+        len = prefix.bytesize
+        i = 0
+        while i < len
+          if prefix.byteslice(i, bullet.bytesize).to_s == bullet
+            out << "  "
+            i += bullet.bytesize
+          else
+            size = Utf8.size_at(prefix, i, len)
+            out << prefix.byteslice(i, size).to_s
+            i += size
+          end
+        end
+        out
+      end
+
       # The rows with the document's row added, wrapped at width cells:
       # at its last space before the width that follows text of the
       # segment, or on a character boundary when it has none, each piece
       # with the row's spans cut to it. The row's prefix (its leading
       # spaces, bars, and bullet) is not text, so a code indent, a bullet,
-      # or a bar is never left alone on a row.
+      # or a bar is never left alone on a row; outside fenced code each
+      # piece after the first starts with the prefix as hang gives it,
+      # while that takes less than half the width.
       #: (DocsText, Integer, Integer, DocsText, String, Integer) -> DocsText
       def self.wrapped(doc, row, width, out, set, row_limit)
         text = doc.line(row)
@@ -801,6 +927,13 @@ module Carat
           return out
         end
         prefix = prefix_size(text, set)
+        hanging = fenced == 0 ? hang(text.byteslice(0, prefix).to_s, set) : ""
+        hang_cells = DisplayWidth.text_width(hanging, 0)
+        if hang_cells * 2 >= width
+          hanging = ""
+          hang_cells = 0
+        end
+        hang_chars = char_count(hanging)
         start = 0
         start_col = 0
         used = 0
@@ -816,14 +949,16 @@ module Carat
             at_space = space > start
             cut = at_space ? space : i
             cut_col = at_space ? space_col : col
-            at = out.add_row(text.byteslice(start, cut - start).to_s.rstrip, syntax, fenced)
-            out.copy_spans(doc, row, start_col, cut_col, at)
+            piece = text.byteslice(start, cut - start).to_s.rstrip
+            hung = start > 0 && !hanging.empty?
+            at = out.add_row(hung ? hanging + piece : piece, syntax, fenced)
+            out.copy_spans(doc, row, start_col, cut_col, at, hung ? hang_chars : 0)
             return out if out.count >= row_limit
             start = at_space ? space + 1 : i
             start_col = at_space ? space_col + 1 : col
             i = start
             col = start_col
-            used = 0
+            used = hang_cells
             space = -1
             seen = false
             next
@@ -842,8 +977,10 @@ module Carat
           col += 1
         end
         if start < len
-          at = out.add_row(text.byteslice(start, len - start).to_s, syntax, fenced)
-          out.copy_spans(doc, row, start_col, col, at)
+          piece = text.byteslice(start, len - start).to_s
+          hung = start > 0 && !hanging.empty?
+          at = out.add_row(hung ? hanging + piece : piece, syntax, fenced)
+          out.copy_spans(doc, row, start_col, col, at, hung ? hang_chars : 0)
         end
         out
       end

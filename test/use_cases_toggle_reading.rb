@@ -156,6 +156,12 @@ module UseCasesToggleReadingTest
     boxed.type("<Space>dr")
     t.assert_equal(["+-------+-----------+-------+", true, true], [boxed.lines[0], ascii?(boxed.lines.join), ascii?(boxed.screen.join)], "under ascii the tables' borders are +, -, and |, and the screen holds no box character")
 
+    # markdown-reading-c, scenarios "A two-line paragraph at 60 columns"
+    # and "A two-line quote at 60 columns".
+    flowing = session("flow.md", "A paragraph its author\nwrapped at a short measure.\n\n> A quote written\n> on two lines.\n", 60)
+    flowing.type("<Space>dr")
+    t.assert_equal("A paragraph its author wrapped at a short measure.||│ A quote written on two lines.", view(flowing), "a 60-column window shows a two-line paragraph and a two-line quote each as one row")
+
     t.finish
   end
 end

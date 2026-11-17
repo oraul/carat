@@ -57,6 +57,13 @@ module Carat
         texts.length - 1
       end
 
+      # Makes text the last row's text: MarkdownText.parse hands it a
+      # copy of the row it then grows in place as a paragraph flows.
+      #: (String) -> void
+      def last_line=(text)
+        texts[texts.length - 1] = text
+      end
+
       # Adds a span of the row over the columns [from, to), when it holds
       # any.
       #: (Integer, Integer, Integer, Integer) -> void
@@ -78,9 +85,9 @@ module Carat
       end
 
       # Adds to row at the spans of the source's row cut to the columns
-      # [from, to), moved to start at from.
-      #: (DocsText, Integer, Integer, Integer, Integer) -> void
-      def copy_spans(source, row, from, to, at)
+      # [from, to), moved to start at from plus shift.
+      #: (DocsText, Integer, Integer, Integer, Integer, Integer) -> void
+      def copy_spans(source, row, from, to, at, shift)
         quads = source.spans
         i = 0
         while i + 3 < quads.length
@@ -89,7 +96,7 @@ module Carat
             high = low + quads[i + 2]
             low = from if low < from
             high = to if high > to
-            add_span(at, low - from, high - from, quads[i + 3]) if low < high
+            add_span(at, low - from + shift, high - from + shift, quads[i + 3]) if low < high
           end
           i += 4
         end

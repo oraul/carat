@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 12
 
-1. `markdown-reading-c` (T2 user now-request, feature, estimated small, S11, carried): at 60 columns paragraphs and quotes show ragged (`carat/domain/markdown_text.rb`). Folds: a pipe line right after a table stays a row (`:177`, sprint-10 note 6), the table row-cap overrun (`:182`), `carat/use_cases/docs/format_docs.rb:33` bool literals. Accepted when a two-line paragraph and quote each flow as one at 60 columns, allocations held. Backlog: "### MarkdownText.parse overruns its row cap with a table".
-2. `lsp-container` (T2 user request, feature, estimated medium, pushed back 2, S12): only `language.<name>.lsp` (`config/default.caratrc:749`) names a server. A user-file line `language.<name>.lsp.root ROOT COMMAND...` runs that command as written, no shell, as the server under ROOT; carat ends only its server process; a project's `.caratrc` names no program. Accepted when a test shows the root's command under ROOT, the default elsewhere, the project file's line refused, quit and :LspRestart ending only the server. Backlog: none.
+1. `lsp-container` (T2 user request, feature, estimated medium, pushed back 2, S12): only `language.<name>.lsp` (`config/default.caratrc:749`) names a server. A user-file line `language.<name>.lsp.root ROOT COMMAND...` runs that command as written, no shell, as the server under ROOT; carat ends only its server process; a project's `.caratrc` names no program. Accepted when a test shows the root's command under ROOT, the default elsewhere, the project file's line refused, quit and :LspRestart ending only the server. Backlog: none.
 
 ## Pool
 
@@ -44,10 +43,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): no periodic finding at 8 or above unfixed; sprint-11 Medium (4), Low (3) under 8, none disputed.
-- `git-signs-status-b` (T2 user request, S11 by the user) delivered, removed from Sprint 12; `markdown-reading-c`, `lsp-container` (T2) stay, 2 features left.
-- Estimated medium: git-signs-status-a 1,124,717 total, 104 min; last 10 feature rows 775,758 to 1,284,000, 51 to 169 min.
-- Size check: 4 acceptance parts, within about four, not split; git-signs-status-a quality 0 first pass, rework 1.
-- `git-signs-transport` (T3, Medium (4) below 8, `plugin.rb:27`) stays in the backlog lane; this change only matches BRANCH's arguments.
-- sprint-11-records retro notes 8 (bench 3,791/7 calls), 9 (reviews 41.0% of output), 10 (groom 22 counted, 20 removed): T1 pipeline, left to the backlog lane's plan.
-- Pool unchanged.
+- Security first clear (T0): git-signs-status-b security high=0 medium=0 low=0; no periodic review pending; sprint-11 Medium (4), Low (3) under 8, none disputed.
+- `markdown-reading-c` (T2 user now-request) delivered as written, removed from Sprint 12; `lsp-container` (T2) stays, 1 feature left.
+- Estimate medium, not small: no feature row under small's 500,000/25 min; same file markdown-reading-b 817,671/60, markdown-reading-a 1,035,751/74 (quality 0 first pass).
+- Size check: 4 fixes (paragraph and quote flow, pipe line after a table, row cap, bool literals), within about four, not split; no `tools/rules.sh` edit.
+- git-signs-status-b overrun note 8: check passed at 230,711 output against medium's 200,000; total 757,631, 88 min.
+- git-signs-status-b retro notes 9 (check 57,747 output), 10 (resumed phases 0 tokens), 11 (quality 62/123 first pass): T1 pipeline, to this change's findings for the backlog lane.
+- git-signs-status-b quality notes 1 to 7 handled already; pool unchanged.

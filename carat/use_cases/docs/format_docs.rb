@@ -15,10 +15,11 @@ module Carat
     # disabled by the plugin guard and the rest of its block stays plain
     # code. The lines are tokenized whole, then wrapped with their spans;
     # a table is drawn at the width as it is parsed.
-    # The bullets, bars, and rules are those of option.icons, and reading
-    # chooses the caps: a file's reading view (ToggleReading) reads up to
-    # MarkdownText::READING_RAW_LIMIT bytes into READING_ROW_LIMIT rows, the
-    # documentation floats (ShowHover, ShowCompletionDocs) the docs caps.
+    # The bullets, bars, and rules are those of option.icons, and the
+    # caller names the caps: a file's reading view (ToggleReading) reads
+    # up to MarkdownText::READING_RAW_LIMIT bytes into READING_ROW_LIMIT
+    # rows, the documentation floats (ShowHover, ShowCompletionDocs)
+    # RAW_LIMIT bytes into ROW_LIMIT rows.
     class FormatDocs
       INDENT = 2
       private_constant :INDENT
@@ -30,11 +31,9 @@ module Carat
         @syntax = syntax
       end
 
-      #: (Domain::EditorState, String, Integer, bool) -> Domain::DocsText
-      def call(state, text, width, reading)
+      #: (Domain::EditorState, String, Integer, Integer, Integer) -> Domain::DocsText
+      def call(state, text, width, raw_limit, row_limit)
         set = state.options.icons
-        raw_limit = reading ? Domain::MarkdownText::READING_RAW_LIMIT : Domain::MarkdownText::RAW_LIMIT
-        row_limit = reading ? Domain::MarkdownText::READING_ROW_LIMIT : Domain::MarkdownText::ROW_LIMIT
         doc = Domain::MarkdownText.parse(text, set, raw_limit, row_limit, width)
         highlight(doc) if state.options.syntax_on
         Domain::MarkdownText.wrap(doc, width, set, row_limit)
