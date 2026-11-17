@@ -10,4 +10,4 @@
 
 ## 3. Documents
 
-- [ ] 3.1 Update `docs/codebase-map.md` area 3 (the new file, the config check) and the README language paragraph; verify `make docs-lint` and `make gates` pass
+- [x] 3.1 Update `docs/codebase-map.md` area 3 (the new file, the config check) and the README language paragraph; verify `make docs-lint` and `make gates` pass
