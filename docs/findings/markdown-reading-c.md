@@ -40,3 +40,8 @@
 - Location: the quality review's blocking findings across the lane histories (git-signs-status-b retro note 11).
 - Why: quality first pass 62/123 against 117/124 or better for every other gate; first.quality 0 on git-signs-status-a and git-signs-status-b (plugin state keyed by buffer id with no rename case); the fix round took output from 164,154 to 342,779, over medium's 200,000.
 - Fix: find what the blocking findings of the last ten quality first-pass failures share and remove the cause upstream; accepted when quality first pass reaches 7 of the next 10 runs.
+
+### A merge that fails on a moved main has no push path
+- Location: tools/run_state.sh push_branch and .claude/workflows/deliver-change.js merge loop
+- Why: a green pull request behind a moved, conflicting main stopped the run, since push --ci-fix needs a red CI
+- Fix: let the merge loop run merge-main and push it as a main-moved push, counted once
