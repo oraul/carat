@@ -9,7 +9,7 @@ Sprint 12 closed with its changes merged (`checks-and-pr-lows`, `git-signs-statu
 - `sh tools/run_state.sh history sprint-12-records` appends the pending history rows of both lanes: `lsp-container` and `planner-split-rule`, each to its lane's `docs/metrics-*.tsv`.
 - `sh tools/run_state.sh groom sprint-12-records` applies the sprint-12 plan: removes the 13 headings of `build/plan/groom.txt` (all listed by merged items) from `docs/backlog.md`, folds the seven findings files under `docs/findings/` into it and removes them, appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-12 row to `docs/sprints.tsv`.
 
-Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes.
+Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes beyond the one backticked path of a removed findings file that `make docs-lint` refuses (design.md, Decisions).
 
 Assumptions:
 

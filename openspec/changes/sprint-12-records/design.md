@@ -6,12 +6,12 @@
 
 ## Goals / Non-Goals
 
-Goals: apply the sprint-12 plan once, with the history rows it needs. Non-goals: any code or tool change; grooming the backlog beyond the plan's `groom.txt`; editing what `groom` writes.
+Goals: apply the sprint-12 plan once, with the history rows it needs. Non-goals: any code or tool change; grooming the backlog beyond the plan's `groom.txt`; editing what `groom` writes beyond the one line `make docs-lint` refuses.
 
 ## Decisions
 
 - Run `history` before `groom`, as `groom` refuses a sprint with fewer history rows than its size.
-- Commit `groom`'s output as written, provided `make docs-lint` passes on it (every backticked path exists, every queue item has a tier and a size).
+- Commit `groom`'s output as written but for one line: a folded finding names the findings file `groom` removes in backticks, so `make docs-lint` fails on a path that no longer exists; that line names the file in prose instead, as in sprint 10.
 
 ## Risks / Trade-offs
 

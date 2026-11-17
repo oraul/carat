@@ -6711,7 +6711,7 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 
 ### The package step appends the planner's findings twice
 - Location: the package step's findings append, `tools/run_state.sh` plan-apply (markdown-reading-c retro note 19).
-- Why: 14 lines of `docs/findings/markdown-reading-c.md` repeated (commit 1fc49d8), raised by 2 quality advisories in a run with quality first pass 0 and rework 3.
+- Why: 14 lines of the markdown-reading-c findings file (since folded here) repeated (commit 1fc49d8), raised by 2 quality advisories in a run with quality first pass 0 and rework 3.
 - Fix: accepted when a tools-test case runs the append twice on one change and the second leaves the file unchanged.
 
 ### A merge refused on a moved main costs a full resume and a CI failure
