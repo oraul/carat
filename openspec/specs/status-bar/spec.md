@@ -71,7 +71,7 @@ The mode pill SHALL be drawn in `StatusLineModeNormal` in normal and operator-pe
 - **THEN** the pill's cells carry the group of that mode
 
 ### Requirement: The slots' colors follow their kind and state
-The diagnostics counts SHALL be drawn in `DiagnosticError`, `DiagnosticWarn`, `DiagnosticInfo`, and `DiagnosticHint`, the `lsp` slot in `StatusLineLspStarting` while starting or indexing, `StatusLineLspReady` when ready, `StatusLineLspError` when crashed, and `StatusLine` when stopped or untrusted, and every other segment in `StatusLine`.
+The diagnostics counts SHALL be drawn in `StatusLineDiagnosticError`, `StatusLineDiagnosticWarn`, `StatusLineDiagnosticInfo`, and `StatusLineDiagnosticHint`, the status bar's count groups, on the bar's background, the `lsp` slot in `StatusLineLspStarting` while starting or indexing, `StatusLineLspReady` when ready, `StatusLineLspError` when crashed, and `StatusLine` when stopped or untrusted, and every other segment in `StatusLine`.
 
 #### Scenario: A row per state
 - **WHEN** the bar is drawn with the server in each state and with a count of each kind
