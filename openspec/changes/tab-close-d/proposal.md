@@ -31,6 +31,6 @@ Out of scope: changing `open_as_tab` or `open_in_tab` in the host; keeping the t
 - `carat/plugins/explorer/plugin.rb` (`open_path`, the `t` decision and its comments), `carat/plugins/finder/plugin.rb` (`open_path`, the action description, the header comment).
 - Tests: `test/editor_tab_flows.rb` (flows for `t` from a lone tree and the finder's `<C-t>` under both values), `test/editor_finder.rb` (the `<C-t>` rows under both values), `test/editor_explorer.rb` if a row expects the old behavior.
 - Docs: `docs/actions.md` (the finder's `open_tab` row), `docs/plugins.md` (the `open_as_tab` row's mention of the finder's `<C-t>`).
-- README.md: unchanged, it does not describe the explorer's `t` or the finder's `<C-t>`.
+- README.md: updated, its finder line says `<C-t>` opens a buffer tab or a tab page as `option.gt` sets.
 - docs/architecture.md: unchanged, section 9 does not describe these keys; the specs are the contract.
 - CLAUDE.md: unchanged, no process changes.
