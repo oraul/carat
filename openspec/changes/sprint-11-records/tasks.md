@@ -7,4 +7,4 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
+- [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
