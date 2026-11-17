@@ -14,7 +14,7 @@ Fixes four search bugs: incsearch now keeps the cursor on a character, `~` in a 
 - Refactor the prompt's search for the end of the pattern to use the compiler's own collection scan (`VimPattern.collection_close`), so a `\]` or a leading `]` in a collection no longer ends the pattern at a `/` inside it
 - Refactor the split of a typed search into pattern and offset into `DelimitedPattern.typed`, and the prompt character into `SearchPrompt.prefix_of`, each written once and used by both `FindMatch` and `PreviewSearch`
 - Add rows to `test/editor_search.rb`, `test/editor_global.rb`, and `test/domain_vim_pattern.rb` for the incsearch clamp, `~` with and without a previous substitute, `^^`, and where the pattern ends for each collection form, with their snapshots
-- Add the search spec requirements for these cases, and document them in the README patterns line, the compatibility pattern paragraph and its Differences from Neovim paragraph, and the code map entries
+- Add the search spec requirements for these cases, and document them in the README patterns line, the compatibility pattern paragraph and its substitute differences, and the code map entries
 - Record the backlog-lane queue, its metrics history row, and the planner's carried backlog entries in `docs/findings/motions-search-tidy.md`
 
 ---
@@ -31,4 +31,4 @@ Fixes four search bugs: incsearch now keeps the cursor on a character, `~` in a 
 
 ## Notes
 
-The `~` string is the one in effect when the pattern was compiled, so `n` after a later substitute keeps the earlier string until the pattern is typed again or recompiled by `:set ic` or `:set scs`; Neovim reads the current string on every use, and the compatibility doc now lists this difference. The quality advisory about the four `compile_search` calls that each unpack `LastSubstitute` is a style suggestion and was dropped, not carried. The incsearch budget per key, the sentence-motion rescan, the ASCII length charge, the one-character slices, the motions' whole-state parameter, the noh row, and the sweep tidy items are left to `motions-search-tidy-b` and `motions-search-tidy-c`.
+The `~` string is the one in effect when the pattern was compiled, so `n` after a later substitute keeps the earlier string until the pattern is typed again or recompiled by `:set ic` or `:set scs`; Neovim reads the current string on every use, a difference the archived proposal records. Two quality advisories were dropped, not carried, being style and docs advisories: the four `compile_search` calls that each unpack `LastSubstitute`, and adding that `~` difference to the compatibility doc, whose note was reverted in packaging since it changed a reviewed file after the check and the security review. The incsearch budget per key, the sentence-motion rescan, the ASCII length charge, the one-character slices, the motions' whole-state parameter, the noh row, and the sweep tidy items are left to `motions-search-tidy-b` and `motions-search-tidy-c`.
