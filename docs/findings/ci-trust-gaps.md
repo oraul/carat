@@ -14,3 +14,7 @@
 - Location: tools/tools_test.sh:157 (the case an unpinned git would run the replaced gates past fsck)
 - Why: the case sends the line's output to /dev/null and only cats the checked-out gates.sh, so it proves the worktree add followed the replace ref, not that fsck passed and the planted gates ran.
 - Fix: assert the line's own output, sh -c "$2" 2>/dev/null expecting ^planted$, instead of the cat.
+### The benchmark runs on a diff that touches no code (retro, third recording)
+- Location: `.claude/workflows/deliver-change.js`, the bench phase start.
+- Why: sprint-14-records spent 4,178 of 32,743 output tokens (12.8%) and 8 of 68 calls on bench for allocations all equal to main's and a us.insert 24% warning on a docs-only diff; over sprint-10 to sprint-14 records bench took 33,140 of 203,003 output tokens (16.3%) and 37 calls, first pass in all five; recorded before as sprint-12-records note 4 and sprint-13-records note 6.
+- Fix: start no benchmark agent when the diff touches nothing under `carat/`, `bench/`, or `test/`, the row carrying main's recorded allocations and rounds; accepted when the next records row shows no bench phase and main's allocs and rounds.
