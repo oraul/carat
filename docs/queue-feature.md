@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 13
 
-1. `lsp-container-b` (T2 user request, feature, estimated medium, pushed back 2): part b of `lsp-container` (#171). Quit and :LspRestart may end more than the server carat started; `command?` (`carat/adapters/json_rpc_language_gateway.rb:318`) runs each idle tick while a filetype has no server and scans about 760 configuration lines twice (`root_line`, `:341`). Fix outline: end only the process carat spawned; settle a language's command once, as `trusted?` keeps its answer. Accepted when a test shows quit and :LspRestart ending only the server and an idle tick with no server reading no configuration line, allocations held. Backlog: "### The language server gateway rescans every configuration line for a rooted command on each idle tick".
-2. `palette-narrow` (T2 user now-request regression, feature, estimated medium): below about 14 cells of float a row shows only its key, `label_room` being `width - KEY_WIDTH` (`carat/use_cases/discovery/follow_palette.rb:166`); `styles` never reads `cut` (`:187`, call `:144`); `pad` adds one space per pass (`:296`); `docs/codebase-map.md:169` names DisplayWidth.fit. Fix outline: room for a label at the narrowest width, `cut` read or dropped, one padding step, the map entry corrected. Accepted when a table row at the smallest screen shows a label. Backlog: "### Palette rows below about 14 cells show only the key", "### FollowPalette#styles never reads its cut parameter", "### The palette's pad appends one space per loop pass", "### The follow_palette map entry names DisplayWidth.fit".
-3. `bar-colors` (T2 user now-request, feature, estimated medium): at 16 colors the lsp accents 3 and 2 on PANEL 7 read near 1.5:1 (`carat/domain/themes.rb:212`); the diagnostics counts draw on NONE (`carat/adapters/status_bar.rb:243`), not the bar. Fix outline: accents readable on the bar, counts on its background. Accepted when `test/domain_theme.rb` asserts both. Backlog: "### The lsp accents at 16 colors read poorly on the light gray bar", "### The status bar's diagnostics counts draw on the terminal's background".
+1. `palette-narrow` (T2 user now-request regression, feature, estimated medium): below about 14 cells of float a row shows only its key, `label_room` being `width - KEY_WIDTH` (`carat/use_cases/discovery/follow_palette.rb:166`); `styles` never reads `cut` (`:187`, call `:144`); `pad` adds one space per pass (`:296`); `docs/codebase-map.md:169` names DisplayWidth.fit. Fix outline: room for a label at the narrowest width, `cut` read or dropped, one padding step, the map entry corrected. Accepted when a table row at the smallest screen shows a label. Backlog: "### Palette rows below about 14 cells show only the key", "### FollowPalette#styles never reads its cut parameter", "### The palette's pad appends one space per loop pass", "### The follow_palette map entry names DisplayWidth.fit".
+2. `bar-colors` (T2 user now-request, feature, estimated medium): at 16 colors the lsp accents 3 and 2 on PANEL 7 read near 1.5:1 (`carat/domain/themes.rb:212`); the diagnostics counts draw on NONE (`carat/adapters/status_bar.rb:243`), not the bar. Fix outline: accents readable on the bar, counts on its background. Accepted when `test/domain_theme.rb` asserts both. Backlog: "### The lsp accents at 16 colors read poorly on the light gray bar", "### The status bar's diagnostics counts draw on the terminal's background".
 
 ## Pool
 
@@ -31,10 +30,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): sprint-12 review security Low (5) only, sweep pass high=0 medium=0 low=3 (6, 5, 4), none at 8, none disputed.
-- Sprint 13: 3 features, 2 backlog; `lsp-container-b`, `palette-narrow`, `bar-colors` (T2, UI now-requests first by goal 1), pool 1 to 3 in order.
-- Estimate medium for all three: no feature row of the last 10 under small's 500,000 (757,631 lowest); markdown-reading-c 1,902,958/117 over 1,200,000, git-signs-status-b 757,631 under, so not two over.
-- `lsp-container-b` takes lsp-container quality advisory 2 (idle tick, about 760 lines twice), 2 parts; the not-a-root report (advisory 4) is `lsp-container-c`, a third part kept apart by the split rule.
-- Sprint-12 notes 10 and sweep 34 (markdown_text.rb:160, :176) fold into `markdown-reading-d`, the same file.
-- S13 tags of `vim-line-commands`, `vim-folds` (now 2), `plugin-protocol-a`, `formatting`, `ux-pass-2` move to S14: 3 T2 UI now-requests go first.
-- Sweep Low (4) `config.rb:236` folds into `project-config-guards` (T3), its domain; sweep note 31 into `bench-scenarios`.
+- Security first clear (T0): sprint-12 security Low (5) only, sweep high=0 medium=0; no pending run holds a review.periodic note; nothing at 8, nothing disputed.
+- `lsp-container-b` delivered as written (T2 user request, Sprint 13 item 1, pushed back 2): 2 parts, under the split rule's 3; removed, `palette-narrow` and `bar-colors` follow in order.
+- Estimate medium: last 10 feature rows 757,631 to 1,902,958 total, all medium; part a `lsp-container` 802,117 in 47.0 min; of the last two only markdown-reading-c (1,902,958) went over, so no size up.
+- `lsp-container-c` stays pool 1 (T2, small): the gateway's third part, kept apart by the split rule.
+- sprint-12-records retro notes 4 (bench 15,099 of 127,367 output tokens over 3 docs-only records runs) and 5 (groom hand edits 2 of 3 records runs, 3 of 3 advisories on its output) are T1 pipeline: backlog lane, not this one, so to this plan's `backlog.md`.
+- Sprint-12-records quality-advisory notes 1 to 3 are handled already (quality-* notes); no other pending note.
