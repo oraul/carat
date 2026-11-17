@@ -4,18 +4,20 @@ require_relative "../../plugin_api"
 module Carat
   module UseCases
     # One registered plugin: the plugin object, its manifest, its name,
-    # whether it is enabled, why it is not ("" while it is), the host it
-    # receives at activation, its resolved options as text, the events it
+    # whether it is enabled, why it is not ("" while it is), whether its
+    # activate ran (a plugin activates on its first trigger, not at
+    # startup), the host it receives at activation, its resolved options as text, the events it
     # subscribed to and its option types, both as names (a manifest may
     # spell them as symbols), and its priority, the registration position
     # from 0, which orders its signs, and the filetypes it tokenizes. A
     # Struct record: mutable, with a reader and a writer per member.
-    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :link, :options, :events, :option_types, :priority, :filetypes, keyword_init: true)
+    class PluginEntry < Struct.new(:plugin, :manifest, :name, :enabled, :reason, :active, :link, :options, :events, :option_types, :priority, :filetypes, keyword_init: true)
       # @rbs @plugin: PluginApi::Plugin
       # @rbs @manifest: PluginApi::Manifest
       # @rbs @name: String
       # @rbs @enabled: bool
       # @rbs @reason: String
+      # @rbs @active: bool
       # @rbs @link: PluginApi::Host?
       # @rbs @options: Hash[String, String]
       # @rbs @events: Array[String]
@@ -34,6 +36,7 @@ module Carat
         self.name = name
         self.enabled = true
         self.reason = ""
+        self.active = false
         self.link = nil
         self.options = {}
         self.events = []
@@ -56,6 +59,16 @@ module Carat
       #: (String) -> bool
       def tokenizes?(filetype)
         filetypes.include?(filetype)
+      end
+
+      # Whether the plugin declares no trigger of its own: no action (so
+      # no key either), no ex command, and no filetype. Such a plugin is
+      # activated when the editor is first idle after the first frame.
+      #: () -> bool
+      def wakes_when_idle?
+        actions = manifest.actions
+        commands = manifest.commands
+        (!actions.is_a?(Hash) || actions.empty?) && (!commands.is_a?(Hash) || commands.empty?) && filetypes.empty?
       end
 
       # Whether the plugin subscribed to the event.

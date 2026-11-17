@@ -39,8 +39,10 @@ require_relative "../../domain/trusted_roots"
 
 module Carat
   module UseCases
-    # The plugin host as the rest of the editor sees it: it registers and
-    # activates the compiled plugins, routes plugin actions, ex commands,
+    # The plugin host as the rest of the editor sees it: it registers the
+    # compiled plugins and activates each on its first trigger (an action,
+    # an ex command, a buffer of its filetype, or, for a plugin with none
+    # of those, the first idle after the first frame), routes plugin actions, ex commands,
     # and prompt answers to them, and delivers events, through the
     # registry, the router, and the events it is built from; each plugin
     # gets a PluginLink over the four request families, and the plugins
@@ -67,6 +69,8 @@ module Carat
       attr_reader :syntax #: PluginSyntax
 
       # @rbs @router: PluginRouter
+      # @rbs @drawn: bool
+      # @rbs @woken: bool
 
       # The records, the window use cases, the path probe, and the runner
       # are the editor's own, built once by the assembly; the registry, the
@@ -89,6 +93,8 @@ module Carat
         @file_requests = FileRequests.new(files: files, processes: processes, probe_path: @probe_path, make_path: @make_path, rename_path: @rename_path, delete_path: @delete_path, list_tree: ListTree.new(files: files))
         @ui_requests = UiRequests.new(state: state, registry: @registry, files: files, plugin_ui: plugin_ui, input: input, runner: runner)
         @syntax = PluginSyntax.new(registry: @registry)
+        @drawn = false
+        @woken = false
       end
 
       # ------------------------------------------------------ registration
@@ -101,15 +107,47 @@ module Carat
         flush
       end
 
-      # Activates every registered plugin the configuration leaves enabled,
-      # first deciding whether their programs may run: the working
-      # directory is under a root of language.trusted_roots.
+      # Prepares every registered plugin the configuration leaves enabled,
+      # its options and bindings, without activating it, first deciding
+      # whether their programs may run: the working directory is under a
+      # root of language.trusted_roots.
       #: (Domain::Config) -> void
-      def activate_all(config)
+      def prepare_all(config)
         files = @file_requests.files
         @file_requests.trusted = Domain::TrustedRoots.cover?(config, files.cwd, files.home)
-        @registry.activate_all(config)
+        @registry.prepare_all(config)
         flush
+      end
+
+      # The editor is idle with no key waiting: the first time after a
+      # frame was drawn, activates every enabled plugin that declares no
+      # trigger of its own and delivers what it caused; true when one was
+      # activated, so the screen is drawn again. Later calls return at once.
+      #: () -> bool
+      def idle
+        return false if @woken || !@drawn
+        @woken = true
+        woke = @registry.wake_idle
+        flush
+        woke
+      end
+
+      # Whether the named plugin was activated.
+      #: (String) -> bool
+      def active?(name)
+        e = @registry.find(name)
+        !e.nil? && e.active
+      end
+
+      # Activates the named plugin now, as its first trigger would; true
+      # when it is enabled and active afterwards.
+      #: (String) -> bool
+      def activate(name)
+        e = @registry.find(name)
+        return false if e.nil?
+        done = @registry.activate(e)
+        flush
+        done
       end
 
       #: (Integer) -> PluginEntry
@@ -222,6 +260,7 @@ module Carat
       # The editor was drawn at a size: delivers resize when it changed.
       #: (Integer, Integer) -> void
       def resized(rows, cols)
+        @drawn = true
         @events.resized(rows, cols)
         flush
       end

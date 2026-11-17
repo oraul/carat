@@ -89,6 +89,8 @@ module UseCasesPluginFilesTest
     plugin = Fs.new
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [plugin])
     h.open("a.txt")
+    # The requests are called from the test, not by a trigger: activate it.
+    h.plugins.activate("fs")
     Session.new(h, plugin)
   end
 

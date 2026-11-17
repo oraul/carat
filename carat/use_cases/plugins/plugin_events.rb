@@ -136,6 +136,7 @@ module Carat
       # The editor was drawn at a size: queues resize when it changed.
       #: (Integer, Integer) -> void
       def resized(rows, cols)
+        @registry.resized(rows, cols)
         return if rows == @last_rows && cols == @last_cols
         @last_rows = rows
         @last_cols = cols
@@ -197,7 +198,7 @@ module Carat
         @queue << PendingEvent.new(event: event, cause: notice.cause)
       end
 
-      # Queues an event of the editor's own unless no enabled plugin
+      # Queues an event of the editor's own unless no active plugin
       # subscribes to it, so a key builds no event nobody would receive.
       #: (String, Domain::Buffer, Integer, Integer, String, String) -> void
       def queue(name, buffer, row, col, detail, cause)
@@ -211,21 +212,22 @@ module Carat
         i = 0
         while i < @registry.count
           e = @registry.entry(i)
-          return true if e.enabled && e.subscribed?(name)
+          return true if e.enabled && e.active && e.subscribed?(name)
           i += 1
         end
         false
       end
 
-      # Delivers one event to every enabled subscriber but its cause, in
-      # registration order.
+      # Delivers one event to every active subscriber but its cause, in
+      # registration order; a plugin not yet activated hears nothing and
+      # reads the state it needs in its activate.
       #: (PendingEvent) -> void
       def deliver(pending)
         event = pending.event
         i = 0
         while i < @registry.count
           e = @registry.entry(i)
-          if e.enabled && e.subscribed?(event.name) && pending.for?(e.name)
+          if e.enabled && e.active && e.subscribed?(event.name) && pending.for?(e.name)
             guarded(e) { e.plugin.on_event(event) }
           end
           i += 1

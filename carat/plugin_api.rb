@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 8
-    VERSION = "2.8"
+    MINOR = 9
+    VERSION = "2.9"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -850,8 +850,16 @@ module Carat
 
     # What a compiled plugin implements. manifest is required; the rest
     # do nothing unless overridden. The host calls activate once with the
-    # plugin's Host when the plugin is enabled, deactivate when the editor
-    # quits, on_event for every subscribed event, on_action for every
+    # plugin's Host on the plugin's first trigger, never at startup (from
+    # 2.9): the first action it declares (from a key bound to it or
+    # otherwise), the first ex command it declares, the first buffer of a
+    # filetype it declares that is highlighted, or, for a plugin that
+    # declares none of those, the first idle after the first frame. So
+    # activate reads the state it needs (the current buffer, the windows)
+    # through the host rather than waiting for events: events arrive only
+    # once the plugin is active. The host calls deactivate when the editor
+    # quits, if the plugin was activated, on_event for every subscribed
+    # event, on_action for every
     # action of the plugin, on_command for every ex command of the
     # plugin, on_input when a prompt the plugin opened ends,
     # on_prompt_change when a live prompt's text changed, and tokenize

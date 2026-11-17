@@ -42,6 +42,10 @@ ok   closing it focuses the one left
 ok   resize is delivered once per new size
 ok   quit is delivered once, then deactivate
 ok   the plugin was deactivated
+ok   events wait for activation: a plugin with an action hears nothing before its first trigger
+ok   its first action activates it, then runs
+ok   and it hears the events of later keys
+ok   a plugin never activated is not deactivated when the editor ends
 ok   a plugin subscribed to buffer_save alone hears nothing of edits or modes
 ok   but hears the save
 ok   read_buffer 0 reads the current buffer
@@ -106,4 +110,4 @@ ok   reads, stats, and icons too
 ok   the plugin has a float in each tab page, beside another plugin's
 ok   a disabled plugin's segment is dropped when it is disabled
 ok   a disabled plugin's floats are closed in every tab page and another plugin's float stays
-use_cases_plugins: 108 passed, 0 failed
+use_cases_plugins: 112 passed, 0 failed

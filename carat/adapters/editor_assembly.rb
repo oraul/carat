@@ -466,7 +466,7 @@ module Carat
         UseCases::JoinCommandHandler.register(@commands)
         UseCases::ShiftCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
-        @plugins.activate_all(value)
+        @plugins.prepare_all(value)
 
         @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui, search_prompt: @search_prompt, command_history: @command_history)
         @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
@@ -521,7 +521,7 @@ module Carat
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
-        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices)
+        @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices, plugins: @plugins)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end

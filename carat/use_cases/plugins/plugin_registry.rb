@@ -34,6 +34,8 @@ module Carat
       # @rbs @entries: PluginEntries
       # @rbs @errors: Array[String]
       # @rbs @causes: Array[String]
+      # @rbs @rows: Integer
+      # @rbs @cols: Integer
 
       #: (state: Domain::EditorState, buffers: Domain::BufferList, tabs: Domain::TabList, plugin_ui: Domain::PluginUi, keymap: Domain::Keymap, leader: String) -> void
       def initialize(state:, buffers:, tabs:, plugin_ui:, keymap:, leader:)
@@ -46,6 +48,8 @@ module Carat
         @entries = PluginEntries.new
         @errors = []
         @causes = []
+        @rows = 0
+        @cols = 0
       end
 
       #: () -> String
@@ -210,15 +214,17 @@ module Carat
         e
       end
 
-      # Activates every registered plugin the configuration leaves enabled:
-      # resolves its options, merges its default bindings into the keymap
-      # below the configuration's, and calls activate with its host. The
+      # Prepares every registered plugin the configuration leaves enabled,
+      # without activating it: resolves its options and merges its default
+      # bindings into the keymap below the configuration's, so its keys,
+      # ex commands, filetypes, and events are known from the manifest.
+      # The plugin is activated on its first trigger (activate). The
       # configuration's plugin lines are checked on the way: one naming no
       # registered plugin, a setting that is not plugin.<name>.<setting>,
       # an option the plugin does not declare, or a value of the wrong
       # kind is noted on the configuration.
       #: (Domain::Config) -> void
-      def activate_all(config)
+      def prepare_all(config)
         check_plugin_names(config)
         i = 0
         while i < count
@@ -227,8 +233,6 @@ module Carat
             if enabled_in?(config, e)
               e.options = resolve_options(config, e)
               merge_bindings(e)
-              link = e.link
-              guarded(e) { e.plugin.activate(link) } unless link.nil?
             else
               e.enabled = false
               e.reason = "disabled in the configuration"
@@ -238,13 +242,61 @@ module Carat
         end
       end
 
-      # Calls deactivate on every enabled plugin, as the editor ends.
+      # Activates the plugin on its first trigger, once: true when it is
+      # enabled and active afterwards, false when it is disabled or its
+      # activate raised, which disables it as any raise does. The flag is
+      # set before the call, so a plugin that triggers itself from its
+      # activate does not activate twice. A plugin subscribed to resize
+      # then hears the size the editor was last drawn at, the one state no
+      # request reads.
+      #: (PluginEntry) -> bool
+      def activate(e)
+        return false unless e.enabled
+        return true if e.active
+        e.active = true
+        link = e.link
+        guarded(e) { e.plugin.activate(link) } unless link.nil?
+        if e.enabled && @rows > 0 && e.subscribed?("resize")
+          size = PluginApi::Event.new(name: "resize", buffer: 0, window: 0, path: "", row: @rows, col: @cols, detail: "", removed: 0, inserted: 0)
+          guarded(e) { e.plugin.on_event(size) }
+        end
+        e.enabled
+      end
+
+      # The size the editor was drawn at, for the resize a plugin hears
+      # right after its activate.
+      #: (Integer, Integer) -> void
+      def resized(rows, cols)
+        @rows = rows
+        @cols = cols
+      end
+
+      # Activates every enabled plugin that declares no trigger of its own,
+      # as the editor is first idle after the first frame; true when one
+      # was activated.
+      #: () -> bool
+      def wake_idle
+        woke = false
+        i = 0
+        while i < count
+          e = entry(i)
+          if e.enabled && !e.active && e.wakes_when_idle?
+            activate(e)
+            woke = true
+          end
+          i += 1
+        end
+        woke
+      end
+
+      # Calls deactivate on every enabled plugin that was activated, as the
+      # editor ends.
       #: () -> void
       def deactivate_all
         i = 0
         while i < count
           e = entry(i)
-          guarded(e) { e.plugin.deactivate } if e.enabled
+          guarded(e) { e.plugin.deactivate } if e.enabled && e.active
           i += 1
         end
       end

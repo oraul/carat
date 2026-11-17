@@ -29,8 +29,9 @@ module Carat
       end
 
       # Runs a plugin.<name>.<action> action, with the count and register
-      # of the command, in the plugin that owns it; an action no enabled
-      # plugin declares is a failure to report.
+      # of the command, in the plugin that owns it, activating it on its
+      # first action (a key bound to the action comes here too); an action
+      # no enabled plugin declares is a failure to report.
       #: (String, Domain::Command) -> Outcome
       def action(name, command)
         state = @state
@@ -41,6 +42,7 @@ module Carat
         return Outcome.failure("Plugin #{plugin_name} is disabled") unless e.enabled
         actions = e.manifest.actions
         return Outcome.failure("Plugin #{plugin_name} has no action #{name}") unless actions.is_a?(Hash) && actions.key?(name)
+        return Outcome.none unless @registry.activate(e)
         cursor = state.cursor
         context = PluginApi::Context.new(count: command.count, register: command.register, buffer: state.buffer.id, window: state.window.id, path: state.buffer.path_text.dup, row: cursor.row, col: cursor.col)
         guarded(e) { e.plugin.on_action(name, context) }
@@ -54,12 +56,13 @@ module Carat
         !@registry.owner_of_command(name).nil?
       end
 
-      # Runs the ex command in the plugin that declared it; the plugin's
-      # own messages go through its requests, so the outcome is silent.
+      # Runs the ex command in the plugin that declared it, activating it on
+      # its first command; the plugin's own messages go through its requests, so the outcome is silent.
       #: (Domain::ExCommand) -> Outcome
       def command(ex_command)
         e = @registry.owner_of_command(ex_command.name)
         return Outcome.failure(Domain::Messages.not_an_editor_command(ex_command.name)) if e.nil?
+        return Outcome.success("") unless @registry.activate(e)
         call = PluginApi::Command.new(name: e.full_command(ex_command.name), bang: ex_command.bang, args: ex_command.args.dup)
         guarded(e) { e.plugin.on_command(call) }
         Outcome.success("")

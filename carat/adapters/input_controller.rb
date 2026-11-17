@@ -12,6 +12,7 @@ require_relative "../use_cases/definitions/show_definition"
 require_relative "../use_cases/docs/show_signature"
 require_relative "../use_cases/discovery/show_key_hints"
 require_relative "../domain/signature_request"
+require_relative "../use_cases/plugins/plugin_host"
 require_relative "key_decoder"
 
 module Carat
@@ -52,6 +53,7 @@ module Carat
       attr_reader :show_signature #: UseCases::ShowSignature
       attr_reader :signature #: Domain::SignatureRequest
       attr_reader :show_key_hints #: UseCases::ShowKeyHints
+      attr_reader :plugins #: UseCases::PluginHost
 
       # @rbs @decoder: KeyDecoder
       # @rbs @wait_until: Float
@@ -59,8 +61,9 @@ module Carat
       # @rbs @hint_at: Float
       # @rbs @hinting: bool
 
-      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_definition: UseCases::ShowDefinition, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest, show_key_hints: UseCases::ShowKeyHints, notices: Domain::Notices) -> void
-      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_definition:, show_signature:, signature:, show_key_hints:, notices:)
+      #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, decoder: KeyDecoder, handle_key: UseCases::HandleKey, input: Domain::InputState, start_screen: Domain::StartScreen, services: Ports::LanguageServicePort, show_completion: UseCases::ShowCompletion, show_hover: UseCases::ShowHover, show_definition: UseCases::ShowDefinition, show_signature: UseCases::ShowSignature, signature: Domain::SignatureRequest, show_key_hints: UseCases::ShowKeyHints, notices: Domain::Notices, plugins: UseCases::PluginHost) -> void
+      def initialize(terminal:, clock:, decoder:, handle_key:, input:, start_screen:, services:, show_completion:, show_hover:, show_definition:, show_signature:, signature:, show_key_hints:, notices:, plugins:)
+        @plugins = plugins
         @notices = notices
         @show_key_hints = show_key_hints
         @show_signature = show_signature
@@ -122,6 +125,10 @@ module Carat
             served = true
           end
           served = @notices.expire(@clock.now) || served if @notices.count > 0
+          # The first idle after the first frame activates the plugins that
+          # declare no trigger of their own (git_signs), so none of their
+          # work, git included, runs before the editor is on screen.
+          served = @plugins.idle || served
           return tick || served
         end
         start = @start_screen

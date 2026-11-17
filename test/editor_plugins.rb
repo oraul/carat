@@ -173,7 +173,7 @@ module EditorPluginsTest
       ["a spelling between the abbreviation and the name greets", ":Hell<CR>", "#{INFO} Hello, world! 1 buffer opened"],
       ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 1 buffer opened"],
       ["a partial abbreviation is unknown", ":He<CR>", "E492: Not an editor command: He"],
-      ["buffer opens are counted", ":e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
+      ["the first greeting loads the plugin, which counts the buffer open then and every open after", " hh:e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
       ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 1"],
       ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 1"],
       ["an unknown plugin action reports it", ":Nope<CR>", "E492: Not an editor command: Nope"]
@@ -355,14 +355,19 @@ module EditorPluginsTest
     files.put("a.txt", "one\ntwo\n")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
     h.open("a.txt")
-    t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event at startup disables the plugin")
+    t.assert_equal([false, true], [h.plugins.active?("boom"), h.plugins.enabled?("boom")], "a plugin with an action hears no event before its first trigger, so nothing raised at startup")
+    h.plugins.activate("boom")
+    h.type("l")
+    t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event once active disables the plugin")
     h.type(" kk")
-    t.assert_equal(["", [0, 0]], [h.message, h.cursor], "its binding went with it")
+    t.assert_equal(["", [0, 1]], [h.message, h.cursor], "its binding went with it")
     h.type("x")
-    t.assert_equal([["ne", "two"], ""], [h.lines, h.message], "the editor goes on editing")
+    t.assert_equal([["oe", "two"], ""], [h.lines, h.message], "the editor goes on editing")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
     h.assembly.plugins.register(Side.new)
     h.open("a.txt")
+    h.plugins.activate("boom")
+    h.type("l")
     t.assert_equal(true, h.plugins.enabled?("boom") == false, "the event plugin is off again")
 
     # Configuration problems are reported when the configuration loads, with

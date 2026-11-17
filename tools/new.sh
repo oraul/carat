@@ -387,6 +387,13 @@ module Carat
           Carat::PluginApi::Manifest.new(name: NAME, version: "0.1.0", api_version: Carat::PluginApi::VERSION, actions: { "plugin.@NAME@.run" => "TODO: what the action does" }, commands: {}, bindings: [], events: [], options: [], option_types: {}, filetypes: [])
         end
 
+        # Called once, on the plugin's first trigger, never at startup: the
+        # first run of an action it declares (a key bound to it included),
+        # of an ex command it declares, or the first buffer of a filetype it
+        # declares; with none of those, the first idle after the first
+        # frame. Events arrive only from then on, so read here the state
+        # the plugin needs (host.read_buffer(0) and the like) instead of
+        # waiting for an event that came before (docs/plugins.md).
         #: (Carat::PluginApi::Host) -> void
         def activate(host)
           @host = host

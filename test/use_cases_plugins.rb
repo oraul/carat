@@ -119,6 +119,12 @@ module UseCasesPluginsTest
   # A state over a.txt with b.txt and c.txt on disk, a keymap, and the host
   # over it with the given plugins registered and activated.
   def self.setup(plugins, lines)
+    build(plugins, lines, true)
+  end
+
+  # The same, the plugins activated before the start file opens when
+  # activate is true, as a trigger would, or left to their first trigger.
+  def self.build(plugins, lines, activate)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\n")
     files.put("b.txt", "zz\n")
@@ -152,7 +158,14 @@ module UseCasesPluginsTest
     config = Carat::Domain::Config.new
     config.read("~/.config/carat/caratrc", "language.trusted_roots /project\n", true)
     config.read(".caratrc", lines, false)
-    host.activate_all(config)
+    host.prepare_all(config)
+    if activate
+      i = 0
+      while i < host.count
+        host.activate(host.entry(i).name)
+        i += 1
+      end
+    end
     keymap.add_lines(["keymap.normal <leader>pp cursor.down"], " ", "")
     open_file.call(state, "a.txt")
     state.tab.layout.arrange(0, 0, 23, 80)
@@ -179,18 +192,18 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.8"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.8"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.9"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.9"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
-    minor = Probe.new("probe", "2.9", [], ACTIONS, {}, [])
+    minor = Probe.new("probe", "2.10", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.9, the host has 2.8"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    t.assert_equal([false, "needs API 2.10, the host has 2.9"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.8"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.9"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
@@ -317,6 +330,26 @@ module UseCasesPluginsTest
     host.observe
     t.assert_equal(["quit b2 w1 b.txt 0,0", "deactivate"], p.log, "quit is delivered once, then deactivate")
     t.assert_equal(true, p.deactivated, "the plugin was deactivated")
+
+    # Scenario "Events wait for activation".
+    p = probe(ALL)
+    rig = build([p], "", false)
+    state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
+    ex.call(state, "e b.txt")
+    host.observe
+    t.assert_equal([false, []], [host.active?("probe"), p.log], "events wait for activation: a plugin with an action hears nothing before its first trigger")
+    host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
+    t.assert_equal([true, ["activate", "action plugin.probe.go c0 r\"\" b2 w1 b.txt 0,0"]], [host.active?("probe"), p.log], "its first action activates it, then runs")
+    p.log.clear
+    state.cursor.col = 1
+    host.observe
+    t.assert_equal(["cursor_move b2 w1 b.txt 0,1"], p.log, "and it hears the events of later keys")
+    idle = probe(ALL)
+    rig = build([idle], "", false)
+    state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
+    ex.call(state, "q")
+    host.observe
+    t.assert_equal([], idle.log, "a plugin never activated is not deactivated when the editor ends")
 
     # Unsubscribed events are not delivered.
     p = probe(["buffer_save"])

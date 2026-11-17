@@ -35,7 +35,9 @@ module Carat
       end
 
       # The enabled plugin that tokenizes the syntax, the first registered
-      # that declares it, or nil.
+      # that declares it, or nil. A buffer of the syntax is its trigger:
+      # the provider is activated here the first time, and one whose
+      # activate raised is passed over for the next.
       #: (String) -> PluginEntry?
       def provider(syntax)
         registry = @registry
@@ -43,7 +45,7 @@ module Carat
         count = registry.count
         while i < count
           e = registry.entry(i)
-          return e if e.enabled && e.tokenizes?(syntax)
+          return e if e.enabled && e.tokenizes?(syntax) && registry.activate(e)
           i += 1
         end
         nil

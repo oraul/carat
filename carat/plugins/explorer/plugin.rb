@@ -69,10 +69,15 @@ module Carat
           )
         end
 
+        # Activated on the first toggle, focus, or ex command, not at
+        # startup: the file of the current window, which the events would
+        # have carried, is read here so the tree marks it at once.
         #: (Carat::PluginApi::Host) -> void
         def activate(host)
           @host = host
           @icon_groups = icon_groups(host)
+          view = host.read_buffer(0)
+          follow(host, view.path) if view.ok
         end
 
         #: () -> void

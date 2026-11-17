@@ -108,7 +108,8 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.status_slots, [["status_bar", a.frame_presenter.status_bar.slots]]), "the status slots")
     t.assert_equal([], strangers(host, [
       ["save_file", a.save_file.plugins], ["cancel_command_line", a.cancel_command_line.plugins],
-      ["execute_command_line", a.execute_command_line.plugins], ["handle_key", a.handle_key.plugins]
+      ["execute_command_line", a.execute_command_line.plugins], ["handle_key", a.handle_key.plugins],
+      ["controller", a.controller.plugins]
     ]), "the plugin host")
     action = a.actions.find("plugin.hello.greet")
     command = a.commands.find("Hello")
