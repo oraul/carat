@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 15
 
-1. `ruby-structure-remove` (T2 user request, estimated medium, pushed back 4, moved from the backlog lane): #147's unclosed-opener sign took a 100,000-line Ruby open from 22 to 116 ms and the user asked for its removal; it lives in `carat/plugins/ruby/structure.rb`, `carat/plugins/ruby/plugin.rb:86` and `:111` (a whole-buffer rescan per normal-mode change), the tokenizer's opener state (`carat/plugins/ruby/tokenizer.rb:820`), `test/editor_ruby_structure.rb`, `test/plugins_ruby.rb:145`, `README.md:124`, and `openspec/specs/ruby-syntax/spec.md`. Fix outline: remove the sign and its spec requirement, highlighting unchanged. Accepted when no structure sign is drawn, the open-ruby bench is at or under main's, the spec and README name no sign, highlighting snapshots are unchanged, and each entry below is closed or carried to the findings file. Backlog: "### Ruby structure sign goes stale after a buffer rename", "### Ruby plugin restates the filetype tables", "### Ruby structure editor test covers only insert mode", "### Ruby structure modifier table misses most jump words", "### Ruby tokenizer keeps the loop flag across a semicolon", "### Ruby structure check rescans the whole buffer per normal-mode change", "### README wording makes the structure sign sound conditional".
-2. `vim-folds-a` (T2 user request, estimated medium, pushed back 3, part a of 2): carat has no folds: `docs/compatibility.md` holds 0 fold rows and zf, zo, zc, za, zd, zE do nothing. Fix outline: manual folds per window; a closed fold drawn as one row and passed by j and k as one line; an operator on a closed fold acting on all its lines; part b takes zR, zM, zj, zk, [z, ]z, `:fold`, `:foldopen`, `:foldclose`. Accepted when compatibility rows and a table-driven test show zfj leaving a closed 2-line fold drawn as one row, j passing it, zo, zc, za, zd, zE, and dd on a closed fold deleting its lines as Neovim does, the keys bound in `config/default.caratrc`, and `lh` and `j` held.
+1. `vim-folds-a` (T2 user request, estimated medium, pushed back 3, part a of 2): carat has no folds: `docs/compatibility.md` holds 0 fold rows and zf, zo, zc, za, zd, zE do nothing. Fix outline: manual folds per window; a closed fold drawn as one row and passed by j and k as one line; an operator on a closed fold acting on all its lines; part b takes zR, zM, zj, zk, [z, ]z, `:fold`, `:foldopen`, `:foldclose`. Accepted when compatibility rows and a table-driven test show zfj leaving a closed 2-line fold drawn as one row, j passing it, zo, zc, za, zd, zE, and dd on a closed fold deleting its lines as Neovim does, the keys bound in `config/default.caratrc`, and `lh` and `j` held.
 
 ## Pool
 
@@ -29,9 +28,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): sprint-14-records security high 0, medium 0, low 0; sprint-14 review 1 Low (3) `tools/gates.sh:131`; 0 open High or Medium at confidence 8 or above.
-- `tab-close-c` delivered as written and removed (T2 user-reported bug): sprint-14 quality `switch_buffer.rb:39`, 5 commands failing in a reading view, 0 reading-view tests, a regression of #181.
-- Size medium, no size up, no split (T2): tab-close 1,038,200 in 81.6 min and tab-close-b 1,050,899 in 70.1 min under 1,200,000; last two feature rows 848,371 and 890,042 under; 2 parts, under 3.
-- Sprint 15 keeps `ruby-structure-remove` and `vim-folds-a` (T2, pushed back 4 and 3), no pool draw: 2 features and 2 backlog left of its 5.
-- sprint-14-records retro notes 3 and 4 left to the backlog lane (T1 pipeline): its row and `docs/queue-backlog.md` are that lane's, which this delivery does not touch.
-- 0 `tools/rules.sh` edits (T1): the brief names `carat/` and `test/` files only.
+- Security first clear (T0): sprint-14-records security high 0, medium 0; ci-trust-gaps security pass high 0, medium 0, low 1 at 9e6738506a90, its Medium (8) fixed before merge 98291c9d75e4; 0 open High or Medium at confidence 8 or above.
+- `ruby-structure-remove` delivered as written and removed (T2 user request, pushed back 4): the sign took a 100,000-line Ruby open from 22 to 116 ms; all 7 entries it lists close with the removal (sign, check, filetype tables, opener counting with its loop flag and JUMPS all go).
+- Size medium, no size up, no split (T2): last two feature rows markdown-reading-d 848,371 in 55.7 min and vim-line-commands-a 890,042 in 54.5 min under 1,200,000, tab-close-c 830,180 in 54.5 min; one removal, 1 testable part, under 3.
+- Sprint 15 keeps `vim-folds-a` (T2, pushed back 3), no pool draw: tab-close-c, ruby-structure-remove, and vim-folds-a are its 3 features.
+- tab-close-c overrun note 4 not acted on (T1): 219,748 output tokens mid-run against 200,000, its total 830,180 under 1,200,000.
+- tab-close-c retro notes 5, 6, 7 to the findings file (T1 pipeline efficiency, not a defect): the sprint rule takes a pipeline change only for a defect; note 7 matches ci-trust-gaps note 6 (4 of 4 records rows over 500,000), whose notes are the backlog lane's.
+- 0 `tools/rules.sh` edits (T1): the brief names `carat/plugins/ruby/`, `test/`, README, map, and spec files only.

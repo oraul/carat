@@ -509,16 +509,15 @@ Files:
 - `carat/use_cases/ex/syntax_command_handler.rb`: `SyntaxCommandHandler` (`:syntax on`, `enable`, `off`).
 - `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, the four search options, and `cursorline`).
 - `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
-- `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `deactivate`, `on_event` (the `error` sign on the opener `Structure` finds, on open, after a change outside the typing modes, and when one ends), `tokenize`.
-- `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer, with each line's block `ends` and `opens`.
-- `carat/plugins/ruby/structure.rb`: `Structure#call`, the row of the innermost block opener a Ruby text leaves open.
+- `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
+- `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
 - `carat/plugins/ruby/line_state.rb`: `LineState`, the documented integer state encoding (`pack`, `mode`, `heredoc`, `frame`, and their fields).
 - `carat/plugins/ruby/keywords.rb`: `Keywords`; `find`, `lookup`, `kind`.
 - `carat/plugins/ruby/groups.rb`: `Groups`, the integer group constants the tokenizer emits (`COMMENT`, `CONSTANT`, `STRING`, and the rest).
 
-Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`, `test/editor_ruby_structure.rb`.
+Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`.
 
-Designs: `syntax-highlighting` (all ten Decisions), `ruby-structure-check` (Decisions), `cursor-shapes` (The cursor line is a layer of group ids).
+Designs: `syntax-highlighting` (all ten Decisions), `cursor-shapes` (The cursor line is a layer of group ids).
 
 Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in `docs/backlog.md`.
 
