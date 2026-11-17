@@ -199,17 +199,17 @@ module Carat
           description = palette.descriptions[entry]
           field = palette.fields[r]
           tokens = Array.new(0, 0)
-          mark(tokens, query, description, 0, 0, kept(description, room), selected) if field == 1
+          mark(tokens, query, description, 0, 0, char_count(description, kept_bytes(description, room)), selected) if field == 1
           if named
-            # The name's column starts after the label's characters and
-            # the spaces padding them to its cells.
-            label = pad(description, room, cut)
-            from = char_count(label, label.bytesize)
-            cell = pad(name, NAME_WIDTH, cut)
+            # The name's column starts at the row's first character past
+            # the label's cells and ends at the key's; counted on the row,
+            # so nothing is built again.
+            line = lines[i]
+            from = char_count(line, Domain::DisplayWidth.bytes_within(line, room))
             tokens << from
-            tokens << char_count(cell, cell.bytesize)
+            tokens << char_count(line, Domain::DisplayWidth.bytes_within(line, room + NAME_WIDTH))
             tokens << (selected ? Domain::Highlight::POPUP_MENU_EXTRA_SELECTED : Domain::Highlight::POPUP_MENU_EXTRA)
-            mark(tokens, query, name, name.start_with?(":") ? 1 : 0, from, kept(name, NAME_WIDTH), selected) if field == 0
+            mark(tokens, query, name, name.start_with?(":") ? 1 : 0, from, char_count(name, kept_bytes(name, NAME_WIDTH)), selected) if field == 0
           end
           out << Domain::SyntaxLine.new(text: lines[i], start: 0, tokens: tokens, end_state: 0)
           i += 1
@@ -270,32 +270,34 @@ module Carat
         count
       end
 
-      # The part of text a column of width cells shows: all of it when
-      # it fits in a cell less, else cut at a character boundary to leave
-      # a cell for the cut mark and one for the space after it.
-      #: (String, Integer) -> String
-      def shown(text, width)
-        return text if Domain::DisplayWidth.text_width(text, 0) < width
-        Domain::DisplayWidth.cut(text, width < 3 ? width - 1 : width - 2)
-      end
-
-      # The characters of text a column of width cells shows, the cut mark
-      # left out.
+      # The bytes of text a column of width cells shows: all of them when
+      # it fits in a cell less, else up to a character boundary that
+      # leaves a cell for the cut mark and one for the space after it.
       #: (String, Integer) -> Integer
-      def kept(text, width)
-        part = shown(text, width)
-        char_count(part, part.bytesize)
+      def kept_bytes(text, width)
+        return text.bytesize if Domain::DisplayWidth.text_width(text, 0) < width
+        Domain::DisplayWidth.bytes_within(text, width < 3 ? width - 1 : width - 2)
       end
 
       # The text in a column of width cells: what it shows, cut followed
       # by the mark, then padded with spaces to the width, so at least one
-      # space follows it.
+      # space follows it. One new string, a cut adding its slice.
       #: (String, Integer, String) -> String
       def pad(text, width, cut)
         cell = +""
-        cell << shown(text, width)
-        cell << cut if width >= 3 && cell.bytesize < text.bytesize
-        Domain::DisplayWidth.fit(cell, width)
+        size = kept_bytes(text, width)
+        if size < text.bytesize
+          cell << text.byteslice(0, size).to_s
+          cell << cut if width >= 3
+        else
+          cell << text
+        end
+        used = Domain::DisplayWidth.text_width(cell, 0)
+        while used < width
+          cell << " "
+          used += 1
+        end
+        cell
       end
     end
   end

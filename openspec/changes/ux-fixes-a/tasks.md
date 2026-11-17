@@ -13,4 +13,4 @@
 ## 4. Docs and checks
 
 - [x] 4.1 Update README.md (the finder's Enter, the palette row, the status bar's colors), checked by `make docs-lint`; append the handed ProcessPort finding to `docs/findings/ux-fixes-a.md`
-- [ ] 4.2 Run `make gates`, `make spec-validate`, and the touched tests through `make test-one`; hold the recorded allocations with `make bench`
+- [x] 4.2 Run `make gates`, `make spec-validate`, and the touched tests through `make test-one`; hold the recorded allocations with `make bench`
