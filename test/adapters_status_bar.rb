@@ -253,7 +253,9 @@ module AdaptersStatusBarTest
     end
     f = paint(scenario("four counts"), 60)
     text = f.row_text(0)
-    t.assert_equal([H::DIAGNOSTIC_ERROR, H::DIAGNOSTIC_WARN, H::DIAGNOSTIC_INFO, H::DIAGNOSTIC_HINT, H::DIAGNOSTIC_HINT], [f.cell(0, text.index("✖").to_i).hl, f.cell(0, text.index("▲").to_i).hl, f.cell(0, text.index("◆").to_i).hl, f.cell(0, text.index("4").to_i).hl, f.cell(0, text.index("4").to_i + 1).hl], "each count in its diagnostic group, the closing space in the last one's")
+    # Scenario: A row per state. Each count, and the closing space after the
+    # last one, carries its kind's count group, drawn on the bar's background.
+    t.assert_equal([H::STATUS_DIAGNOSTIC_ERROR, H::STATUS_DIAGNOSTIC_WARN, H::STATUS_DIAGNOSTIC_INFO, H::STATUS_DIAGNOSTIC_HINT, H::STATUS_DIAGNOSTIC_HINT], [f.cell(0, text.index("✖").to_i).hl, f.cell(0, text.index("▲").to_i).hl, f.cell(0, text.index("◆").to_i).hl, f.cell(0, text.index("4").to_i).hl, f.cell(0, text.index("4").to_i + 1).hl], "each count in its status bar count group, the closing space in the last one's")
 
     # The slots are empty until a service fills them.
     empty = D::StatusSlots.new

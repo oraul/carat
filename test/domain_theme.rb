@@ -154,14 +154,43 @@ module DomainThemeTest
     out
   end
 
-  # The lsp groups whose background differs from StatusLine's at some
-  # depth, by name.
-  #: (Carat::Domain::Theme) -> Array[String]
-  def self.lsp_holes(theme)
+  # The groups drawn on the status bar's background: the lsp slot's and
+  # the diagnostics counts'.
+  LSP_GROUPS = [H::STATUS_LSP_STARTING, H::STATUS_LSP_READY, H::STATUS_LSP_ERROR]
+  COUNT_GROUPS = [H::STATUS_DIAGNOSTIC_ERROR, H::STATUS_DIAGNOSTIC_WARN, H::STATUS_DIAGNOSTIC_INFO, H::STATUS_DIAGNOSTIC_HINT]
+
+  # The 24-bit colors xterm shows for the 16 basic colors by default, the
+  # reference the 16-color contrast checks measure against.
+  XTERM_16 = [0x000000, 0xcd0000, 0x00cd00, 0xcdcd00, 0x0000ee, 0xcd00cd, 0x00cdcd, 0xe5e5e5, 0x7f7f7f, 0xff0000, 0x00ff00, 0xffff00, 0x5c5cff, 0xff00ff, 0x00ffff, 0xffffff]
+
+  # The groups among ids whose background differs from StatusLine's at
+  # some depth, by name.
+  #: (Carat::Domain::Theme, Array[Integer]) -> Array[String]
+  def self.bar_holes(theme, ids)
     out = []
-    [H::STATUS_LSP_STARTING, H::STATUS_LSP_READY, H::STATUS_LSP_ERROR].each do |id|
+    ids.each do |id|
       same = theme.bg(id) == theme.bg(H::STATUS) && theme.bg256(id) == theme.bg256(H::STATUS) && theme.bg16(id) == theme.bg16(H::STATUS)
       out << H::NAMES[id] unless same
+    end
+    out
+  end
+
+  # The groups on the status bar, StatusLine, the lsp groups, and the
+  # count groups, whose 16-color foreground falls below 4.5:1 on their
+  # 16-color background under xterm's default colors, each with its
+  # ratio, or that lack a basic color on either side.
+  #: (Carat::Domain::Theme) -> Array[String]
+  def self.bar_low_contrast_16(theme)
+    out = []
+    ([H::STATUS] + LSP_GROUPS + COUNT_GROUPS).each do |id|
+      fg = theme.fg16(id)
+      bg = theme.bg16(id)
+      if fg < 0 || bg < 0
+        out << "#{H::NAMES[id]} no basic color"
+      else
+        ratio = contrast(XTERM_16[fg], XTERM_16[bg])
+        out << "#{H::NAMES[id]} #{ratio}" if ratio < 450
+      end
     end
     out
   end
@@ -233,14 +262,16 @@ module DomainThemeTest
     # UI group is -1), The search groups have colors,
     # Every UI group has a color in every palette,
     # Every palette passes (the contrast tables), and Comments are readable.
-    # The group table: the 56 UI groups first, then the thirty syntax
+    # The group table: the 60 UI groups first, then the thirty syntax
     # groups, then the thirteen file-icon groups, then the six markup
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
     t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups")
-    t.assert_equal([56, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "56 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal([60, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "60 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
+    # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
+    t.assert_equal(["StatusLineDiagnosticError", "StatusLineDiagnosticWarn", "StatusLineDiagnosticInfo", "StatusLineDiagnosticHint", "IblIndent"], [H::NAMES[H::STATUS_DIAGNOSTIC_ERROR], H::NAMES[H::STATUS_DIAGNOSTIC_WARN], H::NAMES[H::STATUS_DIAGNOSTIC_INFO], H::NAMES[H::STATUS_DIAGNOSTIC_HINT], H::NAMES[H::STATUS_LSP_ERROR + 5]], "the status bar's count groups follow its lsp groups")
 
     t.assert_equal(["Comment", "Error", "SignColumn", "CursorLine", "DiagnosticHint", "DevIconRb"], [H::NAMES[H::COMMENT], H::NAMES[H::ERROR], H::NAMES[H::SIGN_COLUMN], H::NAMES[H::CURSOR_LINE], H::NAMES[H::DIAGNOSTIC_HINT], H::NAMES[H::ICON_RUBY]], "names by id")
     t.table([
@@ -296,8 +327,8 @@ module DomainThemeTest
       ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc97fe0, D::Theme::BOLD, 0, 13]],
       ["replace pill", [H::STATUS_MODE_REPLACE], [0x282c34, 0xe8757e, D::Theme::BOLD, 0, 9]],
       ["command pill", [H::STATUS_MODE_COMMAND], [0x282c34, 0xe5c07b, D::Theme::BOLD, 0, 11]],
-      ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, 0x3e4452, 0, 3, 7]],
-      ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, 0x3e4452, 0, 2, 7]],
+      ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, 0x3e4452, 0, 0, 7]],
+      ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, 0x3e4452, 0, 0, 7]],
       ["lsp error", [H::STATUS_LSP_ERROR], [0xf5a3a8, 0x3e4452, D::Theme::BOLD, 1, 7]]
     ]) { |input| id = input[0].to_i; [dark.fg(id), dark.bg(id), dark.attr(id), dark.fg16(id), dark.bg16(id)] }
     light = D::Themes.find("one_light", "terminal")
@@ -320,10 +351,12 @@ module DomainThemeTest
 
     # Scenario: Every palette passes. WCAG AA: 4.5:1 for text, 3:1 for
     # decorations, on the theme's background, at 24 bits and at the 256
-    # colors written. The pills and the lsp groups are text groups, so the
-    # same rows prove two more scenarios:
+    # colors written. The pills, the lsp groups, and the count groups are
+    # text groups, so the
+    # same rows prove three more scenarios:
     # Every palette's pills pass
     # Every palette's lsp groups pass on the bar
+    # Every palette's count groups pass on the bar
     D::Themes::NAMES.each do |name|
       t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), false, 0), "#{name} at 24 bits")
       t.assert_equal([], low_contrast(D::Themes.find(name, "theme"), true, 0), "#{name} at 256 colors")
@@ -335,9 +368,20 @@ module DomainThemeTest
     D::Themes::NAMES.each do |name|
       D::Themes::BACKGROUNDS.each do |background|
         theme = D::Themes.find(name, background)
-        t.assert_equal([], lsp_holes(theme), "The lsp groups share the bar's background: #{name} on the #{background}'s background")
+        t.assert_equal([], bar_holes(theme, LSP_GROUPS), "The lsp groups share the bar's background: #{name} on the #{background}'s background")
+        # Scenario: The count groups share the bar's background. The
+        # diagnostics counts leave no hole in the bar either.
+        t.assert_equal([], bar_holes(theme, COUNT_GROUPS), "The count groups share the bar's background: #{name} on the #{background}'s background")
       end
     end
+
+    # Scenario: The bar reads at 16 colors. StatusLine, the lsp groups,
+    # and the count groups reach 4.5:1 on the bar under xterm's default
+    # colors, so no accent reads near 1.5:1 on a light gray bar.
+    D::Themes::NAMES.each do |name|
+      t.assert_equal([], bar_low_contrast_16(D::Themes.find(name, "terminal")), "The bar reads at 16 colors: #{name}")
+    end
+    t.assert_equal([135, 171], [contrast(XTERM_16[3], XTERM_16[7]), contrast(XTERM_16[2], XTERM_16[7])], "the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1")
 
     # Every palette's selected tab stands out: TabLineSel on its accent
     # at 3:1 from the tab row, another basic color, and bold, on either

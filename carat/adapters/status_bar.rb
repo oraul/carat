@@ -240,10 +240,10 @@ module Carat
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, slots.branch, hl, limit)
         elsif kind == DIAGNOSTICS
-          x = paint_count(frame, row, x, limit, slots.errors, "error", Domain::Highlight::DIAGNOSTIC_ERROR, set)
-          x = paint_count(frame, row, x, limit, slots.warnings, "warning", Domain::Highlight::DIAGNOSTIC_WARN, set)
-          x = paint_count(frame, row, x, limit, slots.infos, "info", Domain::Highlight::DIAGNOSTIC_INFO, set)
-          x = paint_count(frame, row, x, limit, slots.hints, "hint", Domain::Highlight::DIAGNOSTIC_HINT, set)
+          x = paint_count(frame, row, x, limit, slots.errors, "error", Domain::Highlight::STATUS_DIAGNOSTIC_ERROR, set)
+          x = paint_count(frame, row, x, limit, slots.warnings, "warning", Domain::Highlight::STATUS_DIAGNOSTIC_WARN, set)
+          x = paint_count(frame, row, x, limit, slots.infos, "info", Domain::Highlight::STATUS_DIAGNOSTIC_INFO, set)
+          x = paint_count(frame, row, x, limit, slots.hints, "hint", Domain::Highlight::STATUS_DIAGNOSTIC_HINT, set)
           hl = last_count_group
         elsif kind == PLUGIN
           x = frame.put_within(row, x, " ", hl, limit)
@@ -340,10 +340,10 @@ module Carat
       #: () -> Integer
       def last_count_group
         slots = @slots
-        return Domain::Highlight::DIAGNOSTIC_HINT if slots.hints > 0
-        return Domain::Highlight::DIAGNOSTIC_INFO if slots.infos > 0
-        return Domain::Highlight::DIAGNOSTIC_WARN if slots.warnings > 0
-        Domain::Highlight::DIAGNOSTIC_ERROR
+        return Domain::Highlight::STATUS_DIAGNOSTIC_HINT if slots.hints > 0
+        return Domain::Highlight::STATUS_DIAGNOSTIC_INFO if slots.infos > 0
+        return Domain::Highlight::STATUS_DIAGNOSTIC_WARN if slots.warnings > 0
+        Domain::Highlight::STATUS_DIAGNOSTIC_ERROR
       end
 
       #: (String) -> Integer
