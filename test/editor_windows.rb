@@ -312,12 +312,15 @@ module EditorWindowsTest
     t.assert_equal([false, unsaved("b.txt"), "b.txt"], [h.quit?, h.message, h.buffer.path], "and :qa is refused, showing it")
     h.type(":q<CR>")
     t.assert_equal([false, E37], [h.quit?, h.message_row], ":q on the last window is refused by the modified buffer it shows")
+    # Under option.gt buffers :q on the last window closes the buffer tab
+    # while another listed file buffer exists; the hidden-buffer refusal
+    # of option.gt tabpages is in test/editor_buffers.rb.
     h.type(":b! 1<CR>:q<CR>")
-    t.assert_equal([false, unsaved("b.txt"), "b.txt"], [h.quit?, h.message, h.buffer.path], ":q on the last window is refused by the hidden buffer and shows it")
-    h.type(":b! 1<CR>:q!<CR>")
-    t.assert_equal([false, "b.txt", ["z"]], [h.quit?, h.buffer.path, h.lines], ":q! shows the hidden buffer instead of quitting")
+    t.assert_equal([false, "", "b.txt", ["b.txt"]], [h.quit?, h.message, h.buffer.path, h.buffer_paths], ":q on the last window closes the buffer tab and shows the modified hidden buffer")
+    h.type(":q<CR>")
+    t.assert_equal([false, E37, ["z"]], [h.quit?, h.message_row, h.lines], ":q on the last listed buffer is refused by its changes")
     h.type(":q!<CR>")
-    t.assert_equal(true, h.quit?, "a second :q! quits")
+    t.assert_equal(true, h.quit?, "a :q! on the last listed buffer quits")
     h = session(":sp b.txt<CR>x<C-w>c<C-w>o")
     t.assert_equal("Already only one window", h.message_row, "Ctrl-W o reports one window")
     h = session("<C-w>s<C-w>s<C-w>jx<C-w>o")

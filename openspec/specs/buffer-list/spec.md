@@ -98,7 +98,7 @@ When the current buffer is a modified file buffer, a switch SHALL be refused wit
 - **THEN** the window shows "b.txt" and ":ls" lists "a.txt" as hidden and modified
 
 ### Requirement: Deleting a buffer from the list
-`:bd`, `:bdelete`, and `:bd N` SHALL remove the current buffer or buffer number N from the list and close every window showing it, a tab page closing with its last window, except that while the current window shows it and is the editor's last window, that window SHALL show the next listed file buffer after it, or the one before it when it was last; when no other listed file buffer exists, the current window SHALL show a new empty buffer with a new number instead.
+`:bd`, `:bdelete`, `:bd N`, and `<leader>bd` SHALL remove the current buffer or buffer N from the list. Under `option.gt buffers` every window showing it SHALL stay and show the next listed file buffer, or the one before, or a new empty buffer when none is left, side windows untouched. Under `option.gt tabpages` those windows SHALL close, but the current window while it is the last one, and the last file window of a tab page beside side windows, SHALL stay and show that replacement.
 
 #### Scenario: Delete the current buffer
 - **WHEN** "a.txt" and "b.txt" are listed, "a.txt" is current in the only window, and ":bd" is run
@@ -112,13 +112,33 @@ When the current buffer is a modified file buffer, a switch SHALL be refused wit
 - **WHEN** "a.txt" is buffer 1, hidden, "b.txt" is current, and ":bd 1" is run
 - **THEN** the window still shows "b.txt" and ":ls" lists only "b.txt"
 
-#### Scenario: Delete closes the windows showing the buffer
+#### Scenario: Delete keeps the windows showing the buffer
 - **WHEN** ":sp b.txt" is run, `<C-w>j` moves to "a.txt", and ":bd 2" is run
+- **THEN** both windows remain, each showing "a.txt"
+
+#### Scenario: Delete in a split keeps the window
+- **WHEN** ":sp b.txt" is run and ":bd" is run in the new window
+- **THEN** both windows remain, each showing "a.txt"
+
+#### Scenario: Delete closes the windows showing the buffer
+- **WHEN** `option.gt tabpages` is set, ":sp b.txt" is run, `<C-w>j` moves to "a.txt", and ":bd 2" is run
 - **THEN** one window remains, showing "a.txt"
 
 #### Scenario: Delete in a split closes the window
-- **WHEN** ":sp b.txt" is run and ":bd" is run in the new window
+- **WHEN** `option.gt tabpages` is set, ":sp b.txt" is run, and ":bd" is run in the new window
 - **THEN** one window remains, showing "a.txt"
+
+#### Scenario: Delete beside the explorer keeps every file window
+- **WHEN** "alpha.txt" and "beta.txt" are listed, the explorer is open beside tab page 1's file window showing "alpha.txt", a second tab page shows "alpha.txt", and ":bd" is run on "alpha.txt"
+- **THEN** the explorer and both file windows remain, each file window showing "beta.txt"
+
+#### Scenario: Delete the last buffer beside the explorer
+- **WHEN** the explorer is open beside the file window of the only listed buffer and ":bd" is run there
+- **THEN** the explorer and the file window remain, the file window showing a new empty buffer, and `<leader>e` then closes the explorer without E444
+
+#### Scenario: Delete under tab pages keeps the last file window beside the explorer
+- **WHEN** `option.gt tabpages` is set, the explorer is open beside the file window of "a.md", "b.rb" is listed, and ":bd" is run there
+- **THEN** the explorer and the file window remain, the file window showing "b.rb"
 
 ### Requirement: Refusals of the buffer delete
 A modified buffer SHALL be refused with "E89: No write since last change for buffer N (add ! to override)" unless the bang is given, which discards its changes. A number of no listed file buffer, and a plugin's scratch buffer, SHALL report "E516: No buffers were deleted: " followed by the command as typed; a name argument SHALL answer "Not implemented: :bdelete name".
@@ -174,3 +194,18 @@ A control character in a buffer's name (a C0 control or DEL) SHALL be shown in c
 
 - **WHEN** that buffer is modified and ":qa" is run
 - **THEN** the editor stays and the message is "E37: No write since last change" and "E162: No write since last change for buffer "x^Jy.txt"" on two lines
+
+### Requirement: The startup buffer leaves once a file opens elsewhere
+Under `option.gt buffers`, the unnamed, empty, unmodified buffer the editor starts with SHALL leave the list, the top row, and `:ls` as soon as a file opens in another window or tab page, every window that showed it showing the opened file. A file opened over it in its own window SHALL take its number, as before.
+
+#### Scenario: A file opened in a tab page retires the startup buffer
+- **WHEN** the editor starts with no file and ":tabe alpha.txt" is run
+- **THEN** no "[No Name]" tab is in the top row and ":ls" lists only "alpha.txt"
+
+#### Scenario: A file opened in a split retires the startup buffer
+- **WHEN** the editor starts with no file and ":sp alpha.txt" is run
+- **THEN** both windows show "alpha.txt" and ":ls" lists only "alpha.txt"
+
+#### Scenario: Under tab pages the startup buffer stays
+- **WHEN** `option.gt tabpages` is set, the editor starts with no file, and ":tabe alpha.txt" is run
+- **THEN** ":ls" lists the unnamed buffer and "alpha.txt"

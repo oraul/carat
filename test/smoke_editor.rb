@@ -207,9 +207,13 @@ module SmokeEditorTest
     settle(reader, out, 0.5)
     writer.write(":q\r")
     settle(reader, out, 0.5)
+    # The last window closes the file's buffer tab first, since the
+    # empty buffer :tabnew listed is still a buffer tab.
+    writer.write(":q\r")
+    settle(reader, out, 0.5)
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
-    t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, and the last window")
+    t.assert_equal(0, code, "the editor exits with status 0 after closing the tab page, a window, the file's buffer tab, and the last window")
     t.assert_true(out.end_with?(RESTORED), "closing the last window restores the cursor and leaves the alternate screen")
 
     # <C-w> waits for its second key past timeoutlen (500 ms in the

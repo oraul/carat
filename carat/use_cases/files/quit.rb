@@ -21,6 +21,11 @@ module Carat
     # also checks only the hidden buffers: the buffer just written is not
     # checked, since a write to another path leaves it modified on
     # purpose. In a floating window :q closes the float and nothing else.
+    # Under option.gt buffers, where the editor would end and another
+    # listed file buffer exists, every way closes the current buffer's
+    # tab instead, past the E37 check of :q: the buffer leaves the list
+    # and its windows show the next listed file buffer, or the one before
+    # (BufferList#withdraw), side windows staying; :q! loses its changes.
     class Quit
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -42,6 +47,11 @@ module Carat
         if way == :quit && current.modified? && !current.scratch?
           return Outcome.failure(Domain::Messages::E37)
         end
+        other = tab_replacement(state)
+        unless other.nil?
+          @buffers.withdraw(current, other)
+          return Outcome.success("")
+        end
         unsaved = @buffers.first_unsaved(way != :quit)
         if unsaved.nil?
           state.quit = true
@@ -53,6 +63,17 @@ module Carat
       end
 
       private
+
+      # The buffer shown in place of the current one when :q closes its
+      # buffer tab: under option.gt buffers, for a listed file buffer, the
+      # next listed file buffer or the one before; nil otherwise.
+      #: (Domain::EditorState) -> Domain::Buffer?
+      def tab_replacement(state)
+        current = state.buffer
+        return nil unless state.options.gt_follows_buffers?
+        return nil if current.tabless? || @buffers.index_of(current) < 0
+        @buffers.replacement_for(current)
+      end
 
       #: (Domain::EditorState) -> Outcome
       def close_current(state)

@@ -27,6 +27,27 @@ module EditorTabsTest
     h
   end
 
+  # An editor started on no file, as `carat .` starts, with the project
+  # configuration lines given and "alpha.txt" on disk, after typing keys.
+  def self.started(project, keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("alpha.txt", "al\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(project), rows: 24, cols: 80, plugins: [])
+    h.type(keys)
+    h
+  end
+
+  # The path each window of the current tab page shows, "" for none.
+  def self.window_paths(h)
+    layout = h.state.tab.layout
+    out = []
+    layout.leaves.each do |id|
+      path = layout.window_at(id).buffer.path
+      out << (path.nil? ? "" : path)
+    end
+    out
+  end
+
   # The path of the current window's buffer, "" for none.
   def self.current_path(h)
     path = h.buffer.path
@@ -263,6 +284,21 @@ module EditorTabsTest
     h.type(":tabnew<CR>")
     t.assert_equal(" • deep.txt ", h.row(0)[0, 12], "a tab shows the file name without its directory")
     t.assert_equal("dir/sub/deep.txt", h.assembly.tabs.tab_at(0).window.buffer.path, "the path is untouched")
+
+    # The startup buffer leaves once a file opens in another window or tab
+    # page, under option.gt buffers only.
+    h = started("", ":tabe alpha.txt<CR>")
+    t.assert_equal([false, ["alpha.txt"], ["alpha.txt", "alpha.txt"]], [h.row(0).include?("[No Name]"), h.buffer_paths, tab_paths(h)], "A file opened in a tab page retires the startup buffer")
+    h.type(":ls<CR>")
+    t.assert_equal(false, h.message.include?("No Name"), "and :ls no longer lists it")
+    h = started("", ":sp alpha.txt<CR>")
+    t.assert_equal([["alpha.txt"], ["alpha.txt", "alpha.txt"]], [h.buffer_paths, window_paths(h)], "A file opened in a split retires the startup buffer")
+    h = started("", ":e alpha.txt<CR>:ls<CR>")
+    t.assert_equal([["alpha.txt"], 1], [h.buffer_paths, h.buffer.id], "a file opened over it in its window takes its number, as before")
+    h = started("", ":tabnew<CR>:tabe alpha.txt<CR>")
+    t.assert_equal([["", "alpha.txt"], 3], [h.buffer_paths, h.assembly.tabs.tab_count], "an empty buffer of :tabnew stays: only the startup buffer leaves")
+    h = started("option.gt tabpages", ":tabe alpha.txt<CR>")
+    t.assert_equal(["", "alpha.txt"], h.buffer_paths, "Under tab pages the startup buffer stays")
 
     t.finish
   end

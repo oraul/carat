@@ -64,17 +64,24 @@ ok   :bd of the last in the list shows the one before
 ok   :bdelete
 ok   :bd of the only buffer shows a new empty one
 ok   :bd N of a hidden buffer
+ok   :bd N keeps the windows showing it
+ok   :bd in a split keeps the window
+ok   :bd of a buffer two windows show keeps both
+ok   :bd of the only buffer in a split shows an empty one in both
+ok   :bd keeps a tab page
+ok   :bd N keeps another tab page showing it
+ok   :bd shows the replacement in every window showing it
+ok   :bd of a modified buffer is refused
+ok   :bd! discards the changes
+ok   :bd N of no buffer
+ok   :bdelete! N of no buffer names the command as typed
+ok   :bd with a name
 ok   :bd N closes the windows showing it
 ok   :bd in a split closes the window
 ok   :bd of a buffer two windows show closes both but the last
 ok   :bd of the only buffer in a split leaves one empty window
 ok   :bd closes a tab page with its last window
 ok   :bd N closes another tab page showing it
-ok   :bd of a modified buffer is refused
-ok   :bd! discards the changes
-ok   :bd N of no buffer
-ok   :bdelete! N of no buffer names the command as typed
-ok   :bd with a name
 ok   the new empty buffer gets a new number
 ok   a file opened over it takes that number
 ok   the buffer shown in place of the deleted one gets its cursor back
@@ -89,14 +96,27 @@ ok   :qa prefers the current buffer
 ok   :qa names an unnamed buffer
 ok   :qa! ends the editor
 ok   :q on a modified current buffer keeps one line
+ok   :q! twice ends the editor
+ok   :q closes the buffer tab and a modified hidden buffer is shown
 ok   :q names a hidden buffer
 ok   :q! names a hidden buffer
-ok   :q! twice ends the editor
 ok   :x names a hidden buffer
 ok   :wq names a hidden buffer
+ok   Under tab pages quit on the last window ends the editor
+ok   under tab pages :q closes one of two windows as before
+ok   Quit closes the buffer tab and shows the next
+ok   the last in the list shows the one before
+ok   Quit on the last listed buffer ends the editor
+ok   Quit on a modified buffer with others listed is refused
+ok   Forced quit closes the buffer tab discarding its changes
+ok   :wq closes the buffer tab after its write
+ok   :x closes the buffer tab after its write
+ok   Ctrl-W q on the last window closes the buffer tab
+ok   :q in a split closes only the window
+ok   :wq wrote the buffer before closing its tab
 ok   :q! over a hidden buffer discards the current buffer's changes
 ok   A newline in a name in the listing: :ls shows it as ^J on one line
 ok   A newline in a name in E162: :qa names it with ^J
 ok   a tab, DEL, and NUL in caret notation
 ok   a UTF-8 name is kept
-editor_buffers: 101 passed, 0 failed
+editor_buffers: 121 passed, 0 failed

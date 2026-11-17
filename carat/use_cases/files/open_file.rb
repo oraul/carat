@@ -21,7 +21,9 @@ module Carat
     # other failure to read or load the file is E484, and a file that
     # is not valid UTF-8 opens with its bytes kept and Vim's "[ILLEGAL
     # BYTE in line N]" in the message. Showing another buffer records the
-    # position left in the window's jump list (BufferList#enter).
+    # position left in the window's jump list (BufferList#enter). Under
+    # option.gt buffers a file shown in another window or tab page than
+    # the startup buffer's retires it (BufferList#retire_startup).
     class OpenFile
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
@@ -39,6 +41,7 @@ module Carat
         listed = @buffers.for_path(path)
         if !listed.nil? && !listed.equal?(state.buffer)
           @buffers.enter(listed)
+          retire_startup(state)
           return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
         end
         exists = @files.exist?(path)
@@ -55,6 +58,7 @@ module Carat
         end
         if listed.nil?
           @buffers.enter(fresh)
+          retire_startup(state)
         else
           listed.reload(fresh.lines)
           listed.line_ending = fresh.line_ending
@@ -65,6 +69,13 @@ module Carat
       end
 
       private
+
+      # Lets the startup buffer go under option.gt buffers once the
+      # current window shows a file.
+      #: (Domain::EditorState) -> void
+      def retire_startup(state)
+        @buffers.retire_startup(state.buffer) if state.options.gt_follows_buffers?
+      end
 
       # Vim's flag for a file that is not valid UTF-8, naming the first
       # line that holds a byte outside a well-formed sequence; "" for a

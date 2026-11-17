@@ -17,6 +17,9 @@ module Carat
     # text. A Struct record: mutable, with a reader and a writer per
     # member.
     class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, keyword_init: true)
+      # The number of the buffer the editor starts with, listed first.
+      STARTUP_ID = 1
+
       # @rbs @tabs: TabList
       # @rbs @buffers: Array[untyped]
       # @rbs @next_id: Integer
@@ -402,7 +405,9 @@ module Carat
 
       # Closes every window that shows target in every tab page but the
       # current window, a tab page closing with its last window; the walk
-      # starts over after each close, since a tab page may go.
+      # starts over after each close, since a tab page may go. A file
+      # window that is the last of its tab page beside side windows stays,
+      # so no tab page is left with only side windows.
       #: (Buffer) -> void
       def close_windows_of(target)
         closed = true
@@ -415,7 +420,7 @@ module Carat
             i = 0
             while i < ids.length && !closed
               current = t == tabs.tab_index && ids[i] == tabs.tab.current
-              if !current && layout.window_at(ids[i]).buffer.equal?(target)
+              if !current && !lone_file_window?(tabs.tab_at(t)) && layout.window_at(ids[i]).buffer.equal?(target)
                 close_window(t, ids[i])
                 closed = true
               end
@@ -424,6 +429,51 @@ module Carat
             t += 1
           end
         end
+      end
+
+      # Closes the tab of target, as :bd and the buffer tab rule of :q do:
+      # every window of every tab page that shows target shows other,
+      # which is listed, each window remembering its cursor in target and
+      # taking the one other remembers; then target leaves the list.
+      #: (Buffer, Buffer) -> void
+      def withdraw(target, other)
+        add(other)
+        t = 0
+        while t < tabs.tab_count
+          layout = tabs.tab_at(t).layout
+          ids = layout.leaves
+          i = 0
+          while i < ids.length
+            window = layout.window_at(ids[i])
+            if window.buffer.equal?(target)
+              remember(window)
+              window.show(other)
+              restore(window)
+            end
+            i += 1
+          end
+          t += 1
+        end
+        remove(target)
+      end
+
+      # The startup buffer leaves once a file opens in another window or
+      # tab page: while buffer STARTUP_ID is listed and still unnamed,
+      # empty, and unmodified, every window showing it shows opened, a
+      # file buffer, and it leaves the list. A file opened over it in its
+      # own window took its number already, so nothing is left to do.
+      #: (Buffer) -> void
+      def retire_startup(opened)
+        return if opened.path.nil? || opened.scratch?
+        startup = with_id(STARTUP_ID)
+        return if startup.nil? || startup.equal?(opened) || startup.tabless? || !blank?(startup)
+        withdraw(startup, opened)
+      end
+
+      # Whether the tab page holds one file window beside side windows.
+      #: (TabPage) -> bool
+      def lone_file_window?(page)
+        page.file_window_count == 1 && page.layout.leaf_count > 1
       end
 
       private
@@ -454,8 +504,14 @@ module Carat
       # window, which a file opened over it replaces under its number.
       #: (Buffer) -> bool
       def reusable?(old)
-        return false if !old.path.nil? || old.scratch? || old.modified? || old.id == 0
-        old.line_count == 1 && old.line(0).empty? && tabs.windows_showing(old) <= 1
+        old.id != 0 && blank?(old) && tabs.windows_showing(old) <= 1
+      end
+
+      # Whether the buffer is an unnamed, empty, unmodified file buffer.
+      #: (Buffer) -> bool
+      def blank?(target)
+        return false if !target.path.nil? || target.scratch? || target.modified?
+        target.line_count == 1 && target.line(0).empty?
       end
     end
   end

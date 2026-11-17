@@ -30,6 +30,15 @@ ok   Ctrl-W Ctrl-P from the file window returns to the tree
 ok   the root, the directories, then the files, the current file marked
 ok   the status bar shows the tree's title and the width option is 30
 ok   quitting the last file window ends the editor with the tree open
+ok   a file opened in a tab page from the tree retires the startup buffer
+ok   Quit beside the explorer closes the buffer tab
+ok   :q beside the tree closes the buffer tab and the tree stays
+ok   Delete beside the explorer keeps every file window: the tab page stays, showing b.rb
+ok   and the first tab page keeps the tree and its file window, showing b.rb
+ok   Delete the last buffer beside the explorer: the file window shows a new empty buffer
+ok   and the tree then closes without E444
+ok   Delete under tab pages keeps the last file window beside the explorer
+ok   The explorer toggle in a lone tree opens a file window
 ok   the side option puts the tree at the right
 ok   a disabled explorer opens nothing
 ok   show_hidden lists dot files but not ignored names
@@ -134,4 +143,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 136 passed, 0 failed
+editor_explorer: 145 passed, 0 failed
