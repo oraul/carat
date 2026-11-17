@@ -10,5 +10,5 @@
 
 ## 3. Docs and checks
 
-- [ ] 3.1 Update `docs/codebase-map.md` (the `MarkdownText`, `FormatDocs`, and `ToggleReading` entries) and the README (framed code); prove with `make docs-lint` and `make lint`
+- [x] 3.1 Update `docs/codebase-map.md` (the `MarkdownText`, `FormatDocs`, and `ToggleReading` entries) and the README (framed code); prove with `make docs-lint` and `make lint`
 - [ ] 3.2 Run `make gates` and `make spec-validate`
