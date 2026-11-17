@@ -33,10 +33,10 @@ None: the change alters the pipeline's tooling only, no editor behavior (`skip_s
 - `tools/gates.sh`: `groom_row`, called from `settled_at`; its comment.
 - `tools/tools_test.sh`: the new cases; fixtures that set a CI record before a push, a stray merged value, or a merge on another branch write them the new way (a forged key, a recorded push, `BASE=main`).
 - `.claude/workflows/deliver-change.js`, `.claude/agents/merger.md`, `.claude/agents/retrospective.md`: as above.
-- README.md: unchanged, it names no run state record or gate rule this changes; no command, binding, option, or make target changes.
+- README.md: changed, the run state paragraph says CI is recorded at the pushed head, the merge only as the squash commit, and the sprint log counts only by groom's row (the docs gate asks for it whenever an agent or workflow file changes).
 - CLAUDE.md: unchanged, its run state and gates entries stay true: `sprint-row` is a helper the script's header lists, like every run state command (CLAUDE.md names "every command in the script's header"), and no process step changes.
 - docs/architecture.md: unchanged, it does not describe the run state's records or the gates' records-only rule.
-- docs/codebase-map.md: changed, the `tools/gates.sh` entry names `settled_at` once for the security, stages, and passed gates and the groom row check; the `tools/run_state.sh` entry, when it lists commands, gains `sprint-row`; no file is added, moved, or removed.
+- docs/codebase-map.md: changed, the `tools/gates.sh` entry names `settled_at` once for the security, stages, and passed gates and the groom row check; the `tools/run_state.sh` entry names the `set` and `phase` checks and gains `sprint-row`; no file is added, moved, or removed.
 - docs/compatibility.md and docs/actions.md: unchanged, no command or action changes.
 - `tools/rules.sh`: unchanged (`RECORDS_RE` stays).
 
