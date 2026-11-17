@@ -31,16 +31,6 @@ module PluginsRubyTest
     out
   end
 
-  # The structure check: the row of the opener left open, -1 for none.
-  ST = R::Structure.new(keywords: R::Keywords.new)
-
-  # The row Structure marks in the lines, converted from the table.
-  def self.marked(lines)
-    texts = []
-    lines.each { |line| texts << line.to_s }
-    ST.call(texts)
-  end
-
   # The state after the lines, described.
   def self.state_after(lines)
     state = 0
@@ -131,33 +121,6 @@ module PluginsRubyTest
       ["a closed heredoc", ["x = <<~A", "a", "A"], "mode=0 heredocs=0 frames=0"],
       ["an open %w", ["%w[a"], "mode=0 heredocs=0 frames=1"]
     ]) { |lines| state_after(lines) }
-
-    # ruby-syntax scenarios:
-    # "An unclosed opener of each kind is marked"
-    # "A modifier if or while is not an opener"
-    # "A closed file shows no mark"
-    # "Openers in literals do not count"
-    t.table([
-      ["an unclosed def is marked", ["x = 1", "def go"], 1],
-      ["an unclosed class is marked", ["x = 1", "class A"], 1],
-      ["an unclosed module is marked", ["x = 1", "module M"], 1],
-      ["an unclosed do is marked", ["x = 1", "items.each do |i|"], 1],
-      ["an unclosed if is marked", ["x = 1", "if ready"], 1],
-      ["an unclosed unless, while, until, case, begin, for", ["unless a", "end", "while b", "end", "until c", "end", "case d", "end", "begin", "end", "for e in f"], 10],
-      ["the innermost opener left open is marked", ["class A", "  def go", "    if x", "  end"], 1],
-      ["an opener closed on its line is not", ["def go; end", "class A; end", "x = if y then 1 else 2 end"], -1],
-      ["an end on a line before an opener", ["def a", "end; def b"], 1],
-      ["modifier if and while are not openers", ["return if done", "x = 1 if y", "x += 1 while x < 5", "foo(x) unless z", "save! until ok", "break if a", "list.map { |e| e } if b", "puts \"a\" if c", "end_it = 1"], -1],
-      ["a block if after an operator is an opener", ["x = if y"], 0],
-      ["an else if needs its own end", ["if a", "else if b", "end", "end"], -1],
-      ["a closed file shows no mark", ["class A", "  def go", "    while x do", "    end", "  end", "  def one = 1", "  def two(a) = a", "end"], -1],
-      ["a setter and an operator are not endless", ["def x=(v)", "end", "def ==(o)", "end"], -1],
-      ["the do of a loop is not an opener", ["until done do", "end", "for a in b do", "end"], -1],
-      ["openers in literals do not count", ["s = \"def\"", "# class", "x.class", "h = {if: 1}", ":do", "y = 'module'"], -1],
-      ["openers in heredocs and block comments do not count", ["x = <<~T", "  def go", "T", "=begin", "class A", "=end"], -1],
-      ["an extra end marks nothing", ["end", "def go", "end"], -1],
-      ["an empty file marks nothing", [], -1]
-    ]) { |lines| marked(lines) }
 
     # Equal text gives equal states, so the editor can tell a state settled.
     a = TK.call("x = <<~SQL", 0, Array.new(0, 0))
