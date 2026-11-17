@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 12
 
-1. `git-signs-status-b` (T2 user request, part b, feature, estimated medium, S11 by the user, carried): no sign shows a line added, changed, or deleted. Part a runs two captures on the editor thread per buffer_open, buffer_save, window_focus (`carat/plugins/git_signs/plugin.rb:43`, `:60`), up to 4 s (sprint-9 Low (5); sweep note 34); a diff capture adds a third, needing BRANCH's safety arguments (`plugin.rb:27`; sprint-11 note 7). Accepted when a canned git shows each sign kind on its lines, a focus change with HEAD and the file unchanged runs no git, a timed-out capture stalls no later event, the diff argv holds the same safety arguments, allocations held. Backlog: "### git_signs runs git synchronously on the editor thread".
-2. `markdown-reading-c` (T2 user now-request, feature, estimated small, S11, carried): at 60 columns paragraphs and quotes show ragged (`carat/domain/markdown_text.rb`). Folds: a pipe line right after a table stays a row (`:177`, sprint-10 note 6), the table row-cap overrun (`:182`), `carat/use_cases/docs/format_docs.rb:33` bool literals. Accepted when a two-line paragraph and quote each flow as one at 60 columns, allocations held. Backlog: "### MarkdownText.parse overruns its row cap with a table".
-3. `lsp-container` (T2 user request, feature, estimated medium, pushed back 2, S12): only `language.<name>.lsp` (`config/default.caratrc:749`) names a server. A user-file line `language.<name>.lsp.root ROOT COMMAND...` runs that command as written, no shell, as the server under ROOT; carat ends only its server process; a project's `.caratrc` names no program. Accepted when a test shows the root's command under ROOT, the default elsewhere, the project file's line refused, quit and :LspRestart ending only the server. Backlog: none.
+1. `markdown-reading-c` (T2 user now-request, feature, estimated small, S11, carried): at 60 columns paragraphs and quotes show ragged (`carat/domain/markdown_text.rb`). Folds: a pipe line right after a table stays a row (`:177`, sprint-10 note 6), the table row-cap overrun (`:182`), `carat/use_cases/docs/format_docs.rb:33` bool literals. Accepted when a two-line paragraph and quote each flow as one at 60 columns, allocations held. Backlog: "### MarkdownText.parse overruns its row cap with a table".
+2. `lsp-container` (T2 user request, feature, estimated medium, pushed back 2, S12): only `language.<name>.lsp` (`config/default.caratrc:749`) names a server. A user-file line `language.<name>.lsp.root ROOT COMMAND...` runs that command as written, no shell, as the server under ROOT; carat ends only its server process; a project's `.caratrc` names no program. Accepted when a test shows the root's command under ROOT, the default elsewhere, the project file's line refused, quit and :LspRestart ending only the server. Backlog: none.
 
 ## Pool
 
@@ -45,10 +44,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): sprint-11 Medium (4), Low (3), both under 8, none disputed, in the backlog lane.
-- Sprint 12: 3 features, 2 backlog; `git-signs-status-b` and `markdown-reading-c` (T2, S11 by the user) carried, unmerged in sprint-11.
-- `lsp-container` (T2, S12, pushed back 2) drawn before it ages at 3; `vim-line-commands`, `vim-folds` (S12) pushed back 1 to S13.
-- New `palette-narrow` (T2) pool 1: sprint-11 quality note 4 (no label under about 14 cells), notes 3, 12, ux-fixes-a advisory 4.
-- New `bar-colors` (T2) pool 2: ux-fixes-a advisories 1 (near 1.5:1 at 16 colors) and 2.
-- Estimates kept: last 10 feature rows 775,758 to 1,284,000 total, 51 to 169 min.
-- Pool lines merged by tier to fit `QUEUE_BUDGET`, order unchanged.
+- Security first clear (T0): no periodic finding at 8 or above unfixed; sprint-11 Medium (4), Low (3) under 8, none disputed.
+- `git-signs-status-b` (T2 user request, S11 by the user) delivered, removed from Sprint 12; `markdown-reading-c`, `lsp-container` (T2) stay, 2 features left.
+- Estimated medium: git-signs-status-a 1,124,717 total, 104 min; last 10 feature rows 775,758 to 1,284,000, 51 to 169 min.
+- Size check: 4 acceptance parts, within about four, not split; git-signs-status-a quality 0 first pass, rework 1.
+- `git-signs-transport` (T3, Medium (4) below 8, `plugin.rb:27`) stays in the backlog lane; this change only matches BRANCH's arguments.
+- sprint-11-records retro notes 8 (bench 3,791/7 calls), 9 (reviews 41.0% of output), 10 (groom 22 counted, 20 removed): T1 pipeline, left to the backlog lane's plan.
+- Pool unchanged.

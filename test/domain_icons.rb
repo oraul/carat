@@ -53,7 +53,17 @@ module DomainIconsTest
       ["the ahead and behind glyphs per set: unicode ahead", ["ahead", "unicode"], "↑"],
       ["unicode behind", ["behind", "unicode"], "↓"],
       ["ascii ahead", ["ahead", "ascii"], "+"],
-      ["ascii behind", ["behind", "ascii"], "-"]
+      ["ascii behind", ["behind", "ascii"], "-"],
+      # Scenario "The git sign glyphs per set"
+      ["the git sign glyphs per set: unicode git_added", ["git_added", "unicode"], "┃"],
+      ["unicode git_changed", ["git_changed", "unicode"], "┇"],
+      ["unicode git_deleted", ["git_deleted", "unicode"], "▁"],
+      ["ascii git_added", ["git_added", "ascii"], "+"],
+      ["ascii git_changed", ["git_changed", "ascii"], "~"],
+      ["ascii git_deleted", ["git_deleted", "ascii"], "_"],
+      ["nerd git_added", ["git_added", "nerd"], "\u{F457}"],
+      ["nerd git_changed", ["git_changed", "nerd"], "\u{F459}"],
+      ["nerd git_deleted", ["git_deleted", "nerd"], "\u{F458}"]
     ]) do |pair|
       I.glyph(pair[0], pair[1])
     end
@@ -69,7 +79,7 @@ module DomainIconsTest
       [glyph.codepoints.length, D::DisplayWidth.of(code), D::DisplayWidth.private_use?(code)]
     end
 
-    t.assert_equal(35, I::NAMES.length, "thirty-five icon names, twelve of them completion kinds and two the branch counts")
+    t.assert_equal(38, I::NAMES.length, "thirty-eight icon names, twelve of them completion kinds, two the branch counts, and three the git line signs")
     t.assert_equal(">", I.glyph("current", "ascii"), "the ascii current marker is >")
     t.assert_equal(true, I.set?("unicode"), "unicode is a set")
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")

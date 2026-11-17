@@ -401,6 +401,11 @@ module UseCasesPluginsTest
     t.assert_equal(["./git: the program must be a name on the PATH", 1], [h.run_program(["/usr/bin/git"]).message.sub("/usr/bin/git", "./git"), processes.captured.length], "and starts nothing for them")
     processes.script("git log", "\xff")
     t.assert_equal([false, "git answered bytes that are not UTF-8"], [h.run_program(["git", "log"]).ok, h.run_program(["git", "log"]).message], "output that is not UTF-8 fails")
+    # run_program says a program ran past its deadline
+    processes.time_out("git fetch")
+    ran = h.run_program(["git", "fetch"])
+    t.assert_equal([false, "git ran past 2 seconds"], [ran.ok, ran.message], "run_program says a program ran past its deadline")
+    t.assert_equal([false, "cannot run svn"], [h.run_program(["svn", "info"]).ok, h.run_program(["svn", "info"]).message], "and a missing program after it still cannot run")
 
     # Requests: the edit transaction.
     p = probe([])

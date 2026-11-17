@@ -6,7 +6,9 @@ module Carat
     # test installed it, so by default no language server runs; spawns,
     # written bodies, and stops are recorded for a test to read. A capture
     # answers the output a test scripted for the command, "" for an
-    # installed command with none, and nil for one not installed.
+    # installed command with none, and nil for one not installed or one a
+    # test made time out, after which timed_out? is true until the next
+    # capture.
     class FakeProcesses < Ports::ProcessPort
       # @rbs @installed: Array[String]
       # @rbs @spawned: Array[String]
@@ -17,6 +19,8 @@ module Carat
       # @rbs @outputs: Array[String]
       # @rbs @captured: Array[String]
       # @rbs @environments: Array[String]
+      # @rbs @slow: Array[String]
+      # @rbs @timed_out: bool
 
       attr_reader :spawned #: Array[String]
       attr_reader :bodies #: Array[String]
@@ -35,6 +39,8 @@ module Carat
         @outputs = []
         @captured = []
         @environments = []
+        @slow = []
+        @timed_out = false
       end
 
       # Gives the command, its words joined by spaces, the output a capture
@@ -48,6 +54,13 @@ module Carat
         else
           @outputs[at] = output
         end
+      end
+
+      # Makes a capture of the command, its words joined by spaces, run
+      # past its deadline: recorded, answering nil, timed_out? true.
+      #: (String) -> void
+      def time_out(command)
+        @slow << command
       end
 
       # Lets a command start.
@@ -91,14 +104,26 @@ module Carat
       # @rbs argv: Array[String]
       # @rbs environment: Hash[String, String]
       def capture(argv, environment)
+        @timed_out = false
         return nil if argv.empty? || !@installed.include?(argv[0])
         command = argv.join(" ")
         @captured << command
         words = []
         environment.each { |name, value| words << "#{name}=#{value}" }
         @environments << words.join(" ")
+        if @slow.include?(command)
+          @timed_out = true
+          return nil
+        end
         at = @scripted.index(command)
         at.nil? ? "" : @outputs[at]
+      end
+
+      # Whether the last capture was of a command made to time out; a
+      # bool.
+      # @rbs skip
+      def timed_out?
+        @timed_out
       end
 
       # The method names of the bodies written, in order.

@@ -71,6 +71,8 @@ ok   run_program fails when the program cannot start
 ok   run_program refuses a path or an empty command, an empty word, and a NUL
 ok   and starts nothing for them
 ok   output that is not UTF-8 fails
+ok   run_program says a program ran past its deadline
+ok   and a missing program after it still cannot run
 ok   two edits apply as one batch
 ok   one bad edit refuses the whole list
 ok   overlapping edits are refused
@@ -99,4 +101,4 @@ ok   a raise in an event disables the plugin and keeps the edit
 ok   a disabled plugin's requests are refused
 ok   reads, stats, and icons too
 ok   a disabled plugin's segment is dropped when it is disabled
-use_cases_plugins: 101 passed, 0 failed
+use_cases_plugins: 103 passed, 0 failed
