@@ -1020,29 +1020,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a modulo shortcut combined with a sentinel-reset loop makes `:bn` and `:bp` with a count hard to check by reading, and `file_count` is public only for it.
 - Fix outline: gather the file-buffer indices once and index them modulo their count from the target's position, and make `file_count` private or fold it in, keeping the `test/domain_buffer_list.rb` rows. Since `bars`, `BufferList#tab_row?` and the buffer tabs also count file buffers, so `file_count` stays public or gives way to a shared walk. Queued as `buffer-list-structure` in `docs/queue.md`.
 
-## :ls and E162 show a newline in a file name as a line break
-
-- Where: `ListBuffers#name_of` in `carat/use_cases/buffers/list_buffers.rb` (line 72 at 68eb750) and `Messages.unsaved_buffer` in `carat/domain/messages.rb` (line 16), whose message the frame presenter splits on line breaks. Periodic security Low (4) at 68eb750.
-- Why it matters: a file in an untrusted repository whose name holds a newline, opened from the explorer, forges extra `:ls` lines (a fake buffer number, flags, or line) and extra E162 lines; `Frame#put` already shows other control bytes safely.
-- Fix outline: show a buffer name in a message with control characters escaped as the painter does, with a `test/editor_buffers.rb` row for a name holding a newline. Queued as `buffer-list-tidy` in `docs/queue.md`.
-
-## Three window closers still say only a modified buffer stays listed
-
-- Where: the comments of `CloseTab` (`carat/use_cases/windows/close_tab.rb`, lines 8 to 10 at 68eb750), `CloseOtherTabs` (`carat/use_cases/windows/close_other_tabs.rb`, lines 8 and 9), and `WindowRequests#open_in` (`carat/use_cases/plugins/window_requests.rb`, lines 124 and 125). Periodic quality advisory at 68eb750.
-- Why it matters: since `buffer-list` every file buffer stays listed until `:bd`, so the comments read as if a clean buffer left the list; `CloseWindow` and `CloseOtherWindows` already say so correctly.
-- Fix outline: say the file buffer stays listed, hidden when no other window shows it, as `close_window.rb` does. Queued as `buffer-list-structure` in `docs/queue.md`.
-
 ## Five methods walk every window of every tab page
 
 - Where: `shown?` (line 128 at 68eb750), `windows_showing` (line 145), `focus_buffer` (line 164), and the private `modified_in_page` (line 229) in `carat/domain/tab_list.rb`, and `BufferList#close_windows_of` in `carat/domain/buffer_list.rb` (line 308). Periodic quality advisory at 68eb750.
 - Why it matters: a change to how windows are enumerated has to land five times.
 - Fix outline: answer each question through one walk, for example `shown?` from `windows_showing`, with the `test/` rows unchanged. Queued as `buffer-list-structure` in `docs/queue.md`.
-
-## DeleteBuffer and ListBuffers reach TabList through BufferList
-
-- Where: `DeleteBuffer` (`carat/use_cases/buffers/delete_buffer.rb`, line 31 at 68eb750) and `ListBuffers` (`carat/use_cases/buffers/list_buffers.rb`, lines 56 and 73) use `@buffers.tabs`, while `CloseTab`, `CloseOtherTabs`, and `Quit` take `tabs:` from `EditorAssembly`; `CloseOtherWindows` (`carat/use_cases/windows/close_other_windows.rb:26`) takes the same route, and its `test/adapters_assembly.rb` row checks only the buffer list. Periodic quality advisories at 68eb750 and 847851d.
-- Why it matters: two routes to one collaborator leave no one clear way, and `test/adapters_assembly.rb` checks only the injected one.
-- Fix outline: inject `tabs:` into the three as their siblings do, with assembly test rows, or document `BufferList#tabs` as the one route. Queued in `buffer-list-tidy` in `docs/queue.md`.
 
 ## StatusBar requires the plugin API it does not use
 
@@ -1091,12 +1073,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `GROUPS = Carat::PluginApi::FileIcons::GROUPS` in `carat/plugins/explorer/file_icons.rb` (line 12 at `bars`), and `carat/plugins/explorer/plugin.rb` (line 455) repeating `group_of` as `FileIcons::GROUPS[icon].to_s`. Quality advisory of `bars`.
 - Why it matters: an alias kept for one caller and a copy of the API's lookup are two more places to change when the groups do.
 - Fix outline: call `PluginApi::FileIcons.group_of` in the explorer, drop the alias, and drop the `Carat::` prefix, which `PluginApi` resolves without.
-
-## Two comments still call the row under a window its status line
-
-- Where: `carat/domain/layout_node.rb` (line 8 at `bars`) describes the row under a column as its status line, and `carat/domain/buffer.rb` (line 145) says `display_name` is what the status line shows. Quality advisory of `bars`.
-- Why it matters: since `bars` the row under a window is a separator and the one status bar sits above the message row, so the comments describe a layout that is gone.
-- Fix outline: say the separator row, and the name the status bar shows.
 
 ## StatusBar names a Symbol state and plugin indexes owners
 
@@ -3866,12 +3842,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a stale clause sends a later change after a fixed defect.
 - Fix outline: drop that clause from the entry's fix outline, in the periodic review's backlog step. Queue item `periodic-council`.
 
-## delivery-speed security Low (3) at tools/run_state.sh:1215
-
-- Where: `tools/run_state.sh:1215`. Delivery review of `delivery-speed` (security Low (3)) at 2dcfd3d.
-- Why it matters: append_history appends late-finding notes from the run state word for word to docs/backlog.md, which the next package step commits; branch code run by the checks can write such notes.
-- Fix outline: Only accept late-finding notes this workflow wrote (e.g. the closing start passes the expected count or a digest), or reapply the noteText character filter when the notes are read.
-
 ## delivery-speed quality advisory at tools/run_state.sh:406
 
 - Where: `tools/run_state.sh:406`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
@@ -3944,12 +3914,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a closing start that does not record now loses its phase lines and metric line with only a note, so a merged run history row can lack its package, ci, and merge figures.
 - Fix outline: keep one record start for the refused close, or say in the report which figures are missing.
 
-## delivery-speed quality advisory at .claude/workflows/deliver-change.js:301
-
-- Where: `.claude/workflows/deliver-change.js:301`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
-- Why it matters: staleRed splits each check on every comma, so a matrix check name holding a comma (spin (ubuntu, 4)) parses wrong.
-- Fix outline: take status and conclusion as the last two fields.
-
 ## delivery-speed quality advisory at .claude/workflows/deliver-change.js:481
 
 - Where: `.claude/workflows/deliver-change.js:481`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
@@ -3985,18 +3949,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `.claude/agents/checker.md:3`. Delivery review of `delivery-speed` (quality advisory) at 2dcfd3d.
 - Why it matters: the description still says the checker runs the canonical stage list.
 - Fix outline: say the fast stages (FAST_STAGES).
-
-## pr-by-tag security Low at tools/pr_tag.sh:121
-
-- Where: tools/pr_tag.sh:121 (removed by pr-on-push). Delivery review of `pr-by-tag` (security Low, confidence 5) at 742ba5f.
-- Why it matters: wait records the highest-numbered pull request whose head ref equals the pushed sha without checking that it comes from this repository's branch; once the tag is gone, a fork pull request on the same commit gets a higher number, is recorded in state.pr, and the merger then acts on the attacker's pull request with its title, body, and conversation.
-- Fix outline: have open-pr publish the number it created, for example in a ref or a tag annotation the contributor reads with git, or check the pull request's head repository and branch with pull_request_read before recording it instead of matching only refs/pull/*/head by sha.
-
-## pr-by-tag security Low at .github/workflows/open-pr.yml:36
-
-- Where: `.github/workflows/open-pr.yml:36`. Delivery review of `pr-by-tag` (security Low, confidence 4) at 742ba5f.
-- Why it matters: the tagged-commit checkout keeps the default persist-credentials true, so the head code later steps run can read the GITHUB_TOKEN stored in head/.git/config; its permission is only contents read, but it hands the branch a credential it does not need.
-- Fix outline: set persist-credentials false on the head checkout, as the main checkout already does; fetch the tag with an explicit token only in the step that needs it, or keep the fetch-depth 0 clone, which already contains the tag.
 
 ## pr-by-tag quality advisory at .github/workflows/open-pr.yml:40
 
@@ -6029,11 +5981,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the same condition is tested twice.
 - Fix: return early with the branch text when counts.length != 2, then read both counts.
 
-### git_signs runs git synchronously on the editor thread
-- Location: carat/plugins/git_signs/plugin.rb:43
-- Why: activation and every buffer_open, buffer_save, and window_focus run up to two git processes synchronously on the editor thread, each up to 2 s (design.md accepts the risk).
-- Fix: measure with make bench on a large repository, and move to the threaded spawn path if a refresh shows.
-
 ### capture now times out on exactly 64 KiB with stdout held open
 - Location: carat/drivers/process_runner.rb:110
 - Why: the loop waits for a byte past CAPTURE_LIMIT or the end, so a program printing exactly 65,536 bytes and holding stdout open (a background child) now times out to nil where it answered before.
@@ -6262,12 +6209,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/adapters_language_gateway.rb:112
 - Why: no replayed row covers a CRLF buffer under sync kind 2, though the design relies on ranges joined with the buffer's own ending staying right.
 - Fix: add a replayed row over a CRLF file to the sync kind 2 table.
-
-### MarkdownText.parse overruns its row cap with a table
-
-- Location: carat/domain/markdown_text.rb:182 and its top border at line 295
-- Why: with the gap set at row_limit - 1 rows, the blank row plus the unconditional top border push the parsed DocsText one or two rows past row_limit; wrap re-caps the output so nothing shows, but parse breaks its own at-most-row_limit contract.
-- Fix: add the gap row and the top border only while doc.count is below row_limit, as draw_table already does for the body and the bottom border, with a test at the cap.
 
 ### Documentation floats draw tables with no test or spec saying so
 
@@ -6587,11 +6528,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: an immutable value view, which CLAUDE.md makes a Data subclass. Folded into ui-code-tidy.
 - Fix: make it a Data subclass of code, width, hl.
 
-### The merger's checks list has no stated source for each check's workflow
-- Location: .claude/agents/merger.md:24 (step 2)
-- Why: the merger is told to return every check as workflow, name, status, conclusion but to read the workflow files only when a check failed, and never how a check run is matched to its workflow run, so a tier that omits the field turns each stale red into a needless fix round, since staleRed treats an entry without a workflow file as not stale.
-- Fix: say the workflow field is needed only on red, and match each check run to the workflow run of its check suite id.
-
 ### sprint-10-records proposal miscounts the sprint's changes (quality advisory)
 
 - Location: openspec/changes/archive/2026-11-16-sprint-10-records/proposal.md:5 (written as openspec/changes/sprint-10-records/proposal.md:5)
@@ -6648,11 +6584,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: openspec/changes/archive/2026-11-17-windows-tabs-tidy/tasks.md:13, design.md ('The previous window never names the current one'), carat/use_cases/windows/close_other_windows.rb:10, carat/domain/buffer_list.rb:369
 - Why: task 3.1 (marked done) and the design describe a BufferList#close_window clear of tab.previous when it equals the new current window and a test 'closing into the previous window clears it', neither in the diff (buffer_list.rb:369 unchanged), so <C-w>s<C-w>c still leaves previous == current and the new comment 'the window kept is never the previous' is false; the design also gives the integer minimum as -4_611_686_018_427_387_903 - 1 where the test uses -2^63.
 - Fix: implement the close_window clear with its editor_windows row, or correct the comment to the shipped behavior and record the design's integer minimum as -2^63.
-
-### A rewrapped comment in scroll_request.rb is still 83 columns wide
-- Location: carat/use_cases/windows/scroll_request.rb:5
-- Why: the rewrap leaves an 83-column comment line, the kind of line the windows-tabs-tidy change set out to fix.
-- Fix: refill the paragraph to the file's width.
 
 ### FloatSpec writes its offset bound test twice
 - Location: carat/domain/float_spec.rb:61
@@ -6713,8 +6644,570 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the files' 72-column wrap, restored elsewhere in sprint-11, is broken again.
 - Fix outline: rewrap the three paragraphs.
 
-### The merger returns checks in two shapes
+### checks-and-pr-lows security Low (4): run_state set still writes any note key
+- Location: tools/run_state.sh:1675
+- Why: the late-finding stamp is public once the run merges and `set` still writes any note.N key, so code running after the merge with write access to build/pipeline (for example the next change's branch code run by a check, if the run-state directory is reachable from there) can forge `set CHANGE note.N "late-finding MERGED text"`, which passes late_findings and lands in docs/findings and then the backlog the planner reads; LATE_TEXT_RE keeps the text to plain characters, 400 at most.
+- Fix: make `set` refuse note.* keys so only add_note writes notes, as it already refuses review.*, phase.* and stage.*; optionally record which start wrote each note or check that note keys are numbered in sequence.
 
-- Location: .claude/agents/merger.md:24 (step 2). Sprint-11 review, quality advisory.
-- Why: checks are returned as "workflow, name, status, conclusion" but the pending result of the same step as "name: status, conclusion", so one field arrives in two shapes.
-- Fix outline: one format for every checks list, saying plainly when the workflow column may be missing.
+### checks-and-pr-lows security Low (3): open_pr wait records a lone matching pull request of unknown origin
+- Location: tools/open_pr.sh:135
+- Why: if a fork opens a pull request on the pushed commit before open-pr opens ours (a race the attacker has to automate), that fork's number is recorded with nothing earlier to compare it against, and the merger would read and squash-merge a pull request whose title the attacker controls.
+- Fix: have open-pr publish the number it opened where wait can read it (the workflow log, a commit status, or an artifact), or have the merger check that the pull request's head repository is this repository before merging.
+
+### checks-and-pr-lows security Low (5): a planted held-finding note is relabeled as a merged-stamped late finding
+- Location: .claude/workflows/deliver-change.js:471
+- Why: branch code a check runs can call `sh tools/run_state.sh note CHANGE held-finding TEXT`, since add_note accepts any lowercase kind before the merge; on a resume seed reads it back through heldFindings and the merged close records it with `note late-finding`, stamped with the real squash commit, so it passes the history stamp check and lands in docs/findings/CHANGE.md, bypassing the provenance stamp; the text stays within noteText and 400 characters, and a planted quality-advisory reaches the findings file the same way (design.md, Risks, records this tradeoff).
+- Fix: keep held findings where branch code cannot write them, for example notes carrying a token the workflow holds (the reviewed HEAD plus a per-start nonce) checked by heldFindings, or add_note refusing held-finding outside the close profile; at minimum have heldFindings keep only texts shaped like a recorded security Low or quality-advisory note.
+
+### checks-and-pr-lows security Low (4): unpushed-finding notes accepted from any run-state writer before the merge
+- Location: .claude/workflows/deliver-change.js:515
+- Why: branch code a check runs could plant an unpushed-finding note that an unpushed resume's seed hands to the package step, which appends it to docs/findings/CHANGE.md; the text is held to noteText's shell-safe shape and reaches only the reviewed PR diff, the reach design.md line 36 accepts for held-finding and quality-advisory notes, but that accepted-risk paragraph does not name the new kind.
+- Fix: add unpushed-finding to the accepted-risk decision in design.md beside held-finding, or have seed accept an unpushed-finding note only when the run state also records a close phase or stop marker written by the workflow at a commit.
+
+### checks-and-pr-lows test gap: the unstamped forged late-finding note is overwritten before it is checked
+- Location: tools/tools_test.sh:986
+- Why: the unstamped forged note.7 is overwritten by the following `state note history overrun`, numbered by the note count plus one (7), so the without-a-stamp case of late_findings is never exercised.
+- Fix: set the forged notes after the overrun note or at numbers above the next note number.
+
+### checks-and-pr-lows correctness: open_pr wait can replace a recorded pull request number
+- Location: tools/open_pr.sh:135
+- Why: a single number on the pushed head is taken even when the run state already records a different pr, so a later push can overwrite the branch's pull request number with another one, a fork's included.
+- Fix: when pr is recorded, accept only that number and keep waiting otherwise.
+
+### git_signs detects a timed-out capture by matching a message suffix spelled twice
+- Location: carat/plugins/git_signs/plugin.rb (TIMEOUT, the timeout check in run) and carat/use_cases/plugins/file_requests.rb (the run_program failure message)
+- Why: the plugin recognizes a timeout only by the suffix "ran past 2 seconds", which file_requests.rb writes again as a literal that also restates ProcessRunner::CAPTURE_SECONDS, so rewording the message or changing the deadline silently disables the back-off and every later event stalls again.
+- Fix: name the suffix once as a PluginApi constant that run_program builds its message from and the plugin matches, deriving the seconds from the one deadline constant.
+
+### git_signs buffer_close drop has no test
+- Location: carat/plugins/git_signs/plugin.rb (the buffer_close subscription and drop), test/editor_git_signs.rb
+- Why: forgetting a closed buffer's HEAD text and clearing its signs is new behavior with no test, so a regression that keeps stale text or leaks held texts would pass the suite.
+- Fix: add an editor_git_signs case that closes a buffer and checks that a reopen at the same HEAD key captures the text again.
+
+### git_signs keeps old signs when a buffer's relative path becomes empty
+- Location: carat/plugins/git_signs/plugin.rb (focus and save return early on an empty relative_path)
+- Why: a buffer renamed to a path outside the working directory (for example under an explorer root elsewhere) keeps its previous signs and held HEAD text, against the rule that a buffer outside the working directory shows no sign.
+- Fix: call drop(buffer) when relative_path is empty, with an editor_git_signs case covering the rename.
+
+### git_signs head_key is empty in a linked worktree or a repository subdirectory
+- Location: carat/plugins/git_signs/plugin.rb (head_key)
+- Why: when .git is a file (a git worktree) or the working directory is below the repository root, the key is always empty, so every focus runs three git commands, and one timed-out capture stops git for the whole session because the empty key never changes.
+- Fix: follow the gitdir: line of a .git file and search upward for the repository root, or record the limit in docs/compatibility.md and the git-status spec and let a timeout back off for a bounded time instead of until a key change.
+
+### The language server gateway rescans every configuration line for a rooted command on each idle tick
+- Location: carat/adapters/json_rpc_language_gateway.rb:318
+- Why: command? runs on every idle tick while the current filetype has no server (any filetype with no lsp, or an untrusted directory) and now scans all of the roughly 760 configuration lines twice instead of once; the design's risk note understates this cost.
+- Fix: keep the chosen command per language once read, as trusted? keeps @trust, since neither the directory nor the configuration changes during a session.
+
+### A language.NAME.lsp.root line whose root is not a root is kept without a report
+- Location: carat/domain/config.rb:218
+- Why: a line whose root is relative or has a . or .. segment is kept silently and covers nothing, though the README promises every configuration mistake is reported as file:line: message.
+- Fix: move root_of into a domain helper config.rb can require and report such a line as not a root.
+
+### A phase's recorded output differs from its agent starts' output
+- Location: `.claude/workflows/deliver-change.js` phase accounting, `metric.phases` (markdown-reading-c retro note 18).
+- Why: phase.check recorded 150,693 output and 27 calls (37.9% of 397,894) while its three checker starts summed 5,213; git-signs-status-b check 57,747 and checks-and-pr-lows 38,907 against 2,029 to 6,432 earlier, so `check-skip` and share-based proposals judge a number the checker did not spend.
+- Fix: accepted when, for the next three runs, each phase's recorded output is within 10% of the summed output of its agent starts.
+
+### The package step appends the planner's findings twice
+- Location: the package step's findings append, `tools/run_state.sh` plan-apply (markdown-reading-c retro note 19).
+- Why: 14 lines of the markdown-reading-c findings file (since folded here) repeated (commit 1fc49d8), raised by 2 quality advisories in a run with quality first pass 0 and rework 3.
+- Fix: accepted when a tools-test case runs the append twice on one change and the second leaves the file unchanged.
+
+### A merge refused on a moved main costs a full resume and a CI failure
+- Location: `.claude/workflows/deliver-change.js` merge and resume path (markdown-reading-c retro note 20).
+- Why: CI green at the first push in 7 min, yet first.ci 0; merge 39,463 output in 24 calls (ci_wait_calls 10), and the resume re-ran 3 checker, 3 quality, 3 security starts.
+- Fix: accepted when the next merge refused for a moved main records first.ci 1 on a green CI and reaches the merge with no new checker or review start unless merging main changed files under carat/ or tools/.
+
+### plan-apply and history write into whatever checkout runs them
+- Location: `tools/run_state.sh:1707` append_history, plan-apply (planner-split-rule retro note 5).
+- Why: the package step ran both from the main checkout, edited main's backlog queue and history while another lane ran, keyed a row to main; package 10,276 output in 21 calls against a median of 14 over the last 10 backlog rows.
+- Fix: accepted when both refuse, non-zero with the tree unchanged, outside the change's lane worktree (a tools-test case), and the next package phase stays within 15 calls.
+
+### CLAUDE.md and planner.md have no bytes left for review fixes
+- Location: `CLAUDE.md`, `.claude/agents/planner.md` against docs-lint's limits (planner-split-rule retro note 6).
+- Why: CLAUDE.md 30,714 of 30,720 bytes, planner.md 8,189 of 8,192; the split rule left out of CLAUDE.md and 2 of 4 quality advisories deferred for want of bytes.
+- Fix: free space by removing repetition, limits unchanged; accepted when the next change touching them lands planner-split-rule quality advisories 3 and 4 and the split rule with docs-lint passing.
+
+### The merge start passes its cap on a first-pass green CI
+- Location: merger start, `CALL_CAPS` in `.claude/workflows/deliver-change.js`; pool item `merge-gate-integrity` (planner-split-rule retro note 7).
+- Why: merge 18,979 output in 14 calls (13.2%) with first.ci 1; 5 of the last 8 medium backlog rows at 14 calls against a cap of 12; merge output 17,462 to 30,050 in 4 runs against 4,045 to 6,438 in 9 of the last 10 feature rows.
+- Fix: fold into `merge-gate-integrity`; accepted when five medium runs in a row merge within cap, no overrun note, under 6,000 output on a first-pass green CI.
+
+### A check pass after a fix round costs more than a first pass
+- Location: `.claude/workflows/deliver-change.js` check phase; backlog pool item `check-skip` (git-signs-status-b retro note 9).
+- Why: git-signs-status-b's check took 57,747 output tokens in 11 calls (16.8% of 342,779) over 2 passes that both passed; the last 20 lane rows ran 1,970 to 24,171; check first pass 121/123.
+- Fix: fold into `check-skip`; accepted when the next three feature runs keep check at or under 6,000 output tokens per pass with first.check still 1.
+
+### A resumed run records 0 output tokens for the phases done before the resume
+- Location: `.claude/workflows/deliver-change.js` resume path, `metric.phases` and the history row (git-signs-status-b retro note 10).
+- Why: git-signs-status-b recorded plan=0/10, areas=0/2, scout=0/14 against plan 10,124 to 25,457 and scout 18,002 to 64,257 output in the last 10 feature rows, so its output total and the check-pass budget line undercount.
+- Fix: accepted when a resumed run's carried phases show their recorded tokens or are marked carried in the phases and the history row, never 0 beside non-zero calls.
+
+### Quality fails its first pass on about half the runs
+- Location: the quality review's blocking findings across the lane histories (git-signs-status-b retro note 11).
+- Why: quality first pass 62/123 against 117/124 or better for every other gate; first.quality 0 on git-signs-status-a and git-signs-status-b (plugin state keyed by buffer id with no rename case); the fix round took output from 164,154 to 342,779, over medium's 200,000.
+- Fix: find what the blocking findings of the last ten quality first-pass failures share and remove the cause upstream; accepted when quality first pass reaches 7 of the next 10 runs.
+### An indented code block inside a quote still flows into one quote row
+- Location: carat/domain/markdown_text.rb:158
+- Why: the four-space check counts only the spaces before the quote markers, so '>     x = 1' followed by '>     y = 2' (five spaces after the marker) joins into one quote row and the code loses its line breaks in the reading view.
+- Fix: also return -1 when the spaces after the last quote marker are five or more (four beyond the marker's one), with a test/domain_markdown_text.rb case for a two-line indented block in a quote.
+
+### marker_end can disagree with the quote-marker scans of flow_key and block
+- Location: carat/domain/markdown_text.rb:175
+- Why: marker_end repeats the leading-space and quote-marker scan of flow_key (:153) and block (:619) with a looser loop (any mix of spaces and >), so the join in parse can cut a line at a different byte than the block that classified it, a latent correctness divergence.
+- Fix: one helper returning the byte after the markers, used by flow_key, block, and the join in parse, with a test of a quote line mixing spaces and markers.
+
+### No hover test shows a flowed paragraph, and the README names the flow only for the reading view
+- Location: test/adapters_hover.rb, README.md:69
+- Why: MarkdownText.parse is shared, so the paragraph and quote flow and the hanging prefix also reach the hover and completion floats, but no test proves it there and the README states it only for the reading view.
+- Fix: add a two-line paragraph case to test/adapters_hover.rb and say in the README's floats sentence that paragraphs and quotes flow there too.
+### A check pass after a fix round costs more than a first pass
+- Location: `.claude/workflows/deliver-change.js` check phase; backlog pool item `check-skip` (git-signs-status-b retro note 9).
+- Why: git-signs-status-b's check took 57,747 output tokens in 11 calls (16.8% of 342,779) over 2 passes that both passed; the last 20 lane rows ran 1,970 to 24,171; check first pass 121/123.
+- Fix: fold into `check-skip`; accepted when the next three feature runs keep check at or under 6,000 output tokens per pass with first.check still 1.
+
+### A resumed run records 0 output tokens for the phases done before the resume
+- Location: `.claude/workflows/deliver-change.js` resume path, `metric.phases` and the history row (git-signs-status-b retro note 10).
+- Why: git-signs-status-b recorded plan=0/10, areas=0/2, scout=0/14 against plan 10,124 to 25,457 and scout 18,002 to 64,257 output in the last 10 feature rows, so its output total and the check-pass budget line undercount.
+- Fix: accepted when a resumed run's carried phases show their recorded tokens or are marked carried in the phases and the history row, never 0 beside non-zero calls.
+
+### Quality fails its first pass on about half the runs
+- Location: the quality review's blocking findings across the lane histories (git-signs-status-b retro note 11).
+- Why: quality first pass 62/123 against 117/124 or better for every other gate; first.quality 0 on git-signs-status-a and git-signs-status-b (plugin state keyed by buffer id with no rename case); the fix round took output from 164,154 to 342,779, over medium's 200,000.
+- Fix: find what the blocking findings of the last ten quality first-pass failures share and remove the cause upstream; accepted when quality first pass reaches 7 of the next 10 runs.
+
+### A merge that fails on a moved main has no push path
+- Location: tools/run_state.sh push_branch and .claude/workflows/deliver-change.js merge loop
+- Why: a green pull request behind a moved, conflicting main stopped the run, since push --ci-fix needs a red CI
+- Fix: let the merge loop run merge-main and push it as a main-moved push, counted once
+
+## Findings of markdown-reading-c after its package step
+
+- quality advisory docs/findings/markdown-reading-c.md:29 the package commit 1fc49d8 appended the three git-signs-status-b retro entries (check pass cost, resumed run 0 tokens, quality first pass) a second time, lines 1-14 already holding them, and left no blank line before :15 and :29; fix: drop the second copy at :29-42 and put one blank line between entries
+- quality advisory carat/domain/docs_text.rb:63 simple and elegant: last_line= stores an alias that parse then grows in place (markdown_text.rb:108-118, the flowing and flowing_row state), cleverness the flow does not need, and the archived tasks.md 1.1 names a DocsText#extend_last that does not exist; fix: one DocsText#append_to_last(text) that replaces the last row with the joined string, dropping
+- quality advisory carat/domain/markdown_text.rb:920 under the ascii set a text row starting with ' ' (a literal pipe line or a narrow table's source) is read as a quote bar prefix, so hang now repeats ' ' on every continuation row of a plain line; fix: take the hanging prefix from the parsed row kind (record the prefix length per row in DocsText at parse) rather than re-reading the text, with an as
+- quality advisory docs/findings/markdown-reading-c.md:29 docs currency: the three pipeline findings of lines 1-14 (check pass cost, resumed-run tokens, quality first pass) are appended a second time; fix: drop lines 29-42
+- quality advisory carat/domain/markdown_text.rb:108 tests beside every behavior change: the -2 path also stops a narrow table's header from joining a paragraph line right before it (key -1 while source), but only the wide table has that case (test line 248); fix: add a test/domain_markdown_text.rb case at width 15 of 'text' directly followed by a narrow table, expecting 'text' its own row
+- quality advisory carat/domain/markdown_text.rb:82 naming: the bool local source says nothing of what it tracks (inside the lines of a table too narrow to draw); fix: rename it narrow_table
+
+### The goals rubric still splits only a brief of more than about four fixes
+- Location: docs/goals.md:24
+- Why: the planner decides by the goals rubric (planner.md step 2), which still splits only a brief of more than about four separate fixes, contradicting planner.md step 3's split at three or more independently testable parts or map areas, so the planner can read two thresholds.
+- Fix: rewrite goals.md line 24 to the three-part or three-area threshold when the planner is next asked for goals, or point it at planner.md step 3.
+
+### planner.md says the contributor appends the plan's backlog file
+- Location: .claude/agents/planner.md:25
+- Why: step 5 says the contributor appends build/plan backlog.md to its findings file, but plan-apply does it (tools/run_state.sh plan_apply) and the CLAUDE.md Backlog bullet says so, so the planner's rules drift from the script.
+- Fix: write "which plan-apply appends to the change's findings file", within the 8,192-byte budget.
+
+### The CLAUDE.md planner bullet names only build/plan/CHANGE/
+- Location: CLAUDE.md:205
+- Why: the planner bullet says the planner writes into build/plan/CHANGE/, but its sprint mode and /plan write to build/plan/ (planner.md:25, sprint-planning.js:9), so the bullet misplaces the sprint plan.
+- Fix: "into build/plan/ (CHANGE/ in a delivery)" when the bytes allow, with the user's approval, since the wording was approved verbatim.
+
+## Folded windows-tabs-tidy close_window finding is in neither lane queue
+
+- Location: docs/backlog.md:6647 (the folded windows-tabs-tidy finding); carat/use_cases/windows/close_other_windows.rb:10
+- Why: the close_window clear of tab.previous never shipped and the comment at close_other_windows.rb:10 is false, yet the finding is in neither lane queue while groom removed the old entry "CloseOtherWindows clears tab.previous a second time" as fixed by windows-tabs-tidy, so the gap can sit unseen.
+- Fix: have the planner add it to the windows-buffers-tidy item (close_other_windows.rb:10, buffer_list.rb:369) or queue it alone.
+
+## FloatSpec offset bound test finding is folded but unqueued
+
+- Location: docs/backlog.md:6657; carat test float_spec.rb:61
+- Why: "FloatSpec writes its offset bound test twice" is folded but unqueued while its sibling from the same delivery (the 83-column scroll_request.rb line) is pulled into windows-buffers-tidy.
+- Fix: add the float_spec.rb:61 heading to that item's Backlog list, or say why it waits.
+
+## Backlog holds the already fixed stale insert acceptance figure entry
+
+- Location: docs/backlog.md:6601
+- Why: the folded entry "Lane queues state a stale insert acceptance figure" is already fixed by sprint-11-records (both queues now say insert 26.0 at line 3), so the backlog holds a done item.
+- Fix: have the next sprint's groom remove it as fixed, or have the planner list such headings in groom.txt when its queues fix them.
+
+## Groom folds a findings file without a trailing newline as is
+
+- Location: docs/backlog.md:6640 (two folded findings run together with no blank line) and docs/backlog.md:6612 (a double blank line); tools/run_state.sh groom
+- Why: groom concatenates a findings file that lacks a trailing newline as is, so entries run together or gain extra blank lines.
+- Fix: make groom end each folded file with exactly one blank line, with a tools-test case.
+
+## sprint-11-records proposal miscounts the removed groom headings
+
+- Location: openspec/changes/archive/2026-11-17-sprint-11-records/proposal.md:9
+- Why: it says groom removes the 22 headings of build/plan/groom.txt from docs/backlog.md, but only 20 are removed there; the last two duplicates were repeated copies inside docs/findings/ux-fixes-a.md.
+- Fix: say 20 headings from docs/backlog.md and 2 duplicate copies in the ux-fixes-a findings file.
+
+## ux-fixes-a history row records no CI minutes
+
+- Location: docs/metrics-feature.tsv:42
+- Why: the ux-fixes-a row records ci_min as - though its CI ran green and its ci_stages are recorded, because build/pipeline/ux-fixes-a.json has no metric.ci_min, leaving a hole in the CI-minutes history.
+- Fix: have the merge phase always record ci_min (or history derive it from ci_stages) and backfill this row.
+
+## Findings append can duplicate a heading on a retried delivery
+
+- Location: docs/findings/ux-fixes-a.md:1 (removed by groom)
+- Why: it held the ProcessPort and benchmark-phase entries twice each, appended twice by a retried or resumed delivery, and only the planner hand-listing them as duplicates kept them out of the backlog.
+- Fix: make the findings append (or groom when folding) skip a heading already present, with a tools-test case.
+
+
+### The workflow trusts an agent-reported head without git
+- Location: .claude/workflows/deliver-change.js:776
+- Why: a fabricated sha sharing a 7-character prefix stopped a passing run at check and made record lines fail.
+- Fix: resolve each reported head with git rev-parse in the lane and stop on a mismatch.
+
+### The :e and :w messages still print a newline in a file name as a line break
+- Location: carat/use_cases/files/open_file.rb:42, :63, :64; carat/use_cases/files/save_file.rb:56
+- Why: these messages still put a raw path in quotes, so a file name holding a newline forges message lines the way `:ls` and E162 did before windows-buffers-tidy; no entry tracked them once the proposal left them out of scope.
+- Fix: pass the path through Domain::ControlText.caret in those messages, with an editor test of a newline name for each.
+### git_signs counts stay stale after a fetch
+
+- Location: carat/plugins/git_signs/plugin.rb:127 (sprint-12 review, quality).
+- Why: the focus fast path skips the COUNTS run, but a git fetch moves refs/remotes and FETCH_HEAD, which head_key does not read, so ahead and behind counts stay stale until the next open or save, where before sprint 12 every focus refreshed them.
+- Fix outline: add the upstream ref's or FETCH_HEAD's stamp to head_key, or state the trade-off in openspec/specs/git-status/spec.md.
+
+### git_signs shows no signs for a file committed empty
+
+- Location: carat/plugins/git_signs/plugin.rb:149 (sprint-12 review, quality).
+- Why: an empty blob and a file not in HEAD both come back empty from run(), and show_signs returns on no head lines, so an edited file committed empty shows no signs although LineDiff marks it all added.
+- Fix outline: record whether cat-file succeeded beside the held text and pass an empty HEAD as zero lines, with a test/editor_git_signs.rb row.
+
+### messages.rb names ControlText without requiring it
+
+- Location: carat/domain/messages.rb:18 (sprint-12 review and sweep, quality).
+- Why: unsaved_buffer calls ControlText.caret with no require_relative of control_text, the only file under carat/ doing so; it compiles only through the order of carat.rb.
+- Fix outline: add require_relative "control_text" at the top of messages.rb.
+
+### MarkdownText flow_key copies block's scan and keeps a dead indent cap
+
+- Location: carat/domain/markdown_text.rb:160, :176, comment :153 (sprint-12 review and sweep, quality).
+- Why: flow_key repeats the leading-space and quote-depth scan of block (:632 to :644); after the return at :165 indent is 0 or 1, so the NEST_LIMIT cap at :176 never runs and the comment promising it misleads.
+- Fix outline: one helper returning depth and indent used by both; drop the dead cap and say the indentation is 0 or 1.
+
+### toolchain-clean deletes every lane worktree under tmp
+
+- Location: Makefile:203; docs/architecture.md:33; README.md:21 (sweep, quality, blocking).
+- Why: toolchain-clean runs rm -rf tmp, which also deletes each stopped delivery's worktree tmp/.lane-CHANGE (uncommitted work kept for its resume), tmp/.merge-gates, the review worktrees, and tmp/scout, leaving dangling worktree records; it ignores the SPINEL_SRC and PREFIX overrides the architecture says it honors.
+- Fix outline: remove only "$(SPINEL_SRC)" and "$(PREFIX)", and say so in its help line and README.md:21.
+
+### CI checkout keeps GITHUB_TOKEN while pull request targets run
+
+- Location: .github/workflows/ci.yml:36 (sweep, security Low (6)).
+- Why: the checkout keeps GITHUB_TOKEN in .git/config while the pull request's own make targets run.
+- Fix outline: persist-credentials: false on the checkout; the scope step already reads through GH_TOKEN.
+
+### Workflow actions are pinned by movable tags
+
+- Location: .github/workflows/open-pr.yml:48 and every workflow (sweep, security Low (5)).
+- Why: actions/checkout and actions/cache are pinned by the tag v4, here in the job of environment AI that holds PR_TOKEN.
+- Fix outline: pin every action to a full commit hash.
+
+### An untrusted project .caratrc may bind keys to destructive actions
+
+- Location: carat/domain/config.rb:236 (sweep, security Low (4)).
+- Why: a project .caratrc may bind any key in any mode to any action, such as quit.write_all or buffer.delete, so a cloned repository can turn common keys into writes or discards.
+- Fix outline: read project keymap lines only under language.trusted_roots, or allow only non-destructive actions there.
+
+### ci_scope.sh splits changed paths at whitespace
+
+- Location: tools/ci_scope.sh:98, :118 (sweep, quality).
+- Why: for path in $changed and $since are unquoted, so a path is split and its globs expanded; a path whose pieces each look like documentation skips the CI checks (fails open).
+- Fix outline: set -f and a newline IFS around both loops, or while IFS= read -r path.
+
+### spec_validate.sh deletes the failed preview it promises to keep
+
+- Location: tools/spec_validate.sh:60, :70 (sweep, quality).
+- Why: each preview starts with rm -rf "$preview", deleting an earlier change's failed preview, though the header says it is kept in build/spec-preview.
+- Fix outline: preview each change in build/spec-preview/NAME, or stop at the first failure.
+
+### The generated config header says spin run carat-gen-config
+
+- Location: bin/carat-gen-config.rb:118, carat/domain/default_config.rb:2, docs/architecture.md:222 (sweep, quality).
+- Why: spin run skips the Spinel-warnings check make gen-config adds, against the CLAUDE.md Commands rule.
+- Fix outline: say make gen-config in all three.
+
+### TrustedRoots#cover? repeats under?'s absolute check
+
+- Location: carat/domain/trusted_roots.rb:19, :35 (sweep, quality).
+- Why: cover? checks cwd is absolute while under? already checks every word.
+- Fix outline: drop the check from cover?.
+
+### Six sites recompute Options#tab_width
+
+- Location: carat/use_cases/dispatcher.rb:112, leave_insert.rb:69, repeat_last.rb:104, arrange_view.rb:43, insert_tab.rb:25, carat/adapters/frame_presenter.rb:216 (sweep, quality, three notes).
+- Why: each spells tabstop > 0 ? tabstop : 8, a copy of Options#tab_width (carat/domain/options.rb:131).
+- Fix outline: call options.tab_width at each site.
+
+### text_objects.rb names a local cls
+
+- Location: carat/domain/text_objects.rb:86 (sweep, quality).
+- Why: cls is the abbreviation the CLAUDE.md naming rule forbids.
+- Fix outline: rename it char_class.
+
+### Keymap#holder_of repeats node_at's walk
+
+- Location: carat/domain/keymap.rb:246, :273 (sweep, quality).
+- Why: holder_of copies the trie walk of node_at.
+- Fix outline: node = node_at(mode, codes), then the owner or "".
+
+### KeyDecoder#csi_key repeats ss3_key's finals
+
+- Location: carat/adapters/key_decoder.rb:148 (sweep, quality).
+- Why: csi_key repeats the letter finals A to D, H, F, P to S of ss3_key.
+- Fix outline: keep the 126 tilde branch and send the rest to ss3_key(final).
+
+### EditorAssembly names the loaded config value
+
+- Location: carat/adapters/editor_assembly.rb:325 (sweep, quality).
+- Why: the loaded Domain::Config is named value across about 175 lines.
+- Fix outline: rename it loaded_config.
+
+### end_visual rewrites clamp_col
+
+- Location: carat/domain/editor_state.rb:122, :97, comment lines 13 and 15 (sweep, quality).
+- Why: end_visual writes clamp_col out again, and two comment lines pass the wrap.
+- Fix outline: c.col = clamp_col(c.row, c.col) and rewrap.
+
+### HandleKey clears a message twice and uses bare codes
+
+- Location: carat/use_cases/handle_key.rb:230, :384 (sweep, quality).
+- Why: the list_message? branch clears a message line 233 clears anyway; :384 uses the bare codes 40 and 44 for ( and ,.
+- Fix outline: drop the first clear and name the two codes.
+
+### Walker and Motions require each other through code_class
+
+- Location: carat/domain/walker.rb:63, carat/use_cases/find_match.rb:134 (sweep, quality).
+- Why: Walker calls Motions.code_class while motions.rb requires walker.rb, a hidden circular dependency; find_match.rb copies blank?.
+- Fix outline: move code_class and blank? into a small character-class module both require.
+
+### The Messages map entry lists half its messages
+
+- Location: docs/codebase-map.md:127 (sweep, quality).
+- Why: it omits E16, E444, unsaved_buffer, and invalid_argument.
+- Fix outline: list them all.
+
+### tools_test pins whole prose sentences
+
+- Location: tools/tools_test.sh:3493 (sweep, quality).
+- Why: the planner and lanes cases grep -F whole sentences of planner.md and CLAUDE.md, so any rewording fails tools-test.
+- Fix outline: pin each rule's key terms.
+
+### Operate and RepeatLast copy clamp_col
+
+- Location: carat/use_cases/operate.rb:204, repeat_last.rb:116 (sweep, quality).
+- Why: both private clamp methods copy EditorState#clamp_col line for line.
+- Fix outline: call state.clamp_col(row, col) and delete both.
+
+### Operators repeats the indent step fallback
+
+- Location: carat/domain/operators.rb:172, :251, :272 (sweep, quality).
+- Why: shift_block and shift repeat the shiftwidth-else-tabstop-else-8 step and indent_width the tab fallback.
+- Fix outline: one private step_width(shiftwidth, tabstop), or an Options reader passed in.
+
+### RegisterCommandHandler re-implements RegisterEntry#lines
+
+- Location: carat/use_cases/ex/register_command_handler.rb:61, :58 (sweep, quality).
+- Why: TextLines.split with an empty fallback copies RegisterEntry#lines; :58 compares kind where linewise? and blockwise? exist.
+- Fix outline: parts = entry.lines and the predicates.
+
+### Three ex handlers spell digits? apart
+
+- Location: carat/use_cases/ex/tab_command_handler.rb:102, buffer_command_handler.rb:102, history_command_handler.rb:67 (sweep, quality).
+- Why: three copies of one check.
+- Fix outline: one domain predicate the three call.
+
+### GlobalCommand and SubstituteLines repeat remember
+
+- Location: carat/use_cases/search/global_command.rb:81, substitute_lines.rb:113 (sweep, quality).
+- Why: both make the same four writes: last substitute pattern, last search, the / register, the history.
+- Fix outline: one shared helper both call.
+
+### The cursor's screen row is spelled in eight places
+
+- Location: carat/use_cases/arrange_view.rb:108, :109, show_completion_docs.rb:92, :106, open_completion_popup.rb:75, carat/domain/layout.rb:247, show_signature.rb:66, show_hover.rb:77, open_definition_float.rb:32, frame_presenter.rb:735 (sweep, quality).
+- Why: window.row + cursor.row - window.top is written out eight times, the column twice.
+- Fix outline: Window#cursor_screen_row and a cursor_screen_col reader used by every site.
+
+### PutOverSelection repeats Operators.put's count loop
+
+- Location: carat/use_cases/visual/put_over_selection.rb:124, carat/domain/operators.rb:42 (sweep, quality).
+- Why: repeated copies the linewise count loop.
+- Fix outline: one Operators.repeated(lines, count).
+
+### The BufferRequest and SwitchBuffer map entries drift
+
+- Location: docs/codebase-map.md:385, :387 (sweep, quality).
+- Why: buffer_request.rb:3 also has :tab and :alternate; switch_buffer.rb:9 handles Ctrl-^ and E23, all unlisted.
+- Fix outline: add both targets, Ctrl-^, and E23.
+
+### Selection#as is unclear and the map omits three methods
+
+- Location: carat/domain/selection.rb:84, docs/codebase-map.md:333 (sweep, quality).
+- Why: as names a copy with another kind; the entry omits numbered_delete?, as, and line_start.
+- Fix outline: rename it with_kind and list the three.
+
+### The docs give PluginApi 2.6 against the code's 2.7
+
+- Location: docs/codebase-map.md:532, docs/architecture.md:330, carat/plugin_api.rb:12 (sweep, quality, two notes).
+- Why: the map and section 9 say 2.6; the code and docs/plugins.md:23 say 2.7; the map's Paths list omits absolute.
+- Fix outline: say 2.7 in both and add absolute.
+
+### make bench without SCENARIOS skips four scenarios
+
+- Location: bench/run.sh:69, bench/keys.rb (sweep, quality).
+- Why: run.sh copies bench/keys.rb's SCENARIOS and lacks lh-float, lh-winbar, n, and palette.
+- Fix outline: let bench/keys.rb print its names for run.sh, or add the four.
+
+### PluginHost builds its own ResolveInside
+
+- Location: carat/use_cases/plugins/plugin_host.rb:80, carat/adapters/editor_assembly.rb:433 (sweep, quality).
+- Why: two instances against the one-shared-instance rule.
+- Fix outline: pass the assembly's resolve_inside as a keyword and assert it in test/adapters_assembly.rb.
+
+### The gateway's six cancel wrappers share one body
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:601, :672, :726, :872, :952, :1005 (sweep, quality).
+- Why: each is cancel_request then sent_id = 0.
+- Fix outline: cancel_request returns 0 and the call sites assign it.
+
+### Explorer Tree has a positional constructor
+
+- Location: carat/plugins/explorer/tree.rb:23, plugin.rb:484 (sweep, quality).
+- Why: the one plugin behavior class without keywords, which lint misses since it exempts plugins (test/lint.rb:1188).
+- Fix outline: initialize(root:, show_hidden:, ignore:) with its signature.
+
+### bench NullTerminal breaks the double naming rule
+
+- Location: bench/keys.rb:30 (sweep, quality).
+- Why: a double not starting with Fake, Memory, Manual, or Fixed.
+- Fix outline: rename it FakeCountingTerminal.
+
+### gates.sh's header misstates the stages source
+
+- Location: tools/gates.sh:39, :355 (sweep, quality).
+- Why: the header says CHECK_STAGES while stage_list reads FAST_STAGES first.
+- Fix outline: say STAGES, else FAST_STAGES, else CHECK_STAGES.
+
+### carat.rb misses three files
+
+- Location: carat.rb:2 (sweep, quality).
+- Why: indent_guides.rb, border_style.rb, and search_handler.rb are reached only through other files, though the header says every file is pulled in here.
+- Fix outline: add each to its layer section.
+
+### Scanner errors pass the text gates
+
+- Location: tools/open_pr.sh:76, tools/gates.sh:208, :520, tools/docs_lint.sh:95, tools/scan_text.sh:82, :90 (sweep, quality).
+- Why: the callers judge only the scanner's output, so an exit 2 with no output passes; --diff mode with a missing FILE scans nothing.
+- Fix outline: fail on an exit other than 0 or 1, as pr_scan.sh does, and check each --diff FILE exists.
+
+### metrics.sh compare passes a base name never measured
+
+- Location: tools/metrics.sh:85, :17 (sweep, quality).
+- Why: compare walks only the current file, so a strict base allocs or rounds name missing from the current run passes, against the header.
+- Fix outline: mark names seen and fail every unseen strict base name in END.
+
+### The branch pattern and the trailer are spelled three times each
+
+- Location: tools/run_state.sh:2347, :2420, tools/open_pr.sh:47, tools/agent_guard.sh:117, tools/gates.sh:78, tools/scan_text.sh:29 (sweep, quality, two notes).
+- Why: three copies of BRANCH_RE and of the co-author trailer can drift.
+- Fix outline: one BRANCH_RE and one TRAILER in tools/rules.sh, a tools_test equality case for the guard copy (a merge-gate rules edit, landed alone).
+
+### ci_scope.sh repeats its API calls
+
+- Location: tools/ci_scope.sh:80, :81, :84, :117 (sweep, quality).
+- Why: the commits pulls call runs twice and the spin check-runs query twice.
+- Fix outline: one call printing both fields and a spin_passed helper.
+
+### rules.sh documentation comment misstates tools-test scope
+
+- Location: tools/rules.sh:62, tools/ci_scope.sh:9 (sweep, quality).
+- Why: documentation() is said to be read by no tool case, yet TOOLS_RE (:88) scopes tools-test on CLAUDE.md and .claude/commands.
+- Fix outline: say no test or build reads them, tools-test scoped by TOOLS_RE.
+
+### The tools-test help line omits four scripts
+
+- Location: Makefile:433 (sweep, quality).
+- Why: it leaves out open_pr.sh, scan_text.sh, pr_scan.sh, and rules.sh.
+- Fix outline: name them, or say every script under tools/.
+
+### gate_pushes passes a non-numeric count
+
+- Location: tools/gates.sh:397 (sweep, quality).
+- Why: -gt on a non-numeric pushes, ci_fixes, or review_fixes errors and the gate prints ok.
+- Fix outline: refuse a value that is not digits.
+
+### gen_respond_to_tables types Row arrays as untyped
+
+- Location: tools/spinel/gen_respond_to_tables.rb:114, :141, :159 (sweep, quality).
+- Why: Array[untyped] where every element is a Row.
+- Fix outline: Array[Row].
+
+### Nothing checks the vendored Spinel header against its generator
+
+- Location: tools/spinel/gen_respond_to_tables.rb, docs/codebase-map.md:78 (sweep, quality).
+- Why: a drift shows only at the next SPINEL_REF bump.
+- Fix outline: a tools-test case or a CI step on a SPINEL_REF change running make spinel-header and diffing the header.
+
+### The ruby plugin copies Filetype's tables and misses shebang files
+
+- Location: carat/plugins/ruby/plugin.rb:24, carat/domain/filetype.rb:8 (sweep, quality).
+- Why: EXTENSIONS and NAMES copy the domain's; a Ruby script found by its shebang or :set ft=ruby never gets the structure check's sign.
+- Fix outline: carry the buffer's filetype in PluginApi::Event (minor API bump), drop the copies, add a shebang case.
+
+### The Visual cursor cell loses a documentation buffer's markup
+
+- Location: carat/adapters/frame_presenter.rb:742, :826 (sweep, quality).
+- Why: place_cursor reads the group from syntax_cache.lookup while paint_window paints a styled buffer from style_at, so the cursor cell shows Normal.
+- Fix outline: one private helper choosing the entry as paint_window does.
+
+### FramePresenter exposes test-only wrappers
+
+- Location: carat/adapters/frame_presenter.rb:318, :1235, docs/codebase-map.md:462 (sweep, quality).
+- Why: public display_col and display_width wrap DisplayWidth.column for one test; diagnostic_group is a public class method under private.
+- Fix outline: test DisplayWidth.column directly, make them private, update the map entry.
+
+### SyntaxCache#lookup recomputes start_of
+
+- Location: carat/domain/syntax_cache.rb:159, :83 (sweep, quality).
+- Why: row == 0 ? 0 : ends[row - 1] copies start_of.
+- Fix outline: start = start_of(row).
+
+### Three bars define [No Name]
+
+- Location: carat/adapters/status_bar.rb:47, tab_bar.rb:22, winbar.rb:18 (sweep, quality).
+- Why: three copies of one constant.
+- Fix outline: one domain constant the three read.
+
+### DecodedLine and Cell are immutable Structs
+
+- Location: carat/domain/decoded_line.rb:15, carat/domain/cell.rb:8 (sweep, quality).
+- Why: documented as never changed after built, yet Structs, while CLAUDE.md makes immutable values Data subclasses.
+- Fix outline: make them Data, or record why the hot path needs a Struct.
+
+### The ruby tokenizer declares constants among private methods
+
+- Location: carat/plugins/ruby/tokenizer.rb:805, :877 (sweep, quality).
+- Why: JUMPS and OPERATOR_NAMES sit apart from the constant block at :25 to :31.
+- Fix outline: move both to the top block.
+
+### Replace mode shows no mode message
+
+- Location: carat/adapters/frame_presenter.rb:1256 (sweep, quality, Neovim compatibility).
+- Why: paint_message shows -- INSERT -- and the visual modes but nothing in Replace, where Neovim prints -- REPLACE --.
+- Fix outline: add the branch with a frame presenter test and a docs/compatibility.md note.
+
+### StatusSlots#set_lsp reports a change on every empty-name call
+
+- Location: carat/domain/status_slots.rb:47 (sweep, quality).
+- Why: it stores :none for an empty name but compares the given state, so each call answers changed and asks for a redraw.
+- Fix outline: normalize the state before the comparison.
+
+### Area 13 map entries omit LineCache#size and two StatusSlots methods
+
+- Location: docs/codebase-map.md:478, :466 (sweep, quality).
+- Why: size (line_cache.rb:50), set_lsp and label (status_slots.rb:45, :86) are unlisted.
+- Fix outline: list them.
+
+### Class comments in the UI adapters are ragged
+
+- Location: carat/adapters/frame_presenter.rb:43, :90, status_bar.rb:16, set_command_handler.rb:17, highlight.rb:6, frame.rb:15, :31 (sweep, quality).
+- Why: later edits left them past or short of the 72-column wrap.
+- Fix outline: rewrap them.
