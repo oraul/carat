@@ -58,6 +58,26 @@ module Carat
         ExRange.new(first: low > 0 ? low - 1 : 0, last: high > 0 ? high - 1 : 0, given: true, error: "")
       end
 
+      # The target address of :m, :co, and :t, the line the lines go below,
+      # as first and last (0 for above the first line): the address one
+      # piece of a range takes. Empty text, a line past the last, or text
+      # that is not an address is E16, an offset, a pattern, or another
+      # mark answers Not implemented, as resolve answers a range.
+      #: (String, Integer, Integer, Selection) -> ExRange
+      def self.target(text, row, line_count, selection)
+        address_text = text.strip
+        return refused(INVALID) if address_text.empty?
+        number = address(address_text, row, line_count, selection)
+        return refused(NO_MARK) if number == -2
+        if number < 0
+          unread = address_text.include?("+") || address_text.include?("-") || address_text.include?(";") ||
+                   address_text.start_with?("/") || address_text.start_with?("?") || address_text.start_with?("'")
+          return refused(unread ? "Not implemented: address #{address_text}" : INVALID)
+        end
+        return refused(INVALID) if number > line_count
+        ExRange.new(first: number, last: number, given: true, error: "")
+      end
+
       # The line number one address names, -2 for a mark that is not set,
       # -1 for an address Carat does not read.
       #: (String, Integer, Integer, Selection) -> Integer

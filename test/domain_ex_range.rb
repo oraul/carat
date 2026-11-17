@@ -20,6 +20,14 @@ module DomainExRangeTest
     [r.first, r.last, r.given, r.error]
   end
 
+  # The target address text gives on a buffer of lines lines with the
+  # cursor on row, with no selection: [line, error]. Typed: a table value
+  # is untyped.
+  def self.target(text, row, lines)
+    r = D::ExRange.target(text.to_s, row.to_i, lines.to_i, D::Selection.none)
+    [r.first, r.error]
+  end
+
   def self.main
     t = Carat::Testing.new("domain_ex_range")
 
@@ -50,6 +58,26 @@ module DomainExRangeTest
       ["percent with another address", ["%,2", 0, 5, -1, -1], [0, 0, true, "Not implemented: range %,2"]]
     ]) do |input|
       resolve(input[0], input[1], input[2], input[3], input[4])
+    end
+
+    # The target of :m, :co, and :t. Rows are [label, [address, cursor
+    # row, lines], [line, error]] on a buffer of five lines.
+    t.cases([
+      ["a target line number", ["3", 0, 5], [3, ""]],
+      ["target 0 is above the first line", ["0", 2, 5], [0, ""]],
+      ["a target dot is the cursor line", [".", 2, 5], [3, ""]],
+      ["a target dollar is the last line", ["$", 0, 5], [5, ""]],
+      ["blanks around the target", [" 2 ", 0, 5], [2, ""]],
+      ["no target", ["", 0, 5], [0, "E16: Invalid range"]],
+      ["a target past the last line", ["6", 0, 5], [0, "E16: Invalid range"]],
+      ["a target that is not an address", ["x", 0, 5], [0, "E16: Invalid range"]],
+      ["text after the target", ["2 x", 0, 5], [0, "E16: Invalid range"]],
+      ["a target with an offset", [".+1", 0, 5], [0, "Not implemented: address .+1"]],
+      ["a target pattern", ["/a/", 0, 5], [0, "Not implemented: address /a/"]],
+      ["another mark as the target", ["'a", 0, 5], [0, "Not implemented: address 'a"]],
+      ["an unset visual mark as the target", ["'<", 0, 5], [0, "E20: Mark not set"]]
+    ]) do |input|
+      target(input[0], input[1], input[2])
     end
 
     t.finish

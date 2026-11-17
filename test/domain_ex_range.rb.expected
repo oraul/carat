@@ -20,4 +20,17 @@ ok   another mark
 ok   arithmetic
 ok   a semicolon
 ok   percent with another address
-domain_ex_range: 22 passed, 0 failed
+ok   a target line number
+ok   target 0 is above the first line
+ok   a target dot is the cursor line
+ok   a target dollar is the last line
+ok   blanks around the target
+ok   no target
+ok   a target past the last line
+ok   a target that is not an address
+ok   text after the target
+ok   a target with an offset
+ok   a target pattern
+ok   another mark as the target
+ok   an unset visual mark as the target
+domain_ex_range: 35 passed, 0 failed
