@@ -21,7 +21,7 @@ The reading view now keeps an indented code block inside a quote as its own rows
 ## Testing
 
 - Run the security review of the committed diff, pass with no High, Medium, or Low findings.
-- Run the quality review, pass with no blocking findings and 3 advisories, two addressed by rewording and one recorded as a finding.
+- Run the quality review, pass with no blocking findings and 3 advisories: the design's minimum frame measure corrected, the duplicated cutting walk dropped as style, and the double marker scan recorded as a finding.
 - Run the checker stages dev-build, test-build, test-run, diagnose, bench-budget, tools-test, docs-lint, gates, and metrics, all pass.
 - Run the benchmark review against main's recorded figures, pass.
 - Run `make spec-validate` after the archive, 53 of 53 pass.
