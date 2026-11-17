@@ -153,13 +153,6 @@ In every shipped palette the mode pills SHALL be drawn bold in the palette's col
 - **WHEN** the contrast of the five pill groups of the six shipped palettes is measured
 - **THEN** none is below 4.5:1
 
-### Requirement: The lsp slot reads on the editor's background
-In every shipped palette the `lsp` groups SHALL be drawn in the accent of their state over the editor's background, as the diagnostic groups are: starting yellow, ready green, and error red and bold, at 4.5:1 or more at 24-bit and 256 colors.
-
-#### Scenario: Every palette's lsp groups pass
-- **WHEN** the contrast of the three `lsp` groups of the six shipped palettes is measured
-- **THEN** none is below 4.5:1
-
 ### Requirement: Markup groups for documentation
 The group table SHALL hold six markup groups after the file-icon groups, named as Neovim's tree-sitter captures, which every shipped palette SHALL color and each SHALL show at 16 colors by a basic color or an attribute. A plugin token MAY carry a markup group.
 
@@ -191,3 +184,14 @@ In every shipped palette `TabLineSel`, the group of the selected buffer tab, the
 #### Scenario: Every palette's selected tab stands out
 - **WHEN** the tab groups of the six shipped palettes are measured, with the theme's background or the terminal's
 - **THEN** `TabLineSel`'s background is at 3:1 or more from `TabLine`'s and `TabLineFill`'s at 24 bits and 256 colors, differs from theirs at 16 colors, and `TabLineSel` is bold at every depth while `TabLine` is not
+
+### Requirement: The lsp slot reads on the status bar's background
+In every shipped palette the `lsp` groups SHALL be drawn over the status bar's own background, the background of `StatusLine`, at 24-bit, 256, and 16 colors, so the bar shows as one band, each in the accent of its state picked for that bar: starting yellow, ready green, and error red and bold, at 4.5:1 or more on the bar at 24-bit and 256 colors.
+
+#### Scenario: The lsp groups share the bar's background
+- **WHEN** the backgrounds of the three `lsp` groups and of `StatusLine` of the six shipped palettes are read, with the terminal's background and with the theme's, at every color depth
+- **THEN** each `lsp` group's background equals the `StatusLine` background
+
+#### Scenario: Every palette's lsp groups pass on the bar
+- **WHEN** the contrast of the three `lsp` groups of the six shipped palettes is measured on their own background
+- **THEN** none is below 4.5:1 at 24-bit or at 256 colors
