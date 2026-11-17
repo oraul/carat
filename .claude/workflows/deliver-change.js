@@ -465,6 +465,18 @@ function metricLine() {
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
+// The held-finding notes an unmerged close recorded, in order and without
+// duplicates, less those a merged close already noted as late findings
+// ("late-finding MERGED TEXT").
+function heldFindings(noted) {
+  const late = noted.filter((v) => v.startsWith('late-finding ')).map((v) => v.replace(/^late-finding [^ ]+ /, ''))
+  const kept = []
+  for (const v of noted) {
+    const t = v.startsWith('held-finding ') ? noteText(v.slice(13)) : ''
+    if (t && !late.includes(t) && !kept.includes(t)) kept.push(t)
+  }
+  return kept
+}
 function seed() {
   for (const key of Object.keys(state)) {
     let m = /^metric\.phase\.([a-z0-9_-]+)$/.exec(key)
@@ -495,6 +507,7 @@ function seed() {
     if (m) addAdvisories([m[1]])
   }
   if (state.pushed) for (const f of findings()) handed.add(f)
+  held = heldFindings(noted)
   // The last quality review's blocking findings, recorded as
   // quality-blocking notes; kept only when all of them are there.
   const [result, commit, blockingCount] = at('review.quality')
@@ -693,12 +706,17 @@ function handOver() {
 // The findings that arrived after the package step, as late-finding notes
 // in the run state: the next change's package step writes them to
 // docs/findings/CHANGE.md with this run's history row, so no push records them.
-// Only a merged run's: the note command refuses an unmerged run, whose
-// refused note would stop the next flush's && chain, so before the merge
-// nothing is queued nor marked handed, and the close records them all.
+// The note command refuses a late finding before the merge, so an unmerged
+// run's close keeps them as held-finding notes instead, which seed reads
+// back into held (a security Low lives only in this start's memory, and
+// seed marks every advisory handed once pushed); a merged close notes the
+// held ones still not noted late, then the fresh ones, as late findings.
+let held = []
 function recordLate() {
-  if (!state.merged) return
-  for (const f of handOver()) queue(`sh tools/run_state.sh note ${state.change} late-finding "${noteText(f)}"`, head)
+  const fresh = handOver().map(noteText).filter((t) => t && !held.includes(t))
+  const texts = state.merged ? held.splice(0).concat(fresh) : fresh
+  const kind = state.merged ? 'late-finding' : 'held-finding'
+  for (const t of texts) queue(`sh tools/run_state.sh note ${state.change} ${kind} "${t}"`, head)
 }
 const intro = () => `Change \`${state.change}\` on branch \`${state.branch}\`, in its worktree \`${laneDir(state.change)}\`: run every command there (\`cd ${laneDir(state.change)} && ...\`) and read and edit its files there, but where a step names the main checkout; the run state, stage logs, plans, and the body file stay in the main checkout's build/, linked into the worktree, so write the body file there.`
 // The merger's step 7 closes the worktree it would otherwise stand in, and
@@ -1223,7 +1241,7 @@ if (!stopped && !state.merged) {
       const push = stopped ? '' : resumePush(state.pushed, head, state.review_fixes)
       if (push && push !== 'push') stopped = `${push}: nothing pushes it`
       else if (push) {
-        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state once the change merges, not appended.`)
+        await contributor('push', `Push the review fix of this resume past the push with \`sh tools/run_state.sh push ${state.change} --review-fix\`, not --ci-fix; the findings that arrived after the package step are recorded in the run state at the close, not appended.`)
       }
     }
     for (; !stopped;) {
@@ -1283,7 +1301,7 @@ if (!stopped && !state.merged) {
       if (!(await contributor('fix', `CI failed at ${m.step}; its log:\n${m.log_excerpt || ''}`))) break
       if (!(await verify())) break
       phase('Merge')
-      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state once the change merges, not appended.'))) break
+      if (!(await contributor('push', 'Push the CI fix; the findings that arrived after the package step are recorded in the run state at the close, not appended.'))) break
     }
   }
 }
@@ -1303,9 +1321,10 @@ if (!stopped && !state.merged) {
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
 phase('Close')
 // The findings that arrived after the package step become late-finding
-// notes, of a merged run only: the note command stamps each with the
-// merged commit and refuses an unmerged run, which would stop the record
-// line's && chain. A line the close profile refuses (a check or review
+// notes of a merged run, which the note command stamps with the merged
+// commit, and held-finding notes of an unmerged one, which a merged resume
+// notes late (a late finding before the merge would be refused and stop
+// the record line's && chain). A line the close profile refuses (a check or review
 // record a failed flush left) is reported, not recorded: a resume runs
 // that check or review again.
 recordLate()

@@ -3305,14 +3305,17 @@ speed_js() {
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
-# A late-finding note is refused before the merge, so recordLate queues
-# nothing and marks nothing handed until merged is set: a CI fix's push
-# leaves the next flush's && chain whole, and the close records them all.
+# A late-finding note is refused before the merge, so an unmerged close
+# keeps the findings that arrived after the package step as held-finding
+# notes, which a merged resume reads back (heldFindings, as seed does) and
+# notes late, once: a stop between the push and the merge loses none.
 late_js() {
-  js "$wf" "noteText handOver recordLate findings" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+  js "$wf" "noteText handOver recordLate findings heldFindings" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
 }
-expect "workflow: recordLate queues nothing before the merge" 0 '^\[0,0,1,true\]$' \
-  late_js "(() => { recordLate(); const before = [q.length, handed.size]; state.merged = 'def5678'; recordLate(); return [...before, q.length, q[0].startsWith('sh tools/run_state.sh note c late-finding ')] })()"
+expect "workflow: an unmerged close holds its late findings, a merged one notes them late" 0 '^\[1,true,1,0,1,true\]$' \
+  late_js "(() => { recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
+expect "workflow: a merged resume after a stop notes the held findings late, once" 0 '^\[\["security Low a","quality advisory b"\],2,true,0\]$' \
+  late_js "(() => { const noted = ['held-finding security Low a', 'quality-advisory abc1234 b', 'held-finding quality advisory b', 'held-finding security Low a']; held = heldFindings(noted); const seeded = held.slice(); backlog.length = 0; state.merged = 'def5678'; recordLate(); const first = [seeded, q.length, q[0] === 'sh tools/run_state.sh note c late-finding \"security Low a\"']; held = heldFindings(noted.concat(['late-finding def5678abcd security Low a', 'late-finding def5678abcd quality advisory b'])); return [...first, held.length] })()"
 expect "workflow: no push path records late findings before the merge" 0 '^1$' grep -c -x 'recordLate()' "$wf"
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
   speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/ci.yml, spin, completed, success", ".github/workflows/scan.yml, scan, completed, success"]), staleRed([".github/workflows/scan.yml, scan, completed, success", ".github/workflows/scan.yml, scan, completed, failure"]), staleRed([])]'
