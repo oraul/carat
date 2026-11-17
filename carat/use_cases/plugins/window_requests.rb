@@ -126,13 +126,16 @@ module Carat
       end
 
       # Makes the window current, switching to its tab page first; a
-      # float's window is entered.
+      # float's window is entered when the plugin opened it, and any
+      # other float, another plugin's or the completion popup, answers as
+      # an unknown id does. Id 0 answers the current window, entering
+      # nothing.
       #: (String, Integer) -> PluginApi::WindowResponse
       def focus_window(name, id)
         target = window_or_current(id)
         tab_index = @tabs.window_tab(target)
         if tab_index < 0
-          tab_index = @tabs.float_tab(target)
+          tab_index = id == 0 ? @tabs.float_tab(target) : own_float_tab(name, id)
           return PluginApi::WindowResponse.failure("No window #{id}") if tab_index < 0
           @tabs.tab_index = tab_index
           @tabs.tab.floats.enter(target)

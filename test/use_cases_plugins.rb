@@ -383,7 +383,8 @@ module UseCasesPluginsTest
     # run_program answers the program's output
     t.assert_equal([true, "main\n", ["git symbolic-ref --short -q HEAD"]], [ran.ok, ran.text, processes.captured], "run_program answers the program's output and the port gets the words as given")
     # run_program turns lazy fetching off
-    t.assert_equal(["GIT_NO_LAZY_FETCH=1"], processes.environments, "run_program turns lazy fetching off: the port gets GIT_NO_LAZY_FETCH=1")
+    # Scenario "run_program allows no transport".
+    t.assert_equal(["GIT_NO_LAZY_FETCH=1 GIT_ALLOW_PROTOCOL="], processes.environments, "run_program turns lazy fetching off and allows no transport: the port gets GIT_NO_LAZY_FETCH=1 and an empty GIT_ALLOW_PROTOCOL")
     # run_program outside a trusted root starts nothing
     requests = rig.host.file_requests
     requests.trusted = Carat::Domain::TrustedRoots.cover?(Carat::Doubles::FixedConfig.with_user("language.trusted_roots /elsewhere\n"), "/project", "/home/user")
@@ -406,6 +407,18 @@ module UseCasesPluginsTest
     ran = h.run_program(["git", "fetch"])
     t.assert_equal([false, "git ran past 2 seconds"], [ran.ok, ran.message], "run_program says a program ran past its deadline")
     t.assert_equal([false, "cannot run svn"], [h.run_program(["svn", "info"]).ok, h.run_program(["svn", "info"]).message], "and a missing program after it still cannot run")
+
+    # Requests: focusing a float.
+    # Scenario "Focus another plugin's float".
+    foreign = rig.host.window_requests.open_float("other", A::FloatOptions.at(0, 0, 1, 4), ["x"]).window
+    current = state.window.id
+    focused = h.focus_window(foreign)
+    t.assert_equal([false, "No window #{foreign}", current], [focused.ok, focused.message, state.window.id], "focusing another plugin's float fails with No window N and the current window is unchanged")
+    own = h.open_float(A::FloatOptions.at(2, 0, 1, 4), ["y"]).window
+    t.assert_equal([true, own], [h.focus_window(own).ok, state.window.id], "and the plugin enters its own float")
+    t.assert_equal([true, own], [h.focus_window(0).ok, h.focus_window(0).window], "focusing window 0 answers the current float")
+    h.close_float(own)
+    rig.host.window_requests.close_float("other", foreign)
 
     # Requests: the edit transaction.
     p = probe([])
@@ -492,8 +505,15 @@ module UseCasesPluginsTest
     p.host.set_status("here")
     p.raise_in_event = false
     p.raise_in_action = true
+    # Scenario "Disabled with floats in two tab pages".
+    foreign = host.window_requests.open_float("other", A::FloatOptions.at(0, 0, 1, 4), ["x"]).window
+    first = p.host.open_float(A::FloatOptions.at(2, 0, 1, 4), ["y"]).window
+    p.host.run_ex("tabnew")
+    second = p.host.open_float(A::FloatOptions.at(2, 0, 1, 4), ["z"]).window
+    t.assert_equal([true, 2, 1], [first > 0 && second > 0, state.tabs.tab_at(0).floats.count, state.tabs.tab_at(1).floats.count], "the plugin has a float in each tab page, beside another plugin's")
     host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
     t.assert_equal({}, host.plugin_ui.segments, "a disabled plugin's segment is dropped when it is disabled")
+    t.assert_equal([1, foreign, 0], [state.tabs.tab_at(0).floats.count, state.tabs.tab_at(0).floats.at(0).id, state.tabs.tab_at(1).floats.count], "a disabled plugin's floats are closed in every tab page and another plugin's float stays")
 
     t.finish
   end
