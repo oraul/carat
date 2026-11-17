@@ -32,12 +32,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `:.,+3s`, `:/foo/s`, `:'a,'bs`, and a count before `:` (Vim's `.,.+N-1`) answer `Not implemented: range x`, and the visual marks are not moved by later edits, as Vim's marks are.
 - Fix outline: resolve `+N` and `-N` after an address or alone, `;` by moving the cursor line to the first address before the second, and `/pat/` and `?pat?` through `Search.find` under a budget; read `'a` to `'z` from the marks change, which also moves the visual marks with the splice.
 
-## ~ in a search pattern ignores the last substitute
-
-- Where: `VimPattern#tilde` in `carat/domain/vim_pattern.rb`, reached from `FindMatch`, `PreviewSearch`, and `LastSearch#recompile` through `VimPattern.compile`.
-- Why it matters: `/~` answers `E33: No previous substitute regular expression` even after a substitute, where Vim matches the last replacement string; only a substitute's own pattern reads it. The same path is reached after `:s/a~/x/`: `SubstituteLines#remember` (`carat/use_cases/search/substitute_lines.rb:113`) makes that pattern the last search pattern, so a later `:set ic` (`LastSearch#recompile`) or an empty `//` compiles it without the substitute memory and answers E33 (quality advisory at 127a14f).
-- Fix outline: hand the `LastSubstitute` record to the three search call sites and compile with its expanded string, as `SubstituteLines` does through `compile_substitute`, with a row in `test/editor_search.rb` for `/~` and one for `:s/a~/x/` followed by `:set ic` and `//`; until then, `remember` could keep a pattern holding `~` out of `recompile`.
-
 ## Sentence motions rescan the whole buffer on every use
 
 - Where: `Carat::Domain::Motions.sentence_starts` in `carat/domain/motions.rb` (line 416 at 7711421), called by `(` and `)` and by the `is` and `as` text objects in `carat/domain/text_objects.rb` (line 150 at 7711421). Raised again at ce6abdb (`motions.rb:398`, `sentence_starts`, on every `(`, `)`, `is`, or `as`; periodic quality), queue item `editing-counts`: scan from the paragraph before the cursor to the one after, or cache the starts by the buffer's change count.
@@ -297,18 +291,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: every match is walked from code point 0, also those left of a horizontal scroll, and a row painted after the frame budget stopped is stored with the search stamp, so it stays unhighlighted until the stamp changes.
 - Fix outline: store 0 as the stamp of a row painted under a stopped budget so the next frame retries it, and start the walk from the first match that can reach the left column, with an `adapters_frame_presenter` row for each. Queued in `search-structure`.
 
-## A second caret after the start of a pattern is read as an anchor
-
-- Where: `VimPattern#caret` in `carat/domain/vim_pattern.rb` (line 261), which leaves `@at_start` set. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
-- Why it matters: `/^^` compiles to two anchors, where Vim reads the second `^` as a literal caret, so the search misses a line starting with `^`.
-- Fix outline: clear `@at_start` in `caret` and keep a separate flag so a `*` right after `^` stays literal, with a `domain_vim_pattern` row for `^^` and `^*`. Queued in `search-tidy`.
-
-## The search offset is found by a collection scan that differs from the compiler's
-
-- Where: `VimPattern.pattern_end` in `carat/domain/vim_pattern.rb` (line 105), which skips a collection to the first `]` after `[x`, unlike `collection_end`. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
-- Why it matters: `/[\]/]` or `/[^]/]` is cut at the inner `/`, so the rest of the collection is taken as a search offset and the pattern searched is not the one typed.
-- Fix outline: share `collection_end`'s scan (an escaped `]` and a `]` right after `[` or `[^`) with `pattern_end`, with `domain_vim_pattern` rows for both forms. Queued in `search-tidy`.
-
 ## Operate passes the search outcome through an instance variable
 
 - Where: `Operate#search_motion` in `carat/use_cases/operate.rb` (line 131), which sets `@notice` deep in `motion_for` for `call` to read. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88. Raised again at 9a92265 (#99): the same side channel in `walk_history.rb` line 32.
@@ -344,12 +326,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `HandleKey#resume` in `carat/use_cases/handle_key.rb` (line 215), which sets the mode to normal outside visual although `CancelCommandLine` and `ExecuteCommandLine` already restored the prompt's return mode. Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
 - Why it matters: two places decide the mode after the prompt, so a change to the return mode of the prompt has to be made in both or the second one overrides it.
 - Fix outline: drop the line and keep the return mode the command line restores, checked by the existing `editor_search` rows. Queued in `search-structure`.
-
-## The pattern-source cut and the prompt prefix are written twice
-
-- Where: `VimPattern.pattern_end(text, forward ? 47 : 63)` with bare byte codes in `carat/use_cases/search/find_match.rb:68` and `carat/use_cases/search/preview_search.rb:37`, and the forward-to-`/`-or-`?` choice at `find_match.rb:159` repeating `SearchPrompt#prefix` (`carat/domain/search_prompt.rb:61`). Periodic quality at 0b17324.
-- Why it matters: two use cases decide where a pattern ends and which delimiter a direction uses, with unnamed byte codes, so a fix to one (such as the collection scan of `pattern_end`) can miss the other.
-- Fix outline: one domain function for the pattern source with named delimiter constants and one prefix helper, called from both use cases. Queued in `search-tidy`.
 
 ## FindMatch re-implements the domain's character classes
 
@@ -4959,12 +4935,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 - Why: open_path, report, and ignored repeat the explorer's; finish_rename moves @followed only on an exact match, so a file inside a renamed directory keeps its old path.
 - Fix: add the shared helpers to PluginApi; rewrite @followed on a path-plus-slash prefix with a test.
 
-## Security: a planted git object substitutes content in the merge gates' worktree of origin/main
-
-- Location: `.claude/workflows/deliver-change.js`, `mergeLines` (the green line's `worktree add -q --detach tmp/.merge-gates origin/main` after its fetch), and `tools/gates.sh merge`, which the green line runs from that worktree.
-- Why it matters: security. git never re-hashes an object it reads, so branch code run by the checks can plant or overwrite a loose object under `.git/objects` with the id of a blob of `origin/main` (for example `tools/gates.sh` or `tools/agent_guard.sh`), and the worktree the merge gates run from checks out the substituted content, so the merge gates can pass a change they should refuse. It is the route #126 (`guard-ref-pin`) closed for the agents' hooks by fetching main into a new temporary repository; #126's proposal and pull request notes left the merge gates' worktree out of scope and no entry recorded it. Severity to set by the planner from a review, by analogy with #126's Medium (8) finding.
-- Fix outline: build the merge gates' copy of main without reading the project's object store, as the hooks do: fetch `refs/heads/main` from the pinned origin into a new temporary bare repository with no global or system configuration and `transfer.fsckObjects`, check out or export its `FETCH_HEAD` tree into `tmp/.merge-gates` from there, and remove the repository; add a `tools/tools_test.sh` case that plants a loose object under the id of main's `tools/gates.sh` blob and expects the green line to run main's gates.
-
 ## Quality: the merger's hook refuses guard-pin-no-url's own green line until the guard lands
 
 - Location: `.claude/workflows/deliver-change.js:551` (the green line now runs `git hash-object --stdin`) and `tools/agent_guard.sh:549` (the merger's `git hash-object --stdin` allowance, which lands on main only with guard-pin-no-url).
@@ -5067,12 +5037,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Quality, accuracy, openspec/changes/archive/2026-11-15-design-principles/proposal.md:29: Impact says four sentences repeating sections 2, 9, and 13 are shortened or removed, but the diff trims six places in docs/architecture.md, and the dropped CRuby 4.0.4 benchmark baseline aside (formerly docs/architecture.md:32) and the Ractor note on Spinel's thread list (formerly line 23) are stated nowhere else. Fix: record in docs/architecture.md, or in a follow-up change's notes, that the baseline aside was dropped content, and restore the Ractor fact if it is still needed.
 
 ## Findings of the sprint-5 review
-
-### Security: the guard pins accept origin's ssh and scp forms (security Medium (5))
-
-- Location: `.claude/agents/merger.md:12` and the same hook line in every agent file under `.claude/agents/`; `ORIGIN_IDS` and `originCheck` in `.claude/workflows/deliver-change.js:542` to `:552` (sprint-5 security review).
-- Why it matters: security. Branch code run by the checks can write the home directory; it can set `remote.origin.url` to the pinned scp form and write a `~/.ssh/config` Host entry with its own HostName, ProxyCommand, and known_hosts, so the hooks' fetch of main and the green line's fetch for the merge gates come from its server and a forged guard and gates allow every call and the merge. The real origin is https, so the ssh forms are unused surface. Confidence 5: ssh is not installed here and an environment insteadOf rewrites ssh to https, so it was not reproduced.
-- Fix outline: pin only the https form's digest (with and without `.git`) in every hook line and in `ORIGIN_IDS`, or keep ssh only with `core.sshCommand` reading no user config and a pinned host key; add a `tools/tools_test.sh` case where an scp-form origin is refused. Queue item `gate-object-pin`.
 
 ### The origin pin is checked two ways in the hooks and the green line
 
@@ -5854,49 +5818,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/testing.rb:4, docs/architecture.md:425 (sprint-8 sweep, quality); queued in `architecture-docs`.
 - Why: both say spin test diffs the output against the snapshot, while tools/run_tests.sh compares it and spin test is never run.
 - Fix: name tools/run_tests.sh in both places.
-
-### Ruby structure sign goes stale after a buffer rename
-
-- Location: carat/plugins/ruby/plugin.rb:86
-- Why: a Ruby buffer renamed to a non-Ruby name (buffer_rename, for example :saveas a.txt) keeps its error sign forever, since every later event returns at ruby_path? before check, and a buffer renamed to a .rb name is not checked until its next change.
-- Fix: subscribe to buffer_rename and check a Ruby path or clear_signs otherwise, with an editor test row.
-
-### Ruby plugin restates the filetype tables
-
-- Location: carat/plugins/ruby/plugin.rb:24
-- Why: EXTENSIONS and NAMES restate Domain::Filetype EXTENSIONS and NAMES (config.ru covered only through .ru), two tables that can drift.
-- Fix: add a test in test/plugins_ruby.rb asserting the plugin lists match Domain::Filetype, or expose the filetype to plugins in a later API minor version.
-
-### Ruby structure editor test covers only insert mode
-
-- Location: test/editor_ruby_structure.rb:30
-- Why: only insert mode is exercised, while the spec also names replace and completion; the Gemfile and Rakefile name branch and the bare .rb exclusion of ruby_path? are untested.
-- Fix: add rows typing R...<Esc> and opening a Gemfile holding def go.
-
-### Ruby structure modifier table misses most jump words
-
-- Location: test/plugins_ruby.rb:145
-- Why: of the JUMPS modifiers only return and break are covered; next, redo, retry, yield, and super are not.
-- Fix: add next if a, yield if b, super unless c rows to the modifier table row.
-
-### Ruby tokenizer keeps the loop flag across a semicolon
-
-- Location: carat/plugins/ruby/tokenizer.rb:820
-- Why: @loop is not reset at a semicolon, so in while x; items.each do |i| the block do is taken by the while and one opener goes uncounted, and a missing end then goes unmarked.
-- Fix: clear @loop when a semicolon is met and add a table row.
-
-### Ruby structure check rescans the whole buffer per normal-mode change
-
-- Location: carat/plugins/ruby/plugin.rb:111
-- Why: every normal-mode change (x, dd, p, each . or macro step) copies all lines through read_buffer and tokenizes the whole buffer, about 100 ms per edit on the 100,000-line open-ruby file by the design figure of 1 microsecond per line, N passes for a macro of N changes, and no bench scenario measures a normal-mode edit.
-- Fix: coalesce the changes of one key (mark the buffer waiting and check once on the following cursor_move or idle) and add a normal-mode edit bench scenario.
-
-### README wording makes the structure sign sound conditional
-
-- Location: README.md:124
-- Why: the sentence starting Without a language server, the plugin also marks reads as conditional on no server running, while the plugin marks regardless of one.
-- Fix: reword it to Needing no language server, the plugin also marks.
-
 
 ### The close start returned a placeholder with no tool calls
 - Location: .claude/workflows/deliver-change.js, the close (retrospective) start of markdown-reading-a (#146), run state notes 8 and 9
@@ -7175,16 +7096,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/drivers_process_runner.rb:91
 - Why: the stalled case relies on `sleep 0.2` for the writer thread to block in `write` before `stop`; when it has not, the write fails at once on the closed pipe and the case still passes without exercising the blocked write, and its three sleeps add 0.7 s to every test run.
 - Fix: stop only after a second write returns while the first is pending (or poll until the outbox is drained into the pipe), and drop the sleep before `stop_cat`, which the next spawn does not need.
-### The benchmark phase measures records and docs-only runs that build nothing it measures
-- Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition)
-- Why: sprint-12-records bench took 6,460 of 36,282 output tokens (17.8%) and 10 of 79 tool calls, stopped at its cap; over the three sprint records runs bench took 15,099 of 127,367 output tokens (11.9%) and 23 of 222 calls, each finding allocations and rounds equal to main (bench first pass 3 of 3), so its result changed no decision (sprint-12-records retro note 4).
-- Fix: record the bench phase as skipped, with its reason and 0 tool calls, on a run touching no file under `carat/`, `bin/`, `bench/`, or the Makefile; accepted when the next records or docs-only run shows it skipped and a change touching those paths is still measured.
-
-### Groom output needs a hand edit and draws the records runs' quality advisories
-- Location: `tools/run_state.sh` (`groom`, `folded_backlog` near :1851)
-- Why: sprint-12-records hand-edited `docs/backlog.md:6714` after groom because docs-lint refused a backticked path to a findings file groom had just removed (sprint-10-records the same, 2 of the last 3 records runs); all 3 of its 3 quality advisories were groom output (headings folded twice from a double append at :6775 and :6787; no blank line before folded headings at :6751, :6765, :6861); reviews took 9,975 of 36,282 output tokens (27.5%) (sprint-12-records retro note 5).
-- Fix: accepted when a tools-test case shows groom leaving no backticked path to a removed findings file, no repeated folded heading, and a blank line before each folded heading, and the next records run applies groom with no hand edit and no advisory on groom output.
-
 ### The contributor's self-check and the quality reviewer use different blocking checklists (lsp-container-b retro note 11)
 - Location: `.claude/agents/contributor.md` self-check, `.claude/agents/quality-reviewer.md` blocking rules
 - Why: quality failed its first pass in lsp-container-b (SIGPIPE ending carat on stop), quality:0 in 5 of the last 11 feature rows and 66 of 130 over all changes against check 128/130 and security 125/130; the fix round cost implement 153,294 of 264,142 output (58.0%) and took the run over its 200,000 output budget (229,659). Adds evidence to "### Quality fails its first pass on about half the runs".
@@ -7422,11 +7333,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: open_as_tab with no file window under option.gt buffers falls back to open_in_tab, so the explorer's t with only the tree left opens tab page 2 and leaves tab page 1 holding only the explorer, the state tab-close-b fixes and that test/editor_tab_flows.rb clean? rejects, while l and Enter open a file window beside the tree; the fallback is also untested (quality advisory, tab-close-b review).
 - Fix: under option.gt buffers open a file window beside the tree as open_file_window does for l, or pin the chosen fallback with a test in test/editor_explorer.rb.
 
-### A refused buffer switch from a side window moves the tab page's previous window
-- Location: carat/use_cases/buffers/switch_buffer.rb:45
-- Why: a refused switch restores the focus with tab.focus(side), which also rewrites tab.previous to the editing leaf instead of restoring its earlier value, so the refusal is not a full no-op on the tab page and a later editing_window may pick another file window (quality advisory, tab-close-b review).
-- Fix: save tab.previous before focusing and set it back with the focus on failure, or document that previous moves, with a test in test/editor_buffers.rb.
-
 ### The package step applies review advisories to reviewed files and the push is refused (markdown-reading-d retro)
 - Location: `.claude/agents/contributor.md` package step; `.claude/workflows/deliver-change.js` package phase
 - Why: markdown-reading-d's packaging contributor applied an advisory that reworded a reviewed comment and its code map line, the pre-push gates refused the push twice (gates_failed 2), and both files were put back in new commits, still claiming one marker scan; package took 22 calls against a last-10 feature median of 15.5, 3 of 3 advisories the cause. For `review-demotion`.
@@ -7436,12 +7342,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `.claude/agents/checker.md`; `.claude/workflows/deliver-change.js` check phase
 - Why: markdown-reading-d's check took 35,360 output tokens in 4 calls, 13.0% of the run's 272,795 output, for a verdict the script gives; first-pass check 136 of 138; ux-fixes-a 22,463 and palette-narrow 40,656 also over 20,000 on a first pass against a last-10 median of 6,425. For `check-skip`.
 - Fix: run the check script from the workflow without an agent, or cap the agent; accepted when over the next 5 deliveries a first-pass check costs at most 5,000 output tokens and 4 calls, the stage records and first.check unchanged.
-
-### Buffer switches fail in a lone reading view (sprint-14 review quality)
-
-- Location: carat/use_cases/buffers/switch_buffer.rb:39, carat/domain/tab_page.rb:112 (editing_leaf), carat/use_cases/docs/toggle_reading.rb.
-- Why: a correctness regression of tab-close-b (#181): the side-window rule takes every window whose buffer is scratch? for a side window, but ToggleReading loads its [reading] buffer into the file window itself, so :bn, :bp, :b N, Ctrl-^, and gt in a lone reading view fail with "No file window to show the buffer in", and with a split they switch the other window; no test switches a buffer from the reading view.
-- Fix outline: decide a side window by what it is, not by scratch?, and add editor rows of :bn and gt from the reading view. Queued in `tab-close-c`.
 
 ### The finder's tab pick opens a tab page under option.gt buffers (sprint-14 sweep quality)
 
@@ -7545,12 +7445,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: duplication; a fix to one copy misses the others.
 - Fix outline: keep the helpers once in tools/rules.sh and the pipeline behind one scan_text.sh option; a rules.sh edit lands alone first. Queued in `tools-docs-tidy`.
 
-### Incremental search leaves the cursor past a line end (sprint-14 sweep quality)
-
-- Location: carat/use_cases/search/preview_search.rb:94.
-- Why: a correctness bug: incsearch moves the cursor to hit.col unclamped, so a match at a line end ($) leaves it past the last character, unlike JumpToMatch.
-- Fix outline: clamp with state.clamp_col, with a row in test/editor_search.rb. Queued in `motions-search-tidy`.
-
 ### Motion code keeps a require cycle, a dead store, and a cls name (sprint-14 sweep quality)
 
 - Location: carat/domain/walker.rb:63 and carat/domain/text_objects.rb:252 (Motions.code_class used without its require, a cycle with motions.rb); carat/domain/motions.rb:599 (row = top overwritten in every branch); carat/domain/text_objects.rb:86 and carat/domain/runs.rb:90 (cls).
@@ -7586,3 +7480,171 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: plan-needed in tools/run_state.sh and the workflow's plan phase.
 - Why: vim-line-commands-a's plan spent 11,391 output in 16 calls (6.2% of output, 10.6% of calls) and kept every decision; feature last-10 plan 9,255 to 21,937 output.
 - Fix outline: accepted when the next 5 runs delivering an item as written show no plan phase and docs-lint passes the queue. Queued in `plan-skip`.
+
+### The merge gates' fsck misses an object swapped back after the worktree add (security Low (5))
+- Location: .claude/workflows/deliver-change.js:595 (the comment above the green line) and the archived ci-trust-gaps design.md
+- Why: the comment and design say an fsck after the worktree add still catches an object swapped back in between, which is backwards: a process left running by branch code can plant the loose object before the add and restore main's real content before the fsck, so the add writes the planted tools/gates.sh into tmp/.merge-gates and fsck passes; such a process could also write the worktree directly, so this is defence in depth (security Low (5), and the quality review's advisory at the same line).
+- Fix: correct the comment and the design: fsck catches an object still planted, not one swapped back; to close the gap, verify the checked-out files against main's tree after the fsck (hash each with git hash-object against git ls-tree origin/main under --no-replace-objects), or fsck both before and after the add, and say which window remains.
+### The merge gates' worktree file can be rewritten on disk after the fsck (security Low (5))
+- Location: .claude/workflows/deliver-change.js:650 (the green line's sh tmp/.merge-gates/tools/gates.sh merge)
+- Why: a process left running by branch code, such as a background job of a check or the other lane's checks, can overwrite tmp/.lane-CHANGE/tmp/.merge-gates/tools/gates.sh between the worktree add and the run, which no object check sees; the fsck now between those steps (2 s warm, 47 s cold) widens that existing window.
+- Fix: run main's gates from the verified store instead of the checked-out file, for example git --no-replace-objects cat-file blob origin/main:tools/gates.sh piped to sh -s merge after the fsck, or compare the checked-out tools/ against git ls-tree blob ids in the same command right before the run; record that a lingering branch process is outside the merge gates' threat model.
+### The planted-object case pins fsck's exact exit status (missing-test robustness)
+- Location: tools/tools_test.sh:3441
+- Why: the case expects exit status 3, the OR of git's internal fsck error bits (object plus reachability), which another git version may report differently, so the case can fail with the gate still working.
+- Fix: assert that the line fails and its output names the mismatch, without the exact status.
+### The unpinned-git case proves the add, not that the planted gates ran (missing test)
+- Location: tools/tools_test.sh:157 (the case an unpinned git would run the replaced gates past fsck)
+- Why: the case sends the line's output to /dev/null and only cats the checked-out gates.sh, so it proves the worktree add followed the replace ref, not that fsck passed and the planted gates ran.
+- Fix: assert the line's own output, sh -c "$2" 2>/dev/null expecting ^planted$, instead of the cat.
+### The benchmark runs on a diff that touches no code (retro, third recording)
+- Location: `.claude/workflows/deliver-change.js`, the bench phase start.
+- Why: sprint-14-records spent 4,178 of 32,743 output tokens (12.8%) and 8 of 68 calls on bench for allocations all equal to main's and a us.insert 24% warning on a docs-only diff; over sprint-10 to sprint-14 records bench took 33,140 of 203,003 output tokens (16.3%) and 37 calls, first pass in all five; recorded before as sprint-12-records note 4 and sprint-13-records note 6.
+- Fix: start no benchmark agent when the diff touches nothing under `carat/`, `bench/`, or `test/`, the row carrying main's recorded allocations and rounds; accepted when the next records row shows no bench phase and main's allocs and rounds.
+
+### Planner and scout resolve the brief's locations twice (ci-trust-gaps retro)
+- Location: `.claude/agents/planner.md`, `.claude/agents/scout.md`, `.claude/workflows/deliver-change.js` (the plan and scout phases)
+- Why: ci-trust-gaps spent plan 28,293 plus scout 48,985 = 77,278 of 252,190 output tokens (30.6 percent) and 28 of 172 calls, the planner and scout disagreeing on one location (`deliver-change.js:614` against `:618`); tab-close-b 33.7 percent, check-parallel 29.8 percent.
+- Fix: one of the two resolves locations and the other reuses its pack; accepted when the next three pipeline-lane rows hold plan plus scout under 20 percent of output tokens with no location re-corrected by the scout.
+
+### The quality reviewer investigates findings it hands to security (ci-trust-gaps retro)
+- Location: `.claude/agents/quality-reviewer.md`
+- Why: in ci-trust-gaps quality note 1 (a replace ref past fsck, marked security's to judge) was the Medium (8) security then blocked on, the run's 1 rework round; reviews 50,343 of 252,190 output tokens (20.0 percent) and 27.3 percent of calls; quality first pass 77/143, the lowest gate.
+- Fix: a finding the quality reviewer marks security's to judge is named, not investigated; accepted when reviews fall below 15 percent of output tokens on the next three pipeline rows with security never skipped.
+
+### No case for a merged sha git cannot resolve
+- Location: tools/tools_test.sh:311
+- Why: the proposal counts a reported merged sha git cannot resolve (a mistyped hash) as a disagreement, but only a resolvable pushed head is tested, so a regression in that path would pass tools-test.
+- Fix: add an expect running phase CHANGE merge merged with a hex value naming no commit and checking that the squash commit is recorded and the merge-disagreement note is written.
+
+### The contributor's extras ship without their tests (T1 efficiency)
+- Location: `.claude/agents/contributor.md`, its self-check step
+- Why: motions-search-tidy first.quality 0 on :g and :v reading ~ through compile_search (`carat/use_cases/search/global_command.rb:65`, an extra the proposal named), the round adding 122,352 output tokens (30 percent of 407,893); 21 of 142 recorded quality-blocking notes read behavior change without its test; quality first pass 79/145.
+- Fix: the self-check holds each extra the proposal names to its test like a brief entry; accepted when over the next 10 runs no quality-blocking note reads behavior change without its test on code the proposal lists as an extra.
+
+### Passing check starts vary from 1,598 to 150,693 output tokens (T1 efficiency)
+- Location: `.claude/agents/checker.md`
+- Why: motions-search-tidy check 57,058 output tokens and 10 calls for two passing checks (14.0 percent of 407,893 output on 5.3 percent of 188 calls); 6 of the last 21 rows over 35,000 against a median of about 6,700; check first pass 143/145, no decision changed.
+- Fix: a passing check reports from its stage logs without further reading; accepted when over the next 5 runs every passing check start costs under 12,000 output tokens.
+
+### Scouts run on a one-area removal the plan already maps (T1 efficiency)
+- Location: `.claude/workflows/deliver-change.js`, the scout phase
+- Why: ruby-structure-remove scout 33,374 output tokens and 17 calls, 24.6 percent of 135,491 output and 14.4 percent of 118 calls with areas=1, while the plan named every line range; scout share tab-close-c 13.2, markdown-reading-d 11.0, lsp-container-c 16.8, vim-line-commands-a 21.9, bar-colors 28.3 percent.
+- Fix: skip or shrink the scout when the plan already names every file and range; accepted when the next one-area removal or revert runs with no scout start (or under 10,000 scout output tokens) and keeps first.check, first.quality, and first.security at 1.
+
+### Queue entries keep stale line references after their change edits the named code
+
+- Location: docs/queue-feature.md:7 (the `ruby-structure-remove` entry), test/lint.rb (the named-path check)
+- Why: the delivery had to unquote the two paths it removes so lint's path check passes, leaving the entry's line references (plugin.rb:86 and :111, tokenizer.rb:820, test/plugins_ruby.rb:145) pointing at code that no longer exists, and a delivery editing its own planner-written queue entry bypasses plan-apply.
+- Fix: leave queue entries to plan-apply and have the lint path check skip docs/queue-*.md entries whose change is the branch's own, or drop the stale line numbers from queue entries.
+### The mid-run output-token overrun check flags runs their totals do not confirm
+- Location: `.claude/workflows/deliver-change.js`, the overrun check at the check pass (output tokens times 6 against the size's total budget)
+- Why: tab-close-c flagged 219,748 output tokens against 200,000 while its total, 830,180, stayed under 1,200,000; the last 10 feature rows have total-to-output ratios 2.2 to 7.9, not 6, and 6 of them passed 200,000 output tokens while only markdown-reading-c (1,902,958) passed the total budget.
+- Fix: base the mid-run flag on recorded totals or a ratio taken from the lane history; accepted when, replayed over the last 10 feature rows, it flags only rows whose total_tokens exceeded their size budget.
+
+### The merge phase's output tokens vary 14-fold on a first-pass green CI
+- Location: `.claude/agents/merger.md`, the merge phase of `.claude/workflows/deliver-change.js`
+- Why: its only decision on a green CI is to merge, yet tab-close-c spent 52,904 output tokens in 11 calls (17.6% of 300,034), against vim-line-commands-a 4,992 and tab-close 5,808 at 11 calls; palette-narrow 69,031.
+- Fix: accepted when over the next 5 runs with first.ci=1 the merge phase stays under 10,000 output tokens.
+
+### Records changes are judged against the small budget with the sprint reviews in their totals
+- Location: the budget line of `sh tools/run_state.sh budget`, the estimate of a `sprint-N-records` change
+- Why: sprint-12-records 2,147,268, sprint-13-records 1,264,361, and sprint-14-records 1,973,945 total tokens against 500,000 (3 of 3 over) with only 36,282, 42,893, and 32,743 output tokens; sprint-14-records weighted phases periodicreview 19,054,636 and review 3,756,759 against deliverchange 3,040,840; the same proposal is ci-trust-gaps retro note 6.
+- Fix: accepted when the next records row's budget line compares only its delivery phases with its size, or budgets the sprint review in its own line, and does not start with over for that reason alone.
+
+# Findings of sprint-14-records
+
+## The folded heading after the merger entry lacks a blank line
+
+- Location: docs/backlog.md:7360 (format).
+- Why: the folded heading 'The merger returns pending before its 30-minute CI wait ends' follows the previous entry's Fix line with no blank line; the known groom defect recurs and make docs-lint does not catch it.
+- Fix: insert one blank line before it, and let folded_backlog put a blank line before every folded heading, as the queued groom entry says.
+
+## Two defects are recorded twice in the backlog
+
+- Location: docs/backlog.md:7470 (duplication), with :7380, :7375, and :7476.
+- Why: the folded merge-record-check findings and the groomed sprint-14 entries record the same two defects twice: 'groom_row trusts history rows the branch can append after review' (:7380) against 'groom_row compares newline-stripped rows and trusts untracked inputs' (:7470), both at tools/gates.sh:131, and 'squash_commit falls back to HEAD' (:7375) against 'merged_at without a pr accepts any ancestor of HEAD' (:7476).
+- Fix: fold each pair into one entry at the next grooming (backlog-dups), keeping the sprint-14 wording and the security Low (4) rating.
+
+### Two definitions of a side window coexist after tab-close-c
+- Location: carat/use_cases/files/quit.rb:87
+- Why: TabPage#side_window? (a shown slot's window, the one place per the design) now sits beside Quit#beside_side_windows?, TabPage#editing_leaf, and file_window_count, which treat any scratch-buffer window as a side window, so :q counts a reading view or a pinned documentation split as a side window while buffer switches do not.
+- Fix: route Quit#beside_side_windows? through TabPage#side_window?, or name the scratch-based notion apart (file window versus side window) in code and docs.
+
+### No flow covers a buffer switch from a pinned documentation split
+- Location: test/editor_tab_flows.rb:189
+- Why: the design states a behavior change for a PinHover split, which now switches itself instead of the file window, yet only the reading view has flows, so a regression of the pinned split would pass.
+- Fix: add one flow row that pins a hover split and runs :bn there, expecting the split to switch and the file window to keep its buffer.
+
+### A closed window's folds stay tracked and are shifted on every edit
+- Location: carat/domain/window.rb:85
+- Why: performance; a closed window's Folds stay in its buffer's fold_lists, so every later edit of the buffer keeps shifting dead fold records (named in the change's design risks).
+- Fix: untrack the folds when Layout or the tab list removes a window.
+
+### Cursor display column inside a closed fold drifts from the drawn one
+- Location: carat/use_cases/arrange_view.rb:107
+- Why: correctness; ArrangeView takes the cursor's display column from the line's column even inside a closed fold, while FramePresenter (carat/adapters/frame_presenter.rb:734) uses window.left there, so the scroll and the drawn cursor can disagree.
+- Fix: one Window or presenter helper for the cursor's shown column, used by both.
+
+### Layout#close frees a window without untracking its folds
+- Location: carat/domain/layout.rb:229
+- Why: performance; every later edit of the buffer shifts the dead fold record of the closed window (the design accepts the leak).
+- Fix: drop the window's folds where a window is closed, as Window#show does.
+
+### ChangeFolds#place resets want_col where Neovim keeps it
+- Location: carat/use_cases/windows/change_folds.rb:44
+- Why: correctness; place repeats ArrangeView#to_fold_start (carat/use_cases/arrange_view.rb:137), which now runs after every key, and the two differ on want_col: move_to resets it, while to_fold_start keeps it as Neovim's foldAdjustCursor does.
+- Fix: keep one fold-start adjustment, for example a Window#to_fold_start(visual) in the domain that ArrangeView calls, and drop ChangeFolds#place (also drop the move in Operate#fold, carat/use_cases/operate.rb:162).
+
+### A linewise put on a closed fold puts the lines inside the fold
+- Location: carat/use_cases/put_register.rb:32
+- Why: correctness, Neovim parity; a linewise p on a closed fold puts the lines inside the fold, hidden, where Neovim's do_put puts them below the fold's last line (P above its first).
+- Fix: for a linewise entry pass the position at folds.last_row(cursor.row) for p, with an editor_folds row proving it.
+
+### Closing a split or a tab never untracks its windows' folds
+- Location: carat/domain/buffer_list.rb:370
+- Why: performance and a missing test; a closed window (layout.close, and tabs.remove_tab at line 368) never untracks its Folds, so buffer.fold_lists keeps every closed split's folds and each later splice shifts them.
+- Fix: call drop_folds on the closing window (each window of a removed tab) before closing it, and assert fold_lists.length after zfj<C-w>s<C-w>c in test/editor_folds.rb.
+
+### Visual modes do not take in closed folds
+- Location: carat/use_cases/arrange_view.rb:138
+- Why: correctness; as Neovim's foldAdjustVisual does not happen here, Vd on a closed fold over rows 0 and 1 deletes only row 0 and leaves a one-line fold, and carat/adapters/frame_presenter.rb:829 marks no selection on a fold row, while docs/compatibility.md says a linewise operator starting on a fold acts on all its lines.
+- Fix: in a visual mode extend the anchor and cursor rows to the fold edges (first_row of the upper, last_row of the lower), paint the selection on the fold row, and add editor_folds rows such as zfjVd.
+### The docs-lint path check fails a delivery that removes a file its own queue entry names (ruby-structure-remove retro)
+- Location: `tools/docs_lint.sh:128` (check_paths), over the delivery's own item in `docs/queue-feature.md`
+- Why: ruby-structure-remove's check failed in 5 s on 2 removed paths its own queue item named: first.check 0, 1 rework round (a contributor fix start and a second checker start, check 6,950 output tokens over two passes), and the fix's queue edit was discarded by plan-apply; check first pass 142/144.
+- Fix: a delivery deleting a file its own queue entry names passes the check on its first pass with no hand edit of a lane queue; accepted when the next such delivery records first.check 1.
+
+### The scout phase runs on a one-area removal whose plan names every location (ruby-structure-remove retro)
+- Location: `.claude/workflows/deliver-change.js:184` (scoutTargets)
+- Why: ruby-structure-remove's scout spent 33,374 output tokens and 17 calls, 24.6% of 135,491 output tokens and 14.4% of 118 calls, with 1 area, while the plan cited every file and line range and the contributor reversed the earlier diff exactly; scout share over recent feature rows 11.0% to 28.3%.
+- Fix: the next one-area removal or revert runs without a scout start, or under 10,000 scout output tokens, keeping first.check, first.quality, and first.security at 1.
+### The green line's refs/replace check fails open when for-each-ref errors (sprint-15 review security Low (3))
+
+- Location: .claude/workflows/deliver-change.js:688
+- Why: branch code that corrupts the ref store (for example a malformed packed-refs line) makes for-each-ref exit non-zero with no output; wc still prints 0, so the stop meant to catch any refs/replace entry passes, leaving only the --no-replace-objects flag on each pinned git.
+- Fix outline: test for-each-ref's own exit status and output before the worktree add, so an error stops the line, with a tools_test case of a corrupt packed-refs file.
+
+### Four sites compile a search against the last substitute by hand (sprint-15 review quality)
+
+- Location: carat/use_cases/search/find_match.rb:83, carat/use_cases/search/preview_search.rb:46, global_command.rb:65, last_search.rb:70 (LastSearch#recompile); SetCommandHandler holds a LastSubstitute only to pass it through.
+- Why: VimPattern.compile_search(source, ignorecase, smartcase, previous, previous_kept) is spelled in 4 places, so a change to how ~ reads the last substitute must be made in each.
+- Fix outline: one domain helper taking (source, options, last_substitute), or LastSearch keeping the LastSubstitute it recompiles against.
+
+### DelimitedPattern.typed is an alternate constructor not named from_x (sprint-15 review quality)
+
+- Location: carat/domain/delimited_pattern.rb:42; callers find_match.rb:73, preview_search.rb:40.
+- Why: the naming rule names an alternate constructor from_x.
+- Fix outline: rename it from_prompt(text, forward) at both callers; cut stays public.
+
+### The quality reviewer raises blocking parity bugs one round at a time (vim-folds-a retro 24)
+
+- Location: .claude/agents/quality-reviewer.md and the quality phase of .claude/workflows/deliver-change.js.
+- Why: vim-folds-a's later rounds raised blocking findings on behavior present at the first review (G or a mark leaving the cursor inside a closed fold; o on a closed fold): rework 3, implement 266,825 of 481,959 output tokens (55.4%) over 4 contributor starts; quality first pass 80/147 (54.4%), the lowest gate.
+- Fix outline: the first review reports every blocking finding in the touched behavior; accepted when over the next 5 runs with first.quality 0 no later round raises a blocking finding on code unchanged since the first review.
+
+### Quality re-reviews re-raise recorded advisories (vim-folds-a retro 25)
+
+- Location: the quality phase of .claude/workflows/deliver-change.js.
+- Why: in vim-folds-a the closed-window fold leak was raised 3 times (notes 5, 12, 17) and the fold-start duplication twice (15, 19); 13 advisories handed to packaging, 6 dropped; reviews 96,869 output tokens (20.1%) and 110 calls (31.6%).
+- Fix outline: a later round knows the recorded advisories and raises none again by location and cause; accepted when one run records no advisory twice.
