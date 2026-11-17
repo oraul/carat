@@ -11,10 +11,11 @@ module Carat
 
       # The two lines of Neovim's check_changed_any, which refuses to quit
       # over another buffer's unsaved changes: E37 without the hint, then
-      # E162 naming the buffer by its path, "" for [No Name].
+      # E162 naming the buffer by its path, "" for [No Name], its control
+      # characters in caret notation so the name adds no line.
       #: (String) -> String
       def self.unsaved_buffer(path)
-        name = path.empty? ? "[No Name]" : path
+        name = path.empty? ? "[No Name]" : ControlText.caret(path)
         "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
       end
 

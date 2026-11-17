@@ -145,7 +145,7 @@ module UseCasesPluginsTest
     quit = Carat::UseCases::Quit.new(buffers: buffers, tabs: tabs)
     quit_all = Carat::UseCases::QuitAll.new(buffers: buffers)
     Carat::UseCases::FileCommandHandler.register(commands, save_file: save_file, save_all: save_all, quit: quit, quit_all: quit_all, open_file: open_file, buffers: buffers)
-    Carat::UseCases::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window, close_other_windows: Carat::UseCases::CloseOtherWindows.new(buffers: buffers))
+    Carat::UseCases::WindowCommandHandler.register(commands, split_window: split_window, close_window: close_window, close_other_windows: Carat::UseCases::CloseOtherWindows.new(buffers: buffers, tabs: tabs))
     Carat::UseCases::TabCommandHandler.register(commands, open_tab: open_tab, close_tab: Carat::UseCases::CloseTab.new(buffers: buffers, tabs: tabs), close_other_tabs: Carat::UseCases::CloseOtherTabs.new(buffers: buffers, tabs: tabs), switch_tab: Carat::UseCases::SwitchTab.new(tabs: tabs))
     Carat::UseCases::PluginCommandHandler.register(commands, plugins: host)
     plugins.each { |p| host.register(p) }

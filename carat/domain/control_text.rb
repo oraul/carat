@@ -22,6 +22,32 @@ module Carat
         cleaned(text, limit, true)
       end
 
+      # The characters a C0 control is shown as after its caret, by code.
+      CARETS = "@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_"
+
+      # The text with each C0 control in caret notation, "^" and the
+      # character 64 above it (^J for a line feed), and DEL as ^?, as
+      # Neovim shows a file name, so no name breaks a message into lines.
+      # Every other byte is kept.
+      #: (String) -> String
+      def self.caret(text)
+        out = +""
+        len = text.bytesize
+        start = 0
+        i = 0
+        while i < len
+          b = text.getbyte(i).to_i
+          if b < 0x20 || b == 0x7F
+            out << text.byteslice(start, i - start).to_s
+            out << (b == 0x7F ? "^?" : "^" + CARETS[b, 1].to_s)
+            start = i + 1
+          end
+          i += 1
+        end
+        out << text.byteslice(start, len - start).to_s
+        out
+      end
+
       # The most bytes of raw text plain reads, so a hostile megabyte costs
       # no more than this.
       RAW_LIMIT = 4096

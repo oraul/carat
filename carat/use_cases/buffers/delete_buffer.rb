@@ -1,5 +1,6 @@
 require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer"
+require_relative "../../domain/tab_list"
 require_relative "../../domain/buffer_list"
 require_relative "../outcome"
 
@@ -17,10 +18,12 @@ module Carat
     # nothing: E516 with the command as typed.
     class DeleteBuffer
       attr_reader :buffers #: Domain::BufferList
+      attr_reader :tabs #: Domain::TabList
 
-      #: (buffers: Domain::BufferList) -> void
-      def initialize(buffers:)
+      #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
+      def initialize(buffers:, tabs:)
         @buffers = buffers
+        @tabs = tabs
       end
 
       #: (Domain::EditorState, Integer, bool, String) -> Outcome
@@ -28,17 +31,16 @@ module Carat
         target = number == 0 ? state.buffer : @buffers.with_id(number)
         return Outcome.failure("E516: No buffers were deleted: #{typed}") if target.nil? || target.scratch?
         return Outcome.failure("E89: No write since last change for buffer #{target.id} (add ! to override)") if target.modified? && !bang
-        tabs = @buffers.tabs
         other = @buffers.replacement_for(target)
-        if other.nil? && tabs.window.buffer.equal?(target)
+        if other.nil? && @tabs.window.buffer.equal?(target)
           @buffers.close_windows_of(target)
           @buffers.load(Domain::Buffer.from_text("", nil))
         else
-          while tabs.window.buffer.equal?(target) && tabs.total_windows > 1
-            @buffers.close_window(tabs.tab_index, tabs.tab.current)
+          while @tabs.window.buffer.equal?(target) && @tabs.total_windows > 1
+            @buffers.close_window(@tabs.tab_index, @tabs.tab.current)
           end
           @buffers.close_windows_of(target)
-          @buffers.load(other) if !other.nil? && tabs.window.buffer.equal?(target)
+          @buffers.load(other) if !other.nil? && @tabs.window.buffer.equal?(target)
         end
         @buffers.remove(target)
         Outcome.none
