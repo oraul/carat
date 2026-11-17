@@ -17,13 +17,14 @@ require_relative "../carat/testing"
 module EditorTabFlowsTest
   ROOT = "/home/ada/proj"
 
-  # /home/ada/proj with alpha.txt, beta.txt, and lib/gamma.rb.
+  # /home/ada/proj with alpha.txt, beta.txt, lib/gamma.rb, and notes.md.
   def self.disk
     files = Carat::Doubles::MemoryFiles.new
     files.move_to(ROOT)
     files.put("alpha.txt", "a1\n")
     files.put("beta.txt", "b1\n")
     files.put("lib/gamma.rb", "g1\n")
+    files.put("notes.md", "# Notes\n\nn1\n")
     files
   end
 
@@ -183,6 +184,41 @@ module EditorTabFlowsTest
       ["<Space>e:b 1<CR>", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
       ["<Space>e<Space>bn", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
       ["<Space>e<C-PageDown>", ". alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+    ])
+
+    # Moving from a reading view, a window that is not a side window
+    # though its buffer is a scratch buffer.
+    # Scenario: Buffer switches from a lone reading view act on its window.
+    flow(t, "Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt", "", [
+      [":e alpha.txt<CR>:e beta.txt<CR>:e notes.md<CR><Space>dr", ". alpha.txt . beta.txt m notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"],
+      [":bn<CR>", ". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"],
+      [":e notes.md<CR><Space>dr:bp<CR>", ". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"],
+      [":e notes.md<CR><Space>dr:b 2<CR>", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"],
+      [":e notes.md<CR><Space>dr<C-^>", ". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"],
+      ["<Space>drgt", ". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
+    ])
+    # Scenario: Buffer switches from a reading view in a split act on the focused window.
+    # Each <C-w>w step shows the other window kept beta.txt.
+    flow(t, "Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt", "", [
+      [":e alpha.txt<CR>:e beta.txt<CR>:sp notes.md<CR><Space>dr", ". alpha.txt . beta.txt m notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      [":bn<CR>", ". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w:e notes.md<CR><Space>dr:bp<CR>", ". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w:e notes.md<CR><Space>dr:b 1<CR>", ". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w:e notes.md<CR><Space>dr<C-^>", ". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w<Space>drgt", ". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<C-w>w", ". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
+    ])
+    # Scenario: A refused switch from a side window keeps the previous window.
+    flow(t, "A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p", "", [
+      [":e alpha.txt<CR>:sp notes.md<CR><Space>dr", ". alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "2", "1", "false", "", "false"],
+      ["<Space>e", ". alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
+      [":b 99<CR>", ". alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "E86: Buffer 99 does not exist", "false"],
+      ["<C-w>p", ". alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
+      ["<Space>e:bn<CR>", ". alpha.txt m notes.md", "notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
     ])
 
     # Closing.

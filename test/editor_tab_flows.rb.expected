@@ -58,6 +58,31 @@ ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 6: <S
 ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 7: <Space>e<Space>bn
 ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 8: <Space>e<C-PageDown>
 ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e notes.md<CR><Space>dr
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: :e notes.md<CR><Space>dr:bp<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: :e notes.md<CR><Space>dr:b 2<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: :e notes.md<CR><Space>dr<C-^>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <Space>drgt
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:sp notes.md<CR><Space>dr
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: <C-w>w:e notes.md<CR><Space>dr:bp<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <C-w>w:e notes.md<CR><Space>dr:b 1<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 7: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 8: <C-w>w:e notes.md<CR><Space>dr<C-^>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 9: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 10: <C-w>w<Space>drgt
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 11: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 1: :e alpha.txt<CR>:sp notes.md<CR><Space>dr
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 2: <Space>e
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 3: :b 99<CR>
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 4: <C-w>p
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 5: <Space>e:bn<CR>
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 2: x:q<CR>
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 3: :q!<CR>
@@ -132,4 +157,4 @@ ok   tab pages: closing down to the editor quitting, step 5: :bd<CR>
 ok   tab pages: closing down to the editor quitting, step 6: x:q<CR>
 ok   tab pages: closing down to the editor quitting, step 7: :q!<CR>
 ok   tab pages: closing down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-editor_tab_flows: 134 passed, 0 failed
+editor_tab_flows: 159 passed, 0 failed
