@@ -1414,10 +1414,21 @@ expect "run_state: groom holds a plan whose sprint has no security review" 0 "^g
 state init sprint-2 main > /dev/null 2>&1
 state review sprint-2 periodic-security not-run "no result" > /dev/null
 expect "run_state: review-due stays due while the sprint's security review did not run" 0 "^due: sprint-2 has 5 changes merged" state review-due
+expect "run_state: groom holds a plan whose sprint security review did not run" 0 "^groom: the plan of sprint-2 waits for its security review [(]not-run[)]" state groom sprint-2-records
 state review sprint-2 periodic-security partial "diff not_reviewed=1" > /dev/null
 expect "run_state: groom holds a plan whose sprint security review is partial" 0 "^groom: the plan of sprint-2 waits for its security review [(]partial[)]" state groom sprint-2-records
+expect "run_state: review-due stays due while the sprint's security review is partial" 0 "^due: sprint-2 has 5 changes merged" state review-due
+# An even sprint's sweep, the whole-tree review in sprint-N-sweep, holds
+# the sprint while it has no record (it failed to start) or did not run.
 state review sprint-2 periodic-security pass "diff blocking=0" > /dev/null
-expect "run_state: review-due is not due while the sprint plan waits" 1 "^not due: sprint-2 is planned" state review-due
+expect "run_state: review-due stays due while the sprint sweep failed to start" 0 "^due: sprint-2 has 5 changes merged" state review-due
+expect "run_state: groom holds a plan whose sprint sweep failed to start" 0 "^groom: the plan of sprint-2 waits for its security review [(]sweep none[)]" state groom sprint-2-records
+state init sprint-2-sweep main > /dev/null 2>&1
+state review sprint-2-sweep periodic-security not-run "the sweep failed to start" > /dev/null
+expect "run_state: groom holds a plan whose sprint sweep did not run" 0 "^groom: the plan of sprint-2 waits for its security review [(]sweep not-run[)]" state groom sprint-2-records
+expect "run_state: review-due stays due while the sprint sweep did not run" 0 "^due: sprint-2 has 5 changes merged" state review-due
+state review sprint-2-sweep periodic-security partial "high=0 medium=0 low=0 blocking=0 missed=tools" > /dev/null
+expect "run_state: review-due is not due while the sprint plan waits, its sweep partial" 1 "^not due: sprint-2 is planned" state review-due
 printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue-backlog.md
 expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue-backlog[.]md, estimated small" state plan-needed b6
 # The backlog grooming: duplicates by location, removals by heading.
@@ -3621,10 +3632,23 @@ expect "sprint: the security reviewer gets one more start, its result merged bef
   sh -c 'echo "$(grep -c "label: .security-reviewer: sprint, continued." "$1") $(grep -c "^    return mergeSecurity(first, again)$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
-expect "sprint: the diff reviewers record nothing and the skeptic records the kept findings" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c "record nothing, the skeptic records" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
-expect "sprint: the planner starts only after the security review and the skeptic" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c "^const reviewed = ran && skeptical$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
+expect "sprint: the diff reviewers record nothing, the workflow and the skeptic record" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "record nothing, the workflow and the skeptic record" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
+expect "sprint: the planner starts only after a complete security review, its notes, the skeptic, and the sweep" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "^const reviewed = ran && !missed && noted && skeptical && swept$" "$1") $(grep -c "^const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
+# Each security finding is recorded from the reviewer's own result, before
+# the skeptic, so a capped skeptic loses none; the text reaches the run
+# state verbatim, never read by the shell.
+note_lines=$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-9', [{ severity: 'High', confidence: 9, file: 'a.rb', line: 3, title: 'it\\'s \$(touch pwned) \\\"q\\\" \\\\n', fix: 'x\\ny' }, { severity: 'Low', confidence: 4, file: 'b.rb', title: '\`id\`', fix: 'z' }]).join(' && ')" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0, "utf8")))')
+state init sprint-9 main > /dev/null 2>&1
+expect "sprint: each security finding is recorded verbatim from the reviewer's result, no skeptic" 0 "^security High [(]9[)] a[.]rb:3 it's [$][(]touch pwned[)] \"q\" .n; fix: x y|security Low [(]4[)] b[.]rb:0 .id.; fix: z|no file$" \
+  sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s\n" "$(sh "$2" get sprint-9 note.1)" "$(sh "$2" get sprint-9 note.2)" "$( [ -e pwned ] && echo pwned || echo no file)"' _ "$note_lines" "$here/run_state.sh"
+expect "sprint: the notes are recorded before the skeptic starts" 0 "^first$" \
+  sh -c 'n=$(grep -n "label: .notes. })" "$1" | cut -d: -f1); k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$k" ] && [ "$n" -lt "$k" ] && echo first' _ "$swf"
+expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
+  grep -c -F 'if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)' "$swf"
+expect "sprint: the report names a partial security review" 0 '^\["partial, 2 file\(s\) not reviewed \(a.rb, b.rb\); 1 finding\(s\), 0 blocking; run /sprint again","1 finding\(s\), 1 blocking, 0 disputed","did not run; run /sprint again"\]$' \
+  js "$swf" "isCommit securityDone securityLine" "[securityLine({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: ['a.rb', 'b.rb'] }, 0, null), securityLine({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: [] }, 1, 0), securityLine(null, 0, null)]"
 expect "sprint: the plan step names the pick over the backlog and findings files, and the triage" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "title: .Plan., detail: .*one-time triage.*backlog-pick" "$1") $(grep -c "Mode: sprint[.].*backlog-pick docs/backlog[.]md docs/findings/[*][.]md.*one-time backlog triage" "$1")"' _ "$swf"
 expect "sprint: the sweep is the periodic review in its own run state" 0 "sprint[.]sweep [?] await workflow[(][{] scriptPath: '[.]claude/workflows/periodic-review[.]js' [}], [{] change: sweepName [}]" grep -F "sprint.sweep ? await workflow(" "$swf"
