@@ -6,7 +6,7 @@ Tab pages hold independent window layouts that the user switches between with ex
 ## Requirements
 
 ### Requirement: Opening a tab page
-":tabnew" SHALL open a new tab page after the current one with one window showing a new empty buffer with no name and make it current; ":tabe file" and ":tabedit file" SHALL do the same showing the file, opened as ":e file" does; ":tabe" and ":tabedit" without a file SHALL behave as ":tabnew".
+":tabnew" SHALL open a new tab page after the current one with one window showing a new empty buffer with no name and make it current; ":tabe file" and ":tabedit file" SHALL do the same showing the file, opened as ":e file" does, a file already listed showing its buffer with no empty buffer left listed; ":tabe" and ":tabedit" without a file SHALL behave as ":tabnew".
 
 #### Scenario: Tab new
 - **WHEN** ":tabnew" is run while "a.txt" is shown
@@ -23,6 +23,10 @@ Tab pages hold independent window layouts that the user switches between with ex
 #### Scenario: New tab after the current one
 - **WHEN** three tab pages exist, the first is current, and ":tabnew" is run
 - **THEN** the new tab page is the second of four and is current
+
+#### Scenario: Tab edit a listed file leaves no empty buffer
+- **WHEN** ":e alpha.txt", ":e beta.txt", and ":tabe alpha.txt" are run
+- **THEN** the second tab page shows "alpha.txt", and the top row and ":ls" list "alpha.txt" and "beta.txt" only
 
 ### Requirement: Closing tab pages
 ":tabc" and ":tabclose" SHALL close the current tab page and make the one before it current, or the first when the first was closed; on the last tab page the message SHALL be "E784: Cannot close last tab page". ":tabo" and ":tabonly" SHALL close every other tab page; with one tab page the message SHALL be "Already only one tab page". A file buffer shown only in a closed tab page SHALL stay hidden in the buffer list, with its changes.
