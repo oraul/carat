@@ -145,8 +145,9 @@ $dead"
 
 # The items of each lane queue, lines that start with a number and a
 # period: each names its tier and its size, as the rubric of docs/goals.md
-# asks. A lane's sprint holds at most its share of the sprint of 5, the
-# feature lane 3 and the backlog lane 2; the sprint, both lanes' sprint
+# asks. A lane's sprint holds at most its share of the sprint of 6 (3 + 3,
+# the user's decision of 2026-11-17), the feature lane 3 and the backlog
+# lane 3; the sprint, both lanes' sprint
 # sections together, holds a pipeline item only for a defect, at most one
 # (T0 exempt), unless a line beginning "The user-approved exception" in
 # either lifts it; both files within QUEUE_BUDGET.
@@ -157,7 +158,7 @@ check_queue() {
   bytes=0
   sprints=""
   marked=""
-  for lane in feature:3 backlog:2; do
+  for lane in feature:3 backlog:3; do
     file=docs/queue-${lane%%:*}.md
     [ -f "$file" ] && check_lane "$file" "${lane#*:}"
   done

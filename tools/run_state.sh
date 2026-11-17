@@ -175,7 +175,7 @@
 #                               per start and per phase; a DIR counts once
 #                               changes, its combined diff BASE..origin/main,
 #                               and "sweep: yes" in an even sprint, and exit 0
-#                               when SPRINT_SIZE changes merged since the last
+#                               when sprint_size changes merged since the last
 #                               sprint of docs/sprints.tsv (SPRINTS_FILE), up
 #                               to SPRINT_EXCEPTIONS marked beyond the sprint
 #                               not counted;
@@ -329,9 +329,9 @@ metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_file=${BACKLOG_FILE:-docs/backlog.md}
 findings_dir=${FINDINGS_DIR:-docs/findings}
 queue_files="docs/queue-feature.md docs/queue-backlog.md"
-# The pick's batches (backlog-pick): the sprint's two backlog items, each
+# The pick's batches (backlog-pick): the sprint's three backlog items, each
 # of one area holding PICK_MIN entries, at most PICK_MAX of them.
-PICK_BATCHES=2
+PICK_BATCHES=3
 PICK_MIN=5
 PICK_MAX=10
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
@@ -388,23 +388,28 @@ TAB=$(printf '\t')
 # Columns 16 and 17 came after estimate, and 19 to 22 after calibration,
 # so rates ($5, $6) read the same columns in every row.
 HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration${TAB}ci_stages${TAB}ci_wait_calls${TAB}weighted_tokens${TAB}weighted_phases"
-# A sprint is SPRINT_SIZE merged changes; sprint-planning reviews each
-# sprint's combined diff, and the whole tree in every second sprint. One
-# row per planned sprint in the sprints file, the first the seed sprint-0.
+# A sprint is sprint_size merged changes (sprint_state): SPRINT_SIZE, three
+# features and three backlog changes, from sprint SPRINT_SIZE_FROM on, the
+# user's decision of 2026-11-17, for now; SPRINT_SIZE_BEFORE, three and
+# two, in an earlier sprint. sprint-planning reviews each sprint's combined
+# diff, and the whole tree in every second sprint. One row per planned
+# sprint in the sprints file, the first the seed sprint-0.
 sprints_file=${SPRINTS_FILE:-docs/sprints.tsv}
 plan_dir=${PLAN_DIR:-build/plan}
-SPRINT_SIZE=5
+SPRINT_SIZE=6
+SPRINT_SIZE_FROM=17
+SPRINT_SIZE_BEFORE=5
 # The run states of reviews, not changes, which a sprint never counts:
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
 # The words that mark a queue item, inside its first parenthesis, as a
-# change the user approved beyond a sprint's five, which it does not count;
+# change the user approved beyond a sprint's size, which it does not count;
 # distinct from "the user-approved exception", which lifts only the
 # one-pipeline limit (docs_lint.sh) and leaves the item counted.
 EXCEPTION_MARK='beyond the sprint'
 # At most this many marked changes per sprint go uncounted, the first in
 # the sprint's order; a later one counts, so a sprint closes after at most
-# SPRINT_SIZE + SPRINT_EXCEPTIONS merges whatever the queue text says.
+# sprint_size + SPRINT_EXCEPTIONS merges whatever the queue text says.
 SPRINT_EXCEPTIONS=1
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
@@ -1982,18 +1987,22 @@ append_history() {
 }
 
 # The sprint in progress: sprint_n, the number after the sprints file's
-# last row; sprint_base, the merged commit of that row's last change, where
-# the combined diff starts; sprint_names, the changes merged since (the
-# history rows after that change's row, then the merged changes without a
-# row); sprint_exceptions, the first SPRINT_EXCEPTIONS of them marked beyond
-# the sprint (exception_item), the queue read no further once they are
-# found; and sprint_count, the rest.
+# last row; sprint_size, the counted merges that close it (SPRINT_SIZE from
+# sprint SPRINT_SIZE_FROM on, else SPRINT_SIZE_BEFORE); sprint_base, the
+# merged commit of that row's last change, where the combined diff starts;
+# sprint_names, the changes merged since (the history rows after that
+# change's row, then the merged changes without a row); sprint_exceptions,
+# the first SPRINT_EXCEPTIONS of them marked beyond the sprint
+# (exception_item), the queue read no further once they are found; and
+# sprint_count, the rest.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
   prev=$(printf '%s\n' "$last_row" | cut -f1)
   valid 'sprint-[0-9]+' "$prev" || die "$sprints_file ends with no sprint row"
   sprint_n=$((${prev#sprint-} + 1))
+  sprint_size=$SPRINT_SIZE
+  [ "$sprint_n" -ge "$SPRINT_SIZE_FROM" ] || sprint_size=$SPRINT_SIZE_BEFORE
   prev_last=$(printf '%s\n' "$last_row" | cut -f2)
   history=$(history_rows)
   sprint_base=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" '$1 == c { print $3 }' | tail -1)
@@ -2078,8 +2087,8 @@ review_due() {
     echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for its records change, sprint-$sprint_n-records"
     return 1
   fi
-  if [ "$sprint_count" -lt "$SPRINT_SIZE" ]; then
-    echo "not due: sprint-$sprint_n has $sprint_count of $SPRINT_SIZE changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, beyond the sprint: $sprint_exceptions}"
+  if [ "$sprint_count" -lt "$sprint_size" ]; then
+    echo "not due: sprint-$sprint_n has $sprint_count of $sprint_size changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, beyond the sprint: $sprint_exceptions}"
     return 1
   fi
   sweep=no
@@ -2246,14 +2255,14 @@ backlog_pick() {
     }'
 }
 
-# The sprint's row from its history rows up to the SPRINT_SIZE-th counted
+# The sprint's row from its history rows up to the sprint_size-th counted
 # one, where it ends, a later exception's row left to the next sprint, whose
 # combined diff starts there (a change beyond the sprint, sprint_exceptions,
 # not counted): the last change, the merges, the changes, the wall minutes
 # and their mean per change, the total tokens, the runs over their size's
 # budget (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
-  history_rows | awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$SPRINT_SIZE" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
+  history_rows | awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$sprint_size" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
     seen && NF && !done && $1 !~ r {
       ex = index(x, " " $1 " ") > 0
@@ -2300,7 +2309,7 @@ groom() {
     return 0
   fi
   rows=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }')
-  [ "$rows" -ge "$SPRINT_SIZE" ] || die "groom: sprint-$sprint_n has $rows of $SPRINT_SIZE history rows; run history first"
+  [ "$rows" -ge "$sprint_size" ] || die "groom: sprint-$sprint_n has $rows of $sprint_size history rows; run history first"
   removals=""
   repeats=""
   if [ -f "$plan_dir/groom.txt" ]; then

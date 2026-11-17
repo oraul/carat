@@ -1,20 +1,20 @@
 export const meta = {
   name: 'sprint-planning',
-  description: 'Close a sprint of five merged changes: the review of its combined diff (security, never skipped, quality and architecture, and the skeptic), the whole-tree sweep every second sprint, the backlog grooming, and the next sprint\'s queue of five, which its records change, sprint-N-records, applies once with the sprint\'s row',
-  whenToUse: '/sprint after a merge; it ends at once with "not due" until the sprint\'s five changes have merged',
+  description: 'Close a sprint of six merged changes (five before sprint-17): the review of its combined diff (security, never skipped, quality and architecture, and the skeptic), the whole-tree sweep every second sprint, the backlog grooming, and the next sprint\'s queue of six, which its records change, sprint-N-records, applies once with the sprint\'s row',
+  whenToUse: '/sprint after a merge; it ends at once with "not due" until the sprint\'s six changes (five before sprint-17) have merged',
   phases: [
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
     { title: 'Review', detail: 'the security and quality reviewers over the combined diff in their sprint mode, the security reviewer once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
     { title: 'Notes', detail: 'each security finding of the reviewer\'s result in the sprint\'s run state, before the skeptic' },
     { title: 'Skeptic', detail: 'the quality reviewer reads both results against the code: records the quality findings it keeps and each security finding it disputes, as disputed' },
-    { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its two backlog items from backlog-pick' },
+    { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its three backlog items from backlog-pick' },
     { title: 'Record', detail: 'the review results in the sprint\'s run state' },
     { title: 'Records', detail: 'the sprint\'s records change, sprint-N-records, delivered through deliver-change.js: history and groom write the backlog fold, the lane queues, and the sprints row once' },
   ],
 }
 
 // args: none. The sprint is the one tools/run_state.sh review-due counts
-// (docs/sprints.tsv): due once its five changes merged, not due while its
+// (docs/sprints.tsv): due once its six changes (five before sprint-17) merged, not due while its
 // plan waits in build/plan/ for its records change, sprint-N-records, which
 // this workflow delivers last and which alone applies it with
 // tools/run_state.sh groom, never a lane's package step. The diff reviewers
@@ -216,7 +216,7 @@ const reviewed = ran && !missed && noted && skeptical && swept
 
 phase('Plan')
 const plan = !reviewed ? null : await agent(
-  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`, the two backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
+  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 
 phase('Record')
