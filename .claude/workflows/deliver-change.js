@@ -1385,7 +1385,7 @@ if (!stopped && !state.merged) {
 // is the one figure recorded nowhere. No other start records: a line the
 // close did not run is reported as not recorded. The delivery never runs
 // the periodic review: sprint-planning (/sprint), its own workflow, reviews
-// the sprint's combined diff once its five changes merged, and the report
+// the sprint's combined diff once its counted changes merged, and the report
 // says when it is due. A stopped run's unpushed commits stay on its local
 // branch for a resume.
 const looking = !stopped && Boolean(state.merged) && !state['phase.retro']
