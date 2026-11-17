@@ -1806,11 +1806,21 @@ sprint_waiting() {
 # True when the run state sprint-N of the sprint in progress records its
 # security review pass or blocked (sprint_security, the result word): a
 # plan written without it waits, review-due staying due, so /sprint again
-# reviews the sprint anew instead of closing it unreviewed.
+# reviews the sprint anew instead of closing it unreviewed. An even
+# sprint, the one review-due asks the sweep for, also needs the sweep's
+# run state sprint-N-sweep to record its periodic security review pass,
+# blocked, or partial (a whole-tree review at its cap leaves its missed
+# areas there): none, a sweep that failed to start, or not-run holds it,
+# sprint_security then reading "sweep WORD".
 sprint_reviewed() {
   sprint_security=$(change="sprint-$sprint_n"; read_key review.periodic-security)
   sprint_security=${sprint_security%% *}
-  case "$sprint_security" in pass|blocked) return 0 ;; esac
+  case "$sprint_security" in pass|blocked) ;; *) return 1 ;; esac
+  [ $((sprint_n % 2)) -eq 0 ] || return 0
+  sweep_security=$(change="sprint-$sprint_n-sweep"; read_key review.periodic-security)
+  sweep_security=${sweep_security%% *}
+  case "$sweep_security" in pass|blocked|partial) return 0 ;; esac
+  sprint_security="sweep ${sweep_security:-none}"
   return 1
 }
 
