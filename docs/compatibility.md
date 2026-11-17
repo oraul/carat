@@ -329,7 +329,7 @@ Differences from Neovim: `:wa` shows the message of the last write only; `:e` of
 
 ## Substitute
 
-A range comes before the command name; `:s`, `:&`, `:g`, `:v`, and the line commands `:d`, `:m`, `:co`, `:t`, `:j`, `:>`, and `:<` take one, and a range alone moves the cursor.
+A range comes before the command name; `:s`, `:A range comes before the command name; `:s`, `:&`, `:g`, `:v`, and `:d` take one,`, `:g`, `:v`, and the line commands `:d`, `:m`, `:co`, `:t`, `:j`, `:>`, and `:<` take one, and a range alone moves the cursor.
 
 | Range | Lines | Test |
 | --- | --- | --- |
