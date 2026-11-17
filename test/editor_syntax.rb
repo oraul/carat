@@ -41,6 +41,18 @@ module EditorSyntaxTest
     Carat::Doubles::EditorHarness.with_plugins(files, 12, 60, plugins)
   end
 
+  # Every sign of the buffer, row by row, empty for none.
+  #: (Carat::Doubles::EditorHarness) -> String
+  def self.signs(h)
+    out = ""
+    i = 0
+    while i < h.buffer.line_count
+      out += h.buffer.sign_at(i)
+      i += 1
+    end
+    out
+  end
+
   # A tokenizer that raises disables its plugin and leaves the buffer plain.
   class Boom < Carat::PluginApi::Plugin
     # Returns the manifest.
@@ -193,6 +205,14 @@ module EditorSyntaxTest
     h.type("y")
     t.assert_equal(1, view.tokenized - before, "typing in a multi-line string tokenizes one row")
     h.type("<Esc>")
+
+    # The ruby plugin places no sign: a block opener no end closes stays
+    # unmarked when insert mode ends and after a change in normal mode.
+    s = editor([Carat::Plugins::Ruby::Plugin.new])
+    s.open("a.rb")
+    s.type("Odef x<Esc>")
+    s.type("jdd")
+    t.assert_equal(["def x", ""], [s.buffer.line(0), signs(s)], "an unclosed def in a Ruby file shows no sign")
 
     t.finish
   end
