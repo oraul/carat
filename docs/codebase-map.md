@@ -94,8 +94,9 @@ Files:
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
-- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks (`lsp.root` needs a root and a command), the project file refused language commands and key-sequence bindings.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks (`lsp.root` needs a root, by `RootWord.root?`, and a command), the project file refused language commands and key-sequence bindings.
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
+- `carat/domain/root_word.rb`: `RootWord.root?`, what a root word is (`~`, `~/...`, or absolute, no `.` or `..` segment), the one rule of the configuration reader and of `TrustedRoots.root_of`.
 - `carat/domain/trusted_roots.rb`: `TrustedRoots.cover?`, whether the last `language.trusted_roots` line covers the working directory, and `under?`, one root word, a `language.<name>.lsp.root` root's rule too; the language gateway (area 17) and the plugin host's `run_program` (area 15) ask it.
 - `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`).
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
