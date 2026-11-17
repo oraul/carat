@@ -33,4 +33,4 @@ Assumptions: `TERM` is the signal that ends a server, the one a terminal or serv
 `carat/drivers/process_runner.rb` (`stop` signals the child's own pid before detaching), `carat/ports/process_port.rb` (the `stop` contract), `carat/adapters/json_rpc_language_gateway.rb` (`words_of` keeps each language's settled command); tests in `test/drivers_process_runner.rb`, `test/adapters_language_gateway.rb`, `test/editor_lsp.rb`. No new file, no dependency, no new port method.
 
 - README.md: changed, the language server paragraph says quit and `:LspRestart` end only the server process Carat started.
-- docs/architecture.md: changed, the `ProcessRunner` entry names the signal to the child's own process and the settled command.
+- docs/architecture.md: changed, the `ProcessRunner` entry names the signal to its child; the settled program is in the codebase map, area 17, since the architecture is at its byte budget.

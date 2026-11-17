@@ -11,4 +11,4 @@
 
 ## 3. Documents
 
-- [x] 3.1 Update `docs/architecture.md` (the `ProcessRunner` entry) for the stop signal and the settled command, and the README language server paragraph; verify `make docs-lint` and `make gates` pass
+- [x] 3.1 Update `docs/architecture.md` (the `ProcessRunner` entry) for the stop signal, `docs/codebase-map.md` area 17 for both, and the README language server paragraph; verify `make docs-lint` and `make gates` pass
