@@ -121,6 +121,8 @@ module EditorWindowsTest
       ["Ctrl-W p returns to the previous window", "<C-w>s<C-w>j<C-w>p", [2, 1, STACKED]],
       ["Ctrl-W p again goes forward", "<C-w>s<C-w>j<C-w>p<C-w>p", [2, 2, STACKED]],
       ["Ctrl-W p after the previous window closed stays", "<C-w>s<C-w>j<C-w>o<C-w>p", [1, 1, ONE]],
+      ["Ctrl-W p after :only closed the previous window stays", "<C-w>s<C-w>j:only<CR><C-w>p", [1, 1, ONE]],
+      ["Ctrl-W p after Ctrl-W o closed two windows stays", "<C-w>s<C-w>s<C-w>j<C-w>j<C-w>o<C-w>p", [1, 1, ONE]],
       ["Ctrl-W c closes the window", "<C-w>s<C-w>c", [1, 1, ONE]],
       [":close closes the window", "<C-w>s:close<CR>", [1, 1, ONE]],
       [":clo closes the window", ":sp<CR>:clo<CR>", [1, 1, ONE]],
