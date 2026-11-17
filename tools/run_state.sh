@@ -71,12 +71,18 @@
 #                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
 #                               and stage.*, which their own commands write,
-#                               and a merged or pushed value but a commit hash
+#                               a pushed value but a commit hash, a ci value
+#                               but "red|green COMMIT" at the pushed head, and
+#                               a merged value but the squash commit on main
+#                               (once pr is recorded, the commit whose subject
+#                               ends with " (#PR)"), each refusal naming both
 # Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
 # control character (newline, carriage return, tab, or another), so no write
 # adds a line of its own.
 #   phase CHANGE NAME [COMMIT]  record the phase (one of PHASES) done at
 #                               COMMIT, HEAD when omitted
+#                               (ci only at the pushed head, merge only at
+#                               the squash commit, as set checks them)
 #   review CHANGE KIND RESULT SUMMARY [COMMIT]
 #                               record a review (KIND one of REVIEW_KINDS,
 #                               RESULT pass or blocked, and for the periodic
@@ -218,6 +224,11 @@
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
 #                               rows, retiring the marker
+#   sprint-row COMMIT           print the row groom appends for the sprint
+#                               the marker names (PLAN_DIR/sprint, else
+#                               sprint.applied), against the sprints file
+#                               at COMMIT; refuse a marker naming another
+#                               sprint than the one in progress there
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not item 1 of a lane queue,
 #                               docs/queue-feature.md or docs/queue-backlog.md
@@ -1531,6 +1542,47 @@ merged_on_main() {
   git merge-base --is-ancestor "$full" "${BASE:-origin/main}" 2>/dev/null
 }
 
+# The twelve-digit pushed head when VALUE ($1) is 7 to 40 of its leading
+# digits: a recorded CI head is the head the push recorded, never another
+# an agent reported; dies naming both, as COMMAND ($2), otherwise.
+pushed_at() {
+  pushed=$(read_key pushed)
+  valid '[0-9a-f]{40}' "$pushed" || die "$2: refused: no pushed head is recorded for $change, so no CI head $1"
+  valid '[0-9a-f]{7,40}' "$1" && case "$pushed" in "$1"*) true ;; *) false ;; esac ||
+    die "$2: refused: the CI head $1 is not the pushed head $pushed"
+  printf '%s\n' "$pushed" | cut -c1-12
+}
+
+# The twelve-digit newest commit of BASE (origin/main), else of HEAD, whose
+# subject ends with " (#PR)", as the squash merge of pull request PR ($1)
+# titles it; fails when none does.
+squash_commit() {
+  for ref in "${BASE:-origin/main}" HEAD; do
+    git rev-parse --verify -q --end-of-options "$ref^{commit}" > /dev/null 2>&1 || continue
+    found=$(git log --format='%H %s' --end-of-options "$ref" -- 2>/dev/null | S=" (#$1)" awk '
+      { s = ENVIRON["S"]; n = length($0) - length(s); if (n > 40 && substr($0, n + 1) == s) { print $1; exit } }')
+    [ -z "$found" ] || { git rev-parse --short=12 "$found"; return 0; }
+  done
+  return 1
+}
+
+# The twelve-digit squash commit when VALUE ($1) names it: a commit on main
+# (merged_on_main) and, once the pull request is recorded, its squash
+# commit (squash_commit); dies naming both, as COMMAND ($2), otherwise, so
+# no pushed head or mistyped hash an agent reported is recorded as merged.
+merged_at() {
+  valid '[0-9a-f]{7,40}' "$1" || die "$2: refused: merged is a commit hash of 7 to 40 hexadecimal digits, not $1"
+  at=$(git rev-parse --verify -q --short=12 --end-of-options "$1^{commit}" 2>/dev/null) && merged_on_main "$at" || at=""
+  pr=$(read_key pr)
+  if valid '[0-9]+' "$pr"; then
+    squash=$(squash_commit "$pr") || squash="none"
+    [ -n "$at" ] && [ "$at" = "$squash" ] || die "$2: refused: $1 is not the squash commit of pull request #$pr on main, $squash"
+  else
+    [ -n "$at" ] || die "$2: refused: $1 is no commit on main"
+  fi
+  printf '%s\n' "$at"
+}
+
 # The merged changes whose run state has no history row, one per line; a
 # merged value that is not a commit hash, or names no commit on main
 # (merged_on_main), is not a merge, so no history row, sprint, or bench
@@ -2289,6 +2341,31 @@ sprint_applied() {
     awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }'
 }
 
+# The row groom appends for the sprint the marker names (PLAN_DIR/sprint,
+# else the sprint.applied groom retired it to), computed by sprint_row
+# against the sprints file at COMMIT ($1) and the history rows of the
+# working tree; dies when the marker names another sprint than the one in
+# progress at COMMIT. The records-only gate (tools/gates.sh, groom_row)
+# accepts no other appended row.
+sprint_row_at() {
+  marker=$plan_dir/sprint
+  [ -f "$marker" ] || marker=$plan_dir/sprint.applied
+  [ -f "$marker" ] || die "sprint-row: no sprint marker in $plan_dir/"
+  named=$(sed -n '1p' "$marker")
+  valid 'sprint-[0-9]+' "$named" || die "sprint-row: $marker names no sprint"
+  at=$(commit_at "$1") || exit 1
+  rows=$(mktemp) || die "sprint-row: no temporary file"
+  git show "$at:$sprints_file" > "$rows" 2>/dev/null || { rm -f "$rows"; die "sprint-row: no $sprints_file at $at"; }
+  row=$(
+    sprints_file=$rows
+    sprint_state
+    [ "$named" = "sprint-$sprint_n" ] || die "sprint-row: $marker names $named, but the sprint in progress at $at is sprint-$sprint_n"
+    sprint_row
+  ) || { rm -f "$rows"; exit 1; }
+  rm -f "$rows"
+  printf '%s\n' "$row"
+}
+
 # True when CHANGE ($2, the change whose package step runs COMMAND $1) has
 # its planning records excluded, records=skip in its run state, which the
 # workflow sets from the brief or the planner; says so.
@@ -2615,6 +2692,7 @@ case "$command" in
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
   backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
+  sprint-row) [ $# -eq 1 ] || usage; sprint_row_at "$1"; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -2658,15 +2736,25 @@ case "$command" in
     read_key "$1" ;;
   set)
     [ $# -eq 2 ] || usage
+    value=$2
     case "$1" in
       review.*|phase.*|stage.*|gated) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated)" ;;
-      merged|pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
+      pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
+      merged) value=$(merged_at "$2" set) || exit 1 ;;
+      ci)
+        valid '(red|green) [0-9a-f]{7,40}' "$2" || die "set: refused: ci is red or green and the pushed head, not $2"
+        at=$(pushed_at "${2#* }" set) || exit 1
+        value="${2%% *} $at" ;;
     esac
-    write_key "$1" "$2" ;;
+    write_key "$1" "$value" ;;
   phase)
     [ $# -eq 1 ] || [ $# -eq 2 ] || usage
     one_of "$1" "$PHASES" || die "phase: not a phase: $1 (one of $PHASES)"
-    at=$(commit_at "${2:-}") || exit 1
+    case "$1" in
+      ci) at=$(pushed_at "${2:-$(head_commit)}" phase) || exit 1 ;;
+      merge) at=$(merged_at "${2:-$(head_commit)}" phase) || exit 1 ;;
+      *) at=$(commit_at "${2:-}") || exit 1 ;;
+    esac
     write_key "phase.$1" "$at" ;;
   review)
     [ $# -eq 3 ] || [ $# -eq 4 ] || usage
