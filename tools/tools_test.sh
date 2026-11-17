@@ -859,6 +859,14 @@ expect "run_state: backlog-pick with no file prints its usage and reads no backl
 expect "run_state: backlog-pick prints no batch when none qualifies" 1 "^no batch: no area holds 5 entries and none names security$" \
   sh -c 'tail -4 "$1" > bk3.md && sh "$2" backlog-pick bk3.md' _ bk2.md "$here/run_state.sh"
 expect "run_state: backlog-pick refuses a missing file" 1 "no nofile[.]md" state backlog-pick nofile.md
+# The next sprint's three backlog items: three areas of five entries each
+# give three batches (PICK_BATCHES).
+{ for i in 1 2 3 4 5; do printf '\n### pa%s at tools/a.sh:6%s\n\n- Location: tools/a.sh:6%s\n- Why: a.\n' $i $i $i; done
+  for i in 1 2 3 4 5; do printf '\n### pt%s at tools/t.sh:6%s\n\n- Location: tools/t.sh:6%s\n- Why: t.\n' $i $i $i; done
+  for i in 1 2 3 4 5; do printf '\n### pc%s at config/p.caratrc:6%s\n\n- Location: config/p.caratrc:6%s\n- Why: c.\n' $i $i $i; done
+} > bk8.md
+expect "run_state: backlog-pick draws three batches, the sprint's three backlog items" 0 "^3$" \
+  sh -c 'sh "$1" backlog-pick bk8.md | grep -c "^batch [1-3]: area [1-3][.] [A-Za-z ]*, 5 of 5 entries$"' _ "$here/run_state.sh"
 # The other entry forms: "## " and deeper headings, "- Where:" and
 # "- Why it matters:" lines, a heading's path:line without a Location, a
 # path on a Tests: line, the second path of a bullet, a section heading.
@@ -1510,6 +1518,29 @@ commit "chore: y1 with the plan naming it"
 state init y1 chore/y1 > /dev/null
 state set y1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due leaves out a change the exception line of its merged commit's queue names" 1 "^not due: sprint-3 has 0 of 5 changes merged [(]y1[)]; not counted, beyond the sprint: y1\$" state review-due
+# From sprint-17 a sprint is six counted changes, three features and three
+# backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
+# 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).
+fresh sprintsix
+printf 'sprint\tlast\nsprint-15\tseed\n' > docs/sprints.tsv
+printf '# Backlog\n' > docs/backlog.md
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; for i in 1 2 3 4 5; do mrow "p$i" "p$i" small 1 1 -; done; } > docs/metrics-backlog.tsv
+expect "run_state: review-due is due at sprint-16's fifth counted merge" 0 "^due: sprint-16 has 5 changes merged [(]p1, p2, p3, p4, p5[)]; combined diff bbb222[.][.]origin/main; sweep: yes\$" state review-due
+printf 'sprint-16\tp5\n' >> docs/sprints.tsv
+for i in 1 2 3 4 5; do mrow "q$i" "q$i" small 1 1 -; done >> docs/metrics-backlog.tsv
+expect "run_state: review-due is not due at sprint-17's fifth counted merge" 1 "^not due: sprint-17 has 5 of 6 changes merged [(]q1, q2, q3, q4, q5[)]\$" state review-due
+mkdir -p build/plan
+echo sprint-17 > build/plan/sprint
+state init sprint-17 main > /dev/null 2>&1
+state review sprint-17 periodic-security pass "diff blocking=0" > /dev/null
+expect "run_state: groom refuses sprint-17 at five history rows" 1 "groom: sprint-17 has 5 of 6 history rows; run history first" state groom sprint-17-records
+mv build/plan/sprint build/plan/sprint.held
+mrow q6 q6 small 1 1 - >> docs/metrics-backlog.tsv
+expect "run_state: review-due is due at sprint-17's sixth counted merge" 0 "^due: sprint-17 has 6 changes merged [(]q1, q2, q3, q4, q5, q6[)]; combined diff p5[.][.]origin/main; sweep: no\$" state review-due
+mrow q7 q7 small 1 1 - >> docs/metrics-backlog.tsv
+mv build/plan/sprint.held build/plan/sprint
+state groom sprint-17-records > /dev/null
+expect "run_state: the groomed sprint-17 row takes six changes" 0 "^sprint-17 q6 6 q1,q2,q3,q4,q5,q6 " sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"
 fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
@@ -2527,6 +2558,11 @@ printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-feature.md
 for n in 1 2 3 4; do printf '%s. `i%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-feature.md; done
 expect "docs_lint: a feature lane sprint of four items fails" 1 "FAIL queue: docs/queue-feature[.]md: the sprint holds 4 items, not 0 to 3" doclint
 rm docs/queue-feature.md
+printf '# Queue\n\n## Sprint 2\n\n' > docs/queue-backlog.md
+for n in 1 2 3; do printf '%s. `j%s` (T5, estimated small): item.\n' "$n" "$n" >> docs/queue-backlog.md; done
+expect "docs_lint: a backlog lane sprint of three items passes, the sprint of 6 (3 + 3)" 0 "ok   queue: 3 item" doclint
+printf '4. `j4` (T5, estimated small): item.\n' >> docs/queue-backlog.md
+expect "docs_lint: a backlog lane sprint of four items fails" 1 "FAIL queue: docs/queue-backlog[.]md: the sprint holds 4 items, not 0 to 3" doclint
 printf '# Queue\n\n## Sprint 2\n\n## Pool\n\n1. `p` (T5, estimated small): pooled.\n' > docs/queue-backlog.md
 expect "docs_lint: a drained sprint of 0 items waits for /sprint" 0 "ok   queue: 1 item" doclint
 # The user-approved exception: a line beginning with it under the sprint
@@ -3974,7 +4010,7 @@ expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "2 backlog items, the first two batches of .sh tools/run_state[.]sh backlog-pick docs/backlog[.]md docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "3 backlog items, the first three batches of .sh tools/run_state[.]sh backlog-pick docs/backlog[.]md docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
 
 # Spinel warnings (tools/spinel_warnings.sh): the real build targets run
 # against a stub toolchain under PREFIX, which the Makefile's PATH puts
