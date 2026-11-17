@@ -15,6 +15,8 @@
 ## 3. Existing tests
 
 - [x] 3.1 Move the plugin tests whose plugins assumed activation at startup to a trigger or `PluginHost#activate`, with `test/editor_explorer.rb` and `test/editor_tab_flows.rb` passing unchanged; proven by `make test`.
+- [x] 3.2 Keep the hello plugin's greeting at "1 buffer opened" by counting the buffer open in its `activate`; proven by `test/editor_plugins.rb` ("the default binding greets with the info icon and the open count").
+- [x] 3.3 Pass over a tokenizer whose late `activate` raised to the next plugin declaring the syntax; proven by `test/use_cases_plugin_syntax.rb` ("a tokenizer raising in its first activate is disabled with its message").
 
 ## 4. Docs
 

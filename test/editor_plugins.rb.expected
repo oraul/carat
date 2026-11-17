@@ -4,7 +4,7 @@ ok   the abbreviation greets
 ok   a spelling between the abbreviation and the name greets
 ok   the argument is the name
 ok   a partial abbreviation is unknown
-ok   buffer opens are counted from the first greeting, which loads the plugin
+ok   the first greeting loads the plugin, which counts the buffer open then and every open after
 ok   a count reaches the plugin
 ok   a register reaches the plugin
 ok   an unknown plugin action reports it

@@ -41,9 +41,12 @@ module Carat
           )
         end
 
+        # Activated on its first greeting, it counts the buffer already open
+        # then, which it heard no buffer_open for, and every open after.
         #: (Carat::PluginApi::Host) -> void
         def activate(host)
           @host = host
+          @opened = host.read_buffer(0).ok ? 1 : 0
         end
 
         #: () -> void

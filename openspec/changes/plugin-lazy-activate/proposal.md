@@ -31,7 +31,8 @@ Out of scope: process plugins (none exist yet); an `idle` event for plugins (it 
 
 - `carat/use_cases/plugins/` (registry, entry, router, events, syntax, host), `carat/adapters/input_controller.rb` and `editor_assembly.rb` (the idle wake), `carat/plugin_api.rb` (VERSION 2.9, the `activate` contract), `tools/new.sh` (the template).
 - `carat/plugins/explorer/plugin.rb`: its `activate` reads the current buffer's path, which it heard from events before, so the tree marks the file at once.
-- `carat/plugins/hello/plugin.rb` unchanged: its greeting counts the buffers opened since it was activated, so the first greeting reads 0 where it read 1.
+- `carat/plugins/hello/plugin.rb`: its `activate` counts the buffer open when it is first called, which it heard no `buffer_open` for, so the first greeting still reads "1 buffer opened" as the plugin-host spec requires.
+- `carat/use_cases/plugins/plugin_syntax.rb`: the provider activates a tokenizer on its first buffer and passes over one whose `activate` raised to the next plugin declaring the syntax, proven in `test/use_cases_plugin_syntax.rb`.
 - Tests: `test/editor_lazy_plugins.rb` (new), `test/editor_git_signs.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb`, and the other plugin tests whose plugins now activate on a trigger.
 - Docs: `docs/architecture.md` section 9 (changed; the manifest rule list there now points to the plugin-host spec, to keep its budget), `docs/plugins.md` (an Activation section), `docs/codebase-map.md` (area 15 and the new test).
 - README.md: unchanged, it does not describe when plugins activate.
