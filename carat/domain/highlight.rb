@@ -63,69 +63,73 @@ module Carat
       STATUS_LSP_STARTING = 46
       STATUS_LSP_READY = 47
       STATUS_LSP_ERROR = 48
-      INDENT_GUIDE = 49
-      INDENT_GUIDE_SCOPE = 50
-      FLOAT_TITLE = 51
-      POPUP_MENU_MATCH = 52
-      POPUP_MENU_MATCH_SELECTED = 53
-      POPUP_MENU_EXTRA = 54
-      POPUP_MENU_EXTRA_SELECTED = 55
+      STATUS_DIAGNOSTIC_ERROR = 49
+      STATUS_DIAGNOSTIC_WARN = 50
+      STATUS_DIAGNOSTIC_INFO = 51
+      STATUS_DIAGNOSTIC_HINT = 52
+      INDENT_GUIDE = 53
+      INDENT_GUIDE_SCOPE = 54
+      FLOAT_TITLE = 55
+      POPUP_MENU_MATCH = 56
+      POPUP_MENU_MATCH_SELECTED = 57
+      POPUP_MENU_EXTRA = 58
+      POPUP_MENU_EXTRA_SELECTED = 59
 
-      SYNTAX_FIRST = 56
-      COMMENT = 56
-      CONSTANT = 57
-      STRING = 58
-      CHARACTER = 59
-      NUMBER = 60
-      BOOLEAN = 61
-      FLOAT = 62
-      IDENTIFIER = 63
-      FUNCTION = 64
-      STATEMENT = 65
-      CONDITIONAL = 66
-      REPEAT = 67
-      LABEL = 68
-      OPERATOR = 69
-      KEYWORD = 70
-      EXCEPTION = 71
-      PRE_PROC = 72
-      INCLUDE = 73
-      DEFINE = 74
-      MACRO = 75
-      TYPE = 76
-      STORAGE_CLASS = 77
-      STRUCTURE = 78
-      TYPEDEF = 79
-      SPECIAL = 80
-      SPECIAL_CHAR = 81
-      DELIMITER = 82
-      SPECIAL_COMMENT = 83
-      TODO = 84
-      ERROR = 85
+      SYNTAX_FIRST = 60
+      COMMENT = 60
+      CONSTANT = 61
+      STRING = 62
+      CHARACTER = 63
+      NUMBER = 64
+      BOOLEAN = 65
+      FLOAT = 66
+      IDENTIFIER = 67
+      FUNCTION = 68
+      STATEMENT = 69
+      CONDITIONAL = 70
+      REPEAT = 71
+      LABEL = 72
+      OPERATOR = 73
+      KEYWORD = 74
+      EXCEPTION = 75
+      PRE_PROC = 76
+      INCLUDE = 77
+      DEFINE = 78
+      MACRO = 79
+      TYPE = 80
+      STORAGE_CLASS = 81
+      STRUCTURE = 82
+      TYPEDEF = 83
+      SPECIAL = 84
+      SPECIAL_CHAR = 85
+      DELIMITER = 86
+      SPECIAL_COMMENT = 87
+      TODO = 88
+      ERROR = 89
 
-      ICON_FIRST = 86
-      ICON_DEFAULT = 86
-      ICON_FOLDER = 87
-      ICON_SYMLINK = 88
-      ICON_RUBY = 89
-      ICON_JSON = 90
-      ICON_MARKDOWN = 91
-      ICON_TOML = 92
-      ICON_MAKEFILE = 93
-      ICON_SHELL = 94
-      ICON_C = 95
-      ICON_YAML = 96
-      ICON_GIT = 97
-      ICON_LOCK = 98
+      ICON_FIRST = 90
+      ICON_DEFAULT = 90
+      ICON_FOLDER = 91
+      ICON_SYMLINK = 92
+      ICON_RUBY = 93
+      ICON_JSON = 94
+      ICON_MARKDOWN = 95
+      ICON_TOML = 96
+      ICON_MAKEFILE = 97
+      ICON_SHELL = 98
+      ICON_C = 99
+      ICON_YAML = 100
+      ICON_GIT = 101
+      ICON_LOCK = 102
 
-      MARKUP_FIRST = 99
-      MARKUP_HEADING = 99
-      MARKUP_STRONG = 100
-      MARKUP_ITALIC = 101
-      MARKUP_RAW = 102
-      MARKUP_LINK = 103
-      MARKUP_RAW_BLOCK = 104
-      COUNT = 105
+      MARKUP_FIRST = 103
+      MARKUP_HEADING = 103
+      MARKUP_STRONG = 104
+      MARKUP_ITALIC = 105
+      MARKUP_RAW = 106
+      MARKUP_LINK = 107
+      MARKUP_RAW_BLOCK = 108
+      COUNT = 109
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -146,6 +150,7 @@ module Carat
         "DiagnosticError", "DiagnosticWarn", "DiagnosticInfo", "DiagnosticHint",
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
+        "StatusLineDiagnosticError", "StatusLineDiagnosticWarn", "StatusLineDiagnosticInfo", "StatusLineDiagnosticHint",
         "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",

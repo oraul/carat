@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 13
 
-1. `bar-colors` (T2 user now-request, feature, estimated medium): at 16 colors the lsp accents 3 and 2 on PANEL 7 read near 1.5:1 (`carat/domain/themes.rb:212`); the diagnostics counts draw on NONE (`carat/adapters/status_bar.rb:243`), not the bar. Fix outline: accents readable on the bar, counts on its background. Accepted when `test/domain_theme.rb` asserts both. Backlog: "### The lsp accents at 16 colors read poorly on the light gray bar", "### The status bar's diagnostics counts draw on the terminal's background".
+Drained: `palette-narrow` and `bar-colors` delivered; Sprint 14's features come from the pool at the sprint's close.
 
 ## Pool
 
@@ -29,12 +29,11 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first clear (T0): lsp-container-b security pass high=0 medium=0 at b89f709acdc9, sprint-security high=0 medium=0 low=1 at 1a344eabf30c; no pending run holds a review.periodic note.
-- `palette-narrow` delivered as written (T2 user now-request regression, Sprint 13 item 1 at c848525, the user's brief): removed; `bar-colors` is now Sprint 13 item 1, the pool unchanged.
-- No split (T2): 4 headings in one file and one map line hold one behavior check (a label at the smallest screen); `cut`, `pad`, and the map line are tidy-ups, under the split rule's 3 independently testable parts.
-- Estimate medium: last 10 feature rows 757,631 to 1,902,958 total, all medium; UI fix ux-fixes-a 894,511 in 54 min; the last two, lsp-container 802,117 and lsp-container-b 1,004,078, stayed under 1,200,000, so no size up.
-- Overrun noted (T1): lsp-container-b note 10, 229,659 output against the medium 200,000 after one quality fix round (implement 153,294 of 264,142); its total 1,004,078 stayed under budget.
-- Quality first pass 66/130 overall and quality:0 in 4 of the last 10 feature rows plus lsp-container-b: this item's acceptance names its test.
-- Retro notes lsp-container-b 11 to 13 and sprint-security 7 to 9 (T1 pipeline, scout 19.2%, 59 total per output): backlog lane, not this one, so entries in this plan's `backlog.md`.
-- Overrun notes lsp-container-b 14 and sprint-security 10 (sprint-12-records 2,147,268 over small 500,000) dropped: already in its history row and the lsp-container-b plan.
-- Quality-advisory notes lsp-container-b 1 to 9 and sprint-security 1 to 6 are handled already (quality-* notes).
+- Security first clear (T0): no review.periodic note in pending palette-narrow or check-parallel; palette-narrow security high=0 medium=0 at 601b3bdd73e2; check-parallel medium=1 blocking=0 at acddfbbe0081 (below confidence 8, in tools, not this change).
+- `bar-colors` delivered as written (T2 user now-request, Sprint 13 item 1 at 5e4d01f, the user's brief): removed; Sprint 13's feature lane drained to 0 items, the pool unchanged.
+- No split (T2): 2 testable parts (accents on PANEL 7 at `carat/domain/themes.rb:212`, counts at `carat/adapters/status_bar.rb:243`) in one test file, under the split rule's 3; no `tools/rules.sh` edit.
+- Estimate medium: last 10 feature rows 757,631 to 1,902,958 total, all medium; UI fixes ux-fixes-a 894,511 in 54 min and palette-narrow 736,843 in 51.2 min; the last two, lsp-container-b 1,004,078 and palette-narrow 736,843, under 1,200,000, so no size up.
+- Quality first pass 67/132 overall, quality:0 in 4 of the last 10 feature rows: the acceptance names `test/domain_theme.rb` for both parts.
+- Retro notes palette-narrow 3 and 4, check-parallel 8 to 10 (T1 pipeline: merge 69,031 of 304,750 output on a first-pass CI, check 40,656 for a pass, 4 of 7 advisories dropped): backlog lane, not this one, so entries in this plan's `backlog.md`.
+- No overrun note: palette-narrow 736,843 in 51.2 min and check-parallel 849,706 in 44.1 min, both under medium 1,200,000.
+- Quality-advisory notes palette-narrow 1 and 2, check-parallel 1 to 7 are handled already (quality-* notes).

@@ -1,8 +1,9 @@
 ok   every id has a name
 ok   FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups
-ok   56 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   60 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
+ok   the status bar's count groups follow its lsp groups
 ok   names by id
 ok   Comment
 ok   String
@@ -74,17 +75,36 @@ ok   dark_plus at 256 colors
 ok   light_plus at 24 bits
 ok   light_plus at 256 colors
 ok   The lsp groups share the bar's background: carat-dark on the terminal's background
+ok   The count groups share the bar's background: carat-dark on the terminal's background
 ok   The lsp groups share the bar's background: carat-dark on the theme's background
+ok   The count groups share the bar's background: carat-dark on the theme's background
 ok   The lsp groups share the bar's background: carat-light on the terminal's background
+ok   The count groups share the bar's background: carat-light on the terminal's background
 ok   The lsp groups share the bar's background: carat-light on the theme's background
+ok   The count groups share the bar's background: carat-light on the theme's background
 ok   The lsp groups share the bar's background: one_dark on the terminal's background
+ok   The count groups share the bar's background: one_dark on the terminal's background
 ok   The lsp groups share the bar's background: one_dark on the theme's background
+ok   The count groups share the bar's background: one_dark on the theme's background
 ok   The lsp groups share the bar's background: one_light on the terminal's background
+ok   The count groups share the bar's background: one_light on the terminal's background
 ok   The lsp groups share the bar's background: one_light on the theme's background
+ok   The count groups share the bar's background: one_light on the theme's background
 ok   The lsp groups share the bar's background: dark_plus on the terminal's background
+ok   The count groups share the bar's background: dark_plus on the terminal's background
 ok   The lsp groups share the bar's background: dark_plus on the theme's background
+ok   The count groups share the bar's background: dark_plus on the theme's background
 ok   The lsp groups share the bar's background: light_plus on the terminal's background
+ok   The count groups share the bar's background: light_plus on the terminal's background
 ok   The lsp groups share the bar's background: light_plus on the theme's background
+ok   The count groups share the bar's background: light_plus on the theme's background
+ok   The bar reads at 16 colors: carat-dark
+ok   The bar reads at 16 colors: carat-light
+ok   The bar reads at 16 colors: one_dark
+ok   The bar reads at 16 colors: one_light
+ok   The bar reads at 16 colors: dark_plus
+ok   The bar reads at 16 colors: light_plus
+ok   the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1
 ok   carat-dark on the theme background: the selected tab reads at a glance
 ok   carat-dark on the terminal background: the selected tab reads at a glance
 ok   carat-light on the theme background: the selected tab reads at a glance
@@ -204,4 +224,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 206 passed, 0 failed
+domain_theme: 226 passed, 0 failed

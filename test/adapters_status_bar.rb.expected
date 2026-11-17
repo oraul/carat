@@ -44,7 +44,7 @@ ok   ready
 ok   indexing
 ok   stopped
 ok   crashed
-ok   each count in its diagnostic group, the closing space in the last one's
+ok   each count in its status bar count group, the closing space in the last one's
 ok   new slots are empty
 ok   a buffer's diagnostics are counted by severity
 ok   counting the same again changes nothing, another list replaces the counts
