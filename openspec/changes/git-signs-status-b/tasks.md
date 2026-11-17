@@ -16,5 +16,5 @@
 
 ## 4. Docs and checks
 
-- [ ] 4.1 Document the signs, the focus rule, the timeout, the icons, and the message in `docs/plugins.md`, `docs/compatibility.md`, `docs/architecture.md`, the README, and `docs/codebase-map.md`; prove with `make docs-lint` and `make lint`
-- [ ] 4.2 Run `make gates` and `make spec-validate`
+- [x] 4.1 Document the signs, the focus rule, the timeout, the icons, and the message in `docs/plugins.md`, `docs/compatibility.md`, `docs/architecture.md`, the README, and `docs/codebase-map.md`; prove with `make docs-lint` and `make lint`
+- [x] 4.2 Run `make gates` and `make spec-validate`
