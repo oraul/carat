@@ -18,6 +18,15 @@ ok   a relative root is no root
 ok   a root with a .. segment is no root
 ok   the filesystem root trusts everything
 ok   a project file cannot trust its own directory
+ok   a root's command runs under its root
+ok   a root's command runs in its root itself
+ok   the default command runs outside every root
+ok   a sibling sharing the root's prefix runs the default
+ok   the later root line wins
+ok   a later root line elsewhere leaves the covering one
+ok   a root under the home
+ok   a root that is no root covers nothing
+ok   an untrusted root waits for :LspStart with the root's command
 ok   an unchanged buffer sends nothing
 ok   an edit sends the whole text at the next idle tick with version 2
 ok   an undo is a change with a higher version
@@ -78,4 +87,4 @@ ok   a broken input crashes the server
 ok   stop sends shutdown and exit and stops the child
 ok   a missing command leaves the slot empty
 ok   a text file starts nothing
-adapters_language_gateway: 80 passed, 0 failed
+adapters_language_gateway: 89 passed, 0 failed

@@ -20,12 +20,22 @@ module Carat
         words = line.words
         i = 0
         while i < words.length
-          root = root_of(words[i].to_s, home)
+          return true if under?(words[i].to_s, cwd, home)
           i += 1
-          next if root.empty?
-          return true if root == "/" || cwd == root || cwd.start_with?("#{root}/")
         end
         false
+      end
+
+      # Whether the directory is, or is under, a root word: the rule of
+      # the trusted roots, which a language.<name>.lsp.root line's root
+      # follows too. A word that is no root, or a directory that is not
+      # absolute, is under nothing.
+      #: (String, String, String) -> bool
+      def self.under?(word, cwd, home)
+        return false unless cwd.start_with?("/")
+        root = root_of(word, home)
+        return false if root.empty?
+        root == "/" || cwd == root || cwd.start_with?("#{root}/")
       end
 
       # A root word as an absolute path without a trailing slash, "" when
