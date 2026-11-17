@@ -167,13 +167,13 @@ module EditorPluginsTest
 
     # The hello plugin: rows are [label, keys, message].
     t.table([
-      ["the default binding greets with the info icon and the open count", " hh", "#{INFO} Hello, world! 1 buffer opened"],
-      ["the ex command greets", ":Hello<CR>", "#{INFO} Hello, world! 1 buffer opened"],
-      ["the abbreviation greets", ":Hel<CR>", "#{INFO} Hello, world! 1 buffer opened"],
-      ["a spelling between the abbreviation and the name greets", ":Hell<CR>", "#{INFO} Hello, world! 1 buffer opened"],
-      ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 1 buffer opened"],
+      ["the default binding greets with the info icon and the open count", " hh", "#{INFO} Hello, world! 0 buffers opened"],
+      ["the ex command greets", ":Hello<CR>", "#{INFO} Hello, world! 0 buffers opened"],
+      ["the abbreviation greets", ":Hel<CR>", "#{INFO} Hello, world! 0 buffers opened"],
+      ["a spelling between the abbreviation and the name greets", ":Hell<CR>", "#{INFO} Hello, world! 0 buffers opened"],
+      ["the argument is the name", ":Hello Ada<CR>", "#{INFO} Hello, Ada! 0 buffers opened"],
       ["a partial abbreviation is unknown", ":He<CR>", "E492: Not an editor command: He"],
-      ["buffer opens are counted", ":e b.txt<CR> hh", "#{INFO} Hello, world! 2 buffers opened"],
+      ["buffer opens are counted from the first greeting, which loads the plugin", " hh:e b.txt<CR> hh", "#{INFO} Hello, world! 1 buffer opened"],
       ["a count reaches the plugin", "3 tt", "count 3 register \"\" buffer 1"],
       ["a register reaches the plugin", "\"a tt", "count 0 register \"a\" buffer 1"],
       ["an unknown plugin action reports it", ":Nope<CR>", "E492: Not an editor command: Nope"]
@@ -200,11 +200,11 @@ module EditorPluginsTest
     config = Carat::Doubles::FixedConfig.with("plugin.hello.greeting Hi\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
-    t.assert_equal("#{INFO} Hi, world! 1 buffer opened", h.message, "an option from the configuration reaches the plugin")
+    t.assert_equal("#{INFO} Hi, world! 0 buffers opened", h.message, "an option from the configuration reaches the plugin")
     config = Carat::Doubles::FixedConfig.with("plugin.hello.greeting \"Good day\" again\nplugin.hello.volume 3\nplugin.hello.enabled maybe\nplugin.nope.enabled true\nplugin.hello\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
-    t.assert_equal(["#{INFO} Hello, world! 1 buffer opened", [], [".caratrc:1: plugin.hello.greeting takes one word", ".caratrc:2: plugin hello has no option volume", ".caratrc:3: plugin.hello.enabled takes true or false", ".caratrc:4: unknown plugin nope", ".caratrc:5: unknown setting plugin.hello"]], [h.message, h.plugins.errors, h.assembly.config_errors], "a wrong option, an unknown option or plugin, and a bad enabled line are reported by file and line and keep the defaults")
+    t.assert_equal(["#{INFO} Hello, world! 0 buffers opened", [], [".caratrc:1: plugin.hello.greeting takes one word", ".caratrc:2: plugin hello has no option volume", ".caratrc:3: plugin.hello.enabled takes true or false", ".caratrc:4: unknown plugin nope", ".caratrc:5: unknown setting plugin.hello"]], [h.message, h.plugins.errors, h.assembly.config_errors], "a wrong option, an unknown option or plugin, and a bad enabled line are reported by file and line and keep the defaults")
     config = Carat::Doubles::FixedConfig.with("plugin.hello.enabled false\nplugin.hello.enabled true\n")
     h = editor_with(config, 24, 80)
     t.assert_equal(true, h.plugins.enabled?("hello"), "a later enabled line wins")
@@ -219,11 +219,11 @@ module EditorPluginsTest
     config = Carat::Doubles::FixedConfig.with("option.icons ascii\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
-    t.assert_equal("i Hello, world! 1 buffer opened", h.message, "the ascii set gives the plugin its icon")
+    t.assert_equal("i Hello, world! 0 buffers opened", h.message, "the ascii set gives the plugin its icon")
     config = Carat::Doubles::FixedConfig.with("option.icons unicode\n")
     h = editor_with(config, 24, 80)
     h.type(":Hello<CR>")
-    t.assert_equal("◆ Hello, world! 1 buffer opened", h.message, "the unicode set too")
+    t.assert_equal("◆ Hello, world! 0 buffers opened", h.message, "the unicode set too")
 
     # Every plugin disabled: the editor starts, edits, saves, and quits.
     config = Carat::Doubles::FixedConfig.with("plugin.hello.enabled false\nplugin.side.enabled false\nplugin.explorer.enabled false\n")
@@ -355,14 +355,19 @@ module EditorPluginsTest
     files.put("a.txt", "one\ntwo\n")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
     h.open("a.txt")
-    t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event at startup disables the plugin")
+    t.assert_equal([false, true], [h.plugins.active?("boom"), h.plugins.enabled?("boom")], "a plugin with an action hears no event before its first trigger, so nothing raised at startup")
+    h.plugins.activate("boom")
+    h.type("l")
+    t.assert_equal(["Plugin boom disabled: event boom", true], [h.message, h.state.message_error], "a raise in an event once active disables the plugin")
     h.type(" kk")
-    t.assert_equal(["", [0, 0]], [h.message, h.cursor], "its binding went with it")
+    t.assert_equal(["", [0, 1]], [h.message, h.cursor], "its binding went with it")
     h.type("x")
-    t.assert_equal([["ne", "two"], ""], [h.lines, h.message], "the editor goes on editing")
+    t.assert_equal([["oe", "two"], ""], [h.lines, h.message], "the editor goes on editing")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 24, 80, [Boom.new])
     h.assembly.plugins.register(Side.new)
     h.open("a.txt")
+    h.plugins.activate("boom")
+    h.type("l")
     t.assert_equal(true, h.plugins.enabled?("boom") == false, "the event plugin is off again")
 
     # Configuration problems are reported when the configuration loads, with
@@ -374,7 +379,7 @@ module EditorPluginsTest
     h.type("zq")
     t.assert_equal([[0, 0], ""], [h.cursor, h.message], "the refused binding does nothing")
     h.type("zh")
-    t.assert_equal("#{INFO} Hello, world! 1 buffer opened", h.message, "a binding of a plugin action loads")
+    t.assert_equal("#{INFO} Hello, world! 0 buffers opened", h.message, "a binding of a plugin action loads")
     config = Carat::Doubles::FixedConfig.with("option.theme solarized\nkeymap.normal zq foo.bar\nkeymap.insert zw foo.baz\noption.tabstop wide\n")
     h = editor_with(config, 24, 80)
     t.assert_equal([".caratrc:1: unknown theme solarized", ".caratrc:2: unknown action foo.bar", ".caratrc:3: unknown action foo.baz", ".caratrc:4: option.tabstop takes a number"], h.assembly.config_errors, "every problem is reported in file and line order")

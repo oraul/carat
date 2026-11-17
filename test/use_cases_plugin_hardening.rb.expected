@@ -42,5 +42,9 @@ ok   a binding conflict between plugins is reported
 ok   and the first plugin keeps the keys
 ok   a line opened above moves the sign down
 ok   deleting its line removes it
-ok   a plugin runs an ex command in activate
-use_cases_plugin_hardening: 45 passed, 0 failed
+ok   a plugin is not activated at startup
+ok   a plugin runs an ex command in activate, at its first key
+ok   a raise in a late activate disables the plugin and its action does not run
+ok   and the editor goes on: x deletes the character
+ok   its binding went with it
+use_cases_plugin_hardening: 49 passed, 0 failed

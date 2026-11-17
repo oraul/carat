@@ -47,6 +47,7 @@ module UseCasesPluginHardeningTest
     #: (Carat::PluginApi::Host) -> void
     def activate(host)
       @link = host
+      raise "late boom" if @mode == "activate_raise"
       if @mode == "activate_tab"
         r = host.run_ex("tabnew")
         @log << "activate #{r.ok} #{r.message}".rstrip
@@ -203,11 +204,14 @@ module UseCasesPluginHardeningTest
     # stop after the rounds limit.
     w = rig("writer", "save_writes", ["buffer_save"])
     h = editor([w])
+    h.plugins.activate("writer")
     h.type("x:w<CR>")
     t.assert_equal([["buffer_save b1 w1 a.txt 0,0"], "ne\ntwo\nthree\n", true], [w.log, h.files.get("a.txt"), h.plugins.enabled?("writer")], "a plugin writing on a save hears only the user's save, not its own")
     w1 = rig("one", "save_writes", ["buffer_save"])
     w2 = rig("two", "save_writes", ["buffer_save"])
     h = editor([w1, w2])
+    h.plugins.activate("one")
+    h.plugins.activate("two")
     h.type(":w<CR>")
     t.assert_equal(["Plugin events dropped after 8 rounds", true, true], [h.message, h.plugins.enabled?("one"), h.plugins.enabled?("two")], "two plugins writing on each other's saves stop after 8 rounds")
     t.assert_equal([8, 8], [w1.log.length, w2.log.length], "each heard one save per round")
@@ -239,6 +243,7 @@ module UseCasesPluginHardeningTest
     t.assert_equal("focus false 0 No window 99", p.log[1], "an unknown window id fails")
     r = rig("reader", "", [])
     h = editor([r])
+    h.plugins.activate("reader")
     a_id = h.buffer.id
     h.type(":e b.txt<CR>:bd #{a_id}<CR>:e a.txt<CR>")
     t.assert_equal([false, true, ["one", "two", "three"]], [r.host.read_buffer(a_id).ok, h.buffer.id > a_id, r.host.read_buffer(h.buffer.id).lines], "a buffer deleted from the list loses its id for good and the reopened file gets a new one")
@@ -285,6 +290,8 @@ module UseCasesPluginHardeningTest
     # Events from the edit path: ranges, other buffers, other plugins.
     listener = rig("listener", "", ["buffer_change"])
     h = editor([listener])
+    # Each listener hears the events of the test's keys: activate it first.
+    h.plugins.activate("listener")
     h.type("jdd")
     t.assert_equal(["buffer_change b1 w1 a.txt 1,0 -1 +0"], listener.log, "dd on row 1 reports row 1, one row removed")
     listener.log.clear
@@ -293,6 +300,7 @@ module UseCasesPluginHardeningTest
     editor_rig = rig("editor", "edit_other", [])
     other = rig("other", "", ["buffer_change"])
     h = editor([editor_rig, other])
+    h.plugins.activate("other")
     b_id = 0
     h.type(":sp b.txt<CR>")
     b_id = h.buffer.id
@@ -309,6 +317,7 @@ module UseCasesPluginHardeningTest
     renamer = rig("renamer", "rename", [])
     renamer.arg = "a.txt"
     h = editor([watcher, renamer])
+    h.plugins.activate("watcher")
     h.type(":sp b.txt<CR>")
     b_id = h.buffer.id
     h.type(":q<CR>")
@@ -361,16 +370,30 @@ module UseCasesPluginHardeningTest
     # Signs move with their lines.
     s = rig("signer", "", [])
     h = editor([s])
+    h.plugins.activate("signer")
     s.host.place_sign(0, 2, "error")
     h.type("ggO<Esc>")
     t.assert_equal(["", "✖"], [h.buffer.sign_at(2), h.buffer.sign_at(3)], "a line opened above moves the sign down")
     h.type("4Gdd")
     t.assert_equal([["", "one", "two"], "", ""], [h.lines, h.buffer.sign_at(2), h.buffer.sign_at(3)], "deleting its line removes it")
 
-    # run_ex works while activating.
+    # Scenario "Tab page in activate": run_ex works while activating, at
+    # the plugin's first trigger, its key.
     act = rig("starter", "activate_tab", [])
     h = editor([act])
-    t.assert_equal([["activate true"], 2], [act.log, h.tab_count], "a plugin runs an ex command in activate")
+    t.assert_equal([[], 1, false], [act.log, h.tab_count, h.plugins.active?("starter")], "a plugin is not activated at startup")
+    h.type(" rs")
+    t.assert_equal(["activate true", 2, true], [act.log[0], h.tab_count, h.plugins.active?("starter")], "a plugin runs an ex command in activate, at its first key")
+
+    # Scenario "A raise in a late activate".
+    late = rig("late", "activate_raise", ["cursor_move"])
+    h = editor([late])
+    h.type(" rl")
+    t.assert_equal(["Plugin late disabled: late boom", true, false, []], [h.message, h.state.message_error, h.plugins.enabled?("late"), late.log], "a raise in a late activate disables the plugin and its action does not run")
+    h.type("x")
+    t.assert_equal([["ne", "two", "three"], ""], [h.lines, h.message], "and the editor goes on: x deletes the character")
+    h.type(" rl")
+    t.assert_equal(["", []], [h.message, late.log], "its binding went with it")
 
     t.finish
   end

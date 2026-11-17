@@ -4,7 +4,7 @@
 The host SHALL read an enabled plugin's manifest at startup, resolving its options and merging its default bindings, without activating it. It SHALL activate the plugin, once, on its first trigger: the first run of an action it declares, from a key bound to it or otherwise; the first ex command it declares; or the first time a buffer of a filetype it declares is highlighted.
 
 #### Scenario: No plugin is active at startup
-- **WHEN** the editor starts on a ruby file with the explorer, finder, ruby, and git_signs plugins enabled and draws its first frame
+- **WHEN** the editor starts on a markdown file with the explorer, finder, ruby, and git_signs plugins enabled and draws its first frame
 - **THEN** none of them is active, and the explorer, finder, and ruby plugins are still not active after the editor goes idle
 
 #### Scenario: The explorer activates on its key

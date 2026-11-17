@@ -4,7 +4,7 @@ ok   the abbreviation greets
 ok   a spelling between the abbreviation and the name greets
 ok   the argument is the name
 ok   a partial abbreviation is unknown
-ok   buffer opens are counted
+ok   buffer opens are counted from the first greeting, which loads the plugin
 ok   a count reaches the plugin
 ok   a register reaches the plugin
 ok   an unknown plugin action reports it
@@ -87,7 +87,8 @@ ok   a side window opens in the second tab page
 ok   and shows the one scratch buffer the first tab page shows
 ok   the first tab page still shows it
 ok   the side window's rows start at its first column, under its header
-ok   a raise in an event at startup disables the plugin
+ok   a plugin with an action hears no event before its first trigger, so nothing raised at startup
+ok   a raise in an event once active disables the plugin
 ok   its binding went with it
 ok   the editor goes on editing
 ok   the event plugin is off again
@@ -97,4 +98,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 99 passed, 0 failed
+editor_plugins: 100 passed, 0 failed

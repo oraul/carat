@@ -55,6 +55,8 @@ module EditorTransactionsTest
     files.put("b.txt", "bee\n")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 10, 80, [Edits.new])
     h.open("a.txt")
+    # The plugin is driven from the test, not by a trigger: activate it.
+    h.plugins.activate("edits")
     h
   end
 
@@ -110,6 +112,7 @@ module EditorTransactionsTest
     files.put("a.txt", "ab\ncd\n")
     h = Carat::Doubles::EditorHarness.with_plugins(files, 10, 80, [edits])
     h.open("a.txt")
+    h.plugins.activate("edits")
     start = h.buffer.closed_count
     r = edits.link.edit_buffer(0, [A::Edit.new(from_row: 0, from_col: 0, to_row: 0, to_col: 1, text: "X"), A::Edit.new(from_row: 1, from_col: 0, to_row: 1, to_col: 1, text: "Y")])
     t.assert_equal([true, 1, 2, ["Xb", "Yd"]], [r.ok, h.buffer.closed_count - start, h.buffer.last_transaction.size, h.lines], "a plugin edit request outside a command closes one transaction with both records")

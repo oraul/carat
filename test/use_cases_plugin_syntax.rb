@@ -83,6 +83,9 @@ module UseCasesPluginSyntaxTest
     second = Toy.new("second", ["toy", "other"])
     h = Carat::Doubles::EditorHarness.with_plugins(files, 8, 40, [first, second, Lazy.new])
     h.open("a.txt")
+    t.assert_equal([false, false], [h.plugins.active?("first"), h.plugins.active?("second")], "a tokenizer is not activated before a buffer of its filetype is highlighted")
+    # The requests below are asked of the plugin directly: activate it.
+    h.plugins.activate("first")
     syntax = h.plugins.syntax
     t.assert_equal(["Comment=true #{H::COMMENT}", "StatusLine=false No highlight group named StatusLine", "Banana=false No highlight group named Banana", "DevIconRb=true #{H::ICON_RUBY}", "CursorLine=false No highlight group named CursorLine"], first.log, "syntax_group answers syntax and file-icon groups by name and refuses others")
 

@@ -179,6 +179,8 @@ module EditorUndoTest
     fixer = Fixer.new
     h = Carat::Doubles::EditorHarness.with_plugins(files, 10, 80, [fixer])
     h.open("a.txt")
+    # The plugin hears the edits of the test's keys: activate it first.
+    h.plugins.activate("fixer")
     h.type("jdd")
     count = fixer.seen.length
     h.type("u")

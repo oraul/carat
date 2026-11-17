@@ -6,7 +6,9 @@ ok   every character of it
 ok   the segment follows a branch change on save, no zero count shown
 ok   a split keeps the branch
 ok   the segment follows a branch change on focus
-ok   the segment shows on activation, before any buffer opens
+ok   git runs only after the first frame: the first frame is drawn with no git run and git_signs not active
+ok   the first idle after it activates git_signs, which reads the current buffer and shows the segment
+ok   a later idle activates nothing again
 ok   a branch without an upstream shows alone
 ok   control characters in the branch are dropped, the first line only
 ok   the name is cut to 60 characters
@@ -43,4 +45,4 @@ ok   a timed-out capture stalls no later event: no git runs after the one that t
 ok   and the segment stays, nothing said
 ok   a timed-out text capture stalls the save after it too
 ok   git runs again after HEAD moves
-editor_git_signs: 45 passed, 0 failed
+editor_git_signs: 47 passed, 0 failed

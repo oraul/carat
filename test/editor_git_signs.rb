@@ -64,6 +64,16 @@ module EditorGitSignsTest
     h
   end
 
+  # Opens the file as bin/carat does, which draws the first frame, then
+  # lets the editor go idle once: git_signs declares no action, ex
+  # command, or filetype, so the first idle after the first frame is
+  # what activates it.
+  #: (Carat::Doubles::EditorHarness, String) -> void
+  def self.start(h, path)
+    h.open(path)
+    h.wait
+  end
+
   # The glyphs of the current buffer's signs on its first rows.
   #: (Carat::Doubles::EditorHarness, Integer) -> Array[String]
   def self.signs(h, rows)
@@ -82,7 +92,7 @@ module EditorGitSignsTest
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
     h.processes.script(COUNTS, "1\t2\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal("± main ↑1 ↓2", segment(h), "the branch and both counts show as the plugin's segment")
     t.assert_equal(true, h.status_row.include?(" ± main ↑1 ↓2 "), "and the status bar shows it")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "git is asked for the branch, then the counts, then the file's text at HEAD")
@@ -103,35 +113,40 @@ module EditorGitSignsTest
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     h.type("<C-w>s")
     t.assert_equal("± main", segment(h), "a split keeps the branch")
     h.processes.script(BRANCH, "topic\n")
     h.type("<C-w>w")
     t.assert_equal("± topic", segment(h), "the segment follows a branch change on focus")
 
-    # Scenario "The segment shows on activation".
+    # Scenario "Git runs only after the first frame" (it replaces "The
+    # segment shows on activation", which ran before any buffer opened).
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
-    h.plugins.activate_all(trusted)
-    t.assert_equal(["± main", [BRANCH, COUNTS]], [segment(h), h.processes.captured], "the segment shows on activation, before any buffer opens")
+    h.open("a.txt")
+    t.assert_equal([false, "", []], [h.plugins.active?("git_signs"), segment(h), h.processes.captured], "git runs only after the first frame: the first frame is drawn with no git run and git_signs not active")
+    h.wait
+    t.assert_equal([true, "± main", [BRANCH, COUNTS, TEXT_A]], [h.plugins.active?("git_signs"), segment(h), h.processes.captured], "the first idle after it activates git_signs, which reads the current buffer and shows the segment")
+    h.wait
+    t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "a later idle activates nothing again")
 
     # Scenario "A branch without an upstream shows alone".
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "topic\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal("± topic", segment(h), "a branch without an upstream shows alone")
 
     # Scenario "Control characters in the branch are dropped".
     h = editor
     h.processes.install("git")
     h.processes.script(BRANCH, "ma\e[31min\tx\nsecond\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal("± ma[31minx", segment(h), "control characters in the branch are dropped, the first line only")
     h.processes.script(BRANCH, "#{"b" * 80}\n")
-    h.open("b.txt")
+    start(h, "b.txt")
     t.assert_equal(62, segment(h).length, "the name is cut to 60 characters")
 
     # Scenario "A count that is not digits reads as zero".
@@ -139,19 +154,19 @@ module EditorGitSignsTest
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
     h.processes.script(COUNTS, "x\t2\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal("± main ↓2", segment(h), "a count that is not digits reads as zero")
 
     # Scenario "Outside a repository nothing shows".
     h = editor
     h.processes.install("git")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["", [BRANCH]], [segment(h), h.processes.captured], "outside a repository nothing shows and the counts are not asked")
     t.assert_equal(false, h.message.include?("git"), "and no message names git")
 
     # Scenario "Without git nothing shows".
     h = editor
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["", [], true], [segment(h), h.processes.captured, h.assembly.plugins.enabled?("git_signs")], "without git nothing shows and the plugin stays enabled")
     t.assert_equal(false, h.message.include?("git"), "and no error reaches the message row")
 
@@ -160,14 +175,14 @@ module EditorGitSignsTest
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
     h.processes.script(COUNTS, "1\t2\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     h.type(":w<CR>")
     t.assert_equal(["", []], [segment(h), h.processes.captured], "outside a trusted root no git runs and no segment shows, with no trusted_roots line")
     t.assert_equal(false, h.message.include?("git") || h.message.include?("trusted"), "and no message names git or the trust")
     h = editor_with(Carat::Doubles::FixedConfig.with_user("language.trusted_roots /elsewhere ~/src\n"))
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["", []], [segment(h), h.processes.captured], "outside a trusted root no git runs, with roots that do not cover the directory")
 
     # Scenario "A promisor remote with a command runs nothing".
@@ -183,14 +198,14 @@ module EditorGitSignsTest
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
     h.processes.script("git rev-list --left-right --count HEAD...@{upstream}", "7\t7\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal("± main", segment(h), "a promisor remote with a command runs nothing: the segment shows the branch alone")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "each command refuses the ext:: transport and the fsmonitor hook on its command line")
     t.assert_equal([SAFE_ENV, SAFE_ENV, SAFE_ENV], h.processes.environments, "and runs with lazy fetching off and no transport allowed, so a git ignoring GIT_NO_LAZY_FETCH fetches nothing either")
 
     # Scenario "Each sign kind shows on its lines".
     h = repository("one\nTWO\nthree\nnew\nfour\n", "one\ntwo\nthree\nfour\nfive\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["", "┇", "", "┃", "▁"], signs(h, 5), "each sign kind shows on its lines: changed, added, and deleted on the line above")
     t.assert_equal(true, h.row(1).include?("┇"), "and the gutter draws them")
 
@@ -219,7 +234,7 @@ module EditorGitSignsTest
     # Scenario "A renamed buffer asks git for its new path".
     h = repository("one\nTWO\n", "one\ntwo\n")
     h.processes.script(TEXT_C, "one\nTWO\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["", "┇"], signs(h, 2), "before the rename a.txt differs from its text at HEAD")
     renamed = h.assembly.plugins.rename_path.call("/project", "a.txt", "c.txt")
     t.assert_equal([true, "c.txt"], [renamed.ok, h.buffer.path.to_s], "the open buffer follows the rename")
@@ -233,21 +248,21 @@ module EditorGitSignsTest
     h = repository("one\n", "one\n")
     h.files.put(".git/HEAD", "ref: refs/../../secret\n")
     h.files.put("secret", "1111111\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     h.type("<C-w>s")
     t.assert_equal([BRANCH, COUNTS, TEXT_A, BRANCH, COUNTS, TEXT_A], h.processes.captured, "a HEAD naming a ref outside refs/ is not followed, so a focus asks git")
 
     # Scenario "Lines removed at the top mark the first line".
     h = repository("one\ntwo\n", "zero\none\ntwo\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(["▁", ""], signs(h, 2), "lines removed at the top mark the first line")
 
     # Scenario "A file git does not hold shows no sign".
     h = repository("one\ntwo\n", "")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal([false, 3], [h.buffer.signs?, h.processes.captured.length], "a file git does not hold shows no sign")
     h = repository("one\n", "one\n#{"x" * 70_000}\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     t.assert_equal(false, h.buffer.signs?, "a text at HEAD a capture may have cut shows no sign")
 
     # Scenario "A timed-out capture stalls no later event".
@@ -255,23 +270,23 @@ module EditorGitSignsTest
     h.processes.install("git")
     h.processes.script(BRANCH, "main\n")
     h.processes.script(TEXT_A, "zero\n")
-    h.open("a.txt")
+    start(h, "a.txt")
     h.processes.time_out(BRANCH)
     h.type(":w<CR>")
     h.type("<C-w>s")
     h.type("<C-w>w")
-    h.open("b.txt")
+    start(h, "b.txt")
     t.assert_equal([BRANCH, COUNTS, TEXT_A, BRANCH], h.processes.captured, "a timed-out capture stalls no later event: no git runs after the one that timed out")
     t.assert_equal(["± main", false], [segment(h), h.message.include?("git")], "and the segment stays, nothing said")
     h = repository("one\n", "one\n")
     h.processes.time_out(TEXT_A)
-    h.open("a.txt")
+    start(h, "a.txt")
     h.type(":w<CR>")
     t.assert_equal([BRANCH, COUNTS, TEXT_A], h.processes.captured, "a timed-out text capture stalls the save after it too")
 
     # Scenario "git runs again after HEAD moves".
     h.files.put(".git/logs/HEAD", "one entry\ntwo entries\n")
-    h.open("b.txt")
+    start(h, "b.txt")
     t.assert_equal([BRANCH, COUNTS, TEXT_B], h.processes.captured.drop(3), "git runs again after HEAD moves")
 
     t.finish

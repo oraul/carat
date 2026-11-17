@@ -75,6 +75,7 @@ require_relative "../editor_grammar"
 require_relative "../editor_insert"
 require_relative "../editor_jumps"
 require_relative "../editor_key_hints"
+require_relative "../editor_lazy_plugins"
 require_relative "../editor_leader"
 require_relative "../editor_line_commands"
 require_relative "../editor_lsp"
@@ -189,6 +190,7 @@ when "editor_grammar" then EditorGrammarTest.main
 when "editor_insert" then EditorInsertTest.main
 when "editor_jumps" then EditorJumpsTest.main
 when "editor_key_hints" then EditorKeyHintsTest.main
+when "editor_lazy_plugins" then EditorLazyPluginsTest.main
 when "editor_leader" then EditorLeaderTest.main
 when "editor_line_commands" then EditorLineCommandsTest.main
 when "editor_lsp" then EditorLspTest.main
