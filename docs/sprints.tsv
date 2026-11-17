@@ -12,3 +12,4 @@ sprint-9	spinel-update	5	markdown-reading-a,ruby-structure-check,git-signs-statu
 sprint-10	markdown-reading-b	6	backlog-lane-split,rework-guards,backlog-lane-c,parallel-lanes,parallel-lanes-b,markdown-reading-b	414.0	69.0	6676133	1	check:6/6,quality:1/6,security:6/6,bench:6/6,ci:5/6,gates:4/6
 sprint-11	ux-fixes-a	5	lsp-incremental-sync,git-signs-trust,review-pipeline-a,windows-tabs-tidy,ux-fixes-a	274.0	54.8	4655372	1	check:5/5,quality:5/5,security:5/5,bench:5/5,ci:5/5,gates:3/5
 sprint-12	lsp-container	6	checks-and-pr-lows,git-signs-status-b,windows-buffers-tidy,planner-split-rule,markdown-reading-c,lsp-container	433.0	72.2	6713227	2	check:6/6,quality:3/6,security:6/6,bench:6/6,ci:5/6,gates:6/6
+sprint-13	tab-close	6	sprint-security,lsp-container-b,check-parallel,palette-narrow,bar-colors,tab-close	364.1	60.7	5326850	0	check:6/6,quality:5/6,security:6/6,bench:6/6,ci:6/6,gates:5/6

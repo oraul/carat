@@ -4040,18 +4040,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: once the delivery records the number of the pull request GitHub Actions opened, a contributor that may still write `pr` can record a number of a pull request it did not open, and the merger would act on it.
 - Fix outline: drop the contributor's `pr` permission and the header line once the wait step records the number, and turn the guard test into a refusal case; keep any bootstrap path the workflow itself needs.
 
-### Sprint planned and closed without its security review (`sprint-planning` security Medium (7))
-
-- Location: `.claude/workflows/sprint-planning.js:121` (and the sweep that fails to start, line 105), `tools/run_state.sh:1389` `groom`.
-- Why it matters: a sprint whose security review is not-run or partial, or whose sweep failed to start, is still planned: the planner writes `build/plan/sprint` and `groom` appends the sprint row, after which `review-due` counts from the next sprint, so the missed review of the sprint's combined diff never runs and a missed sweep waits ten more merges, breaking the rule that a partial or not-run security result keeps the next review due.
-- Fix outline: skip the Plan phase, so no `build/plan/sprint` is written, unless the security result is pass or blocked with every file reviewed (and, in an even sprint, the sweep ran); or make `groom` and `review-due` refuse to close sprint-N until `review.periodic-security` of run states sprint-N and sprint-N-sweep is pass or blocked.
-
-### Sprint security findings reach the run state only through the skeptic (`sprint-planning` security Medium (7))
-
-- Location: `.claude/workflows/sprint-planning.js:113`.
-- Why it matters: in sprint mode the security reviewer records nothing, so its findings reach the run state only through the skeptic, a quality-reviewer start; when the skeptic hits its cap, errors, or returns null, `periodic-security` is recorded blocked with no note per finding, so the planner, which reads only the notes, never sees a blocking High or Medium finding and never moves it to the front of the queue.
-- Fix outline: have the record start write each security finding as a security note straight from `security.findings`, keeping the skeptic only to add the disputed prefix, or have the security reviewer record its own findings as in periodic mode.
-
 ### Groom removes security entries without proof of a fix (`sprint-planning` security Low (6))
 
 - Location: `tools/run_state.sh:1358` (`listed CHANGE HEADING`) and `tools/run_state.sh:1361` (`fixed COMMIT HEADING`).
@@ -4117,12 +4105,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `tools/docs_lint.sh:19`, against the check at line 151 and the map.
 - Why it matters: the header still says the sprint items are 1 to 5 while the check and the map moved to 0 to 5, a drained sprint.
 - Fix outline: say 0 to 5, 0 once the sprint's deliveries drained it.
-
-### Sprint report hides a partial security review (`sprint-planning` quality advisory)
-
-- Location: `.claude/workflows/sprint-planning.js:177`.
-- Why it matters: the report's Security line gives only the finding counts, so a security review left partial after its continuation (recorded partial, `review-due` staying due, `groom` holding the plan) reads as complete and the user is not told to run /sprint again.
-- Fix outline: append ", partial: not reviewed FILES; run /sprint again" when `security.not_reviewed` is not empty.
 
 ### Sprint after a sixth merge reviews a change twice (`sprint-planning` quality advisory)
 
@@ -4197,12 +4179,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Location: `.claude/workflows/deliver-change.js:301` (`staleRed`) and `.claude/agents/merger.md:24`. Re-entered by the sprint-1 grooming from the second copy of the repeated heading at that line, whose first copy (a comma inside a check name) stays.
 - Why it matters: staleRed relies on the merger listing check runs oldest first while GitHub lists them newest first; a misordered list starts a needless fix round or asks again up to WAITS times.
 - Fix outline: have the merger return only the latest run per name, or a completion time to sort on, with a tools-test case for each order.
-
-### The sprint planner starts after a partial security review (`sprint-1` review quality)
-
-- Location: `.claude/workflows/sprint-planning.js:146`.
-- Why it matters: the planner starts once the security review ran, even when `not_reviewed` is not empty, while `groom` and `review-due` accept only pass or blocked, so that plan always waits and /sprint redoes the review and the plan: a wasted planner start.
-- Fix outline: start the planner only on a complete, skeptic-checked security result, with a case. Queue item `sprint-tidy`.
 
 ### The sprint quality review gets no continuation at its cap (`sprint-1` review quality)
 
@@ -6557,29 +6533,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the port takes capture(argv, environment) since #160, so the binding architecture table misstates the port.
 - Fix: name the environment argument in the row.
 
-### The lsp accents at 16 colors read poorly on the light gray bar
-
-- Location: carat/domain/themes.rb:212
-- Why: at 16 colors the lsp accents PANEL_YELLOW 3 and PANEL_GREEN 2 now sit on PANEL's 7 in carat-dark, carat-light, one_dark, and one_light; dark yellow and green on light gray read near 1.5:1 in common terminal palettes, where the dark palettes had 11 and 10 on the terminal's background, and no test measures 16-color contrast.
-- Fix: give these palettes 16-color accents that read on 7 (0 with bold, or 4 and 1), or keep a 16-color background that suits 3 and 2, and assert the pairs in test/domain_theme.rb.
-
-### The status bar's diagnostics counts draw on the terminal's background
-
-- Location: carat/adapters/status_bar.rb:243
-- Why: the diagnostics counts on the bar still draw in DIAGNOSTIC_ERROR, WARN, INFO, and HINT, whose background is NONE (carat/domain/themes.rb:125), the same hole in the bar ux-fixes-a closed for the lsp slot.
-- Fix: add PANEL-backed status diagnostic groups, as for the lsp slot, and extend lsp_holes in test/domain_theme.rb to them.
-
-### The palette's pad appends one space per loop pass
-
-- Location: carat/use_cases/discovery/follow_palette.rb:296
-- Why: pad appends one space per loop pass, redoing the padding DisplayWidth.fit already does, with a string per pass on a path drawn after each key while the palette is open.
-- Fix: cell << " " * (width - used) if used < width, as DisplayWidth.fit does.
-### The follow_palette map entry names DisplayWidth.fit
-
-- Location: docs/codebase-map.md:169
-- Why: the follow_palette entry says its columns are fit by DisplayWidth.fit, which the file no longer calls since ux-fixes-a, so the map misdescribes the file.
-- Fix: name the private pad and kept_bytes on DisplayWidth.bytes_within instead.
-
 ### The windows-tabs-tidy artifacts and a comment describe a close_window clear that never shipped
 - Location: openspec/changes/archive/2026-11-17-windows-tabs-tidy/tasks.md:13, design.md ('The previous window never names the current one'), carat/use_cases/windows/close_other_windows.rb:10, carat/domain/buffer_list.rb:369
 - Why: task 3.1 (marked done) and the design describe a BufferList#close_window clear of tab.previous when it equals the new current window and a test 'closing into the previous window clears it', neither in the diff (buffer_list.rb:369 unchanged), so <C-w>s<C-w>c still leaves previous == current and the new comment 'the window kept is never the previous' is false; the design also gives the integer minimum as -4_611_686_018_427_387_903 - 1 where the test uses -2^63.
@@ -6613,18 +6566,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/use_cases/plugins/plugin_host.rb:110. Sprint-11 review, security Low (3).
 - Why: the trust flag comes from TrustedRoots.cover? in activate_all and never again; no attack today since the editor has no chdir, but a later :cd or configuration reload changing the working directory or the roots would keep the old decision and could run git in an untrusted directory.
 - Fix outline: decide trust at each run_program call, or again wherever the working directory or the roots change, with a test changing the roots after activation.
-
-### FollowPalette#styles never reads its cut parameter
-
-- Location: carat/use_cases/discovery/follow_palette.rb:187, called at :144. Sprint-11 review, quality advisory.
-- Why: dead parameter in styles(top, lines, width, cut), its signature, and its call.
-- Fix outline: drop the parameter from the method, its signature, and the call.
-
-### Palette rows below about 14 cells show only the key
-
-- Location: carat/use_cases/discovery/follow_palette.rb:166. Sprint-11 review, quality advisory (narrow-screen regression of ux-fixes-a).
-- Why: label_room is width - KEY_WIDTH when the name is left out, zero or negative below about 14 cells of float, so a row shows only its key where the code before ux-fixes-a still showed the name.
-- Fix outline: keep a few cells for the label, cutting the key column first when width - KEY_WIDTH < 2, with a table row at the smallest screen.
 
 ### The incremental-sync text diff lives in the 1438-line gateway
 
@@ -6694,11 +6635,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: when .git is a file (a git worktree) or the working directory is below the repository root, the key is always empty, so every focus runs three git commands, and one timed-out capture stops git for the whole session because the empty key never changes.
 - Fix: follow the gitdir: line of a .git file and search upward for the repository root, or record the limit in docs/compatibility.md and the git-status spec and let a timeout back off for a bounded time instead of until a key change.
 
-### The language server gateway rescans every configuration line for a rooted command on each idle tick
-- Location: carat/adapters/json_rpc_language_gateway.rb:318
-- Why: command? runs on every idle tick while the current filetype has no server (any filetype with no lsp, or an untrusted directory) and now scans all of the roughly 760 configuration lines twice instead of once; the design's risk note understates this cost.
-- Fix: keep the chosen command per language once read, as trusted? keeps @trust, since neither the directory nor the configuration changes during a session.
-
 ### A language.NAME.lsp.root line whose root is not a root is kept without a report
 - Location: carat/domain/config.rb:218
 - Why: a line whose root is relative or has a . or .. segment is kept silently and covers nothing, though the README promises every configuration mistake is reported as file:line: message.
@@ -6762,21 +6698,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: test/adapters_hover.rb, README.md:69
 - Why: MarkdownText.parse is shared, so the paragraph and quote flow and the hanging prefix also reach the hover and completion floats, but no test proves it there and the README states it only for the reading view.
 - Fix: add a two-line paragraph case to test/adapters_hover.rb and say in the README's floats sentence that paragraphs and quotes flow there too.
-### A check pass after a fix round costs more than a first pass
-- Location: `.claude/workflows/deliver-change.js` check phase; backlog pool item `check-skip` (git-signs-status-b retro note 9).
-- Why: git-signs-status-b's check took 57,747 output tokens in 11 calls (16.8% of 342,779) over 2 passes that both passed; the last 20 lane rows ran 1,970 to 24,171; check first pass 121/123.
-- Fix: fold into `check-skip`; accepted when the next three feature runs keep check at or under 6,000 output tokens per pass with first.check still 1.
-
-### A resumed run records 0 output tokens for the phases done before the resume
-- Location: `.claude/workflows/deliver-change.js` resume path, `metric.phases` and the history row (git-signs-status-b retro note 10).
-- Why: git-signs-status-b recorded plan=0/10, areas=0/2, scout=0/14 against plan 10,124 to 25,457 and scout 18,002 to 64,257 output in the last 10 feature rows, so its output total and the check-pass budget line undercount.
-- Fix: accepted when a resumed run's carried phases show their recorded tokens or are marked carried in the phases and the history row, never 0 beside non-zero calls.
-
-### Quality fails its first pass on about half the runs
-- Location: the quality review's blocking findings across the lane histories (git-signs-status-b retro note 11).
-- Why: quality first pass 62/123 against 117/124 or better for every other gate; first.quality 0 on git-signs-status-a and git-signs-status-b (plugin state keyed by buffer id with no rename case); the fix round took output from 164,154 to 342,779, over medium's 200,000.
-- Fix: find what the blocking findings of the last ten quality first-pass failures share and remove the cause upstream; accepted when quality first pass reaches 7 of the next 10 runs.
-
 ### A merge that fails on a moved main has no push path
 - Location: tools/run_state.sh push_branch and .claude/workflows/deliver-change.js merge loop
 - Why: a green pull request behind a moved, conflicting main stopped the run, since push --ci-fix needs a red CI
@@ -7211,3 +7132,263 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/adapters/frame_presenter.rb:43, :90, status_bar.rb:16, set_command_handler.rb:17, highlight.rb:6, frame.rb:15, :31 (sweep, quality).
 - Why: later edits left them past or short of the 72-column wrap.
 - Fix outline: rewrap them.
+
+### The merge phase's output on a green first-pass CI varies fivefold
+- Location: `.claude/agents/merger.md`, the merge phase of `.claude/workflows/deliver-change.js` (palette-narrow note 3, check-parallel note 8).
+- Why: palette-narrow's merge took 69,031 of 304,750 output tokens (22.7%) in 11 calls with ci:1 and 4 CI wait calls; check-parallel's 22,685 in 11 calls; of the last 20 lane rows 19 passed CI first, 6 of them over 10,000 (up to 39,463) against a median near 7,100.
+- Fix: make one CI wait and one merge cost about the same each run; accepted when the merge phase stays under 8,000 output tokens in 4 of the next 5 runs whose CI passes first.
+
+### The checker's start costs as much as a fix round on a first-pass check
+- Location: the check phase of `.claude/workflows/deliver-change.js`, `.claude/agents/checker.md` (palette-narrow note 4).
+- Why: palette-narrow's check took 40,656 of 304,750 output tokens (13.3%) in 8 calls for a pass at the first try, while check first pass is 130 of 132 changes and 6 of the last 10 feature rows' check phase ran under 6,200.
+- Fix: remove or merge the checker start so a passing check costs little; accepted when a first-pass check costs under 6,000 output tokens in 4 of the next 5 runs and a failing stage still returns to the contributor.
+
+### The check-pass budget step returns nothing or reads under (same proposal as budget-prediction)
+- Location: the check-pass budget step of `.claude/workflows/deliver-change.js` (palette-narrow note 4, check-parallel note 9).
+- Why: check-parallel's step printed no spent line; palette-narrow's read under at 178,345 because it counted no phase from check on, which then added 126,405 (41%); the projection assumes 6 total tokens per output token while the last ten backlog rows ran 3.5 to 59.
+- Fix: drop the step or fold it into the close budget line; accepted when over the next 5 runs every budget step prints an under: or over: line, or the close line is the only one.
+
+### Quality advisories the package step drops as style (same proposal as review-demotion)
+- Location: `.claude/agents/quality-reviewer.md` (check-parallel note 10).
+- Why: check-parallel dropped 4 of 7 advisories as style-only, 1 fixed, 2 appended; sprint-security dropped 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
+- Fix: the reviewer does not report a class the contributor then drops unchanged; accepted when over the next 5 runs the package step drops none of the advisories reported.
+
+### A stage's branch code can forge its pass record through the runner's job files (security Medium, confidence 6)
+- Location: tools/run_state.sh:637 (stages_reap and the jobs directory beside the check clone)
+- Why: a stage runs the branch's own code in the check clone, and the runner's job files sit in ../jobs/ beside it; the code can overwrite ../jobs/NAME.start with a PID the runner did not start plus the current commit and write 0 to ../jobs/NAME.status, so stages_reap records stage.NAME as passed at HEAD for its own stage or any stage running beside it, and gate_stages in tools/gates.sh accepts it, weakening the clone isolation the README promises; before this change the exit status came straight from `wait`. Not blocking since a deliberate stage could already reach the run state through the tmp/.toolchain symlink.
+- Fix: keep each job's PID, start second, and commit in runner shell variables, take the exit status from `wait PID` on the runner's own child (poll with `kill -0`, then `wait`), or keep status files in a runner-owned mktemp -d outside the clone's parent, and trust only a PID the runner launched.
+
+### A failing stage's log excerpt reaches the terminal unfiltered (security Low, confidence 4)
+- Location: tools/run_state.sh:778
+- Why: the last 20 lines of a failing stage's log go to the check's stdout and check.log as they are; branch code controls that log, so terminal escape sequences such as OSC 52 clipboard writes or title changes reach whoever runs the check or cats check.log.
+- Fix: strip control characters from the excerpt before printing it, for example through `LC_ALL=C tr -d '\000-\010\013-\037\177'` ahead of the sed prefix, or print it with `cat -v`.
+
+### stages_stop does not record a passed compile stage as compiled
+- Location: tools/run_state.sh:666
+- Why: a compile stage that passed while the check was stopping is recorded through stage_end but compiled_set is never called, so the next check compiles it again, costing minutes of a stage the cache already holds.
+- Fix: share one record-a-passed-stage step (stage_end, then compiled_set for COMPILE_STAGES) between stages_reap and stages_stop.
+
+### A lost runner's stage jobs keep running, and its test waits them out with a fixed sleep
+- Location: tools/tools_test.sh:558, check_lost in tools/run_state.sh
+- Why: the fixed `sleep 3` is timing-fragile and shows that check_lost leaves a hard-killed runner's stage jobs running, writing into the stage logs the next check reuses.
+- Fix: have check_lost stop the lost runner's process group (setsid makes its pid the group id) and drop the sleep from the test.
+### The contributor self-check and the quality reviewer share no blocking checklist
+- Location: `.claude/agents/contributor.md` (self-check), `.claude/agents/quality-reviewer.md` (blocking rule)
+- Why: quality fails its first pass most often, 66 of 130 changes against check 128/130 and security 125/130; 5 of the last 11 feature rows quality:0; lsp-container-b's fix round (SIGPIPE ending carat on stop) cost implement 153,294 of 264,142 output (58.0%) and put the run over its 200,000 output budget at 229,659 (retro note 11).
+- Fix: one blocking checklist both read, or drop the self-check items that never caught a blocker; accepted when the feature lane's quality first pass over the next 10 rows reaches 8 of 10 with implement output no higher than its current median. Queued in `review-demotion`.
+
+### A post-review prose edit in the package step refuses the push
+- Location: the package step of `.claude/workflows/deliver-change.js` and the check and security records it invalidates
+- Why: in lsp-container-b a docs-only wording fix (`docs/architecture.md:275`, Open3) invalidated the recorded check and security review, the push was refused, the edit reverted and the stale sentence left on main; package 21 of 210 tool calls (10.0%) (retro note 12).
+- Fix: settle the advisories the package step may fix before the last review, or let pure prose edits of docs keep the records; accepted when no package step over the next 10 runs has a refused push from a post-review prose edit. Queued in `check-skip`.
+
+### The in-run budget line prices total tokens at 6 per output token
+- Location: the check-pass budget line of `.claude/workflows/deliver-change.js`
+- Why: sprint-12-records spent 36,282 output against 2,147,268 total (59 per output), 4.3x over small's 500,000, while 6 per output predicted 217,692; the last ten backlog rows ran 3.5 to 59 per output; windows-tabs-tidy 1,433,283 and windows-buffers-tidy 1,373,899 were over 1,200,000 at 4.8 and 10.7; sprint-security's line said under at 131,132 output (lsp-container-b note 13, sprint-security note 8).
+- Fix: derive the multiplier from the lane history or drop the in-run total estimate; accepted when the line, replayed over the last ten rows of both lanes, says over for every row whose final total exceeded its budget. Queued in `budget-prediction`.
+
+### Scout packs whose facts the contributor redoes
+- Location: the scout phase of `.claude/workflows/deliver-change.js`, `.claude/agents/scout.md`
+- Why: in sprint-security the scout took 34,911 of 181,413 output (19.2%) and 19 of 126 calls, its pack found the brief's lines stale and the contributor re-checked them at the same commit; backlog rows' scout share 18.4% to 40.1% (sprint-security note 7).
+- Fix: start a scout only where its facts change a decision, or let the contributor take the pack as read; accepted when over the next five runs that start a scout its output stays under 10% of the run's with no drop in the quality first-pass rate. Queued in `scout-value`.
+
+### The quality reviewer reports advisory classes the package step drops
+- Location: `.claude/agents/quality-reviewer.md` (advisory classes)
+- Why: of sprint-security's 6 advisories, 3 naming or duplication ones (RAN, the repeated prompts, the findingLine format) were dropped, changing no decision; the reviews phase took 15,732 output and 28 of 126 calls (22.2%) (sprint-security note 9).
+- Fix: stop reporting the classes the package step drops by rule; accepted when over the next five runs the package step drops no advisory class the reviewer reported, with blocking findings unchanged. Queued in `review-demotion`.
+
+### The benchmark phase measures records and docs-only runs that build nothing it measures
+- Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition)
+- Why: sprint-12-records bench took 6,460 of 36,282 output tokens (17.8%) and 10 of 79 tool calls, stopped at its cap; over the three sprint records runs bench took 15,099 of 127,367 output tokens (11.9%) and 23 of 222 calls, each finding allocations and rounds equal to main (bench first pass 3 of 3), so its result changed no decision (sprint-12-records retro note 4).
+- Fix: record the bench phase as skipped, with its reason and 0 tool calls, on a run touching no file under `carat/`, `bin/`, `bench/`, or the Makefile; accepted when the next records or docs-only run shows it skipped and a change touching those paths is still measured.
+
+### Groom output needs a hand edit and draws the records runs' quality advisories
+- Location: `tools/run_state.sh` (`groom`, `folded_backlog` near :1851)
+- Why: sprint-12-records hand-edited `docs/backlog.md:6714` after groom because docs-lint refused a backticked path to a findings file groom had just removed (sprint-10-records the same, 2 of the last 3 records runs); all 3 of its 3 quality advisories were groom output (headings folded twice from a double append at :6775 and :6787; no blank line before folded headings at :6751, :6765, :6861); reviews took 9,975 of 36,282 output tokens (27.5%) (sprint-12-records retro note 5).
+- Fix: accepted when a tools-test case shows groom leaving no backticked path to a removed findings file, no repeated folded heading, and a blank line before each folded heading, and the next records run applies groom with no hand edit and no advisory on groom output.
+### The language server stop signals TERM before the writer sends the queued shutdown
+- Location: carat/drivers/process_runner.rb:81
+- Why: `stop` sends TERM on the editor thread before the writer thread has written the shutdown and exit requests the gateway queues, so the graceful language server shutdown is usually skipped and the server ends without flushing its state.
+- Fix: have the writer drain signal and detach after it closes the child's input (the pid still unreaped), keeping the immediate TERM only where nothing may wait, or say in the `ProcessPort` comment that shutdown is best effort.
+
+### The stalled server test does not prove the blocked write path and sleeps 0.7 s
+- Location: test/drivers_process_runner.rb:91
+- Why: the stalled case relies on `sleep 0.2` for the writer thread to block in `write` before `stop`; when it has not, the write fails at once on the closed pipe and the case still passes without exercising the blocked write, and its three sleeps add 0.7 s to every test run.
+- Fix: stop only after a second write returns while the first is pending (or poll until the outbox is drained into the pipe), and drop the sleep before `stop_cat`, which the next spawn does not need.
+### The benchmark phase measures records and docs-only runs that build nothing it measures
+- Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition)
+- Why: sprint-12-records bench took 6,460 of 36,282 output tokens (17.8%) and 10 of 79 tool calls, stopped at its cap; over the three sprint records runs bench took 15,099 of 127,367 output tokens (11.9%) and 23 of 222 calls, each finding allocations and rounds equal to main (bench first pass 3 of 3), so its result changed no decision (sprint-12-records retro note 4).
+- Fix: record the bench phase as skipped, with its reason and 0 tool calls, on a run touching no file under `carat/`, `bin/`, `bench/`, or the Makefile; accepted when the next records or docs-only run shows it skipped and a change touching those paths is still measured.
+
+### Groom output needs a hand edit and draws the records runs' quality advisories
+- Location: `tools/run_state.sh` (`groom`, `folded_backlog` near :1851)
+- Why: sprint-12-records hand-edited `docs/backlog.md:6714` after groom because docs-lint refused a backticked path to a findings file groom had just removed (sprint-10-records the same, 2 of the last 3 records runs); all 3 of its 3 quality advisories were groom output (headings folded twice from a double append at :6775 and :6787; no blank line before folded headings at :6751, :6765, :6861); reviews took 9,975 of 36,282 output tokens (27.5%) (sprint-12-records retro note 5).
+- Fix: accepted when a tools-test case shows groom leaving no backticked path to a removed findings file, no repeated folded heading, and a blank line before each folded heading, and the next records run applies groom with no hand edit and no advisory on groom output.
+
+### The contributor's self-check and the quality reviewer use different blocking checklists (lsp-container-b retro note 11)
+- Location: `.claude/agents/contributor.md` self-check, `.claude/agents/quality-reviewer.md` blocking rules
+- Why: quality failed its first pass in lsp-container-b (SIGPIPE ending carat on stop), quality:0 in 5 of the last 11 feature rows and 66 of 130 over all changes against check 128/130 and security 125/130; the fix round cost implement 153,294 of 264,142 output (58.0%) and took the run over its 200,000 output budget (229,659). Adds evidence to "### Quality fails its first pass on about half the runs".
+- Fix: one blocking checklist both read, or drop the self-check items that never caught a blocker; accepted when the feature lane's quality first pass over the next 10 rows reaches 8 of 10 with implement output no higher than its current median.
+
+### A post-review prose edit in the package step refuses the push (lsp-container-b retro note 12)
+- Location: the package step of `.claude/workflows/deliver-change.js`, the review-currency check of `tools/run_state.sh push`
+- Why: a docs-only wording fix of `docs/architecture.md:275` invalidated the recorded check and security review, 1 refused push, the edit reverted and the stale Open3 sentence left on main; package 21 of 210 tool calls (10.0%).
+- Fix: settle the advisories the package step may fix before the last review, or exempt pure prose edits from invalidating it; accepted when no package step over the next 10 runs has a refused push from a post-review prose edit.
+
+### The in-run budget line prices total tokens at 6 per output token (lsp-container-b retro note 13, sprint-security retro note 8)
+- Location: the check-pass budget line of `.claude/workflows/deliver-change.js`
+- Why: the last ten backlog rows ran 3.5 to 59 total per output; sprint-12-records 36,282 output projected 217,692 against 2,147,268 actual (over small 500,000 by 4.3x), windows-tabs-tidy 1,433,283 and windows-buffers-tidy 1,373,899 over 1,200,000 at 4.8 and 10.7, sprint-security's line said under at 131,132 output. Folds into `budget-prediction`.
+- Fix: derive the multiplier from the lane history or drop the in-run total estimate; accepted when the line, replayed over the last ten rows of both lanes, says over for every row whose final total exceeded its size budget.
+
+### The scout's pack is redone by the contributor (sprint-security retro note 7)
+- Location: the scout phase of `.claude/workflows/deliver-change.js`, `.claude/agents/scout.md`
+- Why: sprint-security scout 34,911 of 181,413 output (19.2%) and 19 of 126 calls, its pack found the brief's lines stale and the contributor re-checked them; backlog rows scout share 18.4% to 40.1% over five runs. Folds into `scout-value`.
+- Fix: accepted when, over the next five runs that start a scout, scout output stays under 10% of the run's output with no drop in the quality first-pass rate.
+
+### The quality reviewer reports advisory classes the package step always drops (sprint-security retro note 9)
+- Location: `.claude/agents/quality-reviewer.md` advisory rules, the package step's advisory triage
+- Why: 3 of sprint-security's 6 advisories (naming, repeated prompts, a duplicated format) were dropped as changing no decision; reviews 15,732 output and 28 of 126 calls (22.2%).
+- Fix: accepted when over the next five runs the package step drops no advisory class the reviewer reported, the reviewer no longer reporting that class, with first-pass blocking findings unchanged.
+
+## Three folded headings appear twice from the markdown-reading-c double append
+
+- Location: docs/backlog.md:6775
+- Why: the headings "Quality fails its first pass on about half the runs", "A resumed run records 0 output tokens for the phases done before the resume", and "A check pass after a fix round costs more than a first pass" were folded twice from the markdown-reading-c findings file's double append, which groom.txt did not list as repeats, so the backlog carries duplicate entries.
+- Fix: have the next sprint grooming list the three as repeats so groom drops the second copies.
+
+## Quality advisory on the markdown-reading-c double append is folded twice
+
+- Location: docs/backlog.md:6787 and docs/backlog.md:6790
+- Why: the same quality advisory on the markdown-reading-c double append is folded twice in near-identical words, so the backlog holds a duplicate entry.
+- Fix: keep one entry at the next grooming.
+
+## Folded backlog headings follow the previous entry with no blank line
+
+- Location: docs/backlog.md:6751, docs/backlog.md:6765, docs/backlog.md:6861; tools/run_state.sh:1851 (folded_backlog)
+- Why: findings entries are appended without a separator and folded_backlog keeps them as written, so the folded headings at those lines sit directly under the previous entry with no blank line, breaking the backlog's format.
+- Fix: have the findings append or folded_backlog put one blank line before every heading.
+
+### The benchmark phase measures records and docs-only runs (sprint-12-records retro note 4)
+- Location: `.claude/workflows/deliver-change.js` benchmark phase; sprint-12-records run state note.4.
+- Why: bench took 6,460 of 36,282 output tokens (17.8%) and 10 of 79 calls on sprint-12-records, 15,099 of 127,367 (11.9%) and 23 of 222 calls over the three sprint-records runs, and found allocations and rounds equal to main 3 of 3, never changing a decision.
+- Fix: skip the bench phase with its reason when the change touches no file under carat/, bin/, bench/, or the Makefile; accepted when a records run records bench skipped with 0 calls and a carat/ change is still measured.
+
+### groom output needs a hand edit after each records run (sprint-12-records retro note 5)
+- Location: `tools/run_state.sh` groom and folded_backlog (about :1851); sprint-12-records run state note.5.
+- Why: 2 of the last 3 records runs hand-edited docs/backlog.md after groom (a backticked path to a findings file groom deleted, docs-lint refusing it), and all 3 of sprint-12-records' quality advisories were groom output (headings folded twice from a double append, no blank line before folded headings); reviews took 9,975 of 36,282 output (27.5%).
+- Fix: groom leaves no backticked path to a removed findings file, no repeated folded heading, and a blank line before each folded heading; accepted when a tools-test case shows all three and the next records run applies groom with no hand edit.
+
+### The skeptic's disputed-note command double-quotes the finding text (`sprint-security` security Low (4))
+- Location: .claude/agents/quality-reviewer.md:41
+- Why: the skeptic is told to record a disputed security finding as a double-quoted shell argument, so `$(...)` or backticks in the finding text, which can echo attacker-controlled diff content, would be expanded when the skeptic runs the note command; the shape existed before, and sprint-security narrows it to disputed findings only.
+- Fix: have the skeptic single-quote the note text (escape ' as '\'' and turn control characters into spaces), as the workflow's shellWord does, or have the workflow build the disputed-note commands itself from a structured disputed list in the skeptic's result.
+
+### A security finding both reviewers missed may go unrecorded (`sprint-security` quality advisory)
+- Location: .claude/agents/quality-reviewer.md:41
+- Why: "Record what both missed the same way" now follows the disputed-only form, so a security finding both missed may be noted with a disputed: prefix or not at all.
+- Fix: say a missed finding is noted as note CHANGE security "FINDING" (quality as in Periodic mode step 4).
+
+### A /sprint rerun records every security finding again (`sprint-security` quality advisory)
+- Location: .claude/workflows/sprint-planning.js:196
+- Why: the Notes step runs on every /sprint run and init resumes sprint-N, so a rerun after an incomplete review (partial, a sweep hold, a capped skeptic, now more frequent) appends every security finding again and the planner reads duplicates.
+- Fix: skip a note whose text the run state already holds.
+
+### The report's not-recorded suffix and new Sweep line have no test (`sprint-security` quality advisory)
+- Location: .claude/workflows/sprint-planning.js:267
+- Why: the Security line's "its findings were not recorded" suffix and the Sweep line's new text have no tools_test case, so a regression in what the report says goes unnoticed.
+- Fix: pass noted to securityLine so the existing tools_test case covers the suffix, and add a case for the Sweep line.
+
+### lone_file_window? is evaluated once per window instead of once per tab page
+
+- Location: carat/domain/buffer_list.rb:423
+- Why: `lone_file_window?(tabs.tab_at(t))` runs for every window of the inner loop though it depends only on the tab page, so the walk repeats a per-tab-page test once per window (performance).
+- Fix: compute it once per tab page before the window loop and reuse the value inside it.
+
+### The E36 branch of open_file_window has no test
+
+- Location: carat/use_cases/plugins/window_requests.rb:287
+- Why: the branch that returns E36 for `close_scratch` on the editor's last window, replacing the old E444, is never exercised, so its message and the state it leaves are unproven (missing test).
+- Fix: add a row closing a lone scratch window with no room for a split, or drop the branch if it cannot happen.
+### The merge phase output on a green first-pass CI varies fivefold (check-parallel retro note 8)
+- Location: .claude/workflows/deliver-change.js, the merge phase; queued in `merge-gate-integrity`
+- Why: check-parallel's merge spent 22,685 of 239,451 output (9.5%) in 11 calls with 4 CI wait calls on a first-pass CI; of the last 20 lane rows 19 passed CI first, 6 of them above 10,000 merge output and the other 13 at 4,347 to 7,747.
+- Fix: one CI wait and one merge per green run; accepted when over the next five runs whose CI passes first the merge phase stays under 8,000 output tokens.
+
+### The check-pass budget step changes no decision (check-parallel retro note 9)
+- Location: .claude/workflows/deliver-change.js, the budget step at the check pass; queued in `budget-prediction`
+- Why: check-parallel printed "no spent line returned" at its check pass; the projection assumes 6 total tokens per output token while the last ten backlog rows ran 3.5 to 59.
+- Fix: remove the step or fold it into the close budget line; accepted when over the next five runs every budget step prints an under: or over: line, or the close line is the only one.
+
+### Quality advisories the package step drops as style (check-parallel retro note 10)
+- Location: .claude/agents/quality-reviewer.md, the advisory classes; queued in `review-demotion`
+- Why: check-parallel's package dropped 4 of 7 advisories as style, sprint-security 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
+- Fix: the reviewer stops reporting the classes the contributor drops unchanged; accepted when over the next five runs the package step drops none of the advisories reported.
+### A check stage can fake a sibling stage's pass through the job files (sprint-13 security Medium (6))
+- Location: tools/run_state.sh:639 (check-parallel, sprint-13 review).
+- Why: the job files sit in ../jobs beside the check clone, writable by stage code; a stage's test writing 0 to ../jobs/SIBLING.status, or rewriting SIBLING.start, while the sibling runs makes stages_reap record it (for example diagnose) passed at HEAD, and gate_stages accepts that record; before check-parallel the status came from wait. Not blocking: a hostile stage could already reach the run state through the tmp/.toolchain symlink.
+- Fix: take each exit status only from wait on a PID the runner itself started (poll with kill -0), or keep the status files in a runner-owned mktemp -d outside the clone's parent; accepted when a tools-test stage writing a sibling's status file cannot turn the sibling into a pass. Queue item `check-runner-safety`.
+
+### The failing stage's log excerpt reaches the terminal unfiltered (sprint-13 security Low (4))
+- Location: tools/run_state.sh:778 (check-parallel, sprint-13 review).
+- Why: tail -n 20 of a log the branch code controls goes to the check's stdout and check.log as is, so test output can carry OSC 52 clipboard writes or title and terminal-state sequences to whoever runs the check or reads check.log.
+- Fix: strip control characters before the prefix (LC_ALL=C tr -d of 000-010, 013-037, 177) or print through cat -v; accepted when a tools-test excerpt holding an escape prints none. Queue item `check-runner-safety`.
+
+### jobs_refusal has two arms for one message and runs twice (sprint-13 quality)
+- Location: tools/run_state.sh:569, :762, :969.
+- Why: two case arms print the same message, the empty-string pattern never matches as CHECK_JOBS defaults to 3, and check_wait (:969) and check_stages (:762) both run it, the second after the queued stages' compiled records were reset.
+- Fix: one pattern such as *[!0-9]*|0|0[0-9]*, checked once before the loop. Queue item `check-runner-safety`.
+
+### The skeptic records a disputed security finding as a double-quoted shell argument (sprint-13 security Low (4))
+- Location: .claude/agents/quality-reviewer.md:41 (sprint-security).
+- Why: $(...) or backticks in the finding text, which can echo diff content, expand when the skeptic runs the note command; the workflow's own Notes step single-quotes with shellWord, this path does not.
+- Fix: the skeptic returns a structured disputed list and the workflow builds the note commands with shellWord; accepted when a tools-test finding holding $(...) is recorded literally. Queue item `sprint-security-b`.
+
+### The Notes phase hands reviewer text to a general agent with Bash (sprint-13 security Low (3))
+- Location: .claude/workflows/sprint-planning.js:198 (sprint-security).
+- Why: shellWord protects the shell, but finding text echoed from the diff can still act as a prompt injection on the notes agent.
+- Fix: write the findings to a file under build/ and run one fixed command that reads them (a run_state.sh note-file subcommand), or start the notes agent limited to Bash and the guard hook; accepted when the notes prompt holds no finding text. Queue item `sprint-security-b`.
+
+### A rerun /sprint after a partial review records its notes twice (sprint-13 quality)
+- Location: .claude/workflows/sprint-planning.js:197; tools/run_state.sh:1375 (add_note).
+- Why: add_note drops repeats only for quality-advisory and init resumes the run state, so a partial review (missed above 0), which forces /sprint again, records the same security and quality notes a second time and the backlog fold gets duplicates.
+- Fix: skip Notes and the skeptic on a partial review, or have add_note drop a security or quality note already recorded; accepted when a tools-test rerun leaves one copy. Queue item `sprint-security-b`.
+
+### lone_file_window? reads only the tab page yet lives on BufferList (sprint-13 quality)
+- Location: carat/domain/buffer_list.rb:475, :423; carat/use_cases/files/quit.rb:87.
+- Why: lone_file_window?(page) reads only file_window_count and layout.leaf_count, Quit#beside_side_windows? restates the rule with its own loop, and :423 evaluates it per window though it depends only on the tab page.
+- Fix: TabPage#lone_file_window? called by Quit, DeleteBuffer, and close_windows_of, once per tab page. Queue item `windows-buffers-walk`.
+
+### open_file_window repeats SplitWindow with another minimum width (sprint-13 quality)
+- Location: carat/use_cases/plugins/window_requests.rb:283, :291; carat/use_cases/windows/split_window.rb:36; plugin_registry.rb:360.
+- Why: it repeats floats.leave, layout.split, E36, adopt, focus, load, passing a minimum width of 1 where SplitWindow passes gutter width + 1, while the registry handles the same last-plugin-window case with an in-place show and unfix_size: two ways to do one thing; file_at(1) restates first_file.
+- Fix: one shared path for both cases, and first_file. Queue item `windows-buffers-walk`.
+
+### close_scratch's E36 refusal has no test (sprint-13 quality)
+- Location: carat/use_cases/plugins/window_requests.rb:287.
+- Why: closing a lone scratch window with no room for the file window answers E36 untested, unlike the other close_scratch scenarios (test/editor_plugins.rb, test/editor_explorer.rb).
+- Fix: a row closing a lone tree in a window too small to split, expecting E36. Queue item `windows-buffers-walk`.
+
+### BufferList#withdraw saves a cursor no one reads (sprint-13 quality)
+- Location: carat/domain/buffer_list.rb:449.
+- Why: remember(window) runs on target just before it leaves the list, and neither alternate_of nor a reopen reaches a removed buffer: a dead write.
+- Fix: drop the remember call, keep show plus restore. Queue item `windows-buffers-walk`.
+
+### FollowPalette#pad keeps a ternary ljust makes unneeded (sprint-13 quality)
+- Location: carat/use_cases/discovery/follow_palette.rb:306.
+- Why: ljust returns a copy when the width is not larger than the length (sp_str_ljust returns sp_str_dup), so the ternary adds nothing.
+- Fix: cell.ljust(cell.length + width - used). Queue item `ui-code-tidy`.
+
+### The architecture names no one-shot ProcessRunner path (sprint-13 quality)
+- Location: docs/architecture.md:275, :431; carat/drivers/process_runner.rb:93.
+- Why: the rewritten line names only the language server path and a planned Open3.capture3 formatter, and the table only Open3, while ProcessRunner#capture already runs short commands with spawn and no shell.
+- Fix: name capture as the one-shot path; Open3 stays planned only for a tool needing stdin_data. Queue item `architecture-docs`.
+
+### A doubled blank line before check_wait (sprint-13 quality)
+- Location: tools/run_state.sh:962.
+- Why: a second blank line was added before the check_wait comment.
+- Fix: remove it. Queue item `tools-docs-tidy`.
+
+### The sprint and parallel-check tests grep source lines and sleep fixed seconds (sprint-13 quality)
+- Location: tools/tools_test.sh:3701, :472, :558.
+- Why: the sprint tests grep exact lines of sprint-planning.js (const reviewed, const swept, const plan), so reformatting breaks them, and the parallel-check tests depend on 1 s and 4 s stage timings (sleep 3) and may flake on a loaded CI.
+- Fix: test through exported helpers with js as the securityLine test does, and wait on the job status files or run state records. Queue item `prose-grep-cases`.
