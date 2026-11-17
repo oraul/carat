@@ -1,0 +1,25 @@
+# Design
+
+## Context
+
+See proposal.md, Why. The plugin of part a (`carat/plugins/git_signs/plugin.rb`) runs `BRANCH` and `COUNTS` through `Host#run_program` on activation and on every `buffer_open`, `buffer_save`, and `window_focus`, and sets its segment only when the text changed. The host already places a plugin's signs by buffer id and icon name (`place_sign`, `clear_signs`), reads a file's first lines (`read_file`, at most 256 KiB) and stats a path (`stat`, size and mtime in seconds), both relative to the editor's working directory. `run_program` blocks the editor thread up to the driver's 2-second deadline (`Drivers::ProcessRunner::CAPTURE_SECONDS`) and answers nil from the port both for a program that cannot start and for one killed at the deadline, so neither the host nor a plugin can tell them apart today. No request runs work off the editor thread.
+
+## Goals / Non-Goals
+
+Goals: the three line signs against HEAD; no git on a focus that changes nothing git knows; one timed-out command never stalls a later event; every git argv keeps part a's two refusals.
+
+Non-goals: signs per keystroke, the index as base, hunk actions, an asynchronous host request.
+
+## Decisions
+
+- The text at HEAD, not `git diff`. `git diff HEAD -- PATH` reads the work tree and converts the file through the repository's `filter.*.clean` command, a command a cloned repository's configuration names, which part a's commands never run. `git -c protocol.ext.allow=never -c core.fsmonitor=false cat-file blob HEAD:./PATH` reads one object; the plugin splits it into lines and compares them with the buffer's (`read_buffer`), so unsaved edits show too. The word starts with `HEAD:`, so no path can read as an option. Output over 65,532 bytes may be cut by the capture's 64 KiB limit (cut before a character, at most 3 bytes short), so such a file shows no sign rather than wrong ones. Empty output is a file git does not hold or an empty one: no sign, since the capture ignores git's exit status.
+- `LineDiff` (`carat/plugins/git_signs/line_diff.rb`), a module of pure functions like `Finder::Matcher`: the common head and tail are trimmed, then Myers' greedy O((N+M)D) search keeps one copy of the diagonal frontier per edit step, the slice -d..d only, so memory is O(D²); past `MAX_EDITS` (300) steps the middle is one changed run. The edit script becomes one mark per buffer line (none, added, changed, deleted): a run of removals and insertions between two equal lines is a change on its inserted lines, insertions alone are added, removals alone mark the line above (the first line at the top). A buffer of one empty line counts as no lines, as an empty file at HEAD does.
+- The HEAD key. `head_key` reads `.git/HEAD` (one line), and for `ref: refs/...` stats that ref file, then `.git/packed-refs` and `.git/logs/HEAD`, joining the line and each size and mtime into one string; "" when `.git/HEAD` cannot be read or the ref leaves `refs/` or holds `..`. A commit rewrites the ref and appends to `logs/HEAD`, a checkout rewrites `HEAD`, a `pack-refs` rewrites `packed-refs`, so each changes the key even within the same second (the log grows). A fetch moves no part of it, so a focus after a fetch keeps the old counts until the next open or save, which still ask git, as part a's scenarios require.
+- Per buffer the plugin keeps the buffer id, its path, the key, and the text at HEAD, in parallel arrays. On a focus with a non-empty key equal to the last run's, it diffs the focused buffer against its kept text and runs no git; a buffer it holds no text for at that key, or an empty key, asks git as an open does. Open and save run `BRANCH` and `COUNTS`, then the text capture only when the buffer's kept key differs from the current one or is empty.
+- The timeout. `Ports::ProcessPort#timed_out?` answers whether the last capture ran past its deadline: `ProcessRunner` sets it in `capture`, `FakeProcesses` from `time_out(command)`, a control that records the command and answers nil. `FileRequests#run_program` then fails with "git ran past 2 seconds" instead of "cannot run git"; the API's version stays 2.7, since the request and its response are the same and only the message is finer. The plugin, on a failure whose message ends "ran past 2 seconds", stops the event's remaining commands and records the current key as stalled; while the key equals it, no event runs git. With an empty key that lasts until the plugin is activated again. A missing git is not a stall, so the tests that install git after the harness activates the plugin keep working and a git installed later is found.
+
+## Risks / Trade-offs
+
+- The HEAD key misses a reftable repository, a working directory below the repository's root, and a linked worktree (`.git` a file): there a focus asks git, as in part a.
+- After a timeout with no `.git` directory readable, the plugin stays quiet for the session until it is enabled again; preferable to stalling every event.
+- The signs go stale while typing until the next save or focus; subscribing to `buffer_change` would diff on every key.
