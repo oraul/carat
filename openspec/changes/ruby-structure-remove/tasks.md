@@ -7,7 +7,7 @@
 
 ## 2. Documents
 
-- [ ] 2.1 Remove the sign sentence from `README.md`, the structure file, test, and design reference from `docs/codebase-map.md` area 14, and the sign from the ruby plugin's description in `docs/plugins.md` (verify: `make docs-lint` and `make lint` pass).
+- [x] 2.1 Remove the sign sentence from `README.md`, the structure file, test, and design reference from `docs/codebase-map.md` area 14, and the sign from the ruby plugin's description in `docs/plugins.md` (verify: `make docs-lint` and `make lint` pass).
 
 ## 3. Verification
 
