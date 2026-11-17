@@ -30,11 +30,13 @@ Out of scope: process plugins (none exist yet); an `idle` event for plugins (it 
 ## Impact
 
 - `carat/use_cases/plugins/` (registry, entry, router, events, syntax, host), `carat/adapters/input_controller.rb` and `editor_assembly.rb` (the idle wake), `carat/plugin_api.rb` (VERSION 2.9, the `activate` contract), `tools/new.sh` (the template).
+- `carat/plugins/explorer/plugin.rb`: its `activate` reads the current buffer's path, which it heard from events before, so the tree marks the file at once.
+- `carat/plugins/hello/plugin.rb` unchanged: its greeting counts the buffers opened since it was activated, so the first greeting reads 0 where it read 1.
 - Tests: `test/editor_lazy_plugins.rb` (new), `test/editor_git_signs.rb`, `test/use_cases_plugins.rb`, `test/use_cases_plugin_hardening.rb`, `test/editor_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb`, and the other plugin tests whose plugins now activate on a trigger.
-- Docs: `docs/architecture.md` section 9 (changed), `docs/plugins.md`, `docs/codebase-map.md` (area 15 and the new test).
+- Docs: `docs/architecture.md` section 9 (changed; the manifest rule list there now points to the plugin-host spec, to keep its budget), `docs/plugins.md` (an Activation section), `docs/codebase-map.md` (area 15 and the new test).
 - README.md: unchanged, it does not describe when plugins activate.
 - CLAUDE.md: unchanged, no process changes.
 
 ## Results
 
-- Startup to the first frame, in a pty over 15 runs: before 11.7 to 13.7 ms (79b6b7c, brief); after: filled in by task 6.2.
+- Startup to the first frame, in a pty over 15 runs, 24 by 80, on a file in a repository under a trusted root with git_signs enabled: before 11.7 to 13.7 ms (79b6b7c, the brief's figure, another machine); after 7.7 to 15.6 ms, median 8.8 ms, with this change's release build. On the same machine an older release build of main (the main checkout's, not rebuilt at 25604e0) read 14.7 to 17.9 ms in 14 runs, median 17.9 ms, and one outlier of 469.7 ms. The figures move with the machine; what the change guarantees is that no plugin's activate, git included, runs before the first frame.
