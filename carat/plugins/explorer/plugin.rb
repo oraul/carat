@@ -256,7 +256,8 @@ module Carat
         end
 
         # A directory expands (l) or toggles (<CR> and o); a file opens
-        # in the editing window, a split, or a tab page.
+        # in the editing window, a split, or as a tab (t), and with no
+        # file window beside the tree, whatever the key, in a new one.
         #: (Carat::PluginApi::Host, Tree, Integer, Symbol) -> void
         def open_entry(host, tree, row, how)
           n = tree.at(row)
@@ -281,16 +282,14 @@ module Carat
         #: (Carat::PluginApi::Host, String, Symbol) -> void
         def open_path(host, path, how)
           relative = PluginApi::Paths.relative(cwd(host), path)
-          if how == :tab
-            report_window(host, host.open_as_tab(relative))
-            return
-          end
           target = host.editing_window.window
           if target == 0
             open_in_tree_window(host, relative)
             return
           end
           case how
+          when :tab
+            report_window(host, host.open_as_tab(relative))
           when :split, :vsplit
             report_window(host, host.open_in_split(target, relative, how == :vsplit))
           else

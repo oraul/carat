@@ -14,7 +14,7 @@ module Carat
       # second float. Enter opens the file in the editing window (it
       # arrives as the prompt's answer, and with no match the prompt opens
       # again on the same text); the prompt's own keys move the
-      # highlight and open it in a split, a vertical split, or a tab page;
+      # highlight and open it in a split, a vertical split, or as a tab;
       # Esc closes it. Each change closes the floats and opens them again,
       # as the command palette does.
       class Plugin < Carat::PluginApi::Plugin
@@ -77,7 +77,7 @@ module Carat
               "plugin.finder.previous" => "Highlight the previous file in the finder",
               "plugin.finder.open_split" => "Open the highlighted file in a horizontal split",
               "plugin.finder.open_vsplit" => "Open the highlighted file in a vertical split",
-              "plugin.finder.open_tab" => "Open the highlighted file in a new tab page"
+              "plugin.finder.open_tab" => "Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages"
             },
             commands: {},
             bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <C-p> plugin.finder.open"],
@@ -319,16 +319,17 @@ module Carat
         end
 
         # Opens the path, relative to the working directory, in the
-        # editing window, a split of it, or a tab page; the path goes to
-        # the host as it is, never inside an ex command line.
+        # editing window, a split of it, or as the tab the top row shows
+        # (a buffer tab or a tab page, by option.gt); with no file window
+        # a tab pick opens as Enter does, so no tab page is left without
+        # one. The path goes to the host as it is, never inside an ex
+        # command line.
         #: (Carat::PluginApi::Host, String, Symbol) -> void
         def open_path(host, path, how)
-          if how == :tab
-            report(host, host.open_in_tab(path))
-            return
-          end
           target = host.editing_window.window
           case how
+          when :tab
+            report(host, target == 0 ? host.open_file(target, path) : host.open_as_tab(path))
           when :split, :vsplit
             report(host, host.open_in_split(target, path, how == :vsplit))
           else

@@ -219,6 +219,6 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `plugin.finder.previous` | `finder` | `<C-p>`, `<Up>` in the finder | Highlight the previous file in the finder |
 | `plugin.finder.open_split` | `finder` | `<C-x>`, `<C-s>` in the finder | Open the highlighted file in a horizontal split |
 | `plugin.finder.open_vsplit` | `finder` | `<C-v>` in the finder | Open the highlighted file in a vertical split |
-| `plugin.finder.open_tab` | `finder` | `<C-t>` in the finder | Open the highlighted file in a new tab page |
+| `plugin.finder.open_tab` | `finder` | `<C-t>` in the finder | Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |
 
 The keys marked "in the finder" are bound in the finder's prompt, a live prompt whose own keymap answers before the command-line keymap while it is open; `<CR>` opens the highlighted file and `<Esc>` closes the finder, as they end any prompt. The keys marked "in the tree" are bound in the tree window's own keymap, which the plugin gives its scratch buffer, so they apply only while the tree is the current window; every other key falls through to the normal keymap. The test fixture `hello` (`carat/plugins/hello/`) declares `plugin.hello.greet` on `<leader>hh`, but it is not in the registry, so the editor does not contain it.

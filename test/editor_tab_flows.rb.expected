@@ -126,6 +126,26 @@ ok   the user's case A: t opens buffer tabs that gt and gT move between, step 4:
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 5: gT
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 6: <Space>egt
 ok   the user's case A: t opens buffer tabs that gt and gT move between: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   t from a lone tree opens a file window, step 1: <Space>e<C-w>l<C-w>c
+ok   t from a lone tree opens a file window, step 2: 3Gt
+ok   t from a lone tree opens a file window, step 3: <Space>e4Gt
+ok   t from a lone tree opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   t from a lone tree under tab pages opens a file window, step 1: <Space>e3Gl<C-w>c
+ok   t from a lone tree under tab pages opens a file window, step 2: 4Gt
+ok   t from a lone tree under tab pages opens a file window, step 3: <Space>e3Gt
+ok   t from a lone tree under tab pages opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Ctrl-T from a lone tree, step 1: <Space>e<C-w>l<C-w>c
+ok   Ctrl-T from a lone tree, step 2: <C-p>beta<C-t>
+ok   Ctrl-T from a lone tree: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Ctrl-T from a lone tree under tab pages, step 1: <Space>e3Gl<C-w>c
+ok   Ctrl-T from a lone tree under tab pages, step 2: <C-p>beta<C-t>
+ok   Ctrl-T from a lone tree under tab pages: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Ctrl-T opens a buffer tab beside the explorer, step 1: <Space>e3Gl
+ok   Ctrl-T opens a buffer tab beside the explorer, step 2: <C-p>beta<C-t>
+ok   Ctrl-T opens a buffer tab beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
+ok   Ctrl-T opens it in a tab page beside the explorer, step 1: <Space>e3Gl
+ok   Ctrl-T opens it in a tab page beside the explorer, step 2: <C-p>beta<C-t>
+ok   Ctrl-T opens it in a tab page beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   tab pages: opening with l, s, v, and t, step 1: <Space>e3Gl
 ok   tab pages: opening with l, s, v, and t, step 2: <Space>e4Gs
 ok   tab pages: opening with l, s, v, and t, step 3: <C-w>q
@@ -157,4 +177,4 @@ ok   tab pages: closing down to the editor quitting, step 5: :bd<CR>
 ok   tab pages: closing down to the editor quitting, step 6: x:q<CR>
 ok   tab pages: closing down to the editor quitting, step 7: :q!<CR>
 ok   tab pages: closing down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-editor_tab_flows: 159 passed, 0 failed
+editor_tab_flows: 179 passed, 0 failed
