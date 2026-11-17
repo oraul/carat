@@ -7,7 +7,8 @@ module Carat
     # :only and Ctrl-W o: closes every other window of the current tab
     # page through BufferList#close_window, so each closed window leaves
     # its cursor in its buffer, which stays listed, hidden when no other
-    # window shows it.
+    # window shows it. close_window also clears the tab page's previous
+    # window when it closes it; the window kept is never the previous.
     class CloseOtherWindows
       ONLY_ONE = "Already only one window"
       private_constant :ONLY_ONE
@@ -31,7 +32,6 @@ module Carat
           @buffers.close_window(index, id) unless id == tab.current
           i += 1
         end
-        tab.previous = -1
         Outcome.success("")
       end
     end

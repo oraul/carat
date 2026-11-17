@@ -17,11 +17,11 @@ module Carat
     # regular file (a FIFO, a device, a socket) are refused with Vim's
     # messages and a file longer than PathInfo::BUFFER_LIMIT with E484,
     # as PathInfo#refusal gives them, and the read itself is bounded and
-    # never waits, so no path can hang the editor or fill its memory. Any other failure to read or load the file is E484, and a
-    # file that is not valid UTF-8 opens with its bytes kept and Vim's
-    # "[ILLEGAL BYTE in line N]" in the message. Showing another buffer
-    # records the position left in the window's jump list
-    # (BufferList#enter).
+    # never waits, so no path can hang the editor or fill its memory. Any
+    # other failure to read or load the file is E484, and a file that
+    # is not valid UTF-8 opens with its bytes kept and Vim's "[ILLEGAL
+    # BYTE in line N]" in the message. Showing another buffer records the
+    # position left in the window's jump list (BufferList#enter).
     class OpenFile
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList

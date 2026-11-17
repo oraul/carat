@@ -10,19 +10,19 @@ module Carat
   module Domain
     # Typed options with Vim names, plus icons, Carat's own: the icon set
     # plugins draw with, "unicode" (the default), "nerd", or "ascii".
-    # timeoutlen is the milliseconds the keymap waits for the rest of an
-    # ambiguous binding.
-    # scroll is the lines <C-d> and <C-u> scroll, half the window when 0.
-    # Only the ones the editor reads are members; :set and local options
-    # arrive with the options change. undolevels is how many undo states a
-    # buffer keeps. theme names the palette, background says whether the
+    # timeoutlen is the milliseconds the keymap waits for the rest
+    # of an ambiguous binding. scroll is the lines <C-d> and <C-u>
+    # scroll, half the window when 0. Only the ones the editor
+    # reads are members; :set and local options arrive with the
+    # options change. undolevels is how many undo states a buffer
+    # keeps. theme names the palette, background says whether the
     # terminal ("terminal") or the palette ("theme") paints the
-    # background, and syntax_on is the switch of :syntax on and :syntax
-    # off, on from the start as in Neovim. keyhints_delay is the
-    # milliseconds a waiting prefix waits before its key hints show, 0
-    # for none. layout_left_width, layout_right_width, and
-    # layout_panel_height size the slots of every tab page, 0 keeping the
-    # size the view asks for. startscreen shows the start
+    # background, and syntax_on is the switch of :syntax on and
+    # :syntax off, on from the start as in Neovim. keyhints_delay
+    # is the milliseconds a waiting prefix waits before its key
+    # hints show, 0 for none. layout_left_width, layout_right_width,
+    # and layout_panel_height size the slots of every tab page, 0
+    # keeping the size the view asks for. startscreen shows the start
     # screen when the editor starts without a file, and reducedmotion
     # shows its last frame without the animation. cursorline draws the
     # cursor's line in the current window over the CursorLine background.
@@ -33,9 +33,9 @@ module Carat
     # border style of floats, Neovim's option (BorderStyle). jumptab is
     # "replace" when a jump takes the tab of the buffer it leaves, or
     # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
-    # the buffer tabs, or "tabpages", Vim's behavior.
-    # All but syntax_on come from option lines of the configuration. A Struct
-    # record: mutable, with a reader and a writer per member.
+    # the buffer tabs, or "tabpages", Vim's behavior. All but syntax_on
+    # come from option lines of the configuration. A Struct record:
+    # mutable, with a reader and a writer per member.
     class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool

@@ -12,10 +12,10 @@ module Carat
     # policy: a file buffer stays listed, hidden when no window shows it,
     # until :bd deletes it, as Neovim keeps it with 'hidden' on, so no
     # edit is lost and the buffer keeps its number; a scratch buffer
-    # leaves as soon as no window shows it. The feed
-    # reports closed transactions to the tab list, which keeps the cursors
-    # inside the text. A Struct record: mutable, with a reader and a writer
-    # per member.
+    # leaves as soon as no window shows it. The feed reports closed
+    # transactions to the tab list, which keeps the cursors inside the
+    # text. A Struct record: mutable, with a reader and a writer per
+    # member.
     class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @buffers: Array[untyped]

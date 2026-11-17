@@ -24,6 +24,8 @@ ok   a row past the top
 ok   a column past the bottom
 ok   the row first
 ok   an offset near the integer maximum
+ok   an offset at the integer minimum
+ok   a column at the integer minimum
 ok   moving keeps the size
 ok   lower z first, a later float above an earlier one of its z
 ok   entering focuses the new float
@@ -38,4 +40,4 @@ ok   moving changes the offset
 ok   a layer holds sixteen floats
 ok   the focused float is the current window and is found by its id
 ok   focusing a leaf leaves the float
-domain_float_layer: 40 passed, 0 failed
+domain_float_layer: 42 passed, 0 failed

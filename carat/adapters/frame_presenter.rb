@@ -58,21 +58,21 @@ module Carat
     # indentguides a file window's rows (not a plugin's buffer, a float,
     # or the start screen) show IndentGuides after their tokens, the key
     # of a row's guides an input of the row and the guides' settings part
-    # of the frame's geometry key. The cursor is
-    # placed in the current window, a bar in insert mode, an underline in
-    # replace mode, and a block otherwise.
+    # of the frame's geometry key. The cursor is placed in the current
+    # window, a bar in insert mode, an underline in replace mode, and a
+    # block otherwise.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
     # stays intact while the other is drawn; they are reallocated only when
-    # the size changes. Each keeps a PaintedRows record of what its window
-    # rows show, one segment per row and window, so a row is painted only when what it shows differs from
-    # what that frame already holds, and is marked dirty when it differs
-    # from the frame drawn before. A full-width window whose first visible
-    # row moved by less than its height records a scroll, its rows sourced
-    # from where they were. The separator rows, the status bar, the tab
-    # row, and the message row are painted every time and compared cell
-    # by cell. Lines are drawn
-    # from the shared line cache, which turns once per frame.
+    # the size changes. Each keeps a PaintedRows record of what its
+    # window rows show, one segment per row and window, so a row is
+    # painted only when what it shows differs from what that frame
+    # already holds, and is marked dirty when it differs from the frame
+    # drawn before. A full-width window whose first visible row moved by
+    # less than its height records a scroll, its rows sourced from where
+    # they were. The separator rows, the status bar, the tab row, and the
+    # message row are painted every time and compared cell by cell. Lines
+    # are drawn from the shared line cache, which turns once per frame.
     #
     # A message of several lines is painted over the rows above the
     # message row, its last lines when it is taller than the screen, with

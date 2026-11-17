@@ -26,6 +26,8 @@ ok   a count before Ctrl-W W picks that window too
 ok   Ctrl-W p returns to the previous window
 ok   Ctrl-W p again goes forward
 ok   Ctrl-W p after the previous window closed stays
+ok   Ctrl-W p after :only closed the previous window stays
+ok   Ctrl-W p after Ctrl-W o closed two windows stays
 ok   Ctrl-W c closes the window
 ok   :close closes the window
 ok   :clo closes the window
@@ -143,4 +145,4 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 145 passed, 0 failed
+editor_windows: 147 passed, 0 failed

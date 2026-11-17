@@ -155,7 +155,7 @@ Files:
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
 - `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose; a plugin's live prompt keymap answers first on the command line and `PluginHost#follow_prompt` ends the key while one is open.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
-- `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `call(state, command)`.
+- `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `breaks_insert?`, `call(state, command)`.
 - `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register` (with the action's short description), `describe`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
 - `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
 - `carat/use_cases/actions/message_handler.rb`: `MessageHandler`, the quit hint and the reserved actions.
@@ -379,7 +379,7 @@ Files:
 - `carat/use_cases/actions/window_handler.rb`: `WindowHandler.register`.
 - `carat/use_cases/actions/tab_handler.rb`: `TabHandler.register` (`tab.next`, `tab.previous`, `tab.last_accessed`, and `tabline.next`, `tabline.previous`, which follow the buffer tabs through `SwitchBuffer` under `option.gt buffers`).
 - `carat/use_cases/actions/float_handler.rb`: `FloatHandler.register`, `float.close` (normal-mode `<Esc>`).
-- `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
+- `carat/use_cases/actions/scroll_handler.rb`: `ScrollHandler.register` and `breaks_insert?`, the nine `scroll.*` actions, each a `ScrollRequest` target for `ScrollWindow`.
 - `carat/use_cases/ex/window_command_handler.rb`: `WindowCommandHandler.register`.
 - `carat/use_cases/ex/tab_command_handler.rb`: `TabCommandHandler.register`; the tab page number of `:tabn`, `:tabc`, `:tabo` and the count of `:tabp` (`E16`, `E475`, `E488`).
 - `carat/use_cases/buffers/buffer_request.rb`: `BufferRequest` (target `:next`, `:previous`, `:first`, `:last`, `:number`, `:current`, count, bang); `steps`.
