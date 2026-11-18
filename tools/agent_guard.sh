@@ -609,7 +609,7 @@ make_form() {
 run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
-    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:moved|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups) ;;
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main) ;;
     contributor:push)
@@ -623,6 +623,9 @@ run_state_form() {
         contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
         *) refuse "tools/run_state.sh set of $3" ;;
       esac ;;
+    read:moved)
+      [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
+        refuse "tools/run_state.sh moved other than CHANGE COMMIT" ;;
     read:ci-stages)
       [ "$closing" = 1 ] && [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
         refuse "tools/run_state.sh ci-stages, which only the close profile runs, as CHANGE COMMIT" ;;

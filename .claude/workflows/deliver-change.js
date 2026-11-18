@@ -907,10 +907,10 @@ function carryFrom(records) {
 // The moved line the checker returns verbatim stands the reviews only
 // when it says the change is the same at the head as at the reviewed
 // commit (from); any other line, or none, runs them again. The line only
-// decides: the record needs the run state's moved record at the head,
-// which only moved's exit-0 path writes (review refuses a carried=1
-// summary without it), so a forged line stops at the record, carrying
-// nothing (moved-review-carry).
+// decides: the record needs the run state's moved record at the head
+// against the commit each review passed at, which only moved's exit-0 path
+// writes (review refuses a carried=1 summary without it), so a forged line
+// stops at the record, carrying nothing (moved-review-carry).
 const CARRIED = /^moved: the change is the same at ([0-9a-f]{7,40}) as at ([0-9a-f]{7,40}):/
 function carried(line, head, from) {
   const m = CARRIED.exec(String(line || '').trim())

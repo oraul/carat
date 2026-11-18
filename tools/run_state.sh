@@ -101,7 +101,8 @@
 #                               or not-run, no result) at COMMIT, HEAD when
 #                               omitted; a pass also records phase.KIND
 #                               (a SUMMARY with carried=1 only at the head
-#                               of the moved record)
+#                               of the moved record, its reviewed commit
+#                               another, where review.KIND passed)
 # The delivery workflow, not its agents, runs phase and review: it builds
 # them from the results it received (tools/agent_guard.sh keeps the agents
 # off them, and the merge gate compares them with RECORDS).
@@ -2795,13 +2796,27 @@ moved_change() {
   echo "moved: the change is the same at $short_head as at $short_at: the merge of $base changed no file of the change, so its reviews stand"
 }
 
-# carried_backed COMMIT: true when the moved record, which only the exit-0
-# path of moved_change writes, names COMMIT as its head, so a review the
-# workflow carries to COMMIT (summary carried=1) is recorded only then;
-# sets moved_record for the refusal.
+# carried_backed KIND COMMIT: true when the moved record, which only the
+# exit-0 path of moved_change writes, names COMMIT as its head and, as its
+# reviewed commit, another commit: the one the existing review.KIND record
+# passed at (read before review overwrites it). So a review the workflow
+# carries to COMMIT (summary carried=1) is recorded only from the commit it
+# passed at, and moved run at the head against itself backs nothing; sets
+# moved_record for the refusal.
 carried_backed() {
   moved_record=$(read_key moved)
-  [ -n "$moved_record" ] && [ "${moved_record%% *}" = "$(git rev-parse -q --verify "$1^{commit}")" ]
+  [ -n "$moved_record" ] || return 1
+  carried_head=${moved_record%% *}
+  carried_from=${moved_record#* }
+  carried_from=${carried_from%% *}
+  [ "$carried_head" = "$(git rev-parse -q --verify "$2^{commit}")" ] || return 1
+  [ "$carried_from" != "$carried_head" ] || return 1
+  carried_prior=$(read_key "review.$1")
+  [ "${carried_prior%% *}" = pass ] || return 1
+  carried_prior=${carried_prior#pass }
+  carried_prior=${carried_prior%% *}
+  valid '[0-9a-f]{7,40}' "$carried_prior" || return 1
+  [ "$carried_from" = "$(git rev-parse -q --verify "$carried_prior^{commit}")" ]
 }
 
 [ $# -ge 1 ] || usage
@@ -2893,7 +2908,7 @@ case "$command" in
       periodic-*) die "review result is pass, blocked, partial, or not-run, not $2" ;;
       *) die "review result is pass or blocked, not $2" ;; esac
     at=$(commit_at "${4:-}") || exit 1
-    case " $3 " in *" carried=1 "*) carried_backed "$at" || die "review: refused: a carried review at $at needs tools/run_state.sh moved to have exited 0 at that commit (the moved record: ${moved_record:-none})" ;; esac
+    case " $3 " in *" carried=1 "*) carried_backed "$1" "$at" || die "review: refused: a carried review at $at needs tools/run_state.sh moved to have exited 0 at that commit against the commit review.$1 passed at (the moved record: ${moved_record:-none})" ;; esac
     write_key "review.$1" "$2 $at $3"
     [ "$2" != pass ] || write_key "phase.$1" "$at" ;;
   stage)

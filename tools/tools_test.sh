@@ -842,6 +842,8 @@ echo edit >> README.md
 echo "echo own" > tools/own.sh
 commit "chore: the change"
 carry_reviewed=$(git rev-parse HEAD)
+state review carry quality pass "blocking=0" "$carry_reviewed" > /dev/null
+state review carry security pass "blocking=0" "$carry_reviewed" > /dev/null
 git_q checkout -q main && echo "echo fixed" > tools/base.sh && commit "fix: a main-only security fix" && git_q checkout -q chore/carry
 git_q merge -q --no-edit main
 expect "run_state: moved keeps the reviews when HEAD matches main outside the change" 0 "^moved: the change is the same at [0-9a-f]{12} as at [0-9a-f]{12}: .*its reviews stand$" \
@@ -849,6 +851,18 @@ expect "run_state: moved keeps the reviews when HEAD matches main outside the ch
 expect "run_state: moved records the head and the reviewed commit on its exit-0 path" 0 "^$(git rev-parse HEAD) $carry_reviewed$" state get carry moved
 expect "run_state: a carried review is recorded after moved exits 0" 0 "" state review carry quality pass "blocking=0 carried=1"
 expect "run_state: set refuses the moved record" 1 "refused: moved is written only by its own command" state set carry moved "$(git rev-parse HEAD) $carry_reviewed"
+# A moved record not tied to the commit the review passed at backs no
+# carry: moved run at the head against itself, which always exits 0, and a
+# review that did not pass at the reviewed commit.
+expect "run_state: moved at the head against itself exits 0 and records the head twice" 0 "^$(git rev-parse HEAD) $(git rev-parse HEAD)$" \
+  sh -c 'env BASE=main sh "$1/run_state.sh" moved carry "$(git rev-parse HEAD)" > /dev/null && sh "$1/run_state.sh" get carry moved' _ "$here"
+expect "run_state: a carried review is refused when moved compared the head with itself" 1 "needs tools/run_state[.]sh moved to have exited 0 at that commit against the commit review[.]security passed at" \
+  state review carry security pass "blocking=0 carried=1"
+state review carry security blocked "blocking=1" "$carry_reviewed" > /dev/null
+env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed" > /dev/null
+expect "run_state: a carried review is refused when the review did not pass at the reviewed commit" 1 "needs tools/run_state[.]sh moved to have exited 0 at that commit against the commit review[.]security passed at" \
+  state review carry security pass "blocking=0 carried=1"
+state review carry security pass "blocking=0" "$carry_reviewed" > /dev/null
 # A merge that puts a main-only file back to its old text (a landed fix).
 git_q checkout -q -b chore/carry-revert "$carry_reviewed"
 git_q merge -q --no-commit main > /dev/null 2>&1
@@ -2166,6 +2180,9 @@ expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributo
 expect "guard: contributor pushes the merge of a moved main" 0 "^$" guard contributor 'sh tools/run_state.sh push c --main-moved'
 expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix [|] --main-moved\]" guard contributor 'sh tools/run_state.sh push c --force'
 expect "guard: checker compares the change's files after a main-moved merge" 0 "^$" guard read 'sh tools/run_state.sh moved c abc1234'
+expect "guard: checker refuses moved without a commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c'
+expect "guard: checker refuses moved at a symbolic commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c HEAD'
+expect "guard: checker refuses moved with an extra argument" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c abc1234 def5678'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
 expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'
