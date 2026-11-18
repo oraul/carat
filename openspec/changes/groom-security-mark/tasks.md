@@ -12,3 +12,10 @@
 ## 3. Docs
 
 - [x] 3.1 README.md pipeline step 11 and `docs/codebase-map.md` (`tools/run_state.sh`, `groom`): the security entry's wording and `security_entry`. Proved by `make docs-lint` and `make gates`.
+
+## 4. Review fixes
+
+- [x] 4.1 `tools/tools_test.sh`: a groom fixture entry naming security only in its heading and a severity only in its body (`## f periodic security note at tools/q.sh:8`, `- Severity: low`), refused as closed and as a duplicate, proving `security_entry` judges the entry's lines joined.
+- [x] 4.2 `tools/tools_test.sh`: groom fixture entries worded "security review finding, rated Medium" and "rated Critical", each refused as closed and as gone, proving the first `SECURITY_MARK` alternative's gap between the word and the severity and the severity `critical`.
+- [x] 4.3 `tools/run_state.sh`: the severity and confidence pair alternative of `SECURITY_MARK` takes `critical` too, as `SECURITY_SEVERITY` does, its comment naming "Critical (9)"; proved by the case "groom refuses a gone entry carrying a Critical severity and confidence pair".
+- [x] 4.4 `design.md`: the channel decision describes the awk that prefixes the merged body's lines, not a `sed`.
