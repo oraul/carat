@@ -4,8 +4,6 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 17
 
-1. `vim-line-commands-c` (T2 user request, estimated medium, part c of 3): `:normal` and `:p` are missing, 0 rows in `docs/compatibility.md`, the commands a `:g` most often runs besides `:s` and `:d`; the sprint-16 review found part b's text garbled at `docs/compatibility.md:332` ("`:s`, `:A range comes ..."), `place_cursor` (`carat/use_cases/ex/line_command_handler.rb:52`) clamping by hand beside `EditorState#clamp_col`, `addresses_in` (`join_command_handler.rb:70`) re-reading the range text beside `ExRange.resolve`, and map entries missing `RegisterCount.parse_count` (`docs/codebase-map.md:422`), `Registers.unnamed?` (`:234`), `Buffer#transaction_size` (`:260`). Fix outline: the two commands as Neovim; one clamp; the range's address count from `ExRange`; the sentence and map fixed. Accepted when compatibility rows and a table-driven test show `:normal`, `:{range}normal`, `:g/x/normal`, `:p`, `:{range}p` as Neovim, and the `:j`, `:>`, `:<` rows unchanged. Backlog: "## The ex commands a global most often runs besides :s and :d".
-
 ## Pool
 
 1. `vim-folds-windows` (T2 user request, estimated medium, the rest of `vim-folds-b`, split at its start): in Insert mode the cursor's closed fold stays closed (`carat/use_cases/arrange_view.rb:60`, `carat/adapters/frame_presenter.rb:734`, `:829`), so i, a, I, A edit its hidden first line; a closed split or tab page keeps its folds tracked and shifted on every edit (`carat/domain/layout.rb:229`, `carat/domain/buffer_list.rb:370`). Fix outline: folds open and untrack as Neovim's. Accepted when rows show `zfjiX` with the fold open and X on row 0, and 1 fold list after `zfj<C-w>s<C-w>c`. Backlog: "### A closed window's folds stay tracked and are shifted on every edit", "### Layout#close frees a window without untracking its folds", "### Closing a split or a tab never untracks its windows' folds".
@@ -25,11 +23,14 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 15. `bidi-controls` (T3 security Lows, estimated small, pushed back 11); `project-config-guards` (T3, estimated medium, pushed back 23): `config.rb:221`, untrusted keymap lines, `rc_config_gateway.rb:70` Low (3).
 16. `insert-copy`, `bench-scenarios` (T4, estimated small each): bench skips 4 scenarios, lh-float, lh-winbar, n, palette (`bench/run.sh:73`).
 
+
 ## Decisions
 
-- No security first (T0): sprint-16 periodic security Medium (9) `tools/run_state.sh:2759` and Medium (5) `deliver-change.js:933` at 2af0b3aa0990 are fixed by moved-review-carry 1a0551848c13 (#199), merged after it.
-- `vim-folds-b` split at its start (T2 user request, size rule): 4 independently testable parts over map areas 8, 11, 13; delivered: the nesting at `folds.rb:85` and the folds `revert_to` leaves shifted (`buffer.rb:676`, `:720`); the rest is `vim-folds-windows`, Pool 1, with the 3 backlog headings.
-- `vim-folds-b` estimated large (T2): comparable rows 801,482 to 893,872, sized up as the last two feature runs went over 1,200,000 (plugin-lazy-activate 1,245,262, tab-close-d 1,654,786); vim-folds-a took 1,678,269 in 145.0 min.
-- `tab-close-d` merged from place 1 (#201) and `vim-folds-b` delivered from place 1, `vim-line-commands-c` now place 1 (T2): fixes the tab-close-d late finding at `docs/queue-feature.md:30`.
-- `vim-folds-windows` in the Pool, not the sprint (T2): Sprint 17 drew its 3 features; no push-back counted below it, `vim-folds-b` was ahead of them; `vim-folds-c` after it, never ahead of its track.
-- 7 run notes to `backlog.md` (T1, T6): tab-close-d retro 12 to 14 (merge 60,874/21, reviews 37,844/46, package 60,830/51) and sprint-16-records retro 7 to 9 (bench 11,192/21 over 3 runs) belong to the backlog lane this delivery does not touch; the late finding `docs/findings/tab-close-d.md:11`.
+- `vim-line-commands-c` delivered as written and removed (T2 user request): Sprint 17 feature item 1 at 84ed58b, the third feature after tab-close-d (#201) and vim-folds-b (#203); the feature sprint drained to 0 items, waiting for `/sprint`.
+- Estimate medium, no size up (T2): vim-line-commands-a 890,042 / 54.5 min, vim-line-commands-b 893,872 / 61.1; of the last 2 feature runs only tab-close-d went over (1,654,786), vim-folds-b 904,033 / 44.8.
+- No split (T2, size rule): already part c of 3; 2 testable commands over map areas 12 and 5 (`:normal` feeds keys like `carat/use_cases/handle_key.rb`); the clamp, address count, sentence, and map edits add no behavior, held by the unchanged `:j`, `:>`, `:<` rows.
+- No merge-gate rule edit (T2): the locations are `carat/use_cases/ex/`, `docs/compatibility.md`, `docs/codebase-map.md`; `tools/rules.sh` untouched.
+- Security first empty (T0): no periodic finding in the 2 pending runs, pipeline-diet and vim-folds-b; sprint-16's Medium (9) fixed by moved-review-carry (#199).
+- vim-folds-b retros 5, 6, 8 to `backlog.md` (T1): merge 98,694 output / 10 calls, scout 44 of 139 calls, 5 of 5 squash bodies #199 to #203 at 3 lines; backlog-lane work this delivery does not touch; retro 5 merges into the backlog pool's `merge-output-cap`.
+- vim-folds-b overrun note 7 dropped (T1): tab-close-d 1,654,786 already placed as a true flag by pipeline-diet-b's plan; pipeline-diet notes 7 to 10 placed there too.
+- Map drift to `backlog.md` (T6): `docs/codebase-map.md:55` says 0 to 2 backlog sprint items, `tools/docs_lint.sh:183` checks 3.

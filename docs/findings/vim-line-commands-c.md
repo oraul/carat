@@ -28,3 +28,22 @@
 - Why: the :p row names its bang refusal as a bare E477 while its other errors and the :normal row give the full text.
 - Fix: write E477: No ! allowed.
 
+### The squash commits on main drop the pull request description (vim-folds-b retro 8)
+- Location: `.claude/agents/merger.md`, `tools/gates.sh` (the `merge` group), `tools/open_pr.sh`
+- Why: 5 of 5 squash commits #199 to #203 carry a 3-line body (one shortened Summary sentence, code spans stripped, the trailer) with 0 sections, against 7 of 7 from #192 to #198 at 31 to 36 lines and 4 sections; vim-folds-b's archived pr.md held 33 lines; the trailer, content, and docs gates all passed it, so the history on main loses every change's description, which CLAUDE.md makes the squash body.
+- Fix: the merge passes the archived pr.md body, one blank line, and the trailer as the squash message, and a merge whose message differs is refused or reported as a gate FAIL; accepted by a tools-test case and the next 5 merged commits each holding the four sections.
+
+### The merge phase's output tokens do not follow its fixed work (vim-folds-b retro 5, extends merge-output-cap)
+- Location: `.claude/agents/merger.md`, `.claude/workflows/deliver-change.js` (merge phase)
+- Why: vim-folds-b's first-pass green CI with 2 waits, no main move, and no refusal cost 98,694 output tokens over 10 calls (9,869 per call), 25.6 percent of the run's 385,471 output, after pipeline-diet (#202) capped the merger's calls but not its tokens; last-ten feature merges 4,992 to 60,874 (median about 13,500), backlog about 12,000; the same problem as pipeline-diet retro 7 (39,483 on 10 calls), queued as `merge-output-cap`.
+- Fix: merge into `merge-output-cap`; accepted when, over the next 5 runs with a first-pass green CI and no main move, the merge phase stays within twice the twenty-row median of its output and under 10 percent of the run's output, the green line, squash check, and merged record unchanged.
+
+### Scouting stays the costliest phase in tool calls (vim-folds-b retro 6)
+- Location: `.claude/agents/scout.md`, `.claude/workflows/deliver-change.js` (scoutTargets)
+- Why: 3 fresh packs at 37e72e3 took 44 of vim-folds-b's 139 calls (31.7 percent) and 62,465 output tokens (16.2 percent), the most scout calls in the last ten feature rows (11 to 40), while the packs held Designs 0, Rules 0, Bench 0 against Gaps 7 for 8 entry points and the contributor needed 34 implement calls.
+- Fix: no empty pack section for a map area, fewer calls per pack; accepted when over the next 5 feature runs the scout phase stays under 20 percent of the run's tool calls with no rise in implement calls or quality first-pass failures (89/159 now).
+
+### The code map gives the backlog lane's sprint share as 0 to 2
+- Location: `docs/codebase-map.md:55`, `tools/docs_lint.sh:183`
+- Why: the map's `tools/docs_lint.sh` entry says a `## Sprint` of 0 to 2 items in the backlog lane, while the lint checks `backlog:3` since the 3 + 3 sprint of sprint-17 (`docs/goals.md`), so an agent reading the map plans one backlog item too few.
+- Fix: say 0 to 3 in the backlog lane in the map entry; accepted when the entry matches the lane shares `check_queue` reads.
