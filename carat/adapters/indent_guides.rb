@@ -15,8 +15,9 @@ module Carat
     # NEIGHBOR_LIMIT rows past the window's edges, none counting as no
     # indent. In the current window the cursor's block is the run of
     # rows around the cursor indented past the deepest level below the
-    # cursor row's indent; its guide at that level is drawn in IblScope,
-    # every other guide in IblIndent. Each row's guides reduce to a key,
+    # cursor row's indent; its guide at that level is drawn in IblScope
+    # as the solid scope glyph, every other guide in IblIndent as the
+    # guide character. Each row's guides reduce to a key,
     # an input of its repaint beside its line. The indents are kept in
     # arrays that grow only when a taller window appears, so measuring
     # and painting allocate nothing.
@@ -33,6 +34,7 @@ module Carat
       # @rbs @width: Integer
       # @rbs @tabstop: Integer
       # @rbs @code: Integer
+      # @rbs @scope_code: Integer
       # @rbs @scope: Integer
       # @rbs @scope_from: Integer
       # @rbs @scope_to: Integer
@@ -45,6 +47,7 @@ module Carat
         @width = 8
         @tabstop = 8
         @code = 0
+        @scope_code = 0
         @scope = -1
         @scope_from = 0
         @scope_to = -1
@@ -52,14 +55,17 @@ module Carat
 
       # Takes a frame's options and returns the stamp of the settings
       # every row's guides depend on, 0 with the guides off, so a frame
-      # with other settings paints every row again.
+      # with other settings paints every row again; its lowest bit says
+      # whether the scope glyph is the ascii one.
       #: (Domain::Options) -> Integer
       def configure(options)
         @tabstop = options.tab_width
         @width = options.shiftwidth > 0 ? options.shiftwidth : @tabstop
         @code = options.indentguides ? options.guide_code : 0
+        @scope_code = options.scope_guide_code
         return 0 if @code == 0
-        (@code * 16_384 + @width) * 16_384 + @tabstop
+        ascii = @scope_code == Domain::Options::GUIDE_ASCII ? 1 : 0
+        ((@code * 16_384 + @width) * 16_384 + @tabstop) * 2 + ascii
       end
 
       # Whether the options of the frame draw guides.
@@ -110,8 +116,11 @@ module Carat
         level = left > 0 ? ((left + @width - 1) / @width) * @width : 0
         scoped = i >= @scope_from && i <= @scope_to
         while level < limit
-          hl = scoped && level == @scope ? Domain::Highlight::INDENT_GUIDE_SCOPE : Domain::Highlight::INDENT_GUIDE
-          frame.put_code(frame_row, col + level - left, @code, 1, hl)
+          if scoped && level == @scope
+            frame.put_code(frame_row, col + level - left, @scope_code, 1, Domain::Highlight::INDENT_GUIDE_SCOPE)
+          else
+            frame.put_code(frame_row, col + level - left, @code, 1, Domain::Highlight::INDENT_GUIDE)
+          end
           level += @width
         end
       end
