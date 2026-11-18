@@ -608,10 +608,9 @@ module AdaptersFramePresenterTest
     t.assert_equal([cur, NOR, NOR, sea], highlights(f, 0, 4), "every match is in the Search group, the one under the cursor in CurSearch")
     t.assert_equal(true, f.dirty[0] == 1, "the row is repainted when the highlight appears")
     # Scenario: The current match is bold. The match holding the cursor is
-    # in CurSearch, bold in Carat's palettes, the others in Search; moving
-    # the cursor onto another match repaints the row.
-    bold = D::Theme::BOLD
-    t.assert_equal([bold, bold, 0, 0], [D::Themes.find("carat-dark", "theme").attr(cur) & bold, D::Themes.find("carat-light", "theme").attr(cur) & bold, D::Themes.find("carat-dark", "theme").attr(sea) & bold, D::Themes.find("carat-light", "theme").attr(sea) & bold], "The current match is bold: CurSearch is bold, Search is not")
+    # in CurSearch, the others in Search; moving the cursor onto another
+    # match repaints the row. CurSearch's bold is pinned by "The search
+    # colors" rows in test/domain_theme.rb.
     s.cursor.move_to(0, 3)
     f = draw(s, 6, 20)
     t.assert_equal([sea, NOR, NOR, cur], highlights(f, 0, 4), "The current match is bold: the cursor on the second match moves CurSearch there")
@@ -619,6 +618,18 @@ module AdaptersFramePresenterTest
     s.cursor.move_to(1, 0)
     f = draw(s, 6, 20)
     t.assert_equal([sea, NOR, NOR, sea], highlights(f, 0, 4), "with the cursor off every match, all are in Search")
+    # Scenario: The current match is bold, in every window: two windows
+    # on the buffer each draw CurSearch on the match under their own
+    # cursor, the current one at the top, the other below it.
+    two = state_for(["a ba", "xyz"], "a.txt")
+    draw(two, 9, 20)
+    top = two.tab.layout.split(0, false, 0, 5)
+    two.window.cursor.move_to(0, 3)
+    two.tab.focus(top)
+    two.window.cursor.move_to(0, 0)
+    f = draw(two, 9, 20)
+    t.assert_equal([cur, NOR, NOR, sea], highlights(f, 0, 4), "The current match is bold: the current window draws CurSearch on its cursor's match")
+    t.assert_equal([sea, NOR, NOR, cur], highlights(f, 4, 4), "The current match is bold: the other window on the buffer draws CurSearch on the match under its own cursor")
     s.cursor.move_to(0, 0)
     LAST.hide
     f = draw(s, 6, 20)

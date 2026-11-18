@@ -210,8 +210,8 @@ module DomainThemeTest
   end
 
   # A role's row of a palette: its 24-bit color, its 256-color index,
-  # and its 16-color index, read from the palette's table, for the roles
-  # no group draws yet.
+  # and its 16-color index, read from the palette's table, for any role,
+  # drawn by a group or not.
   #: (Array[Integer], Integer) -> Array[Integer]
   def self.role_row(palette, role)
     i = 0
@@ -529,14 +529,14 @@ module DomainThemeTest
 
     # Scenario: The search colors. Search and Todo on the soft tint in
     # their own text color, black on bright yellow at 16 colors;
-    # CurSearch on the strong INC_SEARCH color, bold.
+    # CurSearch on the strong INC_SEARCH color, bold, where Search is not.
     t.cases([
-      ["The search colors: carat-dark", ["carat-dark"], [0xc8ccd8, 0x4a4129, 0, 11, 0xc8ccd8, 0x4a4129, 0xf0a35e, D::Theme::BOLD, D::Theme::BOLD]],
-      ["The search colors: carat-light", ["carat-light"], [0x2f3340, 0xf7e3a1, 0, 11, 0x2f3340, 0xf7e3a1, 0xf2b06e, D::Theme::BOLD, D::Theme::BOLD]]
+      ["The search colors: carat-dark", ["carat-dark"], [0xc8ccd8, 0x4a4129, 0, 11, 0xc8ccd8, 0x4a4129, 0xf0a35e, D::Theme::BOLD, D::Theme::BOLD, 0]],
+      ["The search colors: carat-light", ["carat-light"], [0x2f3340, 0xf7e3a1, 0, 11, 0x2f3340, 0xf7e3a1, 0xf2b06e, D::Theme::BOLD, D::Theme::BOLD, 0]]
     ]) do |input|
       theme = D::Themes.find(input[0].to_s, "terminal")
       cur = H::CURRENT_SEARCH
-      [theme.fg(H::SEARCH), theme.bg(H::SEARCH), theme.fg16(H::SEARCH), theme.bg16(H::SEARCH), theme.fg(H::TODO), theme.bg(H::TODO), theme.bg(cur), theme.attr(cur) & D::Theme::BOLD, theme.attr16(cur) & D::Theme::BOLD]
+      [theme.fg(H::SEARCH), theme.bg(H::SEARCH), theme.fg16(H::SEARCH), theme.bg16(H::SEARCH), theme.fg(H::TODO), theme.bg(H::TODO), theme.bg(cur), theme.attr(cur) & D::Theme::BOLD, theme.attr16(cur) & D::Theme::BOLD, theme.attr(H::SEARCH) & D::Theme::BOLD]
     end
     # Scenario: The light selection shows. carat-light's Visual is
     # #c2ccef, 1.5:1 from its background, where it was 1.26:1.
@@ -569,9 +569,9 @@ module DomainThemeTest
     end
     # Scenario: The command pill is cyan. Every palette's command pill,
     # which the query pickers' prompts draw too, is on its cyan.
-    D::Themes::NAMES.each do |name|
+    D::Themes::NAMES.each_with_index do |name, i|
       theme = D::Themes.find(name, "terminal")
-      t.assert_equal(theme.fg(H::DIAGNOSTIC_HINT), theme.bg(H::STATUS_MODE_COMMAND), "The command pill is cyan: #{name}")
+      t.assert_equal(role_row(D::Themes::PALETTES[i], D::Themes::CYAN)[0], theme.bg(H::STATUS_MODE_COMMAND), "The command pill is cyan: #{name}")
     end
 
     lit = H::CURSOR_LINE_LAYER

@@ -17,3 +17,10 @@
 
 - [x] 4.1 Update `docs/compatibility.md` (UI groups, search highlighting), checked by `make docs-lint`
 - [x] 4.2 Append the plan's backlog entries to `docs/findings/facet-palette.md`
+
+## 5. Review fixes
+
+- [x] 5.1 Drop the theme bold check from `test/adapters_frame_presenter.rb`, which proves only the painted group, and pin Search's missing bold in "The search colors" rows of `test/domain_theme.rb`
+- [x] 5.2 Compare "The command pill is cyan" with each palette's CYAN role in `test/domain_theme.rb`, not with DiagnosticHint's foreground
+- [x] 5.3 Describe `role_row` in `test/domain_theme.rb` as reading any role's row
+- [x] 5.4 Prove CurSearch in a second window on the buffer, on the match under its own cursor, in "The current match is bold" rows of `test/adapters_frame_presenter.rb`
