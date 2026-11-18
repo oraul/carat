@@ -747,8 +747,8 @@ function mergeTarget() {
 }
 
 const at = (key) => (state[key] || '').split(' ')
-const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head)
-const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head)
+const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head) || (name === 'check' && settledAtHead())
+const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head) || (SETTLES.includes(kind) && settledAtHead())
 const note = (line) => { notes.push(line); log(line) }
 const backlog = []
 // A finding joins the list once, compared as its note text, so a resumed
@@ -912,17 +912,20 @@ function checkVerdict(line) {
 // spent and bench; and moved when asked. The checker's reading start runs
 // only on a failed stage (checkerNeeded): a pass, a refusal (its message is
 // its log), and a check that did not finish start none. tools/tools_test.sh
-// runs these helpers.
-function checkLines(change, backed, movedFrom, metric) {
+// runs these helpers. In an advisory-only round (settleFrom) the start
+// runs settled first and the check only when that exits 1 (review-lite).
+function checkLines(change, backed, movedFrom, metric, settleFrom = '') {
   const rs = 'sh tools/run_state.sh'
   return {
+    settle: settleFrom ? `${rs} settled ${change} ${settleFrom}` : '',
     check: `${metric ? `${metric}; ` : ''}${rs} check ${change}${backed ? ` ${backed}` : ''}`,
     passed: `${rs} spent ${change}; ${rs} bench ${change}`,
     moved: movedFrom ? `${rs} moved ${change} ${movedFrom}` : '',
   }
 }
 function checkRunTask(lines) {
-  return `Mode: run. Run each line below exactly as written, as your Mode run section says, and read nothing else.\n1. \`${lines.check}\`: while it exits 3, run it again, at most three times; return its last line, verbatim, as verdict.\n2. Only when that line begins \`check: every stage passed\`: \`${lines.passed}\`; return the line spent printed as budget, bench_same true when the line exited 0, and the last 20 lines bench printed as bench_report.${lines.moved ? `\n3. Then \`${lines.moved}\`; return its last line, verbatim, as moved.` : ''}`
+  const settle = lines.settle ? `\nFirst \`${lines.settle}\`: when it exits 0, return its last line, verbatim, as verdict, and run nothing else; when it exits 1, go on.` : ''
+  return `Mode: run. Run each line below exactly as written, as your Mode run section says, and read nothing else.${settle}\n1. \`${lines.check}\`: while it exits 3, run it again, at most three times; return its last line, verbatim, as verdict.\n2. Only when that line begins \`check: every stage passed\`: \`${lines.passed}\`; return the line spent printed as budget, bench_same true when the line exited 0, and the last 20 lines bench printed as bench_report.${lines.moved ? `\n3. Then \`${lines.moved}\`; return its last line, verbatim, as moved.` : ''}`
 }
 function checkerLogTask(v) {
   return `Mode: log. The check failed at stage ${v.stage} at ${v.at}: read only its log, ${v.log}, as your Mode log section says, and return passed false, the verdict \`check: stage ${v.stage} failed at ${v.at}; read ${v.log}\`, and the lines that show the cause. Run no check.`
@@ -931,6 +934,48 @@ const checkerNeeded = (v) => v.kind === 'failed' && v.stage !== 'refused'
 const sameCommit = (a, b) => COMMIT.test(a || '') && COMMIT.test(b || '') && (a.startsWith(b) || b.startsWith(a))
 let reruns = 0
 let rerunWhy = ''
+
+// An advisory-only round (review-lite, the user-approved exception of
+// 2026-11-18): the fix-in-place round of its own, offered when nothing
+// blocked. settleFrom gives the commit it may stand on: this start's
+// check, when this start's security review and benchmark passed at that
+// same commit (RECORDS, ran) and the round offers no security finding,
+// which the security reviewer must confirm fixed; '' otherwise, and the
+// round runs in full. A blocking round never reaches it.
+function settleFrom(records, offeredList) {
+  const checked = String(records['phase.check'] || '')
+  const passed = ['security', 'bench'].every((k) => passedAt(records, 'review.' + k, checked))
+  return COMMIT.test(checked) && passed && !offeredList.some((f) => String(f).startsWith('security ')) ? checked : ''
+}
+// The settled line the checker returns verbatim stands the check, the
+// security review, and the benchmark only when it names FROM and HEAD;
+// any other line, an unsettled one included, leaves the check's verdict.
+// A forged line only stops the run: the pre-push and merge gates settle
+// the same pass records with settled_at, main's copy at the merge.
+const SETTLED = /^settled: only records changed from ([0-9a-f]{7,40}) to ([0-9a-f]{7,40})(:|$)/
+function settled(line, head, from) {
+  const m = SETTLED.exec(String(line || '').trim().replace(/^run_state: /, ''))
+  return !!m && sameCommit(m[1], from) && sameCommit(m[2], head)
+}
+// The settled round at the head: the check, security, and bench passes
+// stay at FROM, where the gates settle them, and the run state notes the
+// skip naming both commits; the quality review alone runs, scoped by
+// priorQuality to the commits since its pass at FROM.
+let settledRound = null
+let settleAt = ''
+function settleRound(from) {
+  settledRound = { at: head, from }
+  const text = `advisory-only round at ${head}: only records changed since ${from}, where the check, the security review, and the benchmark passed; none of them rerun, the quality review scoped to the commits since`
+  note(text)
+  queue(`sh tools/run_state.sh note ${state.change} settled-round "${text}"`, head)
+}
+const SETTLES = ['security', 'bench']
+const settledAtHead = () => !!settledRound && settledRound.at === head
+// What the package step is told after a settled round: Testing names the
+// check and the security review at the commit where they ran.
+function settledTesting() {
+  return settledRound ? `\nThe last fix round changed only records: the check, the security review, and the benchmark last ran at ${settledRound.from}; in Testing name each at ${settledRound.from}, never at the head.` : ''
+}
 
 // A merge refused because main moved (merge-main-path; #169 stopped there
 // and cost a second run): the merger read CI green, and the pull request
@@ -1201,36 +1246,43 @@ async function rounds(fixes = true) {
       // it, so a record at the head that no workflow record backs runs again.
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); a check still running at this commit is rejoined.` : ''
-      const lines = checkLines(state.change, backed, movedFrom, metricLine())
+      const from = movedFrom ? '' : settleAt
+      settleAt = ''
+      const lines = checkLines(state.change, backed, movedFrom, metricLine(), from)
       const c = await measured('check', () => agent(`${intro()} ${checkRunTask(lines)}${again}${capLine('run')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK_RUN), label: 'checker: run' })), callCap('run'))
       if (!c) { stopped = 'the check start returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
       const v = checkVerdict(c.verdict)
-      if (RERUN_WORDS.test(v.kind) || !sameCommit(v.at, head)) {
+      if (from && settled(c.verdict, head, from)) {
+        reruns = 0
+        rerunWhy = ''
+        settleRound(from)
+      } else if (RERUN_WORDS.test(v.kind) || !sameCommit(v.at, head)) {
         const where = v.stage ? ` at stage ${v.stage}, log ${v.log}` : ''
         const why = v.kind === 'none' ? 'no verdict line' : `${v.kind}${where} at ${v.at}${sameCommit(v.at, head) ? '' : `, not the head ${head}`}`
         if (++reruns > RERUNS) { stopped = `the check did not finish at ${head} in ${reruns} starts: ${why}`; return false }
         rerunWhy = why
         note(`check rerun ${reruns} of ${RERUNS}, no fix round: ${why}`)
         continue
+      } else {
+        reruns = 0
+        rerunWhy = ''
+        const passed = v.kind === 'passed'
+        verdict('check', passed)
+        note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
+        if (passed) {
+          phaseDone('check', head)
+          budgetAtCheck(c.budget, head)
+          benchSameAt = c.bench_same ? head : ''
+          benchReport = c.bench_report || []
+          if (movedFrom) carryReviews(c.moved)
+        } else if (checkerNeeded(v)) {
+          // The checker starts only here, to read the failed stage's log.
+          const r = await measured('check', () => agent(`${intro()} ${checkerLogTask(v)}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK), label: 'checker: log' })), callCap('checker'))
+          blocked = `The stage ${v.stage} failed; its log, ${v.log}:\n${(r && r.log_excerpt) || ''}`
+        } else blocked = `The check refused to run: ${v.log}`
       }
-      reruns = 0
-      rerunWhy = ''
-      const passed = v.kind === 'passed'
-      verdict('check', passed)
-      note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
-      if (passed) {
-        phaseDone('check', head)
-        budgetAtCheck(c.budget, head)
-        benchSameAt = c.bench_same ? head : ''
-        benchReport = c.bench_report || []
-        if (movedFrom) carryReviews(c.moved)
-      } else if (checkerNeeded(v)) {
-        // The checker starts only here, to read the failed stage's log.
-        const r = await measured('check', () => agent(`${intro()} ${checkerLogTask(v)}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK), label: 'checker: log' })), callCap('checker'))
-        blocked = `The stage ${v.stage} failed; its log, ${v.log}:\n${(r && r.log_excerpt) || ''}`
-      } else blocked = `The check refused to run: ${v.log}`
     }
     if (!blocked) {
       const r = await reviews()
@@ -1266,9 +1318,13 @@ async function rounds(fixes = true) {
     offer(fresh, place === 'with' || place === 'alone')
     if (place === 'with') blocked += `\n\n${inPlaceTask(fresh)}`
     if (place === 'alone') {
-      note(`fix in place: ${fresh.length} finding(s) in a round of their own; check, security, and quality run again at its head`)
+      // A records-only fix stands on this round's check, security, and
+      // bench passes (settleFrom, settled); any other reruns them all.
+      const from = settleFrom(ran, fresh)
+      note(`fix in place: ${fresh.length} finding(s) in a round of their own; ${from ? `the check, security, and bench stand on ${from} when the fix changes only records, else they run again` : 'check, security, and quality run again'} at its head`)
       phase('Implement')
       if (!(await contributor('fix', inPlaceTask(fresh)))) return false
+      settleAt = from
       continue
     }
     if (!blocked) return true
@@ -1449,7 +1505,7 @@ if (!stopped && !state.merged) {
     if (await verify()) {
       phase('Package')
       const plan = packagePlan(state, planned)
-      const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}`)
+      const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}${settledTesting()}`)
       if (done) state.pr = packagedPr(done)
       if (done && !state.pr) stopped = 'no pull request appeared for the branch ' + state.branch + ': read the open-pr workflow\'s log'
       else if (done) phaseDone('package', head)
