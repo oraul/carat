@@ -21,7 +21,7 @@ Two fold defects left by `vim-folds-a` break Neovim's manual-fold behavior: `zf`
 - Domain: `Folds#create` counts a fold sharing the new fold's first row as nested, not crossing; `Buffer#transaction_mark` keeps a copy of every tracked fold list and `Buffer#revert_to` puts them back.
 - Use cases: none changed; `BufferRequests#edit_buffer` already takes the mark and reverts to it.
 - Tests: rows in `test/domain_folds.rb` (`[[2,6],[2,3]]`), `test/editor_folds.rb` (`zf3jzozfj`), and `test/domain_edits.rb` (a reverted edit leaving the folds as before).
-- Docs: `docs/compatibility.md` Folding (the nesting at a shared first row), `docs/plugins.md` (`edit_buffer` failure leaves the folds).
-- README.md: unchanged, its feature list already names manual folds and nesting is not described there.
+- Docs: README.md feature list (the folds nest as Neovim's), `docs/compatibility.md` Folding (the nesting at a shared first row), `docs/plugins.md` (`edit_buffer` failure leaves the folds).
+- README.md: changed, its feature list says the manual folds nest as Neovim nests them.
 - docs/architecture.md: unchanged, it names the window's folds but neither the nesting rule nor the plugin edit rollback.
 - Assumptions: an identical fold (same first and last row) still nests as a second fold, as Neovim's `zf` on the same range does; the folds return to their state at the mark, so a fold the failed request dropped comes back closed or open as it was.
