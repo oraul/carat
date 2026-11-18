@@ -581,6 +581,7 @@ module DomainThemeTest
       ["an unknown name in SignColumn", "nope", H::SIGN_COLUMN]
     ]) { |icon| H.sign_group(icon.to_s) }
     t.assert_equal([H::DIAGNOSTIC_ERROR, H::DIAGNOSTIC_WARN, H::DIAGNOSTIC_INFO, H::DIAGNOSTIC_HINT], [H.diagnostic_group(1), H.diagnostic_group(2), H.diagnostic_group(3), H.diagnostic_group(4)], "a diagnostic sign's group by its severity")
+    t.assert_equal([H::DIAGNOSTIC_HINT, H::DIAGNOSTIC_HINT], [H.diagnostic_group(0), H.diagnostic_group(5)], "a severity outside 1 to 4 is drawn as a hint")
 
     # Scenario: The command pill is cyan. Every palette's command pill,
     # which the query pickers' prompts draw too, is on its cyan.

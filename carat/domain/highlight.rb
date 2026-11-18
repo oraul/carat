@@ -218,9 +218,11 @@ module Carat
       end
 
       # The group a diagnostic sign of the severity (1 error to 4 hint)
-      # is drawn in, DiagnosticError to DiagnosticHint.
+      # is drawn in, DiagnosticError to DiagnosticHint; a severity outside
+      # 1 to 3 is drawn as a hint.
       #: (Integer) -> Integer
       def self.diagnostic_group(severity)
+        return DIAGNOSTIC_HINT if severity < 1 || severity > 3
         DIAGNOSTIC_ERROR + severity - 1
       end
     end

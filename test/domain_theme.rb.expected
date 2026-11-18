@@ -209,6 +209,7 @@ ok   git deleted in Removed
 ok   another icon in SignColumn
 ok   an unknown name in SignColumn
 ok   a diagnostic sign's group by its severity
+ok   a severity outside 1 to 4 is drawn as a hint
 ok   The command pill is cyan: carat-dark
 ok   The command pill is cyan: carat-light
 ok   The command pill is cyan: one_dark
@@ -298,4 +299,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 300 passed, 0 failed
+domain_theme: 301 passed, 0 failed
