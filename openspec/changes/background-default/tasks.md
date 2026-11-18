@@ -13,3 +13,5 @@
 
 - [x] 3.1 Word the `terminal` case of the delta requirement as the replaced text does: `Normal` keeps the terminal's own colors and every group without a background of its own the terminal's background (quality review, spec precision)
 - [x] 3.2 Record in `design.md` why the delta removes the requirement and adds a renamed one rather than modifying it: OpenSpec refuses a MODIFIED block that drops the "Transparent by default" scenario, and keeping that name would state a false default
+- [x] 3.3 Correct the count in the `design.md` note: two scenarios ("The theme paints", "Scrolled-in rows are painted") carried over unchanged and "Unknown value" with the new default `theme` (quality review, docs precision)
+- [x] 3.4 Keep the delta's remove-and-add over a MODIFIED block, which `openspec validate` refuses for dropping "Transparent by default"; the `design.md` note records why, closing the finding (quality review, one clear way)
