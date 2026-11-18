@@ -959,9 +959,65 @@ merge_tool() {
 # pushed head (its lines after the title and the blank line), one blank
 # line, and SQUASH_TRAILER last, trailing blank lines ignored on both
 # sides; anything else, a shortened body included, is refused naming the
-# first line that differs. A tab is a space and a run of bytes outside
-# ASCII one "?" on both sides, as field reads a JSON tab or \u escape.
+# first line that differs. The bytes are compared exactly: json_text
+# decodes the message whole, every escape included, and only the display
+# of a differing line shows a control or non-ASCII byte as "?".
 SQUASH_TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
+# json_text KEY prints the string value of KEY decoded exactly (\uXXXX
+# and surrogate pairs as UTF-8, \b \f \n \r \t as their bytes), nothing
+# when KEY is absent; fails on a raw control byte, a NUL, a lone
+# surrogate, a bad escape, or an unterminated string.
+json_text() {
+  LC_ALL=C K="$1" awk '
+    function hex(h,   v, i, d) {
+      v = 0
+      for (i = 1; i <= 4; i++) {
+        d = index("0123456789abcdef", substr(h, i, 1))
+        if (!d) return -1
+        v = v * 16 + d - 1
+      }
+      return v
+    }
+    function utf8(v) {
+      if (v < 128) return sprintf("%c", v)
+      if (v < 2048) return sprintf("%c%c", 192 + int(v / 64), 128 + v % 64)
+      if (v < 65536) return sprintf("%c%c%c", 224 + int(v / 4096), 128 + int(v / 64) % 64, 128 + v % 64)
+      return sprintf("%c%c%c%c", 240 + int(v / 262144), 128 + int(v / 4096) % 64, 128 + int(v / 64) % 64, 128 + v % 64)
+    }
+    { all = all (NR > 1 ? "\n" : "") $0 }
+    END {
+      if (!match(all, "\"" ENVIRON["K"] "\"[ \t\n\r]*:[ \t\n\r]*\"")) exit 0
+      s = substr(all, RSTART + RLENGTH)
+      n = length(s)
+      out = ""
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (c == "\"") { printf "%s", out; exit 0 }
+        if (c ~ /[\001-\037]/) exit 1
+        if (c == "\\") {
+          i++
+          c = substr(s, i, 1)
+          if (c == "n") c = "\n"
+          else if (c == "t") c = "\t"
+          else if (c == "r") c = "\r"
+          else if (c == "b") c = "\b"
+          else if (c == "f") c = "\f"
+          else if (c == "u") {
+            v = hex(tolower(substr(s, i + 1, 4)))
+            i += 4
+            if (v >= 55296 && v < 56320 && substr(s, i + 1, 2) == "\\u") {
+              w = hex(tolower(substr(s, i + 3, 4)))
+              if (w >= 56320 && w < 57344) { v = 65536 + (v - 55296) * 1024 + w - 56320; i += 6 }
+            }
+            if (v <= 0 || (v >= 55296 && v < 57344)) exit 1
+            c = utf8(v)
+          } else if (c != "\"" && c != "\\" && c != "/") exit 1
+        }
+        out = out c
+      }
+      exit 1
+    }'
+}
 squash_message() {
   change=${found##*/}
   change=${change%.json}
@@ -970,19 +1026,18 @@ squash_message() {
     grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change/pr[.]md")
   [ -n "$pr_md" ] && [ "$(printf '%s\n' "$pr_md" | wc -l)" -eq 1 ] ||
     refuse "a merge of $sha, which holds no one archived pr.md of $change"
-  message=$(printf '%s' "$input" | field commit_message)
+  message=$(printf '%s' "$input" | json_text commit_message) ||
+    refuse "a commit message with a raw control byte, a NUL, a lone surrogate, or a bad escape"
   [ -n "$message" ] || refuse "a merge without a commit message: pass the body of $pr_md, a blank line, and the trailer"
   differs=$(git -C "$project_dir" show "$sha:$pr_md" | sed '1,2d' |
     LC_ALL=C M="$message" T="$SQUASH_TRAILER" awk '
-      function norm(s) { gsub(/\t/, " ", s); gsub(/\r/, "?", s); gsub(/[\200-\377]+/, "?", s); return s }
-      function cut(s) { return length(s) > 80 ? substr(s, 1, 80) "..." : s }
-      { want[++n] = norm($0) }
+      function cut(s) { gsub(/[\001-\037\177-\377]/, "?", s); return length(s) > 80 ? substr(s, 1, 80) "..." : s }
+      { want[++n] = $0 }
       END {
         while (n > 0 && want[n] == "") n--
         want[++n] = ""
-        want[++n] = norm(ENVIRON["T"])
-        g = split(ENVIRON["M"], got, "\001")
-        for (i = 1; i <= g; i++) got[i] = norm(got[i])
+        want[++n] = ENVIRON["T"]
+        g = split(ENVIRON["M"], got, "\n")
         while (g > 0 && got[g] == "") g--
         for (i = 1; i <= n || i <= g; i++) {
           if (i > g) {
