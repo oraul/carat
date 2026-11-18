@@ -67,6 +67,34 @@ module AdaptersIndentGuidesTest
     out
   end
 
+  # The first rows of a frame as text, the guide characters ┊ and │ as
+  # themselves, other ASCII as is, trailing blanks cut.
+  #: (Carat::Domain::Frame, Integer) -> Array[String]
+  def self.glyphs(frame, rows)
+    out = []
+    r = 0
+    while r < rows
+      line = +""
+      c = 0
+      while c < COLS
+        code = frame.cell(r, c).code
+        if code == 0x250a
+          line << "┊"
+        elsif code == 0x2502
+          line << "│"
+        elsif code > 32 && code < 127
+          line << code.chr
+        else
+          line << " "
+        end
+        c += 1
+      end
+      out << line.rstrip
+      r += 1
+    end
+    out
+  end
+
   NESTED = ["x", "  a", "    b", "    c", "    d", "  e", "f"]
 
   # The guides a case draws, as marks of its first rows.
@@ -130,6 +158,26 @@ module AdaptersIndentGuidesTest
       s = state_for(["x", "    b"], 0, 0)
       s.window.buffer.owner = "explorer"
       marks(draw(s), 2)
+    when "solid"
+      glyphs(draw(state_for(NESTED, 3, 4)), 7)
+    when "solid ascii"
+      s = state_for(NESTED, 3, 4)
+      s.options.icons = "ascii"
+      s.options.indentguides_char = ":"
+      glyphs(draw(s), 7)
+    when "solid moves"
+      s = state_for(NESTED, 3, 4)
+      draw(s)
+      draw(s)
+      s.cursor.move_to(1, 2)
+      glyphs(draw(s), 7)
+    when "icons switched"
+      s = state_for(NESTED, 3, 4)
+      s.options.indentguides_char = ":"
+      draw(s)
+      draw(s)
+      s.options.icons = "ascii"
+      glyphs(draw(s), 7)
     when "float"
       s = state_for(["x", "    b", "    c", "    d", "    e"], 0, 0)
       spec = D::FloatSpec.new(anchor: "editor", row: 2, col: 2, height: 2, width: 10, border: false, title: "", z: 50)
@@ -182,6 +230,15 @@ module AdaptersIndentGuidesTest
       ["turning the guides off repaints every row", "turned off", ["x", "    b"]],
       ["A plugin's window draws no guide", "plugin", ["x", "    b"]],
       ["A float shows no guide over a file window", "float", ["x", "| | b", "|      f", "|      g", "| | e"]]
+    ]) { |name| guides(name.to_s) }
+
+    # The scope guide's glyph: rows are [label, case, the first rows with
+    # the guide characters as drawn].
+    t.table([
+      ["The scope guide is solid: │ on the cursor's block, ┊ on the others", "solid", ["x", "┊ a", "┊ │ b", "┊ │ c", "┊ │ d", "┊ e", "f"]],
+      ["The scope guide in ASCII: | on the cursor's block", "solid ascii", ["x", ": a", ": | b", ": | c", ": | d", ": e", "f"]],
+      ["the solid guide follows the cursor into another block", "solid moves", ["x", "│ a", "│ ┊ b", "│ ┊ c", "│ ┊ d", "│ e", "f"]],
+      ["switching to the ascii icon set repaints the scope guide", "icons switched", ["x", ": a", ": | b", ": | c", ": | d", ": e", "f"]]
     ]) { |name| guides(name.to_s) }
 
     # The guide character: rows are [label, case, the code point drawn].
