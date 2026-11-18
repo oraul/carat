@@ -29,7 +29,7 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 - Domain: `Themes` (roles BORDER, PANEL_DIM, ON_SEARCH in every palette; FloatBorder, Search, Todo, and the command pill remapped; carat-light SELECTION, PANEL_NC, FLOAT; carat-dark PANEL_NC at 256), `StartArt` (the sparkle's group).
 - Adapters: `FramePresenter#paint_matches` draws the match holding the cursor in `CurSearch`.
 - Tests: `test/domain_theme.rb` (role rows for both palettes, the border's floor, the cyan pill), `test/adapters_frame_presenter.rb` (the bold current match), `test/editor_search.rb` (hlsearch with the cursor on a match), `test/editor_start_screen.rb` (the sparkle's group).
-- Docs: `docs/compatibility.md` (UI groups, search highlighting).
-- README.md: unchanged, it names no palette color, group, or pill color.
+- Docs: `docs/compatibility.md` (UI groups, search highlighting, start screen), README.md.
+- README.md: changed, its search options say the match under the cursor is bold in a stronger color and its colors paragraph names the float border, the search tint, the 256-color panels, and the cyan command pill.
 - docs/architecture.md: unchanged, it names neither the palette roles nor the search groups' painting.
 - Assumptions: the queue line's "light PANEL #eceef3" is the designer's proposal for the light panel surfaces PANEL_NC and FLOAT (designer.md lists PANEL #e3e6ef as kept); the stronger light SELECTION is #c2ccef, meeting the researcher's 1.5:1 on the background, 1.3:1 on the cursor line, and 7:1 for text; the current match is the match holding the cursor in each window, as Neovim's CurSearch; the query pickers' prompts already draw the command-line pill, so the one group covers them.
