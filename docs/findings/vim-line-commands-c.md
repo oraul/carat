@@ -52,3 +52,28 @@
 - Location: carat/use_cases/ex/history_command_handler.rb:38
 - Why: the review fix makes u, Ctrl-R, g-, and g+ under :normal close the open transaction before walking the tree (HistoryHandler), as Vim's u_undo syncs; ':normal x:undo<CR>' still finds the keys before it in the open transaction, so :undo, :redo, :earlier, and :later there say the history ends or walk past the edits, against Neovim.
 - Fix: share the sync of HistoryHandler#call (close the open transaction when normal_depth is above 0, reopen it after the walk) with HistoryCommandHandler's :undo, :redo, :earlier, and :later variants, and test ':normal x:undo<CR>'.
+
+### :undo, :redo, :earlier, :later inside :normal do not sync the open transaction
+- Location: carat/use_cases/ex/history_command_handler.rb:38 (quality review at 759c2e2, raised as blocking; left unfixed because the user limited the final round to the :g trailing-blank tests, the compatibility row, and the pull request text)
+- Why: HistoryHandler commits the transaction :normal holds open before an undo walk and reopens it afterwards, but HistoryCommandHandler does not, so ':normal x:undo<CR>' on a buffer with no earlier history answers 'Already at oldest change' and keeps the x (undo_path is computed before begin_history commits it), and with history every key after it becomes its own undo state because no transaction is reopened.
+- Fix: do the close-and-reopen once in WalkHistory (keyed on normal_depth > 0 and an open transaction), which every walk goes through, drop the copy in HistoryHandler, and add table rows for ':normal x:undo<CR>' and ':normal x:undo<CR>xu'.
+
+### GlobalArgs.parse keeps a blank-only check no caller can reach
+- Location: carat/domain/global_args.rb:33
+- Why: the only caller passes ExCommand#literal, which already has its leading blanks removed, so a blank-only text never arrives and text.strip.empty? acts as text.empty?; the comment states a rule that no test covers. Left in place because removing it would change what a direct call of GlobalArgs.parse with " " returns.
+- Fix: keep text.empty? and drop the blank-only clause from the comment, or add a test/domain_global.rb row for a blank-only text.
+
+### The :normal handler requires HandleKey, breaking the innermost-first require order
+- Location: carat/use_cases/ex/normal_command_handler.rb:5 and carat.rb:240
+- Why: an ex handler now requires ../handle_key, the outer key orchestrator, so carat.rb loads HandleKey and the dispatcher's graph through it ahead of their own lines (329 and 332), and the production require graph is no longer innermost first.
+- Fix: list the :normal and :p requires in carat.rb after handle_key, or give the handler a narrow key-feeding collaborator.
+
+### place_cursor's clamp now depends on the mode, without a test
+- Location: carat/use_cases/ex/line_command_handler.rb:496
+- Why: place_cursor now clamps through EditorState#max_col, which lets the column sit past the end in insert and visual modes, where the old code always clamped as normal mode does (a line command a plugin runs outside normal mode); no test covers the mode dependence.
+- Fix: keep the normal-mode clamp (length - 1), or state the mode dependence and test it.
+
+### Header comments run past the wrap width
+- Location: carat/use_cases/ex/normal_command_handler.rb:17 and carat/domain/editor_state.rb:16
+- Why: the header comment's second line in normal_command_handler.rb and the comment at editor_state.rb:16 run far past the wrap width of the comment around them, which makes them harder to read.
+- Fix: rewrap both comments.
