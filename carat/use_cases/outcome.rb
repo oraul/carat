@@ -23,7 +23,7 @@ module Carat
 
       # The lines :p showed, one per line of message.
       #: (String) -> Outcome
-      def self.printed(message)
+      def self.from_print(message)
         Outcome.new(ok: true, message: message, printed: true)
       end
 

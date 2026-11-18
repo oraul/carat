@@ -11,7 +11,7 @@ module Carat
     # line of the message, as Neovim's ex_print does without flags. The
     # position left is recorded in the jump list and the cursor goes to
     # the last line shown at the wanted column. The message is
-    # Outcome.printed, so a global shows the lines of every :p together.
+    # Outcome.from_print, so a global shows the lines of every :p together.
     # E749 on an empty buffer, E477 for a bang; a bad range reports what
     # ExRange gives, a bad count or a flag what RegisterCount gives.
     class PrintCommandHandler < LineCommandHandler
@@ -42,7 +42,7 @@ module Carat
         end
         state.window.record_jump
         place_cursor(state, lines.last)
-        Outcome.printed(out)
+        Outcome.from_print(out)
       end
 
       # Registers :print after :normal, in the order of

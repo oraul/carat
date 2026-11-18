@@ -171,7 +171,7 @@ module Carat
             outcome = @runner.call(state, command)
             return outcome unless outcome.ok
             unless outcome.message.empty?
-              said = said.printed && outcome.printed ? Outcome.printed("#{said.message}\n#{outcome.message}") : outcome
+              said = said.printed && outcome.printed ? Outcome.from_print("#{said.message}\n#{outcome.message}") : outcome
             end
             break unless state.buffer.equal?(buffer)
             row = marks.take

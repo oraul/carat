@@ -121,12 +121,12 @@ Files:
 - `carat/adapters/editor_assembly.rb`: `EditorAssembly`; `initialize` (reads the configuration once, builds records and collaborators with a reader for each, builds the ex table and runner before the plugin host, has each feature `register` its handlers, core ex commands before plugin commands, registers and activates plugins, then adds the configuration's bindings with `add_checked`), `open`, `render` (resize, `PluginHost#resized`, `ArrangeView`, `HighlightView`, `FramePresenter`, `ScreenPresenter#present`), `config_errors`.
 - `carat/domain/message_history.rb`: `MessageHistory` record, the one-line messages and notifications shown, with their levels, the oldest past 500 dropped; `add`, `count`, `text_at`, `level_at`, `to_s`, `clear`.
 - `carat/domain/notices.rb`: `Notices` record, at most three notifications with their levels, deadlines (3, 5, or 8 seconds), and serials, each kept in the history; `add`, `expire`, `wait`, `count`, `text_at`, `level_at`, `serial_at`; fed by the language gateway, expired by the input controller, drawn by the frame presenter.
-- `carat/domain/editor_state.rb`: `EditorState`, the thin aggregate of the current view (tab list, mode, options, command line, message, the message history, quit flag, pending block insert, screen size); `show` (keeps a one-line message in the history), `show_output` (keeps nothing), `resize`, `tab`, `window`, `buffer`, `cursor`, `current_line`, `max_col`, `clamp_col`, `selection`, `end_visual`, `list_message?`, `clear_message`.
+- `carat/domain/editor_state.rb`: `EditorState`, the thin aggregate of the current view (tab list, mode, options, command line, message, the message history, quit flag, pending block insert, screen size, `normal_depth`, the running `:normal` commands); `show` (keeps a one-line message in the history), `show_output` (keeps nothing), `resize`, `tab`, `window`, `buffer`, `cursor`, `current_line`, `max_col`, `clamp_col`, `selection`, `end_visual`, `list_message?`, `clear_message`.
 - `carat/domain/position.rb`: `Position` value; `sure`, `before?`, `to_a`.
 - `carat/domain/range.rb`: `Range` value; `charwise`, `normalized`.
 - `carat/domain/cursor.rb`: `Cursor` record (`row`, `col`, `want_col`); `position`, `move_to`.
 - `carat/domain/messages.rb`: `Messages`, messages several use cases show (`E36`, `E37`, the register refusals, `not_an_editor_command`, `seconds_ago`).
-- `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared).
+- `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared), `from_print` (the lines `:p` showed, `printed`).
 - `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
 
 Tests: `test/adapters_assembly.rb` (every holder of a shared object holds the one the assembly built, each holder the assembly keeps reading its shared objects out, as `lint` checks), `test/editor_normal.rb`.
@@ -155,7 +155,7 @@ Files:
 - `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `pending?`, `display`.
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
 - `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose; a plugin's live prompt keymap answers first on the command line and `PluginHost#follow_prompt` ends the key while one is open.
-- `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next.
+- `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next; under `:normal` an open transaction is joined, not closed.
 - `carat/use_cases/actions/action_handler.rb`: `ActionHandler`, the input port of an action: `kind`, `repeat`, `breaks_insert?`, `call(state, command)`.
 - `carat/use_cases/actions/action_table.rb`: `ActionTable`; `register` (with the action's short description), `describe`, `register_namespace` (for `plugin.`), `find`, `kind_of`, `include?`, `names`.
 - `carat/use_cases/actions/normal_mode_handler.rb`: `NormalModeHandler`, leaving a visual mode itself.
@@ -269,7 +269,7 @@ Files:
 - `carat/use_cases/break_line.rb`: `BreakLine#call` (Enter).
 - `carat/use_cases/erase_character.rb`: `EraseCharacter#call(state, forward)` (Backspace, Delete).
 - `carat/use_cases/insert_tab.rb`: `InsertTab#call`.
-- `carat/use_cases/leave_insert.rb`: `LeaveInsert#call`.
+- `carat/use_cases/leave_insert.rb`: `LeaveInsert#call`; under `:normal` the insert session's transaction stays open.
 - `carat/use_cases/actions/insert_mode_handler.rb`: `InsertModeHandler`, entering insert mode itself (`i a I A o O`).
 - `carat/use_cases/actions/insert_text_handler.rb`: `InsertTextHandler`.
 - `carat/domain/completion_item.rb`: `CompletionItem` (label, kind, detail, insert text); `from_source` drops escape sequences and controls and bounds each string, `icon_name`.
@@ -410,7 +410,7 @@ Files:
 
 - `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
-- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`, as the row the lines are put at; `line_of`, the one reading of an address both use (`E16`, `E20`, `Not implemented`); `counted`, a count after a line command.
+- `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`, `addresses`, the count of addresses typed); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`, as the row the lines are put at; `line_of`, the one reading of an address both use (`E16`, `E20`, `Not implemented`); `counted`, a count after a line command.
 - `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call, and `typed` (a `/` or `?` prompt's pattern and offset).
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
@@ -430,7 +430,7 @@ Files:
 - `carat/use_cases/ex/global_command_handler.rb`: `GlobalCommandHandler.register` (`:g[lobal]`, `:g!`, `:v[global]`), `ranged?`; every line without a range.
 - `carat/use_cases/ex/line_command_handler.rb`: `LineCommandHandler`, the base of the line commands `:d`, `:m`, `:co`, `:t`, `:j`, `:>`, `:<`: `ranged?`, `bang?`, and the shared `lines_of` (`E477`, the range), `target_of`, and `place_cursor`.
 - `carat/use_cases/ex/delete_command_handler.rb`: `DeleteCommandHandler.register` (`:d[elete] [x] [count]`), a line command.
-- `carat/use_cases/search/global_command.rb`: `GlobalCommand#call(state, first, last, text, invert)`: marks under the budget, remembers the pattern, runs the command per marked line through the `CommandRunner` in one transaction, lists without one, `E147` when nested with a range.
+- `carat/use_cases/search/global_command.rb`: `GlobalCommand#call(state, first, last, text, invert)`: marks under the budget, remembers the pattern, runs the command per marked line through the `CommandRunner` in one transaction, lists without one, the lines of its `:p` commands together, `E147` when nested with a range.
 - `carat/use_cases/delete_lines.rb`: `DeleteLines#call(state, first, last, register)`, the linewise delete into a register.
 - `carat/use_cases/search/substitute_lines.rb`: `SubstituteLines#call(state, first, last, args)`, the one substitute use case.
 - `carat/use_cases/actions/substitute_handler.rb`: `SubstituteHandler.register` (`substitute.repeat`, `substitute.repeat_all`).
@@ -454,7 +454,7 @@ Files:
 - `carat/use_cases/ex/join_command_handler.rb`: `JoinCommandHandler.register` (`:j[oin][!] [count]`), a line command; joins the range, or the cursor line and the next, as `J` does or as they are with `!`, one undo step.
 - `carat/use_cases/ex/shift_command_handler.rb`: `ShiftCommandHandler.register` (`:>`, `:<` with a count), a line command; shifts the range by shiftwidth once per character typed, "N lines >ed M times", one undo step.
 - `carat/use_cases/ex/normal_command_handler.rb`: `NormalCommandHandler.register` (`:norm[al][!] {commands}`), a line command; feeds the argument's characters to `HandleKey` at the cursor or on each line of the range, ends an unfinished command with Esc, one undo step through `EditorState#normal_depth`; `E471`, `E192`.
-- `carat/use_cases/ex/print_command_handler.rb`: `PrintCommandHandler.register` (`:p[rint] [count]`), a line command; shows the lines as `Outcome.printed`, which a global joins, the cursor to the last at the wanted column; `E749`.
+- `carat/use_cases/ex/print_command_handler.rb`: `PrintCommandHandler.register` (`:p[rint] [count]`), a line command; shows the lines as `Outcome.from_print`, which a global joins, the cursor to the last at the wanted column; `E749`.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`).
 
