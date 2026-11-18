@@ -160,6 +160,16 @@ module DomainThemeTest
     out
   end
 
+  # The indent guides' entries among a theme's low_contrast ones.
+  #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
+  def self.guide_low_contrast(theme, at256, layer)
+    out = []
+    low_contrast(theme, at256, layer).each do |entry|
+      out << entry if entry.start_with?("#{H::NAMES[H::INDENT_GUIDE]} ") || entry.start_with?("#{H::NAMES[H::INDENT_GUIDE_SCOPE]} ")
+    end
+    out
+  end
+
   # What breaks the indent guides' order on a theme, on layer 0 or on
   # H::CURSOR_LINE_LAYER, at 24 bits or at 256 colors: IblIndent at or
   # above IblScope, IblScope at or above Comment, or IblIndent below
@@ -431,10 +441,18 @@ module DomainThemeTest
         t.assert_equal([], low_contrast(D::Themes.find(name, background), true, H::CURSOR_LINE_LAYER), "#{name} on the cursor line on the #{background}'s background at 256 colors")
       end
     end
-    # Scenario: The other palettes' guides keep 3:1. The two tables above
-    # hold IblIndent and IblScope of one_dark, one_light, dark_plus, and
-    # light_plus to 3:1 on the background and on the cursor line.
-    t.assert_equal([false, false, true, true], [RECEDING.include?("one_dark"), RECEDING.include?("light_plus"), DECORATIONS.include?(H::INDENT_GUIDE), DECORATIONS.include?(H::INDENT_GUIDE_SCOPE)], "The other palettes' guides keep 3:1: only Carat's palettes leave the guides to their order")
+    # Scenario: The other palettes' guides keep 3:1. IblIndent and
+    # IblScope of one_dark, one_light, dark_plus, and light_plus keep 3:1
+    # on the background and on the cursor line, at 24 bits and at 256
+    # colors.
+    ["one_dark", "one_light", "dark_plus", "light_plus"].each do |name|
+      theme = D::Themes.find(name, "theme")
+      [0, H::CURSOR_LINE_LAYER].each do |layer|
+        where = layer == 0 ? "the background" : "the cursor line"
+        t.assert_equal([], guide_low_contrast(theme, false, layer), "The other palettes' guides keep 3:1: #{name} on #{where} at 24 bits")
+        t.assert_equal([], guide_low_contrast(theme, true, layer), "The other palettes' guides keep 3:1: #{name} on #{where} at 256 colors")
+      end
+    end
 
     # Scenario: The guides order below Comment. In Carat's palettes
     # IblIndent is below IblScope, IblScope below Comment, and IblIndent

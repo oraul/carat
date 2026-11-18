@@ -42,23 +42,27 @@ module AdaptersIndentGuidesTest
   # one in IblScope as !, whatever its character, trailing blanks cut.
   #: (Carat::Domain::Frame, Integer) -> Array[String]
   def self.marks(frame, rows)
+    frame_text(frame, rows, false)
+  end
+
+  # The first rows of a frame as text, the guide characters ┊ and │ as
+  # themselves, other ASCII as is, trailing blanks cut.
+  #: (Carat::Domain::Frame, Integer) -> Array[String]
+  def self.glyphs(frame, rows)
+    frame_text(frame, rows, true)
+  end
+
+  # The first rows of a frame as text, each cell as cell_text maps it,
+  # trailing blanks cut.
+  #: (Carat::Domain::Frame, Integer, bool) -> Array[String]
+  def self.frame_text(frame, rows, as_glyphs)
     out = []
     r = 0
     while r < rows
       line = +""
       c = 0
       while c < COLS
-        cell = frame.cell(r, c)
-        hl = H.base(cell.hl)
-        if hl == H::INDENT_GUIDE
-          line << "|"
-        elsif hl == H::INDENT_GUIDE_SCOPE
-          line << "!"
-        elsif cell.code > 32 && cell.code < 127
-          line << cell.code.chr
-        else
-          line << " "
-        end
+        line << cell_text(frame.cell(r, c), as_glyphs)
         c += 1
       end
       out << line.rstrip
@@ -67,32 +71,22 @@ module AdaptersIndentGuidesTest
     out
   end
 
-  # The first rows of a frame as text, the guide characters ┊ and │ as
-  # themselves, other ASCII as is, trailing blanks cut.
-  #: (Carat::Domain::Frame, Integer) -> Array[String]
-  def self.glyphs(frame, rows)
-    out = []
-    r = 0
-    while r < rows
-      line = +""
-      c = 0
-      while c < COLS
-        code = frame.cell(r, c).code
-        if code == 0x250a
-          line << "┊"
-        elsif code == 0x2502
-          line << "│"
-        elsif code > 32 && code < 127
-          line << code.chr
-        else
-          line << " "
-        end
-        c += 1
-      end
-      out << line.rstrip
-      r += 1
+  # A cell as one character: with as_glyphs a guide character as itself,
+  # otherwise a guide group as its mark; other ASCII as is, the rest a
+  # blank.
+  #: (Carat::Domain::Cell, bool) -> String
+  def self.cell_text(cell, as_glyphs)
+    code = cell.code
+    if as_glyphs
+      return "┊" if code == 0x250a
+      return "│" if code == 0x2502
+    else
+      hl = H.base(cell.hl)
+      return "|" if hl == H::INDENT_GUIDE
+      return "!" if hl == H::INDENT_GUIDE_SCOPE
     end
-    out
+    return code.chr if code > 32 && code < 127
+    " "
   end
 
   NESTED = ["x", "  a", "    b", "    c", "    d", "  e", "f"]
