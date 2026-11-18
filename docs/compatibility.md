@@ -381,6 +381,7 @@ Differences from Neovim: the `c` and `l` flags, `\=` expressions, and `\n` in th
 | The argument | The delimiter is any ASCII character but a letter (`E146`); the pattern ends at the next delimiter no backslash escapes, and the rest is the command; no argument is `E148: Regular expression missing from :global` | `editor_global`, `domain_global` |
 | The pattern | Compiled as a search pattern under `ignorecase` and `smartcase`; an empty one is the last search pattern (`E35` without one); it becomes the last search and substitute pattern, the `/` register, and a search history entry, so `n` and `:s//x/` use it | `editor_global` |
 | No command | The marked lines are listed, the cursor on the first non-blank of the last | `editor_global` |
+| Trailing blanks | A pattern with no closing delimiter keeps its trailing blanks, as Neovim does (`:g/a ` marks the lines holding `a` and a blank); a command of blanks only, as in `:g/x/ `, lists the marked lines, where Neovim runs the blank command on each | `editor_global` |
 | No marked line | `Pattern not found: pat` for `:g`, `Pattern found in every line: pat` for `:g!` and `:v`; nothing runs | `editor_global` |
 | Messages | The first command that fails stops the global with its message; otherwise the lines every `:p` showed are shown together, and else the last message a command gave | `editor_global`, `editor_line_commands` |
 | Undo and repeat | One undo step; `.` does not repeat it | `editor_global` |
