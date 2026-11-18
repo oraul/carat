@@ -7,10 +7,11 @@ Sprint 17 closed with its six changes merged (`tab-close-d`, `pipeline-diet`, `v
 ## What Changes
 
 - `sh tools/run_state.sh history sprint-17-records` appends the pending history rows of `squash-body-full` to `docs/metrics-backlog.tsv` and of `vim-line-commands-c` to `docs/metrics-feature.tsv` (committed first, with the late findings of `vim-line-commands-c`); a second run finds nothing pending.
-- `sh tools/run_state.sh groom sprint-17-records` applies the sprint-17 plan: removes the 14 headings of `build/plan/groom.txt` (3 listed by `tab-close-d` and `vim-line-commands-c`, 5 fixed by merged commits, 6 duplicates) from `docs/backlog.md`, folds the 7 findings files under `docs/findings/` into it and removes them (those of `pipeline-diet`, `pipeline-diet-b`, `sprint-16-records`, `squash-body-full`, `tab-close-d`, `vim-folds-b`, and `vim-line-commands-c`), appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-17 row to `docs/sprints.tsv`.
-- Three backticked paths to removed findings files that `make docs-lint` refuses, two in `docs/backlog.md` and one in `docs/queue-backlog.md`, are put in prose, the only hand edit.
+- `sh tools/run_state.sh groom sprint-17-records` applies the sprint-17 plan: removes the 14 headings of `build/plan/groom.txt` (3 listed by `tab-close-d` and `vim-line-commands-c`, 5 fixed by merged commits, 6 duplicates), 5 of them from `docs/backlog.md` and 9 (3 fixed, 6 duplicate copies) from the findings files it folds, folds the 7 findings files under `docs/findings/` into it and removes them (those of `pipeline-diet`, `pipeline-diet-b`, `sprint-16-records`, `squash-body-full`, `tab-close-d`, `vim-folds-b`, and `vim-line-commands-c`), appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-17 row to `docs/sprints.tsv`.
+- Three backticked paths to removed findings files that `make docs-lint` refuses, two in `docs/backlog.md` and one in `docs/queue-backlog.md`, are put in prose.
+- The review's advisories in the files this change edits are fixed in place: `docs/queue-feature.md` names the backlog heading of the fold mark leak instead of a line of the removed `vim-folds-b` findings file, and `docs/queue-backlog.md` places `round-limit-resume` first of the pool's T1 defects, as its Pool orders it, both kept within the queues' byte budget; the two backlog duplications wait for the next grooming, recorded in this change's findings.
 
-Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes beyond a line `make docs-lint` refuses.
+Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes beyond a line `make docs-lint` refuses and the review advisories named above.
 
 Assumptions:
 

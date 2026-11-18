@@ -41,7 +41,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 - Main session's pipeline defects placed (T1): `open-pr-retry`, `pr-testing-truth`, `stage-clean`, `spinel-bump` alone; round-limit-bypass and review-fix-treadmill merged.
 - Batch 1 split (T1, size rule): 10 headings in 4 parts; the 4 groom headings now, 2 review-phase headings to `rework-review-repeat`, 2 pr-on-push to `ci-trust-gaps-c`, gates.sh:112 to `sprint-security-b`, 186ddfb to `check-clone-toolchain`, its `path_of` part split into an lsp entry.
 - Batch 2 split (T6): 6 language-server headings plus `path_of` now; MakePath, DiskFiles, and 2 NO_COLOR to `file-access-color`; old pool `lsp-tidy` merged.
-- `round-limit-resume` queued first in the pool (T1 defect): vim-line-commands-c retro 104, rework 6, 3 extra rounds.
+- `round-limit-resume` queued first of the pool's T1 defects (T1 defect): vim-line-commands-c retro 104, rework 6, 3 extra rounds.
 - Retros merged (T1): squash-body-full 11 and vim-line-commands-c 103 into `rework-review-repeat`; squash-body-full 12 and vim-line-commands-c 105 into `quality-first-pass`.
 - `normal-command-fixes` queued (T3): vim-line-commands-c security Low (6) at `carat/use_cases/ex/normal_command_handler.rb:62` and 11 late findings, groomed into entries.
 - Sprint-17 review placed (T1, T6): Low (4) `tools/agent_guard.sh:950` to `ci-trust-gaps-c`; quality 2, 3, 4, 6, 7 already recorded; 5, 8 to 11 groomed.
