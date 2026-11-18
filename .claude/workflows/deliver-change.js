@@ -971,9 +971,6 @@ function checkOutcome(line, at, from) {
   const v = checkVerdict(line)
   return RERUN_WORDS.test(v.kind) || !sameCommit(v.at, at) ? 'rerun' : 'check'
 }
-// The commit an in-place round may settle from: only a round of its own
-// ('alone'; a blocking round never settles) offers one, settleFrom.
-const roundSettle = (place, records, offeredList) => (place === 'alone' ? settleFrom(records, offeredList) : '')
 // What the next check is asked to settle from after the in-place fix: FROM
 // only when the fix moved the head; a fix that made no commit leaves the
 // check passed at the head, and no settle waits for a later round.
@@ -1342,7 +1339,9 @@ async function rounds(fixes = true) {
     if (place === 'alone') {
       // A records-only fix stands on this round's check, security, and
       // bench passes (settleFrom, settled); any other reruns them all.
-      const from = roundSettle(place, ran, fresh)
+      // Only this path computes it: a blocking round is 'with'
+      // (inPlaceRound), so it never settles.
+      const from = settleFrom(ran, fresh)
       note(`fix in place: ${fresh.length} finding(s) in a round of their own; ${from ? `the check, security, and bench stand on ${from} when the fix changes only records, else they run again` : 'check, security, and quality run again'} at its head`)
       phase('Implement')
       const before = head

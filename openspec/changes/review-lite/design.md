@@ -16,7 +16,7 @@ Goals: an advisory-only round with a records-only fix reruns only the quality re
 - `settleRound` keeps `{ at: head, from }`; `doneAtHead('check')` and `reviewedAtHead` of `security` and `bench` read it, never `quality`. The pass records stay at the settled commit, so `mergeRecords` and the run state agree and the gates settle them. It queues a `settled-round` note naming both commits (closable, flushed with the quality record).
 - The quality review needs no new scope: it passed at the settled commit this start, so `priorQuality` already returns `git diff <that commit> HEAD` (`narrowedFrom`); a test case proves it for this round.
 - The package step's prompt names the settled commit for Testing (`settledTesting`) only while the settled round is at the head; a full round after it, in the same start, leaves the check and the security review at the head, as usual.
-- The in-place fix asks the next check to settle only when it moved the head (`settleAfter`); `settleBase` drops the settle after a merge of a moved main, and `checkOutcome` and `roundSettle` hold the verdict and alone-path decisions so test cases prove them as behavior.
+- The in-place fix asks the next check to settle only when it moved the head (`settleAfter`); `settleBase` drops the settle after a merge of a moved main, and `checkOutcome` holds the verdict decision so test cases prove it as behavior; `settleFrom` is called only on the `alone` path, which `inPlaceRound` never gives a blocking round.
 - In a settled round the run's metric line leads the settle line instead of the check line, so its figures are recorded once whether or not the check then runs.
 
 ## Risks / Trade-offs

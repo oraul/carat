@@ -12,10 +12,15 @@
 - [x] 2.3 `.claude/agents/checker.md` Mode run names the settle line
 - [x] 2.4 `settledTesting` names the settled commit only while the settled round is at the head, so a full round after it (an in-place code fix, a blocking finding, a CI fix) is told nothing stale; proved by "workflow: a full round after a settled one names no settled commit for Testing"
 - [x] 2.5 `settleAfter`: the in-place fix asks the next check to settle only when it moved the head, so a fix that made no commit leaves no settle for a later round; proved by "workflow: only the advisory round's fix asks the next check to settle"
-- [x] 2.6 `settleBase`, `checkOutcome`, and `roundSettle` carry the verdict handling and the alone-path decision of `rounds`, tested as behavior instead of source text; proved by "workflow: the check verdict settles, reruns, or stands, never settling after a moved main" and "workflow: a blocking round never settles"
+- [x] 2.6 `settleBase` and `checkOutcome` carry the verdict handling of `rounds`, and `inPlaceRound` the alone-path decision, the only path that computes `settleFrom`, tested as behavior instead of source text; proved by "workflow: the check verdict settles, reruns, or stands, never settling after a moved main" and "workflow: a blocking round never settles"
 - [x] 2.7 The run's metric line leads the settle line and leaves the check line in an advisory-only round, so a settled round records its figures once; proved by "workflow: the check start runs settled first only in an advisory-only round" and "guard: the checker's run start may run the settle line with the run's figures"
 
 ## 3. Docs and checks
 
 - [x] 3.1 README.md (pipeline step 5), `docs/codebase-map.md` (`tools/run_state.sh`), `docs/goals.md` (the in-place re-review rule)
 - [x] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+
+## 4. Findings fixed in place
+
+- [x] 4.1 Drop `roundSettle`, whose `alone` guard was always true at its one call site: the `alone` path calls `settleFrom` directly and "workflow: a blocking round never settles" proves `inPlaceRound` never gives a blocking round that path (quality advisory, `.claude/workflows/deliver-change.js:976`)
+- [x] 4.2 The checker's step 1 names the first line the check line, the run's figures leading it unless the settle line carried them (quality advisory, `.claude/agents/checker.md:23`)
