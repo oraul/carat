@@ -38,6 +38,8 @@
 #                    and counted (tokens); older runs stored
 #                    first_pass, out_tokens, tool_calls, phases
 #   note.N           "KIND TEXT": a retrospective proposal or a finding
+#   moved            "HEAD COMMIT": moved found the change the same at
+#                    HEAD as at the reviewed COMMIT (full shas)
 # Logs: build/stages/CHANGE/STAGE.log, ending in "EXIT n", "KILLED: ...",
 # or "SUPERSEDED: ..."; check.log, the runner's output, ending in its
 # verdict line, and check.pid, "PID COMMIT CLONE" while the runner runs.
@@ -70,7 +72,7 @@
 #   gated CHANGE clear|pass     the merge gates' record: none (in every run
 #                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
-#                               and stage.*, which their own commands write,
+#                               stage.*, and moved, which their own commands write,
 #                               a pushed value but a commit hash, a ci value
 #                               but "red|green COMMIT" at the pushed head, and
 #                               a merged value but the squash commit on main
@@ -98,6 +100,9 @@
 #                               kinds also partial, some areas not reviewed,
 #                               or not-run, no result) at COMMIT, HEAD when
 #                               omitted; a pass also records phase.KIND
+#                               (a SUMMARY with carried=1 only at the head
+#                               of the moved record, its reviewed commit
+#                               another, where review.KIND passed)
 # The delivery workflow, not its agents, runs phase and review: it builds
 # them from the results it received (tools/agent_guard.sh keeps the agents
 # off them, and the merge gate compares them with RECORDS).
@@ -138,11 +143,14 @@
 #                               exit 1 otherwise or when nothing changed
 #   moved CHANGE COMMIT         after merge-main took in a moved main (BASE,
 #                               origin/main), print "moved: the change is the
-#                               same ..." and exit 0 when no file of the change
-#                               (outside the records-only paths) differs from
-#                               COMMIT, the reviewed commit, to HEAD, so its
-#                               reviews stand; "moved: the merge changed files
-#                               of the change: FILES ..." and exit 1 otherwise
+#                               same ...", record moved ("HEAD COMMIT" in full),
+#                               and exit 0 when no file of the change differs
+#                               from COMMIT, the reviewed commit, to HEAD and
+#                               HEAD matches BASE in every file the change
+#                               never touched (both outside the records-only
+#                               paths, names compared as text), so its reviews
+#                               stand; else, or when a git diff fails, print
+#                               why and exit 1, no moved record left
 #   bench CHANGE                record the metrics stage's measurement and
 #                               compare it with main's through make
 #                               metrics-compare: the newest merged change
@@ -2745,29 +2753,70 @@ merge_main() {
 }
 
 # moved_change COMMIT: after merge_main took in a moved main, whether the
-# merge changed a file of the change: the files the change touches at
-# COMMIT (the reviewed commit) or at HEAD, each against its merge base with
-# BASE (origin/main), outside the records-only paths (RECORDS_RE), compared
-# from COMMIT to HEAD. None changed: the change's reviews stand at HEAD and
-# only the check runs again (merge-main-path); else they run again.
+# change's reviews at COMMIT (the reviewed commit) stand at HEAD. The names
+# of three diffs, each status checked: REVIEWED, the change at COMMIT
+# against its merge base with BASE (origin/main); CURRENT, HEAD against
+# its own; MOVED, COMMIT against HEAD. They stand only when no name of
+# MOVED is in REVIEWED or CURRENT and every name of CURRENT is in
+# REVIEWED, so HEAD matches the new main in every file the change never
+# touched, outside the records-only paths (RECORDS_RE) in both. Names are
+# compared as text (grep -F -x), never handed to git as pathspecs. Only
+# that path records moved, "HEAD COMMIT" in full, which a carried review
+# needs (review); it is dropped first, so a refusal leaves none and the
+# reviews run again (merge-main-path, moved-review-carry).
 moved_change() {
+  [ ! -f "$(state_file)" ] || drop_key moved
   at=$(git rev-parse -q --verify --end-of-options "$1^{commit}") || die "moved: not a commit: $1"
   git merge-base --is-ancestor "$at" HEAD || die "moved: $1 is not an ancestor of HEAD"
   base=${BASE:-origin/main}
   old_base=$(git merge-base "$base" "$at") || die "moved: $1 shares no history with $base"
   new_base=$(git merge-base "$base" HEAD) || die "moved: HEAD shares no history with $base"
-  files=$( { git diff --no-renames --name-only "$old_base" "$at"; git diff --no-renames --name-only "$new_base" HEAD; } |
-    grep -v -E "^($RECORDS_RE)" | sort -u)
-  changed=$( (set -f; IFS='
-'; [ -z "$files" ] || git diff --no-renames --name-only "$at" HEAD -- $files) | tr '\n' ' ')
+  head_full=$(git rev-parse HEAD) || die "moved: no HEAD"
   short_at=$(git rev-parse --short=12 "$at")
   short_head=$(git rev-parse --short=12 HEAD)
-  if [ -z "$changed" ]; then
-    echo "moved: the change is the same at $short_head as at $short_at: the merge of $base changed no file of the change, so its reviews stand"
-    return 0
+  reviewed=$(git diff --no-renames --name-only "$old_base" "$at") &&
+    current=$(git diff --no-renames --name-only "$new_base" HEAD) &&
+    moved_names=$(git diff --no-renames --name-only "$at" HEAD) || {
+    echo "moved: git diff failed comparing $short_at, HEAD, and $base; the reviews run again at $short_head"
+    exit 1
+  }
+  files=$(printf '%s\n%s\n' "$reviewed" "$current" | grep -v -E -e "^($RECORDS_RE)" -e '^$' | sort -u)
+  changed=$( [ -z "$files" ] || printf '%s\n' "$moved_names" | grep -F -x -e "$files" | sort -u | tr '\n' ' ')
+  if [ -n "$changed" ]; then
+    echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
+    exit 1
   fi
-  echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
-  exit 1
+  untouched=$(printf '%s\n' "$current" | grep -v -E -e "^($RECORDS_RE)" -e '^$' |
+    { if [ -n "$reviewed" ]; then grep -v -F -x -e "$reviewed"; else cat; fi; } | sort -u | tr '\n' ' ')
+  if [ -n "$untouched" ]; then
+    echo "moved: HEAD differs from $base in files the change never touched: ${untouched% }; the reviews run again at $short_head"
+    exit 1
+  fi
+  write_key moved "$head_full $(git rev-parse "$at")"
+  echo "moved: the change is the same at $short_head as at $short_at: the merge of $base changed no file of the change, so its reviews stand"
+}
+
+# carried_backed KIND COMMIT: true when the moved record, which only the
+# exit-0 path of moved_change writes, names COMMIT as its head and, as its
+# reviewed commit, another commit: the one the existing review.KIND record
+# passed at (read before review overwrites it). So a review the workflow
+# carries to COMMIT (summary carried=1) is recorded only from the commit it
+# passed at, and moved run at the head against itself backs nothing; sets
+# moved_record for the refusal.
+carried_backed() {
+  moved_record=$(read_key moved)
+  [ -n "$moved_record" ] || return 1
+  carried_head=${moved_record%% *}
+  carried_from=${moved_record#* }
+  carried_from=${carried_from%% *}
+  [ "$carried_head" = "$(git rev-parse -q --verify "$2^{commit}")" ] || return 1
+  [ "$carried_from" != "$carried_head" ] || return 1
+  carried_prior=$(read_key "review.$1")
+  [ "${carried_prior%% *}" = pass ] || return 1
+  carried_prior=${carried_prior#pass }
+  carried_prior=${carried_prior%% *}
+  valid '[0-9a-f]{7,40}' "$carried_prior" || return 1
+  [ "$carried_from" = "$(git rev-parse -q --verify "$carried_prior^{commit}")" ]
 }
 
 [ $# -ge 1 ] || usage
@@ -2827,7 +2876,7 @@ case "$command" in
     [ $# -eq 2 ] || usage
     value=$2
     case "$1" in
-      review.*|phase.*|stage.*|gated) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated)" ;;
+      review.*|phase.*|stage.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated, moved)" ;;
       pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
       merged) value=$(merged_at "$2" set) || exit 1 ;;
       ci)
@@ -2859,6 +2908,7 @@ case "$command" in
       periodic-*) die "review result is pass, blocked, partial, or not-run, not $2" ;;
       *) die "review result is pass or blocked, not $2" ;; esac
     at=$(commit_at "${4:-}") || exit 1
+    case " $3 " in *" carried=1 "*) carried_backed "$1" "$at" || die "review: refused: a carried review at $at needs tools/run_state.sh moved to have exited 0 at that commit against the commit review.$1 passed at (the moved record: ${moved_record:-none})" ;; esac
     write_key "review.$1" "$2 $at $3"
     [ "$2" != pass ] || write_key "phase.$1" "$at" ;;
   stage)
