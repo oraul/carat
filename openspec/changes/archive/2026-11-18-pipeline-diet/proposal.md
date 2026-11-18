@@ -19,6 +19,8 @@ Out of scope, part b (`pipeline-diet-b`): cut 3 (the check without a relay check
 
 This part's own total and output tokens, against the 1,091,490 / 183,053 averages, are its history row in `docs/metrics-backlog.tsv` and the figures the package step reads from `sh tools/run_state.sh budget` (filled below at the package step); the next two deliveries' figures are read by the retrospective.
 
+At the package step the run state records 172,726 output tokens over the phases before it (plan 23,579, areas 913, scout 25,051, implement 103,539, check 2,416, reviews 17,228), 94.4 percent of the 183,053 output average with the package, merge, and close still to run; no total is recorded until the close writes the history row, which the retrospective reads against the 1,091,490 total average.
+
 ## Capabilities
 
 ### New Capabilities
