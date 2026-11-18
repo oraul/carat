@@ -3863,7 +3863,7 @@ cd "$close_back" || exit 1
 # resume's seed hands to its package step, never held, so none is written
 # twice.
 late_js() {
-  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.fixedInPlace = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
 }
 expect "workflow: an unmerged close holds its late findings, a merged one notes them late" 0 '^\[1,true,1,0,1,true\]$' \
   late_js "(() => { state.pushed = 'abc1234'; recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
@@ -4045,7 +4045,7 @@ expect "workflow: the reviews carry over only at one commit both passed at" 0 '^
 expect "workflow: the reviews stand only on a moved line naming the head and the reviewed commit" 0 '^\[true,false,false,false\]$' \
   js "$wf" "COMMIT sameCommit CARRIED carried" "[carried('moved: the change is the same at abcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('moved: the merge changed files of the change: a.rb; the reviews run again at abcdef012345', 'abcdef012345', '111111222222'), carried('moved: the change is the same at bbcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('', 'abcdef012345', '111111222222')]"
 expect "workflow: the check after a main-moved merge asks for the moved line and carries only on a pass" 0 "^2$" \
-  sh -c 'grep -c -F -e "run \\\`sh tools/run_state.sh moved \${state.change} \${movedFrom}\\\`" -e "        if (movedFrom) carryReviews(c.moved)" "$1"' _ "$wf"
+  grep -c -F -e 'moved: movedFrom ? `${rs} moved ${change} ${movedFrom}`' -e '        if (movedFrom) carryReviews(c.moved)' "$wf"
 expect "workflow: a conflict merge-main cannot resolve stops naming its files" 0 '^true$' \
   js "$wf" "movedTask" "(() => { globalThis.state = { change: 'mm' }; const t = movedTask('405'); return /run_state.sh merge-main mm/.test(t) && /both sides changed the same logic, return stopped, with the question naming each such file/.test(t) })()"
 expect "workflow: first.ci keeps the green read before main moved" 0 '^1$' \
