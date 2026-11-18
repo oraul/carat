@@ -4,7 +4,7 @@
 
 ## 2. Folds back on a reverted edit
 
-- [ ] 2.1 Keep a copy of every tracked fold list at `Buffer#transaction_mark` and put it back in `Buffer#revert_to` (`carat/domain/buffer.rb`), proven by "A reverted plugin edit leaves the folds as before" in `test/domain_edits.rb`
+- [x] 2.1 Keep a copy of every tracked fold list at `Buffer#transaction_mark` and put it back in `Buffer#revert_to` (`carat/domain/buffer.rb`), proven by "A reverted plugin edit leaves the folds as before" in `test/domain_edits.rb`
 
 ## 3. Docs
 

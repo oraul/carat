@@ -63,9 +63,11 @@ module Carat
     # Neovim's 'buflisted': false for a buffer a jump left, which stays
     # loaded with its number but has no tab until it is opened again.
     # fold_lists holds the folds of the windows with folds over the
-    # buffer, which every splice moves with its lines. A Struct
+    # buffer, which every splice moves with its lines; marked_folds and
+    # marked_fold_copies pair each of them with a copy taken by
+    # transaction_mark, which revert_to puts back. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -93,6 +95,8 @@ module Carat
       # @rbs @readonly: bool
       # @rbs @listed: bool
       # @rbs @fold_lists: Array[untyped]
+      # @rbs @marked_folds: Array[untyped]
+      # @rbs @marked_fold_copies: Array[untyped]
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -130,6 +134,8 @@ module Carat
         self.readonly = false
         self.listed = true
         self.fold_lists = []
+        self.marked_folds = []
+        self.marked_fold_copies = []
       end
 
       # Has splice move folds, a window's, with every edit; once only.
@@ -628,8 +634,10 @@ module Carat
 
       # Seals the open transaction's records against merging and returns
       # their count, 0 when none is open: the mark revert_to returns to.
+      # Keeps a copy of every tracked fold list for revert_to.
       #: () -> Integer
       def transaction_mark
+        mark_folds
         open = transaction
         open.nil? ? 0 : open.seal
       end
@@ -670,8 +678,10 @@ module Carat
       # Undoes the records of the open transaction after the first count,
       # last first, without recording anything: the lines, the change
       # counter, the signs, and the marks of a running global return to
-      # how they were, as splice moves them forward. The plugin host
-      # uses it when applying a validated edit request still fails.
+      # how they were, as splice moves them forward, and the folds to the
+      # copies transaction_mark kept, a fold the records shrank or dropped
+      # included. The plugin host uses it, with the mark, when applying a
+      # validated edit request still fails.
       #: (Integer) -> void
       def revert_to(count)
         open = transaction
@@ -688,6 +698,7 @@ module Carat
           i -= 1
         end
         open.truncate(count)
+        restore_folds
       end
 
       private
@@ -774,6 +785,47 @@ module Carat
       #: (Integer) -> Folds
       def fold_list_at(i)
         fold_lists[i]
+      end
+
+      # Copies every tracked fold list beside the list itself, replacing
+      # the copies of an earlier mark.
+      #: () -> void
+      def mark_folds
+        marked_folds.clear
+        marked_fold_copies.clear
+        i = 0
+        while i < fold_lists.length
+          kept = Folds.new
+          kept.copy_from(fold_list_at(i))
+          marked_folds.push(fold_list_at(i))
+          marked_fold_copies.push(kept)
+          i += 1
+        end
+      end
+
+      # Puts the copies of the last mark back into their fold lists and
+      # forgets them.
+      #: () -> void
+      def restore_folds
+        i = 0
+        while i < marked_folds.length
+          marked_fold_at(i).copy_from(marked_fold_copy_at(i))
+          i += 1
+        end
+        marked_folds.clear
+        marked_fold_copies.clear
+      end
+
+      # The fold list at i of marked_folds, a boxed array as fold_lists.
+      #: (Integer) -> Folds
+      def marked_fold_at(i)
+        marked_folds[i]
+      end
+
+      # The copy at i of marked_fold_copies.
+      #: (Integer) -> Folds
+      def marked_fold_copy_at(i)
+        marked_fold_copies[i]
       end
 
       # Moves the folds of every window that tracks the buffer.
