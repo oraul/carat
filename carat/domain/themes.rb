@@ -82,13 +82,11 @@ module Carat
       GUIDE = 43
       GUIDE_SCOPE = 44
       # The float border, apart from the text roles so it frames a float
-      # without reading as text; secondary text on the status bar's
-      # background; and the text on the search tint, black at 16 colors
-      # where the tint is a bright basic color.
+      # without reading as text, and the text on the search tint, black at
+      # 16 colors where the tint is a bright basic color.
       BORDER = 45
-      PANEL_DIM = 46
-      ON_SEARCH = 47
-      ROLES = 48
+      ON_SEARCH = 46
+      ROLES = 47
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -221,7 +219,6 @@ module Carat
         GUIDE, 0x30364b, -1, 8,
         GUIDE_SCOPE, 0x46506e, -1, 8,
         BORDER, 0x3b4157, -1, 8,
-        PANEL_DIM, 0xa4aabd, -1, 0,
         ON_SEARCH, 0xc8ccd8, -1, 0,
         PANEL, 0x2e3346, -1, 7,
         PANEL_FG, 0xe2e5ee, -1, 0,
@@ -274,7 +271,6 @@ module Carat
         GUIDE, 0xd8dce8, -1, 8,
         GUIDE_SCOPE, 0xa9b4d6, -1, 8,
         BORDER, 0xc9cdd9, -1, 8,
-        PANEL_DIM, 0x5c6173, -1, 0,
         ON_SEARCH, 0x2f3340, -1, 0,
         PANEL, 0xe3e6ef, -1, 7,
         PANEL_FG, 0x2f3340, -1, 0,
@@ -327,7 +323,6 @@ module Carat
         GUIDE, 0x737a8a, -1, 8,
         GUIDE_SCOPE, 0x959ca8, -1, 8,
         BORDER, 0x737a8a, -1, 8,
-        PANEL_DIM, 0xd7dae0, -1, 0,
         ON_SEARCH, 0x282c34, -1, 0,
         PANEL, 0x3e4452, -1, 7,
         PANEL_FG, 0xd7dae0, -1, 0,
@@ -380,7 +375,6 @@ module Carat
         GUIDE, 0x84868e, -1, 8,
         GUIDE_SCOPE, 0x696c77, -1, 8,
         BORDER, 0x84868e, -1, 8,
-        PANEL_DIM, 0x383a42, -1, 0,
         ON_SEARCH, 0x383a42, -1, 0,
         PANEL, 0xe5e5e6, -1, 7,
         PANEL_FG, 0x383a42, -1, 0,
@@ -433,7 +427,6 @@ module Carat
         GUIDE, 0x737373, -1, 8,
         GUIDE_SCOPE, 0x8f8f8f, -1, 8,
         BORDER, 0x737373, -1, 8,
-        PANEL_DIM, 0xffffff, -1, 15,
         ON_SEARCH, 0xffffff, -1, 15,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
@@ -487,7 +480,6 @@ module Carat
         GUIDE, 0x858585, -1, 8,
         GUIDE_SCOPE, 0x1f6b82, -1, 8,
         BORDER, 0x858585, -1, 8,
-        PANEL_DIM, 0xffffff, -1, 15,
         ON_SEARCH, 0x000000, -1, 0,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,

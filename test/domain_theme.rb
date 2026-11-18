@@ -543,30 +543,21 @@ module DomainThemeTest
     light_carat = D::Themes.find("carat-light", "theme")
     selection = light_carat.bg(H::VISUAL)
     t.assert_equal([0xc2ccef, true, 126], [selection, contrast(selection, light_carat.bg(H::NORMAL)) >= 150, contrast(0xdce1f2, 0xfbfbfd)], "The light selection shows: #c2ccef at 1.5:1 or more from the background, above the old 1.26:1")
-    # Scenario: The panel colors. The bar's dim text color, at 4.5:1 on
-    # the bar; carat-light's panels #eceef3; carat-dark's panels at
-    # index 233 at 256 colors, apart from the background's 234.
+    # Scenario: The panel colors. carat-light's panels #eceef3;
+    # carat-dark's panels at index 233 at 256 colors, apart from the
+    # background's 234.
     dark_carat = D::Themes.find("carat-dark", "theme")
     t.cases([
-      ["The panel colors: carat-dark", ["carat-dark"], [0xa4aabd, 0x2e3346]],
-      ["The panel colors: carat-light", ["carat-light"], [0x5c6173, 0xe3e6ef]]
+      ["The panel colors: carat-dark", ["carat-dark"], [0x2e3346]],
+      ["The panel colors: carat-light", ["carat-light"], [0xe3e6ef]]
     ]) do |input|
       name = input[0].to_s
       theme = D::Themes.find(name, "theme")
-      [role_row(D::Themes::PALETTES[D::Themes::NAMES.index(name).to_i], D::Themes::PANEL_DIM)[0], theme.bg(H::STATUS)]
+      [theme.bg(H::STATUS)]
     end
     t.assert_equal([0xeceef3, 0xeceef3, 0xeceef3], [light_carat.bg(H::TAB_LINE), light_carat.bg(H::STATUS_NC), light_carat.bg(H::NORMAL_FLOAT)], "The panel colors: carat-light's tab row, inactive bar, and floats are #eceef3")
     t.assert_equal([233, 233, -1], [dark_carat.bg256(H::TAB_LINE), dark_carat.bg256(H::STATUS_NC), dark_carat.bg256(H::NORMAL)], "The panel colors: carat-dark's panels are index 233 at 256 colors")
     t.assert_equal(234, Carat::Adapters::SgrTable.index_256(dark_carat.bg(H::NORMAL)), "carat-dark's background is the nearest index 234")
-    # Every palette's dim bar text reads on its bar, at 24 bits and 256
-    # colors.
-    D::Themes::NAMES.each_with_index do |name, i|
-      palette = D::Themes::PALETTES[i]
-      dim = role_row(palette, D::Themes::PANEL_DIM)
-      bar = role_row(palette, D::Themes::PANEL)
-      ratios = [contrast(dim[0], bar[0]), contrast(shown_256(dim[0], dim[1]), shown_256(bar[0], bar[1]))]
-      t.assert_true(ratios[0] >= 450 && ratios[1] >= 450, "The panel colors: #{name}'s dim bar text reads at 4.5:1 on the bar (#{ratios[0]}, #{ratios[1]})")
-    end
     # Scenario: The command pill is cyan. Every palette's command pill,
     # which the query pickers' prompts draw too, is on its cyan.
     D::Themes::NAMES.each_with_index do |name, i|

@@ -186,12 +186,6 @@ ok   The panel colors: carat-light
 ok   The panel colors: carat-light's tab row, inactive bar, and floats are #eceef3
 ok   The panel colors: carat-dark's panels are index 233 at 256 colors
 ok   carat-dark's background is the nearest index 234
-ok   The panel colors: carat-dark's dim bar text reads at 4.5:1 on the bar (540, 518)
-ok   The panel colors: carat-light's dim bar text reads at 4.5:1 on the bar (493, 479)
-ok   The panel colors: one_dark's dim bar text reads at 4.5:1 on the bar (696, 696)
-ok   The panel colors: one_light's dim bar text reads at 4.5:1 on the bar (900, 894)
-ok   The panel colors: dark_plus's dim bar text reads at 4.5:1 on the bar (586, 644)
-ok   The panel colors: light_plus's dim bar text reads at 4.5:1 on the bar (586, 644)
 ok   The command pill is cyan: carat-dark
 ok   The command pill is cyan: carat-light
 ok   The command pill is cyan: one_dark
@@ -281,4 +275,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 283 passed, 0 failed
+domain_theme: 277 passed, 0 failed

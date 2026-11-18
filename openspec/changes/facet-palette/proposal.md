@@ -4,7 +4,7 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 
 ## What Changes
 
-- The palettes gain three color roles, reusing guide-colors' pattern: BORDER, which colors `FloatBorder` (carat-dark #3b4157, carat-light #c9cdd9, basic color 8); PANEL_DIM, secondary text on the status bar's background (carat-dark #a4aabd, carat-light #5c6173), not yet used by a group; and ON_SEARCH, the text on the soft search tint (carat-dark #c8ccd8, carat-light #2f3340, black at 16 colors). The other four palettes keep their look: BORDER takes their FAINT, ON_SEARCH their ON_ACCENT, PANEL_DIM their PANEL_FG.
+- The palettes gain two color roles, reusing guide-colors' pattern: BORDER, which colors `FloatBorder` (carat-dark #3b4157, carat-light #c9cdd9, basic color 8), and ON_SEARCH, the text on the soft search tint (carat-dark #c8ccd8, carat-light #2f3340, black at 16 colors). The other four palettes keep their look: BORDER takes their FAINT, ON_SEARCH their ON_ACCENT.
 - In carat-dark and carat-light `FloatBorder` leaves the 3:1 decoration floor, as the guides did, and stays apart from the float's background by at least 1.3:1; the other palettes' borders keep 3:1.
 - Search softens to a tint the text keeps reading on: SEARCH #4a4129 / #f7e3a1, `Search` and `Todo` drawn in ON_SEARCH.
 - The match under the cursor, in every window, is drawn in `CurSearch` (the strong orange INC_SEARCH, bold) while "hlsearch" shows the matches, as Neovim draws it.
@@ -13,7 +13,7 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 - `StatusLineModeCommand`, the pill of the command line and of every query picker's prompt, is cyan in every palette.
 - The start screen's sparkle is drawn in `Title`, sapphire, in place of `Type`.
 - Roadmap: outside the numbered roadmap of `docs/architecture.md` section 12; a user request from the Facet plan (wave 1 item 4).
-- Out of scope: the match count on the command line (Neovim's searchcount `[3/12]`), split off by the plan as `search-count`; a group using PANEL_DIM (the status bar's dim text comes with `ui-groups`); BORDER on `WinSeparator`; pinning carat-dark's FLOAT at 256 colors; new colors for one_dark, one_light, dark_plus, and light_plus beyond the cyan pill.
+- Out of scope: the match count on the command line (Neovim's searchcount `[3/12]`), split off by the plan as `search-count`; the brief's PANEL_DIM role (carat-dark #a4aabd, carat-light #5c6173), left with the group that draws it, the status bar's dim text, to `ui-groups`, since no group reads it yet (the quality review's finding); BORDER on `WinSeparator`; pinning carat-dark's FLOAT at 256 colors; new colors for one_dark, one_light, dark_plus, and light_plus beyond the cyan pill.
 
 ## Capabilities
 
@@ -26,7 +26,7 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 
 ## Impact
 
-- Domain: `Themes` (roles BORDER, PANEL_DIM, ON_SEARCH in every palette; FloatBorder, Search, Todo, and the command pill remapped; carat-light SELECTION, PANEL_NC, FLOAT; carat-dark PANEL_NC at 256), `StartArt` (the sparkle's group).
+- Domain: `Themes` (roles BORDER and ON_SEARCH in every palette; FloatBorder, Search, Todo, and the command pill remapped; carat-light SELECTION, PANEL_NC, FLOAT; carat-dark PANEL_NC at 256), `StartArt` (the sparkle's group).
 - Adapters: `FramePresenter#paint_matches` draws the match holding the cursor in `CurSearch`.
 - Tests: `test/domain_theme.rb` (role rows for both palettes, the border's floor, the cyan pill), `test/adapters_frame_presenter.rb` (the bold current match), `test/editor_search.rb` (hlsearch with the cursor on a match), `test/editor_start_screen.rb` (the sparkle's group).
 - Docs: `docs/compatibility.md` (UI groups, search highlighting, start screen), README.md.
