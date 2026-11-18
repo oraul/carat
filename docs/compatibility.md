@@ -505,7 +505,7 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 | `l` | tree | `plugin.explorer.open` | Open the file in the previously used file window, or expand the directory and leave an expanded one expanded |
 | `h` | tree | `plugin.explorer.collapse` | Collapse the directory, or go to the parent's line |
 | `<CR>`, `o` | tree | `plugin.explorer.toggle_dir` | Toggle the directory, or open the file in the previously used file window |
-| `s`, `v`, `t` | tree | `plugin.explorer.open_split`, `open_vsplit`, `open_tab` | Open the file in a horizontal split, a vertical split, or a new tab page |
+| `s`, `v`, `t` | tree | `plugin.explorer.open_split`, `open_vsplit`, `open_tab` | Open the file in a horizontal split, a vertical split, or a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages, and with no file window beside the tree a file window as `l` opens |
 | `a` | tree | `plugin.explorer.create` | Prompt for a name and create a file, or a directory when it ends with `/`, in the entry's directory |
 | `r` | tree | `plugin.explorer.rename` | Prompt for a new name, starting from the current one, and rename in place |
 | `d` | tree | `plugin.explorer.delete` | Ask `Delete name? (y/n)` and delete a file or an empty directory |
@@ -525,7 +525,7 @@ The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow
 | typed text | finder | none | Filter by a fuzzy match of the path ignoring case, best first: the file name, word starts, and runs score higher, a shorter path breaks a tie; `No match` when nothing matches |
 | `<C-n>`, `<Down>`, `<C-p>`, `<Up>` | finder | `plugin.finder.next`, `previous` | Move the highlight, stopping at the ends |
 | `<CR>` | finder | none | Open the highlighted file in the editing window and close the finder; with no match the finder stays open on the typed text, so it can be corrected |
-| `<C-x>`, `<C-s>`, `<C-v>`, `<C-t>` | finder | `plugin.finder.open_split`, `open_vsplit`, `open_tab` | Open the highlighted file in a horizontal split, a vertical split, or a new tab page |
+| `<C-x>`, `<C-s>`, `<C-v>`, `<C-t>` | finder | `plugin.finder.open_split`, `open_vsplit`, `open_tab` | Open the highlighted file in a horizontal split, a vertical split, or a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |
 | `<Esc>`, `<BS>` on the empty prompt | finder | none | Close the finder and open nothing |
 | none | finder, 100 columns or more | none | Preview the first rows of the highlighted file in a second float titled with its path |
 

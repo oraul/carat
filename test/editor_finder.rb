@@ -35,6 +35,18 @@ module EditorFinderTest
     h
   end
 
+  # The paths of the listed buffers, comma separated.
+  def self.listed(h)
+    list = h.assembly.buffers
+    out = []
+    i = 0
+    while i < list.count
+      out << list.buffer_at(i).path.to_s
+      i += 1
+    end
+    out.join(",")
+  end
+
   # Each float of the current tab page as its title, "|", and its lines.
   def self.floats(h)
     layer = h.state.tab.floats
@@ -141,8 +153,8 @@ module EditorFinderTest
       ["Ctrl-S opens it in a split too", "<Space>ffbet<C-s>", [:normal, "lib/beta.rb", [0, 0], 1, 1, 0]],
       # Ctrl-V opens it in a vertical split
       ["Ctrl-V opens it in a vertical split", "<Space>ffbet<C-v>", [:normal, "lib/beta.rb", [0, 41], 1, 1, 0]],
-      # Ctrl-T opens it in a tab page
-      ["Ctrl-T opens it in a tab page", "<Space>ffbet<C-t>", [:normal, "lib/beta.rb", [0], 2, 2, 0]],
+      # Ctrl-T opens a buffer tab (option.gt buffers, the default)
+      ["Ctrl-T opens a buffer tab", "<Space>ffbet<C-t>", [:normal, "lib/beta.rb", [0], 1, 1, 0]],
       # Enter with no match opens nothing
       ["Enter with no match opens nothing", "<Space>ffzzz<CR>", [:cmdline, "lib/alpha.rb", [0], 1, 1, 1]],
       # The query is kept for a correction
@@ -154,6 +166,12 @@ module EditorFinderTest
       h = session(keys, 80)
       [h.mode, h.buffer.path.to_s, columns(h), h.tab_index, h.tab_count, h.state.tab.floats.count]
     end
+
+    # Ctrl-T opens it in a tab page (option.gt tabpages)
+    h = configured("option.gt tabpages\n", "<Space>ffbet<C-t>", 80)
+    t.assert_equal([:normal, "lib/beta.rb", [0], 2, 2, 0], [h.mode, h.buffer.path.to_s, columns(h), h.tab_index, h.tab_count, h.state.tab.floats.count], "Ctrl-T opens it in a tab page")
+    h = configured("", "<Space>ffbet<C-t>", 80)
+    t.assert_equal("lib/alpha.rb,lib/beta.rb", listed(h), "Ctrl-T opens a buffer tab: the file before it stays listed")
 
     # Ignored directories are not listed
     files = Carat::Doubles::MemoryFiles.new

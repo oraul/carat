@@ -274,6 +274,38 @@ module EditorTabFlowsTest
       ["<Space>egt", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
 
+    # A lone tree: the file window closed with Ctrl-W c leaves only the
+    # tree, and t or the finder's Ctrl-T opens a file window beside it
+    # or in it, never a tab page beside a tab page of only the tree.
+    # Under tab pages the startup buffer stays listed once hidden, so
+    # those flows leave the tree after opening a file.
+    flow(t, "t from a lone tree opens a file window", "", [
+      ["<Space>e<C-w>l<C-w>c", "explorer", "explorer", "[No Name]", "1", "1", "true", "", "false"],
+      ["3Gt", "explorer | 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+    ])
+    flow(t, "t from a lone tree under tab pages opens a file window", tabpages, [
+      ["<Space>e3Gl<C-w>c", "explorer", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
+      ["4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gt", ". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"]
+    ])
+    flow(t, "Ctrl-T from a lone tree", "", [
+      ["<Space>e<C-w>l<C-w>c", "explorer", "explorer", "[No Name]", "1", "1", "true", "", "false"],
+      ["<C-p>beta<C-t>", "1 b1", "beta.txt", "beta.txt", "1", "1", "false", "", "false"]
+    ])
+    flow(t, "Ctrl-T from a lone tree under tab pages", tabpages, [
+      ["<Space>e3Gl<C-w>c", "explorer", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
+      ["<C-p>beta<C-t>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+    ])
+    flow(t, "Ctrl-T opens a buffer tab beside the explorer", "", [
+      ["<Space>e3Gl", "explorer | 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<C-p>beta<C-t>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+    ])
+    flow(t, "Ctrl-T opens it in a tab page beside the explorer", tabpages, [
+      ["<Space>e3Gl", "explorer | 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<C-p>beta<C-t>", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
+    ])
+
     # The same flows under option.gt tabpages.
     flow(t, "tab pages: opening with l, s, v, and t", tabpages, [
       ["<Space>e3Gl", "explorer | 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
