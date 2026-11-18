@@ -306,10 +306,15 @@ module SmokeEditorTest
 
     # A Ruby file is drawn in colors: the keyword and the string are each
     # preceded by a color sequence, whatever depth the terminal's environment
-    # gives, and :syntax off draws them plain again.
+    # gives, and :syntax off draws them plain again. The user file names the
+    # terminal's background, which is kept over the painted default, so the
+    # plain text is written after the bare reset.
     ruby_path = "#{DIR}/colors.rb"
     File.write(ruby_path, "def go\n  \"hi\"\nend\n")
-    reader, writer, pid = PTY.spawn(BIN, ruby_path)
+    plain_home = "#{DIR}/plain-home"
+    make_dirs("#{plain_home}/.config/carat")
+    File.write("#{plain_home}/.config/carat/caratrc", "option.background terminal\n")
+    reader, writer, pid = PTY.spawn({ "HOME" => File.expand_path(plain_home) }, BIN, ruby_path)
     writer.winsize = [24, 80]
     out = +"".b
     settle(reader, out, 0.5)

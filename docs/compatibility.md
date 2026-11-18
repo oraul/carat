@@ -543,7 +543,7 @@ The editor knows 60 UI groups: Neovim's 41 by its names (`Normal`, `LineNr`, `St
 | Option | Values | Effect | Problem | Tests |
 | --- | --- | --- | --- | --- |
 | `option.theme` | Carat's own `carat-dark` (default) and `carat-light`, then `one_dark`, `one_light`, `dark_plus`, `light_plus` | The palette every group takes its colors from, each with its own syntax colors | `file:line: unknown theme x` | `domain_theme`, `adapters_screen_presenter` |
-| `option.background` | `terminal` (default), `theme` | `terminal` leaves `Normal` and the background to the terminal; `theme` paints the palette's background and text color under every cell, the cleared screen and scrolled-in rows included, which needs a terminal with background color erase | `file:line: unknown background x` | `domain_theme`, `adapters_screen_presenter` |
+| `option.background` | `theme` (default), `terminal` | `terminal` leaves `Normal` and the background to the terminal; `theme`, the default, paints the palette's background and text color under every cell, the cleared screen and scrolled-in rows included, which needs a terminal with background color erase | `file:line: unknown background x` | `domain_theme`, `adapters_screen_presenter`, `editor_screen` |
 
 Differences from Neovim: `background` in Neovim names `dark` or `light` and lets a color scheme choose; Carat's names who paints the background, since `theme` chooses the palette. Neither is set by `:set` yet (`Not implemented: :set background`). The theme is read once at startup; there is no `:colorscheme` or `:highlight`.
 

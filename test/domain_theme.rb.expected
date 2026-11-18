@@ -257,14 +257,14 @@ ok   light_plus's selected menu row at 16 colors on the terminal's background
 ok   light_plus's selected menu row at 16 colors on the theme's background
 ok   Comments are readable: carat-dark's comments reach 4.5:1
 ok   the contrast of WCAG's lightest AA gray on white and of a color on itself
-ok   the defaults: carat-dark on the terminal's background, syntax on
+ok   the defaults: carat-dark painting its own background, syntax on
 ok   the theme line selects a palette
 ok   Carat's light palette is accepted
 ok   Unknown theme: it keeps the default and is reported
 ok   a theme of the wrong kind keeps the default
 ok   the background line paints the background
 ok   an unknown background keeps the default and is reported
-ok   Default theme: the shipped configuration names carat-dark on the terminal's background
+ok   Default theme: the shipped configuration names carat-dark painting its own background
 ok   truecolor
 ok   24bit
 ok   256 colors
