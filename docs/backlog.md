@@ -1255,12 +1255,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `error?` is `severity == 1`, so both arms add one to `counts[severity]`; the branch reads as if errors were counted apart.
 - Fix outline: drop the `if` and keep `counts[diagnostic.severity] += 1`.
 
-## The diagnostic highlight group is a public class method of the presenter
-
-- Where: `FramePresenter.diagnostic_group` in `carat/adapters/frame_presenter.rb` (line 956 at 38d8c47), called only by `paint_diagnostic`. Quality advisory at `diagnostics-display`, reported twice.
-- Why it matters: the mapping from severity to group is a property of the domain value, kept as public API of an adapter that only its own painter uses.
-- Fix outline: move it to `Domain::Diagnostic#group` (or `Highlight.diagnostic_group`) and call it from `paint_diagnostic`; failing that, make it a private instance method beside `paint_diagnostic`.
-
 ## The gateway's apply has an unclear name and a needless branch
 
 - Where: `apply(set)` in `carat/adapters/json_rpc_language_gateway.rb` (lines 440 and 453 at 38d8c47). Quality advisory at `diagnostics-display`.
@@ -3992,23 +3986,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: once the delivery records the number of the pull request GitHub Actions opened, a contributor that may still write `pr` can record a number of a pull request it did not open, and the merger would act on it.
 - Fix outline: drop the contributor's `pr` permission and the header line once the wait step records the number, and turn the guard test into a refusal case; keep any bootstrap path the workflow itself needs.
 
-### Groom removes security entries without proof of a fix (`sprint-planning` security Low (6))
-
-- Location: `tools/run_state.sh:1358` (`listed CHANGE HEADING`) and `tools/run_state.sh:1361` (`fixed COMMIT HEADING`).
-- Why it matters: `listed` only checks that some archived change's name ends in -CHANGE, not that it is one of this sprint's merged changes or that its queue item named the heading, and `fixed` accepts any ancestor of HEAD, even the root commit, so the planner, a model reading about 4,600 backlog lines, can remove any security entry unchecked, though the design says removal is proven.
-- Fix outline: for `listed`, require CHANGE in `sprint_names` and its archived proposal or brief to contain the exact heading; for `fixed`, require COMMIT in `sprint_base..HEAD` and touching the heading's file:line location; or refuse every removal of a security entry except `listed` by a merged sprint change.
-
 ### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))
 
 - Location: `.claude/workflows/sprint-planning.js:97` `mergeSecurity`.
 - Why it matters: it keeps only the continuation's `not_reviewed` entries that exactly match the first start's free-form file names, so a differently spelled path (for example `./tools/run_state.sh`) is dropped and the sprint security review records pass with that file never reviewed.
 - Fix outline: fail closed: use `again.not_reviewed` unchanged, or normalize both lists against `git diff --name-only BASE TIP` before intersecting, or constrain the SECURITY schema's `not_reviewed` items to an enum of the combined diff's files as `periodic-review.js` does with its areas.
-
-### Groom's fixed check accepts any ancestor commit (`sprint-planning` quality advisory)
-
-- Location: `tools/run_state.sh:1361` `fixed COMMIT HEADING`.
-- Why it matters: it accepts any ancestor of HEAD, even the root commit, so a security entry's removal is not provable as the design claims.
-- Fix outline: also require the commit to touch the file the heading names (`git show --name-only`).
 
 ### Groom's listed check matches any archive name suffix (`sprint-planning` quality advisory)
 
@@ -4550,6 +4532,10 @@ One clear way to do each thing: the boundary rule is applied by hand at seven `b
 ### docs/spinel-notes.md:47: the compile-time check of a Spinel bump has no place in the bump procedure
 
 The new rule that a bump past 2440954d1 is checked for compile time is not in the bump procedure: the SPINEL_REF comment (Makefile:16) and the CLAUDE.md Commands toolchain bullet still say only after make check passes, nothing measures compile seconds (analysis-budget only warns on analysis ms), and Makefile:79 still cites 22 to 26 s of analysis against the 47.2 s and 106.7 s spinel-compile-time measured. Why: the next bump can reintroduce the regression unnoticed. Fix: name the compile-time comparison (test-build and diagnose seconds) in the SPINEL_REF comment and the CLAUDE.md toolchain bullet, or record test-build seconds as a metric, and refresh Makefile:79.
+- Merged: ### docs/spinel-notes.md:47: the Spinel regression bullet mixes terms, stale advice, and dated figures
+- Location: docs/spinel-notes.md:47 and the comment at carat/testing.rb:52 (merged at the sprint-11 grooming from four quality advisories on the one bullet).
+- Why: the bullet calls the rebuilt structure both the position map and the load record; it still advises an element reader (Array[untyped], Integer) -> T although a bare reader given an untyped argument narrows nothing; it records 125 runner rebuilds at 93d7883b without saying why the bump was accepted against the old pin's 39; and it names a pin ("stays at its parent 6af548c9") and grows a dated figure per bump, so every bump makes it false (the pin is c0502112 since #151).
+- Fix outline: rewrite the bullet once: one term, load record, as SP_TIMING names it (also in carat/testing.rb:52); the reader must narrow with is_a?(Array) as Carat::Json.element does; keep the rule (no [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field, element, reach) and the current figures only, saying compile time (test-build 169 s, diagnose 219 s) met the target; "6af548c9, its parent, is the newest commit without it"; leave the pin to SPINEL_REF and the history to the archived changes.
 
 ### docs/spinel-notes.md:55: the open notes were not rechecked at the new pin 6af548c9
 
@@ -6414,12 +6400,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/domain/float_spec.rb:61
 - Why: duplication: the bound test 'x >= -OFFSET_MAX && x <= OFFSET_MAX' is written twice (lines 61-62), where the design names one outside?(value) helper.
 - Fix: add the class predicate outside?(value) and call it for row and bad.
-
-### docs/spinel-notes.md:47: the Spinel regression bullet mixes terms, stale advice, and dated figures
-
-- Location: docs/spinel-notes.md:47 and the comment at carat/testing.rb:52 (merged at the sprint-11 grooming from four quality advisories on the one bullet).
-- Why: the bullet calls the rebuilt structure both the position map and the load record; it still advises an element reader (Array[untyped], Integer) -> T although a bare reader given an untyped argument narrows nothing; it records 125 runner rebuilds at 93d7883b without saying why the bump was accepted against the old pin's 39; and it names a pin ("stays at its parent 6af548c9") and grows a dated figure per bump, so every bump makes it false (the pin is c0502112 since #151).
-- Fix outline: rewrite the bullet once: one term, load record, as SP_TIMING names it (also in carat/testing.rb:52); the reader must narrow with is_a?(Array) as Carat::Json.element does; keep the rule (no [] on an untyped receiver; read through Testing#cell, Testing#cases, Carat::Json.field, element, reach) and the current figures only, saying compile time (test-build 169 s, diagnose 219 s) met the target; "6af548c9, its parent, is the newest commit without it"; leave the pin to SPINEL_REF and the history to the archived changes.
 
 ### BRANCH and COUNTS repeat git_signs' safety arguments
 
@@ -8352,3 +8332,213 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Where: `.claude/workflows/deliver-change.js:1119` and `:791` (`addAdvisories`), and two blank lines in a row at `:1009`, at 522a0e1.
 - Why it matters: fixed-in-place matching depends on the two copies of the regular expression staying identical; the blank lines are left from a removal.
 - Fix outline: one helper used by both, one blank line. Fold into the next pipeline change editing the file.
+
+### Advisory-only rework rounds cost half of facet-palette's output
+- Location: `.claude/workflows/deliver-change.js` (the rework loop after the first check pass); backlog queue item `rework-review-repeat`
+- Why: facet-palette rework 2 with 0 blocking in all 3 quality and security reviews (5, 1, 0 advisories); output at the check passes 204,127, 332,067, 573,120 of 736,922, about 369,000 (50 percent) after the first pass; guide-colors advisory-only rework 1, +83,604 (facet-palette retro 10).
+- Fix: an advisory-only round counts no rework and reruns only what its fix touched; accepted when the next 5 runs whose reviews block nothing record rework 0 and spend under 15 percent of their output after the first check pass. Fold into `rework-review-repeat`.
+
+### A re-review re-raised an advisory declined for the brief's reason
+- Location: `.claude/agents/quality-reviewer.md`, `.claude/workflows/deliver-change.js` (notes handed to a later round); facet-palette note 6 repeating note 1
+- Why: the PANEL_DIM advisory, declined in round 1 because the brief pins #a4aabd / #5c6173, came back word for word; round 2 grew output from 332,067 to 573,120 (+241,053, 33 percent of 736,922); quality first pass 93/166 (facet-palette retro 11).
+- Fix: an advisory declined with a recorded reason goes to the findings file, not to a new round; accepted when no run has a later-round advisory repeating a declined note that drives a round of its own. Fold into `rework-review-repeat`.
+
+### facet-palette dropped the brief's PANEL_DIM
+- Location: `carat/domain/themes.rb` (no PANEL_DIM role, no #a4aabd, at caf4532ac051; DIM 0x5c6173 at line 269)
+- Why: facet-palette's brief pinned PANEL_DIM #a4aabd / #5c6173 and its acceptance asked theme rows pinning each value; round 2 removed it on a re-raised advisory (retro 11), so the merged palette misses a value the user's Facet plan named.
+- Fix: restore the PANEL_DIM role on carat-dark and carat-light with the pinned values; accepted when theme rows pin both. Queued with `ui-groups`.
+
+### The check and merge phases spend a third of a feature run's output waiting
+- Location: `.claude/agents/checker.md`, `.claude/agents/merger.md`, `.claude/workflows/deliver-change.js:126` (mergerCap); backlog queue item `merge-output-cap`
+- Why: facet-palette check 123,463 output in 6 calls (16.8 percent, 3 passes all green first), merge 101,948 in 13 calls (13.8 percent, ci_wait_calls 6), together 30.6 percent of output for 8.4 percent of calls; guide-colors merge 26,423 in 11 calls (facet-palette retro 12).
+- Fix: the checker and merger read the stage and CI results the run state holds and generate little; accepted when check stays under 10,000 output per pass and merge under 30,000 over the next 5 feature runs with first passes unchanged. Fold into `merge-output-cap`.
+
+### Background delta spec removes and re-adds the requirement instead of modifying it
+- Location: openspec/changes/archive/2026-11-18-background-default/specs/color-themes/spec.md:1 (quality advisory, raised at openspec/changes/background-default/specs/color-themes/spec.md:1)
+- Why: one clear way: the delta removes 'The background option chooses who paints the background' and adds a renamed copy repeating three of its four scenarios word for word, where only the default and one scenario changed, so the history reads as a new requirement rather than a changed default.
+- Fix: a MODIFIED block under the existing header with the new default, the painted-by-default scenario in place of Transparent by default, and the two named-kept scenarios; the contributor tried a MODIFIED block in a scratch copy and openspec validate refused it for dropping 'Transparent by default' (design.md records it), so a follow-up first checks whether the validator allows a modified requirement to drop a scenario, else closes this finding.
+
+### The code map says the backlog lane's sprint holds 0 to 2 items
+
+- Location: docs/codebase-map.md:55, tools/docs_lint.sh:23 (its header, check_lane)
+- Why: sprint-size-six made a sprint 3 features and 3 backlog items, so the map's "0 to 2" for the backlog lane's `## Sprint` is stale and misleads a reader of the lane rules (the planner's note on backlog-throughput).
+- Fix: say 0 to 3 in the map line and confirm `check_lane` in tools/docs_lint.sh enforces the same bound, with a docs-lint case.
+
+### The planner's guard refuses backlog-pick, which its sprint mode runs
+
+- Location: tools/agent_guard.sh:613 (run_state_form, the read profile)
+- Why: the planner's sprint mode (.claude/agents/planner.md step 2, sprint-planning.js line 222) runs `sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md`, but the read profile lists only backlog-dups among the backlog commands, so the guard refuses it ("refused for the read profile: tools/run_state.sh backlog-pick") and the planner must pick the batches by hand; backlog-throughput added backlog-oldest to the profile but left backlog-pick out of scope.
+- Fix: add `read:backlog-pick` to the read profile and its header comment, with a guard case beside "guard: the read profile lists backlog duplicates" in tools/tools_test.sh.
+### groom description overstates the refusal of a later removal of a merged heading
+- Location: docs/codebase-map.md:48 (tools/run_state.sh:2642)
+- Why: docs currency: the groom description says neither a merged entry's kept nor its merged heading is removed by another line, but groom refuses a merged line only when an earlier line already removes its heading, so a later listed or fixed line naming the same merged heading still passes (quality advisory at 65a5758220b7).
+- Fix: say the merged heading is refused when an earlier line removes it, or refuse any later removal of a merged heading in groom with a tools_test case.
+
+### Advisory-only fix rounds cost a full review round (guide-colors retro, merged)
+- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
+- Why: guide-colors reported 0 blocking findings (security 0, quality 0 blocking), yet 4 quality advisories cost rework 1: output 147,140 at the first check pass and 230,744 at the second (83,604 more), over the medium output budget of 200,000. The same finding as "### Advisory-only fix rounds cost a full review round (sprint-17-records retro)" and the `advisory-findings-auto` entry; merge into them at grooming.
+- Fix: a run whose reviews report 0 blocking findings ends with rework 0 and one check pass, its advisories fixed in the same round or in the findings file.
+
+### The merge phase spends output out of proportion to its calls (guide-colors retro)
+- Location: `.claude/workflows/deliver-change.js`, the merge phase, and `.claude/agents/merger.md`
+- Why: guide-colors merge took 26,423 output tokens for 11 calls and 4 CI-wait calls (9.1 percent of 290,842) on a 7-minute green CI; the last 10 feature rows range 4,992 to 98,694 merge output at 10 to 21 calls.
+- Fix: a run green on its first CI pass keeps its merge phase under 10,000 output tokens; accepted over 5 consecutive runs.
+
+### A passing check phase costs a full agent start (guide-colors retro)
+- Location: `.claude/workflows/deliver-change.js`, the check phase, and `.claude/agents/checker.md`
+- Why: guide-colors check took 30,277 output tokens for 5 calls over two passes with all 9 stages passing (10.4 percent of 290,842), though the stages are deterministic; the benchmark already records equal figures without an agent.
+- Fix: record a check phase whose stages all pass without an agent's reasoning, or with a minimal start; accepted when such a phase records under 3,000 output tokens.
+
+### Groom's duplicate guard lets an unmarked security entry leave as a duplicate
+- Location: tools/run_state.sh:424 (SECURITY_MARK) and the duplicate check at tools/run_state.sh:2510; reached the branch through the merge of main (#209, 9674689), not this change's own commits.
+- Why: security Low (6). The guard now uses SECURITY_MARK instead of any line naming security, so a security entry recorded without the 'security Low' or 'Low (N)' form (for example the benchmark's reused temporary report path, recorded as a Low finding of the periodic security review at 66fd52b) can be removed by a planner-written groom.txt `duplicate` line, and an open security finding leaves without a merged item or a fixing commit.
+- Fix: Widen SECURITY_MARK so it also matches an entry naming a severity next to a security review (for example '(high|medium|low)( finding)? of the (periodic )?security review'), or keep the old case-insensitive 'security' test for duplicates while the narrow mark stays for ranking; add a tools_test.sh case where groom refuses to remove such an entry as a duplicate; separately, normalize stored entries to the 'security Low (N)' form.
+### Advisory-only fix rounds cost a full review round (guide-colors retro, merged)
+- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
+- Why: guide-colors reported 0 blocking findings (security 0, quality 0 blocking), yet 4 quality advisories cost rework 1: output 147,140 at the first check pass and 230,744 at the second (83,604 more), over the medium output budget of 200,000. The same finding as "### Advisory-only fix rounds cost a full review round (sprint-17-records retro)" and the `advisory-findings-auto` entry; merge into them at grooming.
+- Fix: a run whose reviews report 0 blocking findings ends with rework 0 and one check pass, its advisories fixed in the same round or in the findings file.
+
+### The merge phase spends output out of proportion to its calls (guide-colors retro)
+- Location: `.claude/workflows/deliver-change.js`, the merge phase, and `.claude/agents/merger.md`
+- Why: guide-colors merge took 26,423 output tokens for 11 calls and 4 CI-wait calls (9.1 percent of 290,842) on a 7-minute green CI; the last 10 feature rows range 4,992 to 98,694 merge output at 10 to 21 calls.
+- Fix: a run green on its first CI pass keeps its merge phase under 10,000 output tokens; accepted over 5 consecutive runs.
+
+### A passing check phase costs a full agent start (guide-colors retro)
+- Location: `.claude/workflows/deliver-change.js`, the check phase, and `.claude/agents/checker.md`
+- Why: guide-colors check took 30,277 output tokens for 5 calls over two passes with all 9 stages passing (10.4 percent of 290,842), though the stages are deterministic; the benchmark already records equal figures without an agent.
+- Fix: record a check phase whose stages all pass without an agent's reasoning, or with a minimal start; accepted when such a phase records under 3,000 output tokens.
+
+### Groom's listed proof accepts a heading as a bare substring of the queue item (`groom-proof` security Low (5))
+- Location: tools/run_state.sh:2387 (item_lists)
+- Why: item_lists accepts the heading as a bare substring of the queue item, so a planner `listed` line for a short heading such as `## Foo` passes when the item only quotes a different, longer heading such as `### Foo bar`; a security entry can then leave the backlog without its merged item ever naming it, the proof this change set out to require.
+- Fix: Require a bounded match: no `#` before it, and after it the closing quote the planner writes (`Backlog: "### title"`), a comma, or the end of the item; or match the quoted form `"` H `"`. Add a tools-test case refusing a shorter heading that prefixes a quoted longer one.
+
+### Groom's duplicate guard lets a security entry without a `security <severity>` marker leave (`groom-proof` security Low (3))
+- Location: tools/run_state.sh:422 (SECURITY_MARK)
+- Why: The guard used to refuse any entry mentioning security and now refuses only text matching its severity marker, so a security entry written without it (an older entry, or one transcribed from a periodic note recorded as `High (8) file:line ...` under the note kind `security`) can leave as a `duplicate` without a listed item or a fixing commit. The design accepts the risk, since findings deliver-change.js hands over carry the `security <severity>` prefix, limiting the exposure to entries written some other way.
+- Fix: Also treat an entry as a security entry when its heading or Location line carries a severity and confidence pair, `(High|Medium|Low) \([0-9]+\)`, or when it came from a security note; or make the planner's sprint mode write `security <severity>` into the heading of every security entry it adds, so the marker the guard reads always exists.
+
+### Groom's listed proof still accepts a comma after an unquoted heading (`groom-proof` security Low (2))
+- Location: tools/run_state.sh:2410 (item_lists)
+- Why: item_lists accepts a comma after a heading that no double quote or backtick opens, so a short heading `## Foo` still counts as listed when an item mentions a longer heading `## Foo, bar` bare or in single quotes, and a security entry could then leave the backlog without its merged item naming it. It predates the change and is narrower now: the planner's double-quoted form is closed, so the residual needs a bare or single-quoted mention of a backlog heading that is the exact prefix of another heading followed by a comma.
+- Fix: Accept a bare heading only at the end of the item, or treat a single quote like the other quote characters; stricter, require the planner's quoted form (Backlog: "H") outright. Add a tools-test case with a bare `## Foo, bar` against `## Foo`.
+
+### Groom's guard against a `#` before a listed heading has no test (`groom-proof` quality advisory)
+- Location: tools/run_state.sh:2406 (item_lists)
+- Why: Untested branch: item_lists' guard against a `#` before the heading (a `## y` heading inside a quoted `### y` one) has no tools-test case; only the guard after it is exercised, so a regression in it would pass the suite.
+- Fix: Add a listed case whose item quotes `### ...` for the same `## ...` heading, listed unquoted at the item's end or before a comma so the guard alone refuses it.
+
+### exception_item now counts a wrapped `beyond the sprint` mark without a test (`groom-proof` quality advisory)
+- Location: tools/run_state.sh:2127 (exception_item)
+- Why: Untested branch: exception_item now reads the item through queue_items, which joins continuation lines, so a `beyond the sprint` mark inside a first parenthesis wrapped onto the next line now counts as an exception in review-due and the sprint row, where main read the first line only; no review-due case pins the new behavior.
+- Fix: Add a review-due tools-test case whose item's parenthesis wraps before the mark.
+
+### Advisory-only fix rounds cost a full review round (sprint-17-records retro)
+- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
+- Why: every review of sprint-17-records reported 0 blocking, yet 2 of 3 rework rounds fixed advisories only (5, then 2), each rerunning check, security, and quality; reviews took 30,387 of 72,515 output tokens (41.9 percent) and 40 of 113 tool calls, against 11,232 of 64,769 (17.3 percent) at rework 0 in sprint-16-records. A near-duplicate of the `advisory-findings-auto` entry; merge into it at grooming.
+- Fix: a run whose reviews report no blocking finding uses at most one fix round; accepted when its reviews stay under 25 percent of output tokens.
+
+### Groom leaves references to the findings files it removes (sprint-17-records retro)
+- Location: `tools/run_state.sh` groom and its fold of docs/findings/, `tools/docs_lint.sh` path check
+- Why: docs-lint refused 3 backticked paths to removed findings files that needed hand edits, as in earlier records changes, and missed a bare file name (`docs/queue-feature.md:44` naming vim-folds-b.md:36), 1 of 5 first-pass advisories that opened rework round 1 (rework 2 in sprint-17-records).
+- Fix: groom rewrites or refuses references to the files it removes, bare names included; accepted when the next records change needs no hand edit for a removed findings file and no review reports one.
+- Evidence: sprint-18-records again needed one hand edit, commit 1dba846 unquoting the removed findings directory in this entry's own Location line, since docs-lint refused it.
+
+### Task 5.2 of sign-colors describes the superseded shown-layer scan
+- Location: openspec/changes/archive/2026-11-18-sign-colors/tasks.md:22 (task 5.2, reviewed as openspec/changes/sign-colors/tasks.md:22)
+- Why: docs currency: task 5.2 still calls Buffer#shown_layer_index private and says sign_at and sign_group_at read the shown layer once, while task 6.2 made it public and the presenter now does the one scan, so the archived record misdescribes the code.
+- Fix: reword 5.2 to name the shared scan, or note that 6.2 supersedes it.
+
+### A tab-close-d findings entry is folded twice into the backlog
+- Location: docs/backlog.md:8156, docs/backlog.md:8020
+- Why: quality advisory, duplication: "The tab-close-d findings entries break the file's format" at :8156 repeats the entry at :8020 (same finding, Location, Why, and Fix under another heading), which the groom triage missed.
+- Fix: list the :8156 heading as a duplicate in the next sprint's groom.txt.
+
+### Two fold format entries are covered by a third
+- Location: docs/backlog.md:8066, docs/backlog.md:8072, docs/backlog.md:8171
+- Why: quality advisory, duplication: "Fold adds a level-one heading per findings file" (:8066) and "Folded headings lack a blank line before them" (:8072) are covered by "Groom's fold keeps producing format defects" (:8171).
+- Fix: groom the two into the :8171 entry at the next grooming.
+### Buffer#sign_at and sign_group_at have no production caller (sprint-18 review quality, sweep quality)
+- Location: `carat/domain/buffer.rb:406`, `:415`; `carat/adapters/frame_presenter.rb:852` to `:858`.
+- Why it matters: the presenter reads `layer_at(shown_layer_index(row))` itself, so the two readers serve only tests and the sign lookup has two shapes.
+- Fix outline: one Buffer reader of the shown sign layer (or nil) used by the presenter and the tests, the test-only pair dropped, `shown_layer_index` private again.
+
+### Two tests scan the palette rows by hand (sprint-18 review quality)
+- Location: `test/adapters_frame_presenter.rb:183` (`palette_rgb`), `test/domain_theme.rb` (`role_row`).
+- Why it matters: the same lookup is written twice over the 4-value palette rows.
+- Fix outline: one `Domain::Themes` reader of a role's 24-bit color, or one shared test helper, used by both.
+
+### The panel color cases check the role the sprint did not change (sprint-18 review quality)
+- Location: `test/domain_theme.rb:551`.
+- Why it matters: the cases check `bg(H::STATUS)` (0x2e3346, 0xe3e6ef) while the label names the PANEL_NC and FLOAT change.
+- Fix outline: drop the block or check TAB_LINE, STATUS_NC, and NORMAL_FLOAT.
+
+### The architecture's Options entry and scope list drift from the code (sprint-18 sweep quality)
+- Location: `docs/architecture.md:118`, `:245`; `carat/domain/options.rb:40`.
+- Why it matters: the entry names wrap and clipboard as members and omits gt, theme, background, syntax_on, startscreen, reducedmotion, indentguides_char; the scope list omits startscreen, reducedmotion, jumptab, gt, indentguides.char.
+- Fix outline: list the Struct members and the KINDS scopes as the code declares them.
+
+### The README omits gt and node (sprint-18 sweep quality)
+- Location: `README.md:91`, `README.md:9`; `Makefile:218`.
+- Why it matters: the option list lacks gt; the prerequisites lack node, which `make doctor` requires and the js tools cases run.
+- Fix outline: add gt beside jumptab; name node as a prerequisite of the checks or drop it from doctor.
+
+### The tab width and shift width fallbacks are hand-written at ten sites (sprint-18 sweep quality)
+- Location: `carat/use_cases/dispatcher.rb:114`, `repeat_last.rb:104`, `leave_insert.rb:71`, `arrange_view.rb:47`, `insert_tab.rb:25`, `carat/adapters/frame_presenter.rb:218`, `carat/domain/operators.rb:172`, `:251`, `:272`, `carat/domain/display_width.rb:57`.
+- Why it matters: `tabstop > 0 ? tabstop : 8` repeats `Options#tab_width` (`options.rb:135`), dead since tabstop is validated from 1.
+- Fix outline: call `options.tab_width`, and pass one resolved shift width (an `Options#shift_width`) to Operators.
+
+### Use cases re-implement clamp_col and wanted_col (sprint-18 sweep quality)
+- Location: `carat/use_cases/operate.rb:233`, `:70`, `:205`; `carat/use_cases/repeat_last.rb:116`; `carat/domain/editor_state.rb:126`; `carat/use_cases/ex/line_command_handler.rb:54`.
+- Why it matters: private `clamp` copies and `end_visual` repeat `EditorState#clamp_col` (`editor_state.rb:100`); `place_cursor` repeats `Motions.wanted_col` (`motions.rb:247`); `yank` writes the cursor directly where siblings use `move_to`.
+- Fix outline: call `state.clamp_col` and `Motions.wanted_col`, `case operator`, `cursor.move_to` in yank.
+
+### Handlers repeat small helpers (sprint-18 sweep quality)
+- Location: `carat/use_cases/ex/tab_command_handler.rb:102`, `buffer_command_handler.rb:102`, `history_command_handler.rb:61`, `carat/domain/json.rb:72` (`digits?` four times); `carat/use_cases/search/global_command.rb:82` and `substitute_lines.rb:112` (`remember`); `carat/domain/keymap.rb:321` (`name_group` repeats `bind_text`, `:200`); `carat/adapters/input_controller.rb:134`; `carat/use_cases/files/save_all.rb:33`.
+- Why it matters: copies change apart.
+- Fix outline: one domain digit predicate, one shared pattern-recording step, one keymap parse helper, one handle call, one branch.
+
+### Outcome.success("") is still built at 23 sites (sprint-18 sweep quality)
+- Location: `carat/use_cases/outcome.rb:30`; `carat/use_cases/files/quit.rb`, `windows/split_window.rb`, `open_side_window.rb`, `plugins/plugin_router.rb`.
+- Why it matters: `Outcome.none` exists so a key allocates nothing.
+- Fix outline: return `Outcome.none`.
+
+### HandleKey's queue rule and signature triggers (sprint-18 sweep quality)
+- Location: `carat/use_cases/handle_key.rb:259`, `:284`, `:391`.
+- Why it matters: `dispatch` says its caller must assign the returned queue, yet `step` and `complete` discard it; `code == 40 || code == 44` are unnamed.
+- Fix outline: state the rule once and apply it, or narrow the comment; named constants for ( and ,.
+
+### A hidden slot's window comes back with its cursor past the last line (sprint-18 sweep quality)
+- Location: `carat/domain/tab_list.rb:252`; `carat/use_cases/windows/toggle_slot.rb:45`, `open_side_window.rb:36`.
+- Why it matters: `clamp_cursors` skips windows kept in hidden slots, so a plugin view whose buffer shrank while hidden returns past its end.
+- Fix outline: clamp kept slot windows too, or on show, with a `test/editor_slots.rb` row.
+
+### The language server gateway holds every request kind in one class (sprint-18 sweep quality)
+- Location: `carat/adapters/json_rpc_language_gateway.rb:1` (1486 lines, 87 methods).
+- Why it matters: lifecycle, sync, and five request kinds each carry their own send, cancel, and answer code.
+- Fix outline: a collaborator per request kind sharing `cancel_request` and `position_params`.
+
+### Doc comments and map entries drift (sprint-18 sweep quality)
+- Location: `carat/testing.rb:4`; `bin/carat-gen-config.rb:32`; `carat/domain/range.rb:4`; `carat/adapters/editor_assembly.rb:190`; `docs/codebase-map.md:128`, `:478`, `:543`, `:474`; `tools/docs_lint.sh:22`, `docs/codebase-map.md:55`; `tools/gates.sh:39`.
+- Why it matters: testing.rb credits spin with the diff; the generated header says `spin run`; range.rb names only charwise ranges; a broken comment and a repeated loop in EditorAssembly; the map omits Messages E16, E444, E477, E490, REPORT, StatusSlots `set_lsp`, Paths `absolute`, and still names FramePresenter `diagnostic_group`; docs_lint says 0 to 2 backlog items where the sprint holds 3; the gates usage names CHECK_STAGES where FAST_STAGES is read first.
+- Fix outline: correct each text, `make gen-config` after the header fix.
+
+### Requires leaned on carat.rb order (sprint-18 sweep quality)
+- Location: `carat/use_cases/plugins/buffer_requests.rb:110`, `:49`; `carat/domain/messages.rb:22`; `carat/domain/walker.rb:63`; `carat/use_cases/search/find_match.rb:140`.
+- Why it matters: Highlight, ControlText, and `Motions.code_class` are named without a require, Walker and Motions form a hidden cycle, `blank?` repeats `code_class`, and one comment line is mis-indented.
+- Fix outline: add the requires, move `code_class` and `blank?` where both require it, use `code_class`, reindent.
+
+### The cls abbreviation is still used (sprint-18 sweep quality)
+- Location: `carat/domain/text_objects.rb:86`, `carat/domain/runs.rb:21`.
+- Why it matters: CLAUDE.md names `cls` as the wrong form.
+- Fix outline: rename to `char_class`.
+
+### assert_true passes any truthy value (sprint-18 sweep quality)
+- Location: `carat/testing.rb:31`.
+- Why it matters: a predicate returning a non-bool passes while the failure text says expected true.
+- Fix outline: compare `value == true`, or rename to `assert_truthy`.
+
+### Tools pass what their usage says fails (sprint-18 sweep quality)
+- Location: `tools/metrics.sh:86`; `tools/gates.sh:266`; `tools/run_state.sh:2538`; `tools/spec_validate.sh:25`; `tools/ci_scope.sh:80`.
+- Why it matters: compare passes a base name CURRENT lacks; `has()` matches paths as a regex; backlog-oldest skips `####` entries backlog-pick takes; only the last spec preview survives; the push path calls one endpoint twice.
+- Fix outline: fail every unseen strict base name; `grep -q -x -F`; one heading test in ENTRY_AWK; a preview directory per change; one gh call.
