@@ -6,8 +6,8 @@ CLAUDE.md (Pull requests) makes the pull request description the body of the squ
 
 ## What Changes
 
-- The merge hook (`merge_tool`, main's `tools/agent_guard.sh`) refuses a squash whose `commit_message` is not exactly the body of the archived change's `pr.md` at the pushed head (every line after the title and its blank line), one blank line, and the trailer as the last line; the refusal names the first line that differs, the message's and pr.md's, or a missing message. Trailing blank lines are ignored on both sides.
-- The merger (`.claude/agents/merger.md` step 5) reads the body file, which `pr.md` holds byte for byte, with the Read tool and passes it whole, never shortened or summarized; step 6 confirms the body too.
+- The merge hook (`merge_tool`, main's `tools/agent_guard.sh`) refuses a squash whose `commit_message` is not exactly the body of the archived change's `pr.md` at the pushed head (every line after the title and its blank line), one blank line, and the trailer as the last line; the refusal names the first line that differs, the message's and pr.md's, or a missing message. Trailing blank lines are ignored on both sides; the message's JSON string is decoded whole and compared byte for byte.
+- The merger (`.claude/agents/merger.md` step 5) prints the body of `pr.md` at the pushed head with git, the hook's own source, and passes it whole, never shortened or summarized; step 6 confirms the body too.
 - `tools/tools_test.sh`: the merge tool cases pass a message and the fixture commits an archived `pr.md`; new cases refuse a missing, a shortened, and a trailer-less message, naming the difference, and pass the exact one.
 
 Out of scope: `tools/rules.sh` is not edited; `.claude/workflows/deliver-change.js` needs no change (it builds no message); no file of the feature lane is touched; the package step adds no queue line. Main's hook judges this change's own merge, so its squash body may still be short: the next delivery's squash commit is the acceptance check.
