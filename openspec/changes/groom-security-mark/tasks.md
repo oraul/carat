@@ -11,4 +11,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 README.md pipeline step 11 and `docs/codebase-map.md` (`tools/run_state.sh`, `groom`): the security entry's wording and `security_entry`. Proved by `make docs-lint` and `make gates`.
+- [x] 3.1 README.md pipeline step 11 and `docs/codebase-map.md` (`tools/run_state.sh`, `groom`): the security entry's wording and `security_entry`. Proved by `make docs-lint` and `make gates`.
