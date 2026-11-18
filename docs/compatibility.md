@@ -538,7 +538,7 @@ The filetype of a buffer comes from its name (`ruby` for `.rb`, `.rake`, `.gemsp
 
 ## Themes
 
-The editor knows 60 UI groups: Neovim's 41 by its names (`Normal`, `LineNr`, `StatusLine`, ... `CursorLine`, `Pmenu`, `NormalFloat`, `DiffAdd`, `DiagnosticError`, ...), the thirty syntax groups, thirteen file-icon groups named as nvim-web-devicons names them (`DevIconRb`, ...; the explorer's icons are drawn in them), and six markup groups named as Neovim's tree-sitter captures (`@markup.heading`, ...); the status bar's twelve (its mode pills, its language server slot, and its diagnostics counts, all on the bar's background but the pills, readable there at 16 colors under xterm's default colors too) and the indent guides' two, `IblIndent` and `IblScope` as indent-blankline names them, follow Neovim's 41, then `FloatTitle` and Neovim's popup menu groups `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, and `PmenuExtraSel`. Every shipped palette meets WCAG AA on its own background and on its cursor line, 4.5:1 for text and 3:1 for decorations, at 24-bit and at 256 colors (`domain_theme`). At 256 colors a palette may give its own index where the nearest one would lose contrast or hue; at 16 colors a group may use an attribute in place of a color the basic set lacks, reverse video for the selection and a menu's selected row and underline for the cursor line (`adapters_screen_presenter`).
+The editor knows 60 UI groups: Neovim's 41 by its names (`Normal`, `LineNr`, `StatusLine`, ... `CursorLine`, `Pmenu`, `NormalFloat`, `DiffAdd`, `DiagnosticError`, ...), the thirty syntax groups, thirteen file-icon groups named as nvim-web-devicons names them (`DevIconRb`, ...; the explorer's icons are drawn in them), and six markup groups named as Neovim's tree-sitter captures (`@markup.heading`, ...); the status bar's twelve (its mode pills, its language server slot, and its diagnostics counts, all on the bar's background but the pills, readable there at 16 colors under xterm's default colors too) and the indent guides' two, `IblIndent` and `IblScope` as indent-blankline names them, follow Neovim's 41, then `FloatTitle` and Neovim's popup menu groups `PmenuMatch`, `PmenuMatchSel`, `PmenuExtra`, and `PmenuExtraSel`. Every shipped palette meets WCAG AA on its own background and on its cursor line, 4.5:1 for text and 3:1 for decorations, at 24-bit and at 256 colors, but for the indent guides of carat-dark and carat-light, which recede below `Comment` instead (`domain_theme`). At 256 colors a palette may give its own index where the nearest one would lose contrast or hue; at 16 colors a group may use an attribute in place of a color the basic set lacks, reverse video for the selection and a menu's selected row and underline for the cursor line (`adapters_screen_presenter`).
 
 | Option | Values | Effect | Problem | Tests |
 | --- | --- | --- | --- | --- |
@@ -559,14 +559,14 @@ Differences from Neovim: `cursorline` is global and drawn in the current window 
 
 ## Indent guides
 
-Neovim draws no indent guides; Carat draws them as the indent-blankline plugin does, by indentation alone. With `indentguides` on, a file window draws the guide character at each `shiftwidth` level of a line's leading whitespace, in `IblIndent`, and the guide of the cursor's block in `IblScope`; both groups are decorations held to 3:1 in every palette, on the cursor line too (`domain_theme`). Each case is a row of the table in `adapters_indent_guides`.
+Neovim draws no indent guides; Carat draws them as the indent-blankline plugin does, by indentation alone. With `indentguides` on, a file window draws the guide character at each `shiftwidth` level of a line's leading whitespace, in `IblIndent`, and the guide of the cursor's block as a solid `│` (`|` with `option.icons ascii`) in `IblScope`. Each palette colors the two groups with roles of its own: carat-dark #30364b and #46506e, carat-light #d8dce8 and #a9b4d6, where at 24-bit and 256 colors `IblIndent` is fainter than `IblScope` and `IblScope` fainter than `Comment`, on the background and the cursor line, each at least 1.1:1; at 16 colors both are basic color 8 and the scope guide is told apart by its solid glyph; the other palettes hold both to the decorations' 3:1, on the cursor line too (`domain_theme`). Each case is a row of the table in `adapters_indent_guides`.
 
 | Case | Effect | Tests |
 | --- | --- | --- |
 | Levels | A guide at every multiple of `shiftwidth` before a line's first non-blank, `tabstop` when `shiftwidth` is 0, a tab counted to the next multiple of `tabstop` | `adapters_indent_guides` |
 | Scrolled sideways | The guides move with the window's horizontal scroll | `adapters_indent_guides` |
 | Blank lines | A blank or whitespace-only line shows the guides of the smaller of the nearest non-blank lines' indents above and below, none past 1000 lines or the buffer's ends | `adapters_indent_guides` |
-| The cursor's block | In the current window, the guide at the deepest level below the cursor line's indent, over the rows around it indented past that level, is in `IblScope`; on a line of no indent none is | `adapters_indent_guides` |
+| The cursor's block | In the current window, the guide at the deepest level below the cursor line's indent, over the rows around it indented past that level, is in `IblScope`, drawn as a solid `│`, `|` with `option.icons ascii`; on a line of no indent none is | `adapters_indent_guides` |
 | Cursor line | The guides on the cursor line take the cursor-line layer of their groups | `adapters_indent_guides` |
 | Windows | File windows only: a plugin's window, a float, and the start screen show none | `adapters_indent_guides` |
 
@@ -575,7 +575,7 @@ Neovim draws no indent guides; Carat draws them as the indent-blankline plugin d
 | `option.indentguides` | `false` (fresh options, as Neovim), `true` (shipped) | Draws the guides | `file:line: option.indentguides takes true or false` | `domain_options_config`, `adapters_indent_guides` |
 | `option.indentguides.char` | One character one column wide, not a control; `┊` by default | The guide character; with `option.icons ascii` one outside ASCII is drawn as `\|` | `file:line: option.indentguides.char takes one character one column wide` | `domain_options_config`, `adapters_indent_guides` |
 
-Differences from indent-blankline: the cursor's block is found by indentation, not by tree-sitter scope, and only in the current window; there is one color for every level; the options are read at startup, with no `:set` or `:IBLToggle`.
+Differences from indent-blankline: the cursor's block is found by indentation, not by tree-sitter scope, and only in the current window; there is one color for every level but the cursor's block, whose glyph is fixed; the options are read at startup, with no `:set` or `:IBLToggle`.
 
 ## Start screen
 

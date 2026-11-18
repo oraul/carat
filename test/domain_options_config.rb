@@ -126,6 +126,14 @@ module DomainOptionsConfigTest
     end
     # The shipped configuration turns them on.
     t.assert_equal([true, "┊"], [options.indentguides, options.indentguides_char], "the shipped configuration turns the indent guides on, drawn in ┊")
+    # The scope guide in ASCII: the cursor's block is drawn in the solid │,
+    # | with the ascii icon set, whatever the guide character.
+    ascii = D::Options.new
+    ascii.icons = "ascii"
+    ascii_kept = D::Options.new
+    ascii_kept.icons = "ascii"
+    ascii_kept.indentguides_char = ":"
+    t.assert_equal([0x2502, 124, 124], [D::Options.new.scope_guide_code, ascii.scope_guide_code, ascii_kept.scope_guide_code], "the scope guide is │, | with the ascii icon set")
 
     # option.keyhints.delay: the key hints' wait, 0 to 10000, 300 by default.
     delays = []

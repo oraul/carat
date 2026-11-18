@@ -141,6 +141,32 @@ ok   dark_plus on the cursor line on the theme's background at 24 bits
 ok   dark_plus on the cursor line on the theme's background at 256 colors
 ok   light_plus on the cursor line on the theme's background at 24 bits
 ok   light_plus on the cursor line on the theme's background at 256 colors
+ok   The other palettes' guides keep 3:1: one_dark on the background at 24 bits
+ok   The other palettes' guides keep 3:1: one_dark on the background at 256 colors
+ok   The other palettes' guides keep 3:1: one_dark on the cursor line at 24 bits
+ok   The other palettes' guides keep 3:1: one_dark on the cursor line at 256 colors
+ok   The other palettes' guides keep 3:1: one_light on the background at 24 bits
+ok   The other palettes' guides keep 3:1: one_light on the background at 256 colors
+ok   The other palettes' guides keep 3:1: one_light on the cursor line at 24 bits
+ok   The other palettes' guides keep 3:1: one_light on the cursor line at 256 colors
+ok   The other palettes' guides keep 3:1: dark_plus on the background at 24 bits
+ok   The other palettes' guides keep 3:1: dark_plus on the background at 256 colors
+ok   The other palettes' guides keep 3:1: dark_plus on the cursor line at 24 bits
+ok   The other palettes' guides keep 3:1: dark_plus on the cursor line at 256 colors
+ok   The other palettes' guides keep 3:1: light_plus on the background at 24 bits
+ok   The other palettes' guides keep 3:1: light_plus on the background at 256 colors
+ok   The other palettes' guides keep 3:1: light_plus on the cursor line at 24 bits
+ok   The other palettes' guides keep 3:1: light_plus on the cursor line at 256 colors
+ok   The guides order below Comment: carat-dark on the background at 24 bits
+ok   The guides order below Comment: carat-dark on the background at 256 colors
+ok   The guides order below Comment: carat-dark on the cursor line at 24 bits
+ok   The guides order below Comment: carat-dark on the cursor line at 256 colors
+ok   The guides order below Comment: carat-light on the background at 24 bits
+ok   The guides order below Comment: carat-light on the background at 256 colors
+ok   The guides order below Comment: carat-light on the cursor line at 24 bits
+ok   The guides order below Comment: carat-light on the cursor line at 256 colors
+ok   The guide colors: carat-dark
+ok   The guide colors: carat-light
 ok   carat-dark: the terminal's background leaves the text color and background to it at 256 colors too
 ok   The cursor line on the terminal's background: carat-dark's Normal takes the palette's text color over CursorLine's background
 ok   carat-light: the terminal's background leaves the text color and background to it at 256 colors too
@@ -224,4 +250,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 226 passed, 0 failed
+domain_theme: 252 passed, 0 failed

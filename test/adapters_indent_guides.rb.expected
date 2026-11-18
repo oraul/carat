@@ -15,9 +15,13 @@ ok   Off draws none
 ok   turning the guides off repaints every row
 ok   A plugin's window draws no guide
 ok   A float shows no guide over a file window
+ok   The scope guide is solid: │ on the cursor's block, ┊ on the others
+ok   The scope guide in ASCII: | on the cursor's block
+ok   the solid guide follows the cursor into another block
+ok   switching to the ascii icon set repaints the scope guide
 ok   the default guide is ┊
 ok   Another character: ▏
 ok   The ASCII fallback: | with the ascii icon set
 ok   An ASCII character is kept with the ascii icon set
 ok   On the cursor line the guides take the cursor-line layer of their groups
-adapters_indent_guides: 22 passed, 0 failed
+adapters_indent_guides: 26 passed, 0 failed
