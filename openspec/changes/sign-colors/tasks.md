@@ -16,6 +16,13 @@
 
 - [x] 4.1 Update `docs/compatibility.md` (63 UI groups and the sign colors), `docs/architecture.md` and `docs/codebase-map.md` (the `Highlight` entry), and `docs/plugins.md` (`place_sign`), checked by `make docs-lint`
 
+## 5. Review fixes
+
+- [x] 5.1 Remove `FramePresenter.diagnostic_group` and call `Domain::Highlight.diagnostic_group` in `paint_diagnostic` (`carat/adapters/frame_presenter.rb`), the duplicate mapping gone, proven by the diagnostic message rows of `test/adapters_frame_presenter.rb` and the severity rows of `test/domain_theme.rb`
+- [x] 5.2 Read the shown layer once through a private `Buffer#shown_layer_index` (-1 for none) that `sign_at` and `sign_group_at` both use (`carat/domain/buffer.rb`), proven by the sign rows of `test/domain_buffer.rb`
+- [x] 5.3 Restore the ellipsis after `NormalFloat` in the `Highlight` entry of `docs/architecture.md`, checked by `make docs-lint`
+- [x] 5.4 Rewrap the edited comments of `carat/adapters/painted_rows.rb` and `FramePresenter#paint_row` at the surrounding width
+
 ## Workflow follow-up
 
 - Archive with `openspec archive sign-colors -y` at packaging.

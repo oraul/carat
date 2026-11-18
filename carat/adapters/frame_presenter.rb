@@ -990,9 +990,8 @@ module Carat
 
       # One text row of a window, every cell written once: the tilde past
       # the end of the buffer, or the sign column (the glyph in its sign's
-      # group), the number, the text,
-      # and blanks between and after, then the token groups, then the
-      # selection.
+      # group), the number, the text, and blanks between and after, then
+      # the token groups, then the selection.
       #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
       def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
         if line.equal?(PaintedRows::TILDE)
@@ -1255,16 +1254,7 @@ module Carat
       def paint_diagnostic(frame, frame_row, window)
         diagnostic = window.buffer.diagnostic_at(window.cursor.row)
         return if diagnostic.nil?
-        frame.put(frame_row, 0, diagnostic.message, FramePresenter.diagnostic_group(diagnostic.severity))
-      end
-
-      # The highlight group of a diagnostic severity.
-      #: (Integer) -> Integer
-      def self.diagnostic_group(severity)
-        return Domain::Highlight::DIAGNOSTIC_ERROR if severity == 1
-        return Domain::Highlight::DIAGNOSTIC_WARN if severity == 2
-        return Domain::Highlight::DIAGNOSTIC_INFO if severity == 3
-        Domain::Highlight::DIAGNOSTIC_HINT
+        frame.put(frame_row, 0, diagnostic.message, Domain::Highlight.diagnostic_group(diagnostic.severity))
       end
 
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void

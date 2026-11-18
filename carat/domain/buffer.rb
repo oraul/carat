@@ -404,26 +404,18 @@ module Carat
       # priority that marks it, "" for none.
       #: (Integer) -> String
       def sign_at(row)
-        i = 0
-        while i < sign_layers.length
-          glyph = layer_at(i).glyph_at(row)
-          return glyph unless glyph.empty?
-          i += 1
-        end
-        ""
+        i = shown_layer_index(row)
+        return "" if i < 0
+        layer_at(i).glyph_at(row)
       end
 
       # The highlight group of the sign shown on the row, the same layer
       # sign_at reads, Highlight::SIGN_COLUMN for none.
       #: (Integer) -> Integer
       def sign_group_at(row)
-        i = 0
-        while i < sign_layers.length
-          layer = layer_at(i)
-          return layer.group_at(row) unless layer.glyph_at(row).empty?
-          i += 1
-        end
-        Highlight::SIGN_COLUMN
+        i = shown_layer_index(row)
+        return Highlight::SIGN_COLUMN if i < 0
+        layer_at(i).group_at(row)
       end
 
       # Splits file text into lines. The line ending is "\r\n" when the first
@@ -728,6 +720,18 @@ module Carat
       end
 
       private
+
+      # The index of the layer whose sign shows on the row: the first, so
+      # the highest priority, that marks it, -1 for none.
+      #: (Integer) -> Integer
+      def shown_layer_index(row)
+        i = 0
+        while i < sign_layers.length
+          return i unless layer_at(i).glyph_at(row).empty?
+          i += 1
+        end
+        -1
+      end
 
       # The style of a row inside the list.
       #: (Integer) -> SyntaxLine

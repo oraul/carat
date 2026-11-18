@@ -11,13 +11,13 @@ module Carat
     # by identity, since lines are never changed in place; TILDE for a row
     # past the end of the buffer, UNSET for nothing painted), the window's
     # horizontal scroll, width, and gutter width, the line number, the
-    # sign shown and its highlight group, the selected display columns and the line end cell, the
-    # cursor's column on the cursor row, the highlight layer it was
-    # lifted onto (0 for none), the syntax entry whose tokens
-    # it was painted with (by identity, SyntaxLine::NONE for none), and
-    # the stamp of the search highlighting it shows (0 for none), the key
-    # of its indent guides (0 for none, IndentGuides#key); and,
-    # to recognize a scroll, the window id and its first visible row.
+    # sign shown and its highlight group, the selected display columns
+    # and the line end cell, the cursor's column on the cursor row, the
+    # highlight layer it was lifted onto (0 for none), the syntax entry
+    # whose tokens it was painted with (by identity, SyntaxLine::NONE for
+    # none), and the stamp of the search highlighting it shows (0 for
+    # none), the key of its indent guides (0 for none, IndentGuides#key);
+    # and, to recognize a scroll, the window id and its first visible row.
     class PaintedRows
       UNSET = String.new("unset")
       TILDE = String.new("tilde")
