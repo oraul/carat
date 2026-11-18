@@ -30,7 +30,7 @@ None: the delivery pipeline is described by no spec under `openspec/specs/` (`sk
 ## Impact
 
 - `.claude/workflows/deliver-change.js`, `.claude/agents/checker.md`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/tools_test.sh`, `docs/goals.md` (the in-place re-review rule).
-- README.md: changed, pipeline step 5's sentence that the check and both reviews run again after an in-place round, and the run state paragraph's command list.
-- docs/codebase-map.md: changed, the `tools/run_state.sh` and `tools/agent_guard.sh` descriptions; no file is added, moved, or removed.
+- README.md: changed, pipeline step 5's sentence that the check and both reviews run again after an in-place round.
+- docs/codebase-map.md: changed, the `tools/run_state.sh` description (`settled`); the `tools/agent_guard.sh` line lists no profile's commands, so it stays; no file is added, moved, or removed.
 - CLAUDE.md: unchanged, its Agents line ("fixed in place and re-reviewed") still holds, since the quality review always reruns.
 - docs/architecture.md: unchanged, it does not describe the fix rounds.
