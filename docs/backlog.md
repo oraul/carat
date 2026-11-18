@@ -579,12 +579,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: the redundant stage makes the one length that matters harder to read and to change with the budget.
 - Fix outline: `head -c "$((17369 - $(wc -c < docs/queue.md)))" /dev/zero | tr '\0' x >> docs/queue.md`. Queued in `phase-shares`.
 
-## The ex commands a global most often runs besides :s and :d
-
-- Where: `carat/use_cases/ex/` and `docs/compatibility.md` Global; `buffer-global` brought `:g`, `:v`, and `:d` without `:m`, `:t`, `:normal`, and `:p`, which `docs/architecture.md` section 5.2 lists with them.
-- Why it matters: `:g/x/m0` (reverse the matching lines), `:g/x/t$` (copy them to the end), and `:g/x/normal Ax` are common globals, and they answer E492 today.
-- Fix outline: add each as an `ExHandler` with its use case over `Buffer#set_lines`, registered in Vim's order, with rows in `docs/compatibility.md` and `test/editor_global.rb`; `:m` and `:t` share `ExRange` for their destination address, and `:normal` feeds keys through `HandleKey` inside the global's transaction. Queued in the backlog-items change of `docs/queue.md`.
-
 ## :d and :s each compute a count's range
 
 - Where: `DeleteCommandHandler#call` in `carat/use_cases/ex/delete_command_handler.rb` (line 42 at 76fa78b) and `SubstituteLines#call` in `carat/use_cases/search/substitute_lines.rb` (lines 66 to 70). Quality advisory of `buffer-global`.
@@ -7298,11 +7292,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the folded entry on the three doubled headings is already resolved by this groom (groom.txt drops the duplicates), and the Location lines of :7253-7265 (docs/backlog.md:6775, :6787, :6790, :6751, :6765, :6861) point at pre-groom lines that now hold other entries (docs currency).
 - Fix: list it as fixed at the next grooming and have findings name a heading instead of a backlog line number.
 
-### The explorer's t with no file window opens a tab page holding only the tree
-- Location: carat/use_cases/plugins/window_requests.rb:211
-- Why: open_as_tab with no file window under option.gt buffers falls back to open_in_tab, so the explorer's t with only the tree left opens tab page 2 and leaves tab page 1 holding only the explorer, the state tab-close-b fixes and that test/editor_tab_flows.rb clean? rejects, while l and Enter open a file window beside the tree; the fallback is also untested (quality advisory, tab-close-b review).
-- Fix: under option.gt buffers open a file window beside the tree as open_file_window does for l, or pin the chosen fallback with a test in test/editor_explorer.rb.
-
 ### The package step applies review advisories to reviewed files and the push is refused (markdown-reading-d retro)
 - Location: `.claude/agents/contributor.md` package step; `.claude/workflows/deliver-change.js` package phase
 - Why: markdown-reading-d's packaging contributor applied an advisory that reworded a reviewed comment and its code map line, the pre-push gates refused the push twice (gates_failed 2), and both files were put back in new commits, still claiming one marker scan; package took 22 calls against a last-10 feature median of 15.5, 3 of 3 advisories the cause. For `review-demotion`.
@@ -7312,12 +7301,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `.claude/agents/checker.md`; `.claude/workflows/deliver-change.js` check phase
 - Why: markdown-reading-d's check took 35,360 output tokens in 4 calls, 13.0% of the run's 272,795 output, for a verdict the script gives; first-pass check 136 of 138; ux-fixes-a 22,463 and palette-narrow 40,656 also over 20,000 on a first pass against a last-10 median of 6,425. For `check-skip`.
 - Fix: run the check script from the workflow without an agent, or cap the agent; accepted when over the next 5 deliveries a first-pass check costs at most 5,000 output tokens and 4 calls, the stage records and first.check unchanged.
-
-### The finder's tab pick opens a tab page under option.gt buffers (sprint-14 sweep quality)
-
-- Location: carat/plugins/finder/plugin.rb:327, against carat/plugins/explorer/plugin.rb:280; the stale open_entry comment at carat/plugins/explorer/plugin.rb:253.
-- Why: the explorer's t moved to open_as_tab while the finder still calls open_in_tab, so under option.gt buffers one pick opens a tab page and the other a buffer tab; the explorer comment still says t opens a tab page.
-- Fix outline: use open_as_tab in the finder with a test, or record in docs/plugins.md why it differs; reword the comment. Queued in `tab-close-d`.
 
 ### groom_row compares newline-stripped rows and trusts untracked inputs (sprint-14 review security Low (3) and quality)
 
@@ -7692,16 +7675,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: it noted 197,007 output as 98.5 percent of medium while the run closed at 893,872 total of 1,200,000; the last 10 feature rows' total to output ratio runs 2.42 to 7.94, so the line notes overruns the totals never show and changes no decision.
 - Fix: drop the line, or make its over agree with the final total-token budget line on the last 10 medium feature rows.
 
-### The planner runs on a placed first item (evidence for plan-skip-placed)
-- Location: the plan phase; git-signs-transport retro note 8, vim-line-commands-b retro note 7.
-- Why: plan 22,923/10 (11.4 percent of output) and 21,821/10 (8.1 percent), after secret-patterns 11,077/12, 3 runs whose decisions kept the item as written.
-- Fix: fold into backlog pool item `plan-skip-placed`; accepted as that item states.
-
-### The merger exceeds its medium call cap waiting on CI (evidence for merge-cap-ci-wait)
-- Location: the merger's cap in `CALL_CAPS`; vim-line-commands-b note 8.
-- Why: merge 14 calls over its cap of 12, after secret-patterns 16 over 14.
-- Fix: fold into backlog pool item `merge-cap-ci-wait`.
-
 ### The merger reports the branch head as the merged commit
 - Location: the merger's result and the merge record of `tools/run_state.sh`; vim-line-commands-b note 9.
 - Why: it reported f230c3210a53, the branch head, not the squash commit 25604e0ec359, which the fallback recorded instead; a record that trusted the report would point at a commit absent from main.
@@ -7994,3 +7967,388 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: .claude/workflows/deliver-change.js, plan-needed in tools/run_state.sh.
 - Why: merge-main-path's brief and the user's answers fixed its tier, placement, sprint count, and size, yet its plan start spent 63,196 output tokens, 28.1 percent of the run's output; evidence for "### The planner runs on a placed first item (evidence for plan-skip-placed)".
 - Fix outline: skip or bound the planner when the brief fixes every decision; accepted when the next such run's plan phase is at or under about 19,000 output tokens or absent with the same decisions.
+
+### Fix-in-place round test checks only a hand-built state
+- Location: tools/tools_test.sh:3691
+- Why: the case named for the fix-in-place round only checks passedAt on a hand-built state and inPlaceCheck, so the alone branch of rounds() (contributor fix start, continue, check and both reviews again) and the reviews() wiring of reviewFindings (security only in_change non-blocking, quality advisories) are unexercised; raised twice by the quality review, merged here.
+- Fix: extract the end-of-round decision into a helper returning the next step and test it, or drop the claim from the case name.
+
+### Security reviewer prompt lacks the fixed_in_place instruction
+- Location: .claude/agents/security-reviewer.md:1
+- Why: the SECURITY schema gains fixed_in_place and quality-reviewer.md describes it, but security-reviewer.md says nothing, so the security side relies on the prompt alone.
+- Fix: add the same one-sentence fixed_in_place instruction to security-reviewer.md.
+
+### Periodic sweep tokens still count in the records budget
+- Location: .claude/workflows/periodic-review.js:142
+- Why: the sweep runs inside sprint-planning but its record start is labelled record, which add_tokens keys record, not sprint, so its tokens still count in the records change's budget; raised twice by the quality review, merged here.
+- Fix: label it periodic: record or match the sweep's record in add_tokens.
+
+### Budget line names the sprint key too narrowly
+- Location: tools/run_state.sh:1795
+- Why: the budget line says sprint-planning's reviews set apart though the sprint key also holds the due, notes, record, records-merged, and planner starts.
+- Fix: say sprint-planning's own starts.
+
+### Proposal names README pipeline step 8 as changed
+- Location: openspec/changes/archive/2026-11-18-pipeline-diet-b/proposal.md:13 and :195
+- Why: the proposal names README pipeline step 8 as changed but the diff leaves step 8 as it was; raised twice by the quality review, merged here.
+- Fix: drop step 8 from the list or say why it stays.
+
+### Two blank lines left where figuresFirst was removed
+- Location: .claude/workflows/deliver-change.js:1007
+- Why: removing figuresFirst left two blank lines between mayFix and qualityTask (also reported at :1009, merged here).
+- Fix: keep one blank line.
+
+### Fixed-in-place state lives only in memory across a resume
+- Location: .claude/workflows/deliver-change.js:1169
+- Why: fixedInPlace, awaiting, and offered live only in memory while seed rebuilds every quality-advisory note on a resume before the push, so a finding confirmed fixed in place in an earlier start (or offered just before a stop) is handed to docs/findings again.
+- Fix: note each confirmed fix as fixed-in-place in the run state and have seed fill fixedInPlace from those notes.
+
+### Run-check prompt may run moved after a failed check
+- Location: .claude/workflows/deliver-change.js:924
+- Why: checkRunTask lists the moved line as step 3, "Then", after the pass-only step 2, while the old prompt said once the check passed, so a run start may run moved (which writes the moved key) after a failed check.
+- Fix: begin step 3 with "Only after that pass" as step 2 does.
+
+### In-place-only rounds inflate the rework metric
+- Location: .claude/workflows/deliver-change.js:1268
+- Why: an in-place-only round goes through contributor('fix'), which increments rework, so metric.rework, the first-pass picture the planner reads, and the 'still blocked after N fix rounds' stop mix advisory clean-ups with blocking fixes.
+- Fix: count in-place rounds in their own metric while still bounding them by ROUNDS.
+### The Sprint 17 feature decision still places tab-close-d at place 1
+- Location: `docs/queue-feature.md:30`.
+- Why: the merge resolution of tab-close-d removed it from the Sprint 17 list, but the decision still places tab-close-d and vim-folds-b at places 1 and 2 and vim-line-commands-c third, while the list holds vim-folds-b at 1 and vim-line-commands-c at 2 (tab-close-d late finding at 5982df4f5353, quality advisory).
+- Fix: say tab-close-d merged from place 1, vim-folds-b and vim-line-commands-c now at places 1 and 2.
+
+### The tab-close-d findings entries drop the file's backticks and periods
+- Location: the tab-close-d findings file, line 11 (folded into this file).
+- Why: the three late entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use, two formats in one file (tab-close-d late finding at 5982df4f5353, quality advisory).
+- Fix: backtick the locations and end each Location, Why, and Fix line with a period as the earlier entries do.
+
+### plan-needed skips the planner for a security note recorded after a later sprint plan (pipeline-diet security Low (3))
+- Location: tools/run_state.sh:2613 (plan_needed)
+- Why: plan-needed now skips the planner for a pending change's `security` notes (PLAN_NOTES includes security) whenever any sprint-N-records change merged after it; a security note recorded on that change after the sprint planner ran would never be placed by a planner, so an advisory security finding could sit unqueued. The blocking periodic-security check above the loop is unchanged, so no blocking finding is affected.
+- Fix: In plan_needed, apply placed_by_sprint only to retro and overrun notes and keep `security` (and `quality`) notes always triggering the planner, or compare each note's recording time with the sprint-records merge time instead of the change's merge commit.
+
+### The contributor's package step drops its no-backlog clause (pipeline-diet quality)
+- Location: .claude/agents/contributor.md:47
+- Why: out of scope: the package step's 'never opening the backlog' is dropped, the contributor file's only statement of the no-backlog rule, which the brief does not ask to change.
+- Fix: restore the clause.
+
+### Unrelated wording trims in the contributor file (pipeline-diet quality)
+- Location: .claude/agents/contributor.md:34, :70
+- Why: out of scope: unrelated wording trims ('Do the plan notes beside the code' to 'too' at :34, 'Return the result the workflow's schema asks' to 'Return the workflow's schema' at :70) change no behavior the brief names.
+- Fix: revert both lines.
+
+### The proposal and the contributor disagree on when reviewed-edits runs (pipeline-diet quality)
+- Location: openspec/changes/archive/2026-11-18-pipeline-diet/proposal.md:13 (was openspec/changes/pipeline-diet/proposal.md:13), .claude/agents/contributor.md:49
+- Why: docs drift: the proposal says the package step runs reviewed-edits before each commit, while .claude/agents/contributor.md:49 runs it once in step 4 before the push, after the records commits.
+- Fix: state one rule in both (before each commit, or once before the push with a restoring commit).
+
+### scoutTargets matches a location as a substring of the brief (pipeline-diet quality)
+- Location: .claude/workflows/deliver-change.js:195 (scoutTargets)
+- Why: loose match: scoutTargets names an area when String(brief).includes(pathOf(l)), so a directory or prefix location (tools/, carat/domain) counts as named whenever the brief names any file under it, skipping its scout.
+- Fix: match the location's path as a whole token of the brief (delimited by backticks, spaces, or punctuation).
+
+### reviewed-edits fails open when git diff fails (pipeline-diet quality)
+- Location: tools/run_state.sh:1692 (reviewed_edits)
+- Why: fail-open: reviewed_edits discards git's errors and chains git diff && git ls-files, so a failing git diff yields an empty list and 'none since the security review' with exit 0.
+- Fix: run git diff outside the 2>/dev/null pipeline and return 1 when it fails.
+
+### docs-lint's own queue item skip needs a symbolic branch (pipeline-diet quality)
+- Location: tools/docs_lint.sh:134 (own_change)
+- Why: own_change reads only a symbolic branch, so a detached checkout (CI's pull_request merge ref) never skips the own queue item; harmless today since plan-apply removes the item before the push, but the comment claims only the check clone.
+- Fix: say so in the comment, or fall back to GITHUB_HEAD_REF.
+
+## sprint-16 row names the wrong six changes
+
+- Location: docs/sprints.tsv:19, tools/run_state.sh:2295 (sprint_row)
+- Why: the sprint-16 row names moved-review-carry (merged after the plan, the next sprint's security-first item) in place of plugin-lazy-activate, whose history row is only on bugfix/tab-close-d, so its names, wall time, tokens, and first-pass figures describe the wrong six changes; sprint_row reads only history rows while sprint_names counts the merged change without one.
+- Fix: make sprint_row (or groom) refuse or wait when a merged sprint change has no history row, then rewrite the sprint-16 row in a records change once plugin-lazy-activate's row is on main.
+
+## Fold adds a level-one heading per findings file
+
+- Location: docs/backlog.md:7740, tools/run_state.sh:2143 (folded_backlog)
+- Why: the fold adds a third level-one heading ('# Findings of sprint-15-records'), the very defect the folded entry under it records, nesting every later entry under it.
+- Fix: drop the title line here and let folded_backlog skip a findings file's leading '# ' line.
+
+## Folded headings lack a blank line before them
+
+- Location: docs/backlog.md:7643, 7647, 7651, tools/run_state.sh (folded_backlog)
+- Why: folded headings follow a text line with no blank line before them (the known fold defect, again).
+- Fix: insert the blank lines and have folded_backlog separate every folded heading by one blank line.
+
+## Committed queue still lists a merged security-first item
+
+- Location: docs/queue-backlog.md:22
+- Why: the committed queue still lists moved-review-carry under Security first though it merged as #199, relying on the package step's plan-apply to drop it.
+- Fix: confirm plan-apply removes the section before the merge, or have groom drop queue items already merged.
+
+## Records proposal names a file the diff does not touch
+
+- Location: openspec/changes/archive/2026-11-18-sprint-16-records/proposal.md:25, tasks.md:7
+- Why: Impact (and task 1.2) names docs/metrics-feature.tsv, which the diff does not touch.
+- Fix: drop it from Impact and say in task 1.2 that only docs/metrics-backlog.tsv gains a row.
+
+## New Pool drops items with no Decisions line
+
+- Location: docs/queue-backlog.md:30, docs/backlog.md:137, 1017, 1168
+- Why: the new Pool drops plugin-host-tidy batch 2 part b (PluginUi, bars comments, in_window, move_float), plugin-host-move, package-advisory-edit, lint-own-queue-paths, plan-skip-placed, scout-pack-reuse, and merge-cap-ci-wait with no Decisions line, their headings left in docs/backlog.md.
+- Fix: the next planner run states each drop or puts the items back in the Pool.
+
+### The squash trailer repeats the gates' trailer
+- Location: tools/agent_guard.sh:964 (SQUASH_TRAILER), tools/gates.sh:78 (TRAILER)
+- Why: quality advisory, duplication: two copies of the trailer line that must stay equal, or the merge hook and the gates disagree on the squash message.
+- Fix: a tools_test.sh case comparing the two lines, as "the guard's risky keys are the gates'" does for RISKY_CONFIG; this change's head already carries it as "guard: the squash trailer is the gates' trailer", so the grooming may close this entry once it confirms the case on main.
+
+### Two JSON string decoders in the guard
+- Location: tools/agent_guard.sh:970 (json_text), tools/agent_guard.sh:153 (field)
+- Why: quality advisory, duplication: json_text repeats field's key match, escape loop, and hex decoding, two JSON string decoders to keep in step.
+- Fix: have field decode through json_text and apply its folding of newlines and non-ASCII after.
+
+### Two lookups of the archived pr.md
+- Location: tools/agent_guard.sh:1027 (merge hook lookup), tools/open_pr.sh:167
+- Why: quality advisory, one clear way: the hook finds the archived pr.md by a non-recursive listing and a cat-file check while open_pr.sh still lists the whole archive with ls-tree -r, two lookups of the same file that grow apart.
+- Fix: give open_pr.sh the same non-recursive listing of the archive's entries, or share one lookup.
+
+### The contributor returns work the quality review blocks on its first pass (plugin-lazy-activate retro 11)
+- Location: `.claude/agents/contributor.md`, the contributor's self-check before it returns; `.claude/workflows/deliver-change.js`, the quality round.
+- Why: quality passes first 85 of 153 runs against check 150/153 and security 147/153; plugin-lazy-activate had 2 blocking findings of two kinds (a test expectation edited against plugin-host spec.md:100 and :115 left in force; a new raise branch at plugin_syntax.rb:48 without its test), its rework round 104,027 output tokens, 30 percent of 343,926; lsp-container-b and vim-folds-a also quality:0 in the feature lane's last 10.
+- Fix: make the contributor catch these two kinds before it returns, without adding a phase; accepted when status shows quality first passes at 8 or more of the next 10 feature runs and none of these two blocking kinds.
+
+### A scout runs for an area the change barely edits (plugin-lazy-activate retro 12)
+- Location: `.claude/workflows/deliver-change.js`, the scout plan from the areas start.
+- Why: plugin-lazy-activate spent 57,113 output tokens and 40 calls on scouts (16.6 percent of 343,926 output, 16.5 percent of 242 calls) for 3 packs, one (build-and-ci) for 8 of 813 changed lines; scout shares tab-close-b 25 percent, tab-close 21 percent, secret-patterns 33.6 percent.
+- Fix: skip or fold the scout of an area whose planned edit is a few lines; accepted when the scout share of output over the next 10 feature runs has a median at or under 12 percent with first.check and first.quality rates not lower.
+
+### The finder's tab pick repeats the open_file call of its default branch
+- Location: carat/plugins/finder/plugin.rb:332 (open_path, the when :tab branch)
+- Why: the :tab branch's target == 0 arm repeats the else branch's host.open_file(target, path) inside a ternary, so the default open lives in two places and can drift (two quality advisories, duplication and simplicity, merged here)
+- Fix: before the case, map how to the default when it is :tab and target is 0 (or guard so :tab reaches open_as_tab only when target != 0), leaving when :tab to call open_as_tab alone and the zero case to fall through to the one open_file call
+
+### The host's open_as_tab fallback with no file window is reached by no shipped caller
+- Location: carat/use_cases/plugins/window_requests.rb:214, docs/plugins.md:79
+- Why: every shipped plugin now checks editing_window before open_as_tab, so the host's no-file-window fallback to a tab page is dead for shipped callers, and docs/plugins.md asks each plugin to repeat the check
+- Fix: at the next plugin API minor step make open_as_tab with no file window open in the current window as open_file does, and drop the finder's own check
+
+### The finder's <C-t> row leaves out the lone-tree case
+- Location: docs/compatibility.md:528
+- Why: the explorer's row (line 508) and the file-finder spec state that with no file window the tab open opens as <CR> does, but the finder's <C-t> row omits it, so the table under-describes the behavior
+- Fix: append "and with no file window as <CR> opens" to the row
+
+## Findings of tab-close-d after its package step
+
+- quality advisory docs/queue-feature.md:30 docs currency: the merge resolution removed tab-close-d from the Sprint 17 list, but the decision still places tab-close-d and vim-folds-b at places 1 and 2 and vim-line-commands-c third, while the list now has vim-folds-b at 1 and vim-line-commands-c at 2; fix: say tab-close-d merged from place 1, vim-folds-b and vim-line-commands-c now at places 1 and 2
+- quality advisory docs/findings/tab-close-d.md:11 one clear way: the three new entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use; fix: backtick the locations and end each Location, Why, and Fix line with a period as above
+
+### A lane's queue removal conflicts with a sprint-records rewrite of the queue (tab-close-d retro)
+- Location: `tools/run_state.sh` merge-main and plan-apply, `docs/queue-feature.md`.
+- Why: after merge-main the delivery's own plan-apply edit of `docs/queue-feature.md` conflicted with the sprint-16-records rewrite; merge-main aborted, a contributor start redid the merge by hand, and the check, both reviews, and a second 16-minute CI ran again (merge 60,874 output tokens/21 calls against 24,917/7; ci_wait_calls 10 against 4 to 8).
+- Fix: re-run plan-apply over the new main's queue in merge-main instead of merging the queue text, so a lane whose base predates a records merge takes in main with no conflict in `docs/queue-*.md` and no contributor start.
+
+### The moved check reruns the reviews on a cleanly merged file and misses a hand-resolved one (tab-close-d retro)
+- Location: `tools/run_state.sh` moved_change.
+- Why: after the merge of main the moved check named `README.md` (merged cleanly, same diff against the new main) as changed and both reviews ran again, while the hand-merged `docs/queue-feature.md` was not named; reviews 37,844 output tokens/46 calls, 20 percent of the run's 227 calls, the rerun changing no decision.
+- Fix: rerun the reviews exactly when the change's own diff of some file differs from its diff before the merge, a hand-resolved conflict file always counting; a tools-test case for each.
+
+### Packaging writes advisory findings into the findings file by hand (tab-close-d retro)
+- Location: `.claude/workflows/deliver-change.js` package phase, `docs/findings/<change>.md`.
+- Why: packaging turned the run state's quality advisories into findings entries and a rewritten pull request text by hand in two docs-only commits, and the next quality review flagged the entries' format; package 60,830 output tokens/51 calls against a last-ten feature median of about 8,000/15.
+- Fix: a `tools/run_state.sh` command appends the advisory notes to `docs/findings/<change>.md` in the file's one format; accepted when the next five medium runs' package phase stays near the median.
+
+### The tab-close-d findings entries break the file's format (tab-close-d late finding)
+- Location: the tab-close-d findings file, line 11 (folded into this file).
+- Why: the three entries added at packaging drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use, two formats in one file.
+- Fix: backtick the locations and end each Location, Why, and Fix line with a period, as above them.
+
+### A records change that resumes into the planner loses the planner's files (sprint-16-records retro)
+- Location: `.claude/workflows/deliver-change.js` package line, `build/plan/sprint-16-records/`.
+- Why: the package line forbids plan-apply on `sprint-N-records`, so the planner's `queue-backlog.md` (10,411 bytes) and `backlog.md` (2,758 bytes) never reached main; `docs/queue-backlog.md:5` still holds the merged moved-review-carry Security first section and moved-review-carry-b is not queued.
+- Fix: a records run starts no planner, or lands every file the planner wrote in its squash commit.
+
+### The benchmark phase starts an agent for a diff with no file under carat/ (sprint-16-records retro)
+- Location: `.claude/workflows/deliver-change.js` benchmark phase.
+- Why: with 0 carat files changed it builds base and change and reports every key unchanged: bench 3,547/6 in sprint-16-records, 4,178/8 in sprint-14-records, 3,467/7 in sprint-15-records, 11,192 output and 21 calls over 3 runs, 0 differences.
+- Fix: record the bench phase without an agent start when no measured file changed; accepted when the next records row shows no bench share.
+
+### Groom's fold keeps producing format defects the records run hand-fixes (sprint-16-records retro)
+- Location: `tools/run_state.sh` folded_backlog (`:2143`), groom.
+- Why: the docs-lint hand edit of a removed findings path recurred in sprints 10, 12, 13, and 16; 2 of sprint-16-records' 6 quality advisories were fold defects already in the backlog (a third level-one heading, headings at `docs/backlog.md:7643`, `:7647`, `:7651` with no blank line).
+- Fix: folded_backlog skips a findings file's leading `# ` line and separates every folded heading by one blank line; accepted when a records run ends with no hand edit after groom and no fold-format finding.
+
+### Marked fold copies outlive a committed plugin edit
+- Location: carat/domain/buffer.rb:640
+- Why: the fold copies taken by transaction_mark are cleared only by revert_to, so after a successful plugin edit they stay, holding a closed window's Folds alive, and a later revert_to without a fresh mark, for example with transaction_size, restores stale folds, contrary to the risk note of the vim-folds-b design.
+- Fix: clear marked_folds and marked_fold_copies in commit_transaction and on revert_to's early return, and add a test of revert_to after a committed marked edit.
+
+### A revert test pins folds misaligned with their reverted lines
+- Location: test/domain_edits.rb:221
+- Why: the assertion 'a revert with no fresh mark puts back no old copy' pins folds [2,3],[4,5] against lines already reverted to six rows, enshrining folds misaligned with their lines as expected.
+- Fix: assert only that no stale copy comes back (a fold count or a fold the stale copy would differ in), or shift the folds back in revert_to as the signs are.
+
+### mark_folds copies every folded window's folds on each plugin edit
+- Location: carat/domain/buffer.rb:794
+- Why: mark_folds allocates a Folds copy per folded window on every plugin edit_buffer, success included, for a rollback only a failure uses.
+- Fix: acceptable as designed, or take the copy lazily on the first splice of the marked transaction that touches a tracked fold list.
+
+### A fold test label repeats keys instead of naming the behavior
+- Location: test/editor_folds.rb:127
+- Why: the label 'zf3jzozfj nests a fold at the outer fold's first row' repeats the keys of the drawing row at line 88 instead of naming the behavior it proves.
+- Fix: label it by the state it proves, for example 'zf at an open fold's first row adds a closed fold nested in it'.
+### A records change that resumes into the planner loses the planner's files (sprint-16-records retro)
+- Location: `.claude/workflows/deliver-change.js` package line, `build/plan/sprint-16-records/`.
+- Why: the package line forbids plan-apply on `sprint-N-records`, so the planner's `queue-backlog.md` (10,411 bytes) and `backlog.md` (2,758 bytes) never reached main; `docs/queue-backlog.md:5` still holds the merged moved-review-carry Security first section and moved-review-carry-b is not queued.
+- Fix: a records run starts no planner, or lands every file the planner wrote in its squash commit.
+
+### Global :p copies every earlier printed line per match
+- Location: carat/use_cases/search/global_command.rb:174
+- Why: each :p in a global copies every earlier printed line into a new string, quadratic in the lines printed (:g/./p on a large file).
+- Fix: append the printed lines to one mutable string or array and build the Outcome.from_print once after the loop.
+
+### place_cursor clamps by the mode's max_col, not as in normal mode
+- Location: carat/use_cases/ex/line_command_handler.rb:57
+- Why: place_cursor now clamps through EditorState#max_col, which allows the column past the last character in insert and visual modes, where the old code always clamped as in normal mode (a line command run by a plugin's run_ex in insert mode or a : binding in visual mode); the new comment's '(the end of the line for a wanted column past it, -1)' is garbled.
+- Fix: keep the normal-mode clamp or state the mode dependence and reword the comment.
+
+### Doubled comma in the join handler's header comment
+- Location: carat/use_cases/ex/join_command_handler.rb:18
+- Why: the header comment reads 'what ExRange gives,, a bad count', a typo reported by two review passes (at bd2f7aad933d and 460a4404420f), merged here.
+- Fix: drop the extra comma.
+
+### Ragged wiring comment around HandleKey in EditorAssembly
+- Location: carat/adapters/editor_assembly.rb:191
+- Why: the edited comment reads 'registered afterwards, after HandleKey, which :normal receives, the core ex commands before the', a broken wrap with stacked clauses that leaves a short ragged line, reported by two review passes, merged here.
+- Fix: rewrap the paragraph and say HandleKey is built before the ex handlers because :normal receives it.
+
+### :normal runs HandleKey's follow for every key it feeds
+- Location: carat/use_cases/ex/normal_command_handler.rb:99
+- Why: each key :normal feeds goes through HandleKey#call, whose follow runs the completion, float, palette, and plugin observers and ArrangeView per key, so :%normal on a large buffer pays them for every key of every line.
+- Fix: note it as a known cost or give HandleKey a path that defers follow to the end of the :normal.
+
+### The :p row gives its bang refusal as a bare E477
+- Location: docs/compatibility.md:1
+- Why: the :p row names its bang refusal as a bare E477 while its other errors and the :normal row give the full text.
+- Fix: write E477: No ! allowed.
+
+### The merge phase's output tokens do not follow its fixed work (vim-folds-b retro 5, extends merge-output-cap)
+- Location: `.claude/agents/merger.md`, `.claude/workflows/deliver-change.js` (merge phase)
+- Why: vim-folds-b's first-pass green CI with 2 waits, no main move, and no refusal cost 98,694 output tokens over 10 calls (9,869 per call), 25.6 percent of the run's 385,471 output, after pipeline-diet (#202) capped the merger's calls but not its tokens; last-ten feature merges 4,992 to 60,874 (median about 13,500), backlog about 12,000; the same problem as pipeline-diet retro 7 (39,483 on 10 calls), queued as `merge-output-cap`.
+- Fix: merge into `merge-output-cap`; accepted when, over the next 5 runs with a first-pass green CI and no main move, the merge phase stays within twice the twenty-row median of its output and under 10 percent of the run's output, the green line, squash check, and merged record unchanged.
+
+### Scouting stays the costliest phase in tool calls (vim-folds-b retro 6)
+- Location: `.claude/agents/scout.md`, `.claude/workflows/deliver-change.js` (scoutTargets)
+- Why: 3 fresh packs at 37e72e3 took 44 of vim-folds-b's 139 calls (31.7 percent) and 62,465 output tokens (16.2 percent), the most scout calls in the last ten feature rows (11 to 40), while the packs held Designs 0, Rules 0, Bench 0 against Gaps 7 for 8 entry points and the contributor needed 34 implement calls.
+- Fix: no empty pack section for a map area, fewer calls per pack; accepted when over the next 5 feature runs the scout phase stays under 20 percent of the run's tool calls with no rise in implement calls or quality first-pass failures (89/159 now).
+
+### The code map gives the backlog lane's sprint share as 0 to 2
+- Location: `docs/codebase-map.md:55`, `tools/docs_lint.sh:183`
+- Why: the map's `tools/docs_lint.sh` entry says a `## Sprint` of 0 to 2 items in the backlog lane, while the lint checks `backlog:3` since the 3 + 3 sprint of sprint-17 (`docs/goals.md`), so an agent reading the map plans one backlog item too few.
+- Fix: say 0 to 3 in the backlog lane in the map entry; accepted when the entry matches the lane shares `check_queue` reads.
+
+### GlobalArgs.parse keeps a blank-only check no caller can reach
+- Location: carat/domain/global_args.rb:33
+- Why: the only caller passes ExCommand#literal, which already has its leading blanks removed, so a blank-only text never arrives and text.strip.empty? acts as text.empty?; the comment states a rule that no test covers. Left in place because removing it would change what a direct call of GlobalArgs.parse with " " returns.
+- Fix: keep text.empty? and drop the blank-only clause from the comment, or add a test/domain_global.rb row for a blank-only text.
+
+### The :normal handler requires HandleKey, breaking the innermost-first require order
+- Location: carat/use_cases/ex/normal_command_handler.rb:5 and carat.rb:240
+- Why: an ex handler now requires ../handle_key, the outer key orchestrator, so carat.rb loads HandleKey and the dispatcher's graph through it ahead of their own lines (329 and 332), and the production require graph is no longer innermost first.
+- Fix: list the :normal and :p requires in carat.rb after handle_key, or give the handler a narrow key-feeding collaborator.
+
+### place_cursor's clamp now depends on the mode, without a test
+- Location: carat/use_cases/ex/line_command_handler.rb:496
+- Why: place_cursor now clamps through EditorState#max_col, which lets the column sit past the end in insert and visual modes, where the old code always clamped as normal mode does (a line command a plugin runs outside normal mode); no test covers the mode dependence.
+- Fix: keep the normal-mode clamp (length - 1), or state the mode dependence and test it.
+
+### Header comments run past the wrap width
+- Location: carat/use_cases/ex/normal_command_handler.rb:17 and carat/domain/editor_state.rb:16
+- Why: the header comment's second line in normal_command_handler.rb and the comment at editor_state.rb:16 run far past the wrap width of the comment around them, which makes them harder to read.
+- Fix: rewrap both comments.
+
+## Findings of vim-line-commands-c after its package step
+
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:24 MAX_DEPTH 100 exceeds Spinel's 64 exception frames when the recursion goes through a plugin action, each level holding a Guarded rescue, so SystemStackError may come before E192; fix: lower the limit below the frame budget or test the plugin path
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:104 the Esc loop runs until the mode is normal whatever mode :normal started in, so a plugin's run_ex of :normal from visual or insert mode ends the user's selection or insert session (LeaveInsert then skips its commit); fix: end only what the keys left unfinished, comparing with the mode at entry
+- quality advisory carat/use_cases/ex/line_command_handler.rb:57 place_cursor now clamps by the mode (EditorState#max_col), so :m, :co, :j, : , : and :p run from insert or visual mode (plugin run_ex) leave the cursor at the line length where the old code put it on the last character, untested; fix: keep the normal-mode clamp or add a test of the intended column
+- quality advisory carat/use_cases/ex/print_command_handler.rb:34 E749 is given for a buffer of one empty line, where Neovim gives it only for a truly empty buffer and prints a file holding one empty line; fix: list it under Differences from Neovim in docs/compatibility.md
+- quality advisory carat/use_cases/search/global_command.rb:174 the :p lines are joined by rebuilding the whole message and a new Outcome per matched line, quadratic on large globals; fix: append to one mutable string and build Outcome.from_print once at the end
+- quality advisory carat/use_cases/handle_key.rb:149 each key :normal feeds runs arrange_view, follow, and plugins.observe, O(keys x lines) on ':%normal' or ':g/x/normal'; fix: skip follow while normal_depth 0 and run it once after the handler
+- quality advisory carat/use_cases/ex/join_command_handler.rb:18 stray double comma ('what ExRange gives,, a bad count'), and the LineCommandHandler class comment still lists only :d, :m, :co, :t, :j, : , : as its subclasses; fix: drop the comma and add :normal and :p
+- quality advisory carat/adapters/editor_assembly.rb:191 the rewrapped comment reads awkwardly ('after HandleKey, which :normal receives, the core ex commands before the'); fix: reflow the sentence
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:35 NormalCommandHandler keeps HandleKey in a public reader but test/adapters_assembly.rb gains no check that it holds the one instance; fix: add the holder check there or drop the reader
+- quality advisory carat/use_cases/actions/history_handler.rb:44 the undo sync under :normal lives in HistoryHandler, so :undo, :redo, :earlier, :later (HistoryCommandHandler) need a second copy (already recorded in docs/findings); fix: do the close-and-reopen once in WalkHistory (start/finish, keyed on normal_depth), which every walk goes through, and drop it from HistoryHandler
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:12 the edited header comment line runs past the file's wrap width; fix: rewrap the paragraph
+- quality advisory carat/use_cases/search/global_command.rb:174 each :p in a global copies every earlier printed line into a new string, quadratic in the lines printed; fix: append to one mutable string and build Outcome.from_print once after the loop
+- quality advisory carat/use_cases/ex/line_command_handler.rb:455 place_cursor now clamps through EditorState#max_col, which allows the column past the end in insert and visual modes where the old code always clamped as in normal mode (a line command a plugin runs outside normal mode); fix: keep the normal-mode clamp or state the mode dependence in the comment
+- quality advisory carat/use_cases/ex/join_command_handler.rb:18 typo: 'what ExRange gives,, a bad count'; fix: drop the extra comma
+- quality advisory carat/adapters/editor_assembly.rb:191 the wiring comment's edit leaves a ragged wrap with stacked clauses ('afterwards, after HandleKey, which :normal receives, the core ex commands before the'); fix: rewrap and say HandleKey is built before the ex handlers because :normal receives it
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:12 the header comment's second line runs past the file's wrap width; fix: rewrap the paragraph
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:33 the new handle_key reader is checked nowhere: test/adapters_assembly.rb does not assert the :normal handler holds the one HandleKey (CLAUDE.md, keyword constructors: readers let the assembly test check every holder); fix: add that assertion or drop the reader
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:59 normal_depth is raised and lowered without ensure (Spinel frames), so a raise escaping the fed keys leaves it above 0 and every later key joins one open transaction that LeaveInsert never closes; fix: reset normal_depth to 0 where the key loop recovers from a raise, or record the limit in docs/spinel-notes.md
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:99 each fed key runs HandleKey#follow (completion, floats, palette, plugin observers, ArrangeView), so :%normal on a large buffer pays them per key per line; fix: note the cost or defer follow to the end of the :normal
+- quality advisory docs/compatibility.md:325 the :p row gives its bang refusal as a bare E477 while its other errors give the full text; fix: write E477: No allowed
+- quality advisory carat/domain/global_args.rb:33 dead branch: the only caller of GlobalArgs.parse passes ExCommand#literal, already lstripped, so a blank-only text never arrives and text.strip.empty? equals text.empty?, and the new comment states a rule no test covers; fix: keep text.empty? and drop the blank-only clause from the comment, or add a test/domain_global.rb row for a blank-only text
+- security Low (6) carat/use_cases/ex/normal_command_handler.rb:62 A hostile project .caratrc remap can make :normal nest over ranges and hang the editor: for example keymap.normal j :%normal Space j CR runs each line's j again at the next depth. That is about line_count to the power MAX_DEPTH (100) key runs, because HandleKey now saves and restores the remap count for each nested call, the bang sti
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:5 layer order: an ex handler now requires ../handle_key, the outer key orchestrator, so carat.rb (line 240) loads HandleKey and the dispatcher's graph through it ahead of their own lines 329 and 332 and the require graph is no longer innermost first; fix: list the :normal and :p requires in carat.rb after handle_key, or give the handler
+- quality advisory carat/use_cases/ex/line_command_handler.rb:496 behavior change without its test: place_cursor now clamps through EditorState#max_col, which allows the column past the end in insert and visual modes, where the old code always clamped as in normal mode; fix: keep the normal-mode clamp (length - 1) or state and test the mode dependence
+- quality advisory carat/use_cases/ex/join_command_handler.rb:18 typo: the header comment reads 'what ExRange gives,, a bad count'; fix: drop the extra comma
+- quality advisory carat/adapters/editor_assembly.rb:191 docs: the wiring comment reads 'registered afterwards, after HandleKey, which :normal receives, the core ex commands before the' with a ragged short line; fix: rewrap and say HandleKey is built before the ex handlers because :normal receives it
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:17 style: the header comment's second line and editor_state.rb:16 run far past the wrap width of the surrounding comment; fix: rewrap both comments
+- quality advisory carat/use_cases/search/global_command.rb:174 efficiency: each :p in a global copies every earlier printed line into a new string, quadratic in lines printed (:g/./p on a large file); fix: collect the printed lines in one mutable string and build Outcome.from_print once after the loop
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:99 efficiency: every key :normal feeds goes through HandleKey#call, whose follow runs the observers and ArrangeView per key, so :%normal on a large buffer pays them per key per line; fix: note it as a known cost or defer follow to the end of the :normal
+- quality advisory docs/compatibility.md:1 docs: the :p row gives its bang refusal as a bare E477 while its other errors and the :normal row give full text; fix: write E477: No allowed
+- quality advisory docs/findings/vim-line-commands-c.md:56 duplication: the fix round appends entries that repeat earlier ones in the same file (':undo, :redo, :earlier, :later inside :normal' repeats line 51, 'place_cursor's clamp now depends on the mode' repeats line 6), so groom folds the same finding twice; fix: merge each pair into one entry
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:69 keys that switch to another buffer and then enter insert mode (:normal bix) leave that buffer transaction open after :normal ends, since LeaveInsert skips its commit under normal_depth and the handler commits only the buffer it opened on, so the undo state closes late with the next key cursor; fix: after the loop, commit the open tra
+- quality advisory test/adapters_assembly.rb:126 the one-instance check of the key handler names only the controller, not NormalCommandHandler, which now holds HandleKey in a reader (CLAUDE.md: every holder checked to get the one instance); fix: add the handle_key of the :normal handler (commands.find( normal )) to that strangers list
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:51 E471 is checked after the range, so :9normal on a 5-line buffer answers E16 where Neovim (EX_NEEDARG) answers E471 first; fix: check command.args.empty? before lines_of, or name the order in docs/compatibility.md
+- quality advisory carat/use_cases/dispatcher.rb:75 transaction_edits is read for every dispatched key though only record uses it, on the hot path; fix: read it inside the if change branch and pass 0 otherwise
+- quality advisory carat/use_cases/ex/normal_command_handler.rb:11 the header comment has one line wrapped far past the file width (read literally with its trailing blanks (ExCommand#literal), as keys typed ...), as does carat/domain/editor_state.rb:16; fix: rewrap both paragraphs to the file width
+- quality advisory docs/architecture.md:200 docs currency: section 6 still names the Outcome output port as (ok and message), while Outcome now also carries printed, which GlobalCommand#visit reads; fix: name printed and Outcome.from_print in that sentence
+- quality advisory docs/findings/vim-line-commands-c.md:51 docs currency: the entries 'An undo ex command among the keys :normal feeds does not sync the undo first' (line 51) and ':undo, :redo, :earlier, :later inside :normal do not sync the open transaction' (line 56) describe what 3ad68de now fixes through UndoSyncing, so the findings file hands the backlog fixed items; fix: drop both entries
+- quality advisory test/editor_line_commands.rb:171 the two new undo-command rows sit between the comment naming the scenario A remap per line of a long range and its row, detaching that comment from the row it labels; fix: move the two rows and their comment above the remap comment at line 171
+- quality advisory test/editor_line_commands.rb:176 tests beside behavior: only :undo is tested among the undo ex commands that now sync under :normal, while docs/compatibility.md promises it for :redo, :earlier, and :later too; fix: add a row for :redo (or :earlier) among the keys :normal feeds
+- quality advisory carat/use_cases/ex/history_command_handler.rb:43 an :undo with a bad argument (E474) under :normal still closes and reopens the open transaction, splitting the keys into two undo states though nothing was undone, unlike Vim, which refuses before syncing; fix: check digits? before synced_walk, or sync only for a valid walk
+## JsonRpcLanguageGateway#path_of keeps dot segments (periodic security Low at 186ddfb)
+
+- Where: `JsonRpcLanguageGateway#path_of` in `carat/adapters/json_rpc_language_gateway.rb` (line 789 at 186ddfb); split at sprint-18 planning from "## Security Lows of the periodic review at 186ddfb", whose OpenSpec pin stays with `check-clone-toolchain`.
+- Why it matters: `.` and `..` segments pass `VisitTarget`'s lexical inside check where only `ResolveInside` refuses them, so one file gets two titles and keys, and a plugin joining an unchecked name reads outside the project.
+- Fix outline: return `PluginApi::Paths.normalize(out)` from `path_of`, with a gateway row for a `..` path. Queued in `lsp-tidy`.
+
+### The squash-merge hook leaves the commit title unchecked (sprint-17 review security Low (4))
+
+- Where: `squash_message` in `tools/agent_guard.sh` (line 950 at 522a0e1).
+- Why it matters: the hook compares `commit_message` with the archived pr.md but never `commit_title`, so a misled merger start could squash with a subject carrying a URL or a model name, and the subject of the commit on main is never compared.
+- Fix outline: read `commit_title` as `commit_message` is read and require line 1 of the archived pr.md followed by ` (#N)`, N the run state's pull request; a tools-test case for a changed title. Queued in `ci-trust-gaps-c`.
+
+### :normal commits the first buffer with another buffer's cursor (sprint-17 review quality)
+
+- Where: `carat/use_cases/ex/normal_command_handler.rb:71` at 522a0e1.
+- Why it matters: when the fed keys switch buffers (Ctrl-^), the original buffer's transaction commits with the other buffer's cursor as its after-cursor, unlike `GlobalCommand#run`, so undo puts the cursor at a position from another file; and keys that switch then enter insert mode (`:normal bix`) leave that buffer's transaction open past the command (`:69`).
+- Fix outline: commit with the position from before the loop when the buffer changed, and commit or close whatever transaction the keys left open, with rows for both. Queued in `normal-command-fixes`.
+
+### :normal can nest through a project remap until the editor hangs (vim-line-commands-c security Low (6))
+
+- Where: `carat/use_cases/ex/normal_command_handler.rb:62` and `MAX_DEPTH` at `:24`, at 522a0e1.
+- Why it matters: a hostile project `.caratrc` line such as `keymap.normal j :%normal Space j CR` runs each line's j again at the next depth, about line_count to the power 100 key runs; and depth 100 exceeds Spinel's 64 exception frames through a plugin action, so a stack error may come before E192.
+- Fix outline: bound the total keys or depth well under the frame budget, refusing with E192, with a row for the remap above and a plugin-action path. Queued in `normal-command-fixes`.
+
+### :normal leaves the caller's mode, depth, and command order wrong (vim-line-commands-c late findings)
+
+- Where: `carat/use_cases/ex/normal_command_handler.rb:104` (the Esc loop), `:59` (normal_depth), `:51` (E471), `carat/use_cases/ex/history_command_handler.rb:43`, at 522a0e1.
+- Why it matters: a plugin's `run_ex` of `:normal` from visual or insert mode ends the user's selection or insert session; a raise escaping the fed keys leaves normal_depth above 0, so every later key joins one transaction never closed; `:9normal` on 5 lines answers E16 where Neovim answers E471; `:undo x` (E474) under `:normal` still splits the undo state.
+- Fix outline: end only what the keys left unfinished, reset the depth where the key loop recovers, check the argument before the range, sync only for a valid walk; rows for each. Queued in `normal-command-fixes`.
+
+### :normal and :p tests and docs miss what the code promises (vim-line-commands-c late findings)
+
+- Where: `test/adapters_assembly.rb:126`, `test/editor_line_commands.rb:171`, `:176`, `carat/use_cases/ex/print_command_handler.rb:34`, `docs/architecture.md:200`, `carat/use_cases/dispatcher.rb:75`, at 522a0e1.
+- Why it matters: the one-instance check names only the controller though `NormalCommandHandler` holds `HandleKey` in a reader; a scenario comment sits above the wrong rows (sprint-17 review); only `:undo` is tested of the four undo commands `docs/compatibility.md` promises sync under `:normal`; E749 is given for one empty line where Neovim prints it, not listed as a difference; section 6 names `Outcome` as ok and message, without printed; `transaction_edits` is read for every dispatched key though only record uses it.
+- Fix outline: add the holder to the strangers list, move the comment, add a `:redo` row, list E749 under Differences, name `printed` and `Outcome.from_print`, read the edits inside the change branch. Queued in `normal-command-fixes`.
+
+### The code map's explorer flow names open_in_tab (sprint-17 review quality)
+
+- Where: `docs/codebase-map.md:584` at 522a0e1.
+- Why it matters: the flow says the explorer opens files through `open_file`, `open_in_split`, and `open_in_tab`, but `carat/plugins/explorer/plugin.rb` calls `open_as_tab` and `open_in_tree_window`, so a reader follows a name that is not called.
+- Fix outline: name the requests the plugin calls. Fold into `explorer-tidy` if it touches the map, else a docs tidy.
+
+### The advisory commit-prefix strip is written twice in the delivery workflow (sprint-17 review quality)
+
+- Where: `.claude/workflows/deliver-change.js:1119` and `:791` (`addAdvisories`), and two blank lines in a row at `:1009`, at 522a0e1.
+- Why it matters: fixed-in-place matching depends on the two copies of the regular expression staying identical; the blank lines are left from a removal.
+- Fix outline: one helper used by both, one blank line. Fold into the next pipeline change editing the file.
