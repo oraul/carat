@@ -830,6 +830,73 @@ expect "run_state: a second main-moved push in one run is refused" 1 "refused: 1
 state set pushing main_moved 2 > /dev/null
 expect "gates: pushes refuse a second main-moved push" 1 "2 main-moved pushes; one is allowed a run" gates pushes
 
+# moved-review-carry: the reviews carry only when HEAD matches the new main
+# in every file the change never touched, the names compared as text and a
+# failing git diff running them again; a carried review is recorded only
+# at the head of the moved record, which moved's exit-0 path alone writes.
+pushing_dir=$(pwd)
+fresh carry
+state init carry chore/carry > /dev/null
+carry_base=$(git rev-parse HEAD)
+echo edit >> README.md
+echo "echo own" > tools/own.sh
+commit "chore: the change"
+carry_reviewed=$(git rev-parse HEAD)
+state review carry quality pass "blocking=0" "$carry_reviewed" > /dev/null
+state review carry security pass "blocking=0" "$carry_reviewed" > /dev/null
+git_q checkout -q main && echo "echo fixed" > tools/base.sh && commit "fix: a main-only security fix" && git_q checkout -q chore/carry
+git_q merge -q --no-edit main
+expect "run_state: moved keeps the reviews when HEAD matches main outside the change" 0 "^moved: the change is the same at [0-9a-f]{12} as at [0-9a-f]{12}: .*its reviews stand$" \
+  env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed"
+expect "run_state: moved records the head and the reviewed commit on its exit-0 path" 0 "^$(git rev-parse HEAD) $carry_reviewed$" state get carry moved
+expect "run_state: a carried review is recorded after moved exits 0" 0 "" state review carry quality pass "blocking=0 carried=1"
+expect "run_state: set refuses the moved record" 1 "refused: moved is written only by its own command" state set carry moved "$(git rev-parse HEAD) $carry_reviewed"
+# A moved record not tied to the commit the review passed at backs no
+# carry: moved run at the head against itself, which always exits 0, and a
+# review that did not pass at the reviewed commit.
+expect "run_state: moved at the head against itself exits 0 and records the head twice" 0 "^$(git rev-parse HEAD) $(git rev-parse HEAD)$" \
+  sh -c 'env BASE=main sh "$1/run_state.sh" moved carry "$(git rev-parse HEAD)" > /dev/null && sh "$1/run_state.sh" get carry moved' _ "$here"
+expect "run_state: a carried review is refused when moved compared the head with itself" 1 "needs tools/run_state[.]sh moved to have exited 0 at that commit against the commit review[.]security passed at" \
+  state review carry security pass "blocking=0 carried=1"
+state review carry security blocked "blocking=1" "$carry_reviewed" > /dev/null
+env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed" > /dev/null
+expect "run_state: a carried review is refused when the review did not pass at the reviewed commit" 1 "needs tools/run_state[.]sh moved to have exited 0 at that commit against the commit review[.]security passed at" \
+  state review carry security pass "blocking=0 carried=1"
+state review carry security pass "blocking=0" "$carry_reviewed" > /dev/null
+# A merge that puts a main-only file back to its old text (a landed fix).
+git_q checkout -q -b chore/carry-revert "$carry_reviewed"
+git_q merge -q --no-commit main > /dev/null 2>&1
+git_q checkout -q "$carry_base" -- tools/base.sh
+commit "chore: a merge of main reverting its fix"
+expect "run_state: moved reruns the reviews when the merge reverted a main-only file" 1 "^moved: HEAD differs from main in files the change never touched: tools/base[.]sh; the reviews run again at [0-9a-f]{12}$" \
+  env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed"
+expect "run_state: moved leaves no record when the merge reverted a main-only file" 0 "^$" state get carry moved
+expect "run_state: a carried review is refused without moved at the head" 1 "review: refused: a carried review at [0-9a-f]{12} needs tools/run_state[.]sh moved to have exited 0" \
+  state review carry security pass "blocking=0 carried=1"
+# A file of the change named like a pathspec is compared literally.
+git_q checkout -q -b chore/carry-pathspec "$carry_reviewed"
+echo odd > ':(exclude)tools'
+commit "chore: a file named like a pathspec"
+carry_odd=$(git rev-parse HEAD)
+git_q merge -q --no-edit main
+echo "echo own two" > tools/own.sh
+commit "chore: an edit of a file of the change"
+expect "run_state: moved compares a file named like a pathspec literally" 1 "^moved: the merge changed files of the change: tools/own[.]sh; the reviews run again" \
+  env BASE=main sh "$here/run_state.sh" moved carry "$carry_odd"
+expect "run_state: moved leaves no record when a file of the change changed" 0 "^$" state get carry moved
+# A failing git diff runs the reviews again and drops the record.
+git_q checkout -q chore/carry
+env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed" > /dev/null
+mkdir -p "$work/faildiff"
+printf '#!/bin/sh\n[ "$1" = diff ] && exit 128\nexec "%s" "$@"\n' "$(command -v git)" > "$work/faildiff/git"
+chmod +x "$work/faildiff/git"
+expect "run_state: moved reruns the reviews when git diff fails" 1 "^moved: git diff failed comparing [0-9a-f]{12}, HEAD, and main; the reviews run again at [0-9a-f]{12}$" \
+  env BASE=main PATH="$work/faildiff:$PATH" sh "$here/run_state.sh" moved carry "$carry_reviewed"
+expect "run_state: moved leaves no record when git diff fails" 0 "^$" state get carry moved
+expect "run_state: a carried review is refused once moved failed at the head" 1 "needs tools/run_state[.]sh moved to have exited 0" \
+  state review carry security pass "blocking=0 carried=1"
+cd "$pushing_dir" || exit 1
+
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
 
 # The backlog pick over a fixture map, queue, and backlogs: area 3 holds 3
@@ -2113,6 +2180,9 @@ expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributo
 expect "guard: contributor pushes the merge of a moved main" 0 "^$" guard contributor 'sh tools/run_state.sh push c --main-moved'
 expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix [|] --main-moved\]" guard contributor 'sh tools/run_state.sh push c --force'
 expect "guard: checker compares the change's files after a main-moved merge" 0 "^$" guard read 'sh tools/run_state.sh moved c abc1234'
+expect "guard: checker refuses moved without a commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c'
+expect "guard: checker refuses moved at a symbolic commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c HEAD'
+expect "guard: checker refuses moved with an extra argument" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c abc1234 def5678'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
 expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'
