@@ -94,25 +94,6 @@ At 256 colors a palette color SHALL be written as the palette's own 256-color in
 - **WHEN** `TERM` is `linux` and a selected cell is written
 - **THEN** the cell is preceded by `\e[0;7m`
 
-### Requirement: The background option chooses who paints the background
-The `option.background` line SHALL take `terminal` (the default) or `theme`. With `terminal`, `Normal` SHALL keep the terminal's own colors and every group without a background of its own the terminal's background. With `theme`, every cell, blank cells and the cleared screen included, SHALL be drawn on the palette's background. Any other value SHALL be reported as `file:line: unknown background VALUE` and keep the value before it.
-
-#### Scenario: Transparent by default
-- **WHEN** the editor starts with the shipped configuration and writes a Normal cell
-- **THEN** the cell is preceded by `\e[0m`
-
-#### Scenario: The theme paints
-- **WHEN** a configuration line is "option.background theme", the theme is `one_dark`, and a frame is first written at 256 colors
-- **THEN** the screen is cleared after `\e[0;38;5;249;48;5;236m`, the palette's text color and background, and a Normal cell is preceded by the same sequence
-
-#### Scenario: Scrolled-in rows are painted
-- **WHEN** the background is `theme` and a window scrolls by a line
-- **THEN** the scroll region is sent after the Normal sequence, so the row that came into view is cleared on the palette's background
-
-#### Scenario: Unknown value
-- **WHEN** the project file's first line is "option.background dark"
-- **THEN** ".caratrc:1: unknown background dark" is reported and the background stays `terminal`
-
 ### Requirement: Text groups meet WCAG AA contrast
 In every shipped palette, drawn with the theme's background, every group that carries text SHALL have a contrast ratio of at least 4.5:1, and every decoration group (`NonText`, `EndOfBuffer`, `WinSeparator`, `FloatBorder`, `Whitespace`, `SignColumn`, and the file-icon groups) at least 3:1, at 24-bit colors and at the 256 colors written. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt; the guides and Carat's float borders have their own rules.
 
@@ -261,3 +242,30 @@ Every palette SHALL color `FloatBorder` with a border role of its own, apart fro
 #### Scenario: The panel colors
 - **WHEN** `carat-dark` and `carat-light` are drawn
 - **THEN** `carat-light`'s `TabLine` and `NormalFloat` backgrounds are #eceef3, and `carat-dark`'s `TabLine` background is index 233 at 256 colors while `Normal`'s is 234
+
+### Requirement: The background option paints the theme by default
+The `option.background` line SHALL take `theme`, the default, or `terminal`. With `theme` every cell, the cleared screen included, SHALL be drawn on the palette's background; with `terminal`, `Normal` SHALL keep the terminal's own colors and every group without a background of its own the terminal's background. A background or theme a configuration line names SHALL be kept. Any other value SHALL be reported as `file:line: unknown background VALUE` and keep the value before it.
+
+#### Scenario: The background is painted by default
+- **WHEN** the editor starts with the shipped configuration and a frame is first written at 256 colors
+- **THEN** the screen is cleared after `\e[0;38;5;252;48;5;234m`, carat-dark's text color and background, and a Normal cell is preceded by the same sequence
+
+#### Scenario: A named background is kept
+- **WHEN** a configuration line is "option.background terminal" and a frame is first written
+- **THEN** a Normal cell is preceded by `\e[0m` and the screen is not cleared on the palette's background
+
+#### Scenario: A named theme is kept
+- **WHEN** a configuration line is "option.theme carat-light" and a frame is first written at 256 colors
+- **THEN** the screen is cleared after carat-light's Normal sequence and a Normal cell is preceded by the same sequence
+
+#### Scenario: The theme paints
+- **WHEN** a configuration line is "option.background theme", the theme is `one_dark`, and a frame is first written at 256 colors
+- **THEN** the screen is cleared after `\e[0;38;5;249;48;5;236m`, the palette's text color and background, and a Normal cell is preceded by the same sequence
+
+#### Scenario: Scrolled-in rows are painted
+- **WHEN** the background is `theme` and a window scrolls by a line
+- **THEN** the scroll region is sent after the Normal sequence, so the row that came into view is cleared on the palette's background
+
+#### Scenario: Unknown value
+- **WHEN** the project file's first line is "option.background dark"
+- **THEN** ".caratrc:1: unknown background dark" is reported and the background stays `theme`
