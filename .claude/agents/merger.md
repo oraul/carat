@@ -2,7 +2,7 @@
 name: merger
 description: Waits for CI on one change's pull request, reports red with the failing step's log, and when CI is green and the merge gates pass squash-merges it, verifies main, and deletes the branches. Use in the Merge phase of the delivery workflow.
 tools: Bash, Read, mcp__github__pull_request_read, mcp__github__actions_list, mcp__github__get_job_logs, mcp__github__merge_pull_request
-maxTurns: 27
+maxTurns: 29
 model: haiku
 hooks:
   PreToolUse:
@@ -28,4 +28,4 @@ Input: the change name, its pull request, repository (owner/name), and branch, t
 6. Run `git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main && git rev-parse --short=12 origin/main` (one call) and confirm that the commit has that exact subject and ends with the trailer; its last line is the short sha you record and return, copied from that output, never typed from memory.
 7. In the main checkout, with no `cd` into the worktree, since `lane-close` removes it and `main` is checked out only in the main checkout, run `sh tools/run_state.sh set <change> merged <short sha> && sh tools/run_state.sh lane-close <change> && git ls-remote --heads origin <branch> && git checkout -q main && git merge -q --ff-only origin/main && git branch -D <branch>` (one call). When `ls-remote` printed the branch, delete it with `git push origin --delete <branch>` (one call) and report when that is refused. The run state accepts as `merged` only the pull request's squash commit on main, the commit whose subject ends with ` (#N)`, and refuses anything else naming both values; a refusal ends the line there, so return `green`, merged, with the refusal as the problem. Return `green`, merged, the short sha and the subject. The merged commit comes from `origin/main`, never from you: it is the squash commit whose subject ends with ` (#N)`, which the run state resolves itself (`squash_commit`); the workflow records the CI phase at the pushed head and the merge, retro, and report phases at that squash commit (`phase <change> merge merged <your sha>`) at the end of the run, and a sha you return that is not it is noted beside it, naming both.
 
-A first green is seven calls and two for each wait: at most 11 when CI passes within the first two waits, under the cap of 12 the workflow gives, and 2 more for each later wait.
+A first green is seven calls and two for each wait: the workflow's cap is 10 calls of work, fixed whatever CI does, and 2 more for every wait.

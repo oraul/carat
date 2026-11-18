@@ -12,7 +12,10 @@
 #   wraps     the pull request template and CLAUDE.md's example body have no
 #             line that continues the line above it, as GitHub would show it
 #   paths     a backticked path under a tracked root names a file or directory
-#             that exists, unless it holds a placeholder
+#             that exists, unless it holds a placeholder or is on the lane
+#             queue item of the change being checked (DOCS_LINT_CHANGE, else
+#             the branch name after its type), which names the paths the
+#             change removes
 #   queue     every numbered item of the lane queues, docs/queue-feature.md
 #             and docs/queue-backlog.md, names a tier T0 to T6 and
 #             "estimated small", "estimated medium", or "estimated large";
@@ -125,6 +128,23 @@ $hits"
   [ $failed -ne $start ] || ok "pull request template and example"
 }
 
+# The change being checked: DOCS_LINT_CHANGE, else the current branch
+# name after its type (the check clone checks out the branch's name).
+own_change() {
+  name=${DOCS_LINT_CHANGE:-$(git symbolic-ref -q --short HEAD 2>/dev/null)}
+  name=${name#*/}
+  printf '%s\n' "$name" | grep -x -E '[a-z0-9][a-z0-9-]*'
+}
+
+# The FILE:LINE of each lane queue item naming the change being checked,
+# whose paths the change itself removes or moves (lint-own-queue-paths).
+own_items() {
+  name=$(own_change) || return 0
+  for q in docs/queue-feature.md docs/queue-backlog.md; do
+    [ -f "$q" ] && grep -n -E "^[0-9]+[.] \`$name\`" "$q" | sed "s|^\([0-9]*\):.*|$q:\1|"
+  done
+}
+
 check_paths() {
   gate=paths
   start=$failed
@@ -132,8 +152,10 @@ check_paths() {
   spans=$(grep -n -o '`[^` ]*`' $(documents) | tr -d '`' |
     grep -E ':(carat|bin|test|bench|tools|docs|config|openspec|\.claude|\.github)/' |
     grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E "^docs/backlog\.md:[0-9]+:($RETIRED)(:[0-9][0-9,-]*)?\$")
+  own=$(own_items)
   dead=$(printf '%s\n' "$spans" | while IFS= read -r line; do
     [ -n "$line" ] || continue
+    [ -z "$own" ] || ! printf '%s\n' "$own" | grep -q -x -F "$(printf '%s\n' "$line" | cut -d: -f1-2)" || continue
     path=${line#*:*:}
     path=$(printf '%s' "$path" | sed -E 's/:[0-9][0-9,-]*$//')
     [ -e "$path" ] || echo "$line"

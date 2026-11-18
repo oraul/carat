@@ -83,7 +83,8 @@
 #                the variables of MAKE_VARS, no shell character in a value;
 #                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
-#                get budget history groom plan-apply merge-main, push CHANGE
+#                get budget history groom plan-apply merge-main
+#                reviewed-edits, push CHANGE
 #                [--ci-fix | --review-fix | --main-moved],
 #                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
 #                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
@@ -611,7 +612,7 @@ run_state_form() {
   case "$profile:$verb" in
     read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
-    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main) ;;
+    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     contributor:push)
       [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ] || [ "$3" = --main-moved ]; } ||
         refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix | --main-moved]" ;;
