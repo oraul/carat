@@ -124,6 +124,8 @@ module EditorLineCommandsTest
       ["a bang runs the same keys", ["ab\n", [0, 0], ":normal! x<CR>"], [[0, 0], "", "b"]],
       ["the trailing blanks are keys", ["a\n", [0, 0], ":normal A <CR>"], [[0, 1], "", "a "]],
       ["an indent of trailing blanks on a range", ["a\nb\n", [0, 0], ":%normal I  <CR>"], [[1, 1], "", "  a|  b"]],
+      ["the trailing blanks are keys on each marked line", ["x1\na\nx2\n", [0, 0], ":g/x/normal A <CR>"], [[2, 2], "", "x1 |a|x2 "]],
+      ["an indent of trailing blanks on each marked line", ["x1\na\nx2\n", [0, 0], ":g/x/norm I  <CR>"], [[2, 1], "", "  x1|a|  x2"]],
       ["an undo takes back the keys before it", ["abc\n", [0, 0], ":normal xux<CR>"], [[0, 0], "", "bc"]],
       ["the keys after an undo are an undo state", ["abc\n", [0, 0], ":normal xux<CR>u"], [[0, 0], "1 change; before #2  0 seconds ago", "abc"]],
       ["a redo after the keys after an undo", ["abc\n", [0, 0], ":normal xux<CR>u<C-r>"], [[0, 0], "1 change; after #2  0 seconds ago", "bc"]],

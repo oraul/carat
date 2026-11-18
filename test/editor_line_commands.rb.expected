@@ -64,6 +64,8 @@ ok   the keys are read literally
 ok   a bang runs the same keys
 ok   the trailing blanks are keys
 ok   an indent of trailing blanks on a range
+ok   the trailing blanks are keys on each marked line
+ok   an indent of trailing blanks on each marked line
 ok   an undo takes back the keys before it
 ok   the keys after an undo are an undo state
 ok   a redo after the keys after an undo
@@ -92,4 +94,4 @@ ok   Normal too deep
 ok   a binding that runs :normal once
 ok   A binding replaying itself after normal
 ok   A remap per line of a long range
-editor_line_commands: 94 passed, 0 failed
+editor_line_commands: 96 passed, 0 failed

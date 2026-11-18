@@ -72,7 +72,7 @@ module Carat
         if rows.empty?
           return Outcome.success(invert ? "Pattern found in every line: #{source}" : "Pattern not found: #{source}")
         end
-        return listed(state, rows) if args.command.empty?
+        return listed(state, rows) if args.command.strip.empty?
         run(state, buffer, rows, args.command)
       end
 
