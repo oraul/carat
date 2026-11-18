@@ -38,11 +38,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- 3 features (T2, the user's request: note.16, NEXT-SESSION.md line 146): `gutter-signcolumn`, `match-paren`, `cursor-and-messages`, no vim item.
+- 3 features (T2, the user's request): `gutter-signcolumn`, `match-paren`, `cursor-and-messages`, no vim item.
 - Vim items to Sprint 20 (T2, the user's request): 3 items pushed back 2 each.
 - Wave 1 rest to Pool 1 to 3 (T2, the user's request): `background-detect`, `search-count`, `ui-groups`, pushed back 1 each, ahead of the vim items.
 - Roadmap (T2, the user's request): waves, `git-panel` (pushed back 5), AI; `lint-panel` pushed back 2.
 - Design values (T2, the user's request): width 36 in `explorer-rows`, #111319 in `window-surfaces`.
 - Estimate (T2): facet-palette 1,273,459 over, guide-colors 922,993 under, no size up.
 - `background-default` delivered (T2): 1,095,842 total, 61.0 min, rework 2; its advisories 1 to 4 dropped (T6): archived spec wording.
-- Security first `groom-security-mark` (T0): Medium (9) `tools/run_state.sh:449`.

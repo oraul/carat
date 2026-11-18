@@ -9,13 +9,13 @@ Sprint 18 closed with its six changes merged (`guide-colors`, `groom-proof`, `fa
 - `sh tools/run_state.sh history sprint-18-records` appends the pending history rows of `background-default` to `docs/metrics-feature.tsv` and of `groom-security-mark` (#214, the security fix that stopped the first start) to `docs/metrics-backlog.tsv`; a second run finds nothing pending.
 - `sh tools/run_state.sh groom sprint-18-records` applies the sprint-18 plan: removes the 4 headings of `build/plan/groom.txt` (2 listed by `groom-proof`, 1 fixed by 53b1e58, 1 merged into a near-same entry), folds the 7 findings files under `docs/findings/` into `docs/backlog.md` and removes them (those of `background-default`, `backlog-throughput`, `facet-palette`, `groom-proof`, `guide-colors`, `sign-colors`, and `sprint-17-records`), appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-18 row to `docs/sprints.tsv`.
 
-Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes.
+Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes beyond those design.md records: one docs-lint fix in the backlog and the review's in-place fixes of the two queues.
 
 Assumptions:
 
 - The queues are the planner's revision at the user's request, applied as they stand: the Sprint 19 features `gutter-signcolumn`, `match-paren`, and `cursor-and-messages`, and the backlog items `review-lite`, `quality-first-pass`, and `contributor-checklist` under the user-approved exception.
-- `docs/queue-backlog.md` keeps its "Security first" section naming `groom-security-mark`, merged as #214 after the plan was written; the next backlog-lane `plan-apply`, which overwrites that queue, drops it.
-- No findings file is written: the sprint-18 quality notes are already in `build/plan/groomed.md` or groomed as fixed.
+- `docs/queue-backlog.md` drops its "Security first" section, and both queues their Decisions bullet, naming `groom-security-mark`, merged as #214 after the plan was written (a review finding fixed in place).
+- The sprint-18 quality notes are already in `build/plan/groomed.md` or groomed as fixed; the review findings not fixed in place go to this change's findings file at packaging.
 
 ## Capabilities
 

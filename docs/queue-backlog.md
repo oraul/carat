@@ -2,10 +2,6 @@
 
 Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
-## Security first
-
-1. `groom-security-mark` (T0 security Medium (9), pipeline defect, T0 exempt, estimated medium, first and alone): groom-proof narrowed `SECURITY_MARK` (`tools/run_state.sh:449`), so a security entry worded otherwise, such as "## The benchmark reuses one temporary report path" ("Low finding of the periodic security review", open at `bench/run.sh:22`), passes `closed`, `gone`, `duplicate`, or a merge into a non-security entry (`:2615` to `:2626`); a merged body line `@@kept X` sends the rest to X, lost when X is unknown (`:2648`, `:2687`, Low (3)); the test is repeated 4 times (`:2616` to `:2655`). Fix outline: security in any wording judged in one place; merged bodies no text can redirect. Accepted when tools-test cases refuse `closed`, `gone`, `duplicate`, and a non-security merge for an entry marked only "Low finding of the periodic security review", and keep a body line `@@kept ` under its heading. Backlog: none (sprint-18 notes 1, 2, sweep 50).
-
 ## Sprint 19
 
 The user-approved exception (2026-11-18): pipeline speedups, not defects, in this order. Evidence: 0 rework rounds take 37-43 min, 2-3 rounds 70-95 min; 496 of 529 findings in the last 45 runs were advisory.
@@ -47,7 +43,6 @@ The user-approved exception (2026-11-18): pipeline speedups, not defects, in thi
 
 ## Decisions
 
-- Security first `groom-security-mark` (T0): sprint-18 Medium (9) `run_state.sh:449` open at 53b1e58; under its own heading, outside the sprint's 3 (docs-lint refused 4).
 - 3 features, 3 backlog (T1, the user's request): `review-lite`, `quality-first-pass`, `contributor-checklist` under the user-approved exception.
 - backlog-pick batches 1 to 3 parts a to Pool 2 to 4 (the user's request): `pr-trust-lows` first, Medium (4), Lows (4), (4), (3); each pushed back 1.
 - `lsp-tidy` to Sprint 20 (T6, the user's request): pushed back 3, its reason written.
