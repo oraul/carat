@@ -38,13 +38,10 @@ Backlog 3 of 3 delivered: `groom-proof`, `backlog-throughput`, `sign-colors`.
 
 ## Decisions
 
-- `sign-colors` delivered, off Sprint 18 (T2 user request, a defect): item 1 at d91f1ba as written; Sprint 18 backlog 3 of 3 with `groom-proof` and `backlog-throughput`.
-- Estimate medium, not small (T2, size rule): palette-narrow 736,843 / 51.2 min, bar-colors 879,991 / 48.2, guide-colors 922,993 / 73.0, all over small's 500k and 25 min; the last 2 comparable under 1.2M, no size up; the lane's last 2 over (sprint-17-records 857,102 of 500k, groom-proof 1,444,297 of 1.2M) are records and tooling runs.
-- No split (T2, the brief "delivered as written"): 1 mechanism, a group per sign by its icon name; 2 dependent paths (diagnostic, plugin); map areas 8, 13, 14 edited, 15 a pass-through; 1 acceptance check.
-- No `tools/rules.sh` edit (T1): the brief touches signs, themes, the presenter, and their tests.
-- Security first empty (T0): backlog-throughput and facet-palette security high=0 medium=0; no `review.periodic` record in the 2 pending runs.
-- backlog-throughput retro 12 and facet-palette retros 10, 11 into `rework-review-repeat` (T1): a docs-only round 67,553 output; rework 2 with 0 blocking.
-- backlog-throughput overruns 9, 10, facet-palette overruns 7 to 9 and retro 12's check part into `check-pass-budget-flag` (T1): 399,564 to 573,120 of 200,000.
-- backlog-throughput retro 11 and facet-palette retro 12's merge part into `merge-output-cap` (T1): merge 137,609 output in 14 calls, green CI.
-- backlog-throughput retro 13 as `doc-budget-room` in Pool 22 (T1): planner.md 8,190 of 8,192 bytes, CLAUDE.md 30,717 of 30,720.
-- backlog-throughput overrun 14 (groom-proof 1,444,297 of 1.2M) dropped, placed already by that run's size decision (T1).
+- `groom-security-mark` delivered first and alone (T0 security Medium (9)): sprint-18 periodic security blocked at 53b1e58e8eae, medium=1 blocking=1, `tools/run_state.sh:449`; its Low (3) at `:2648` in the same brief.
+- Security first empty after it (T0): sprint-18 high=0, disputed=0; its 1 blocking Medium (9) is the brief.
+- Estimate large (T0, size rule): groom-proof 1,444,297 / 95.0 min in the same groom code, backlog-throughput 1,307,861 / 77.0; the lane's last 2 over 1.2M, one size up.
+- No split (T0, the brief "delivered as written, first and alone"): 2 parts in 1 map area, under 3; a queued part b would be overwritten when sprint-18-records applies the waiting plan.
+- Queue kept as applied, not the waiting Sprint 19 plan (T0, the brief "do not apply build/plan"): sprint-18-records applies it.
+- No `tools/rules.sh` edit (T1): the fix is `tools/run_state.sh` and its tools-test cases.
+- sprint-18 notes 3 to 6 left to the waiting plan (T6): 3 groomed entries and 1 `fixed 53b1e58` line.
