@@ -418,6 +418,19 @@ module Carat
         layer_at(i).group_at(row)
       end
 
+      # The index of the layer whose sign shows on the row: the first, so
+      # the highest priority, that marks it, -1 for none. The presenter reads
+      # the glyph and the group from this one layer, one scan per row.
+      #: (Integer) -> Integer
+      def shown_layer_index(row)
+        i = 0
+        while i < sign_layers.length
+          return i unless layer_at(i).glyph_at(row).empty?
+          i += 1
+        end
+        -1
+      end
+
       # Splits file text into lines. The line ending is "\r\n" when the first
       # terminator is one, "\n" otherwise; a trailing terminator does not
       # produce an extra empty line. The text is split by bytes, so a byte
@@ -720,18 +733,6 @@ module Carat
       end
 
       private
-
-      # The index of the layer whose sign shows on the row: the first, so
-      # the highest priority, that marks it, -1 for none.
-      #: (Integer) -> Integer
-      def shown_layer_index(row)
-        i = 0
-        while i < sign_layers.length
-          return i unless layer_at(i).glyph_at(row).empty?
-          i += 1
-        end
-        -1
-      end
 
       # The style of a row inside the list.
       #: (Integer) -> SyntaxLine

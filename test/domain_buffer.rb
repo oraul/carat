@@ -249,6 +249,12 @@ module DomainBufferTest
     t.assert_equal([["X", D::Highlight::SIGN_COLUMN], ["X", D::Highlight::DIAGNOSTIC_ERROR]], [[b.sign_at(0), b.sign_group_at(0)], [b.sign_at(1), b.sign_group_at(1)]], "one glyph in two groups keeps each row's group")
     b.place_sign("hello", 0, 0, "X", D::Highlight::ADDED)
     t.assert_equal([D::Highlight::ADDED, D::Highlight::DIAGNOSTIC_ERROR], [b.sign_group_at(0), b.sign_group_at(1)], "a later sign on a row replaces its group")
+    layered = D::Buffer.new(lines: ["a", "b", "c"], path: nil, line_ending: "\n")
+    layered.place_sign("high", 0, 0, "H", D::Highlight::ADDED)
+    layered.place_sign("low", 5, 0, "L", D::Highlight::SIGN_COLUMN)
+    layered.place_sign("low", 5, 1, "L", D::Highlight::CHANGED)
+    t.assert_equal([0, 1, -1], [layered.shown_layer_index(0), layered.shown_layer_index(1), layered.shown_layer_index(2)], "the shown layer is the highest priority marking the row, -1 for none")
+    t.assert_equal([["H", D::Highlight::ADDED], ["L", D::Highlight::CHANGED]], [[layered.layer_at(0).glyph_at(0), layered.layer_at(0).group_at(0)], [layered.layer_at(1).glyph_at(1), layered.layer_at(1).group_at(1)]], "the shown layer holds the row's glyph and group")
 
     # Diagnostics: the most severe per row, drawn over a plugin's sign.
     d = D::Buffer.new(lines: ["a", "b", "c"], path: "a.rb", line_ending: "\n")

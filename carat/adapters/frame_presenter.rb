@@ -834,8 +834,6 @@ module Carat
             shown_last = folds.last_of(fold)
             line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
             number = number_shown(row, cursor.row, options, gutter, signs)
-            sign = buffer.sign_at(row) if signs
-            sign_group = buffer.sign_group_at(row) if signs
             if cursor.row >= row && cursor.row <= shown_last
               cur = 0
               layer = lit
@@ -845,13 +843,19 @@ module Carat
             syntax = highlights.lookup(row, line)
             syntax = buffer.style_at(row, line) if styled
             number = number_shown(row, cursor.row, options, gutter, signs)
-            sign = buffer.sign_at(row) if signs
-            sign_group = buffer.sign_group_at(row) if signs
             if row == cursor.row
               cur = cursor.col
               layer = lit
             end
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
+          end
+          if signs && row < count
+            shown = buffer.shown_layer_index(row)
+            if shown >= 0
+              sign_layer = buffer.layer_at(shown)
+              sign = sign_layer.glyph_at(row)
+              sign_group = sign_layer.group_at(row)
+            end
           end
           unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
             @row_of = row

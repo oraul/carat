@@ -23,6 +23,12 @@
 - [x] 5.3 Restore the ellipsis after `NormalFloat` in the `Highlight` entry of `docs/architecture.md`, checked by `make docs-lint`
 - [x] 5.4 Rewrap the edited comments of `carat/adapters/painted_rows.rb` and `FramePresenter#paint_row` at the surrounding width
 
+## 6. Second review fixes
+
+- [x] 6.1 Drop `diagnostic_group` from the `FramePresenter` entry of `docs/codebase-map.md`, which names `Highlight.diagnostic_group` as the group `paint_diagnostic` uses, checked by `make docs-lint`
+- [x] 6.2 Make `Buffer#shown_layer_index` public and have `FramePresenter#paint_window` read a row's glyph and group from the one layer it returns, one scan per painted row where `sign_at` and `sign_group_at` scanned twice (`carat/domain/buffer.rb`, `carat/adapters/frame_presenter.rb`, the map's `Buffer` entry), proven by the shown layer rows of `test/domain_buffer.rb` and the sign rows of `test/adapters_frame_presenter.rb`
+- [x] 6.3 Bound the severity in `Highlight.diagnostic_group`, a severity outside 1 to 3 drawn as a hint as the removed presenter mapping drew it (`carat/domain/highlight.rb`), proven by the out-of-range row of `test/domain_theme.rb`
+
 ## Workflow follow-up
 
 - Archive with `openspec archive sign-colors -y` at packaging.
