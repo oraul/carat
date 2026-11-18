@@ -21,3 +21,4 @@
 - [x] 3.3 `ENTRY_AWK` holds the groomed set (`load_groomed`) and the entry test (`backlog_entry_head`) `backlog_pick` and `backlog_oldest` share; `entry_naming` prints the naming text `touches_entry` and `entry_paths` read; no behavior moves, the backlog-pick, backlog-oldest, fixed, and gone cases still pass
 - [x] 3.4 A merged line whose heading another line already removes is refused; proved by "run_state: groom refuses merging one heading twice"
 - [x] 3.5 The allowed security path is proved: "run_state: groom merges a security entry into another security entry"
+- [x] 3.6 The `docs/codebase-map.md` line of `tools/run_state.sh` says `groom` refuses a closed, duplicate, or gone line for a security entry and removes neither a merged nor its kept heading by another line, naming `entry_naming` beside `entry_paths` and `ENTRY_AWK` for `backlog-oldest` (quality advisory, docs currency); no behavior moves
