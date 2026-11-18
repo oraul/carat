@@ -2341,6 +2341,7 @@ expect "guard: retrospective budgets the last row's change" 0 "^$" guard close '
 expect "guard: retrospective checks the squash commit" 0 "^$" guard close 'sh tools/run_state.sh show c && git show --stat abc1234 && BASE=abc1234~1 sh tools/gates.sh trailer && BASE=abc1234~1 sh tools/gates.sh content docs'
 expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run_state.sh note c retro \"x; evidence: 3\" && sh tools/run_state.sh budget c && sh tools/run_state.sh review-due && sh tools/run_state.sh status'
 expect "guard: the read profile lists backlog duplicates" 0 "^$" guard read 'sh tools/run_state.sh backlog-dups && sh tools/run_state.sh review-due' build/plan
+expect "guard: the read profile lists the oldest backlog entries" 0 "^$" guard read 'sh tools/run_state.sh backlog-oldest docs/backlog.md docs/findings/a.md' build/plan
 expect "guard: the contributor applies the sprint plan" 0 "^$" guard contributor 'sh tools/run_state.sh history && sh tools/run_state.sh groom'
 expect "guard: the contributor applies its plan" 0 "^$" guard contributor 'sh tools/run_state.sh plan-apply c && sh tools/run_state.sh history c'
 expect "guard: the contributor runs reviewed-edits" 0 "^$" guard contributor 'sh tools/run_state.sh reviewed-edits c'
@@ -4495,6 +4496,10 @@ expect "agents: the package step applies its own plan and rows, never groom" 0 "
 expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep -c -F 'build/plan/<change>/` for a delivery' "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
+expect "agents: the sprint planner merges near-same notes and prunes the oldest entries against HEAD" 0 "^1 1$" \
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md., against HEAD: .closed <commit> <heading>. (fixed later) or .gone <heading>.") $(printf "%s\n" "$s" | grep -c "leaves only by .listed., .fixed., or .closed.")"' _ "$agents/planner.md"
+expect "workflow: sprint-planning hands the planner the oldest entries and the merge of near-same notes" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c -F "(a near-same note merged, never dropped), the oldest entries to check against HEAD from" "$1") $(grep -c -F "run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md" "$1")"' _ "$swf"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
   sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "3 backlog items, the first three batches of .sh tools/run_state[.]sh backlog-pick docs/backlog[.]md docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
 

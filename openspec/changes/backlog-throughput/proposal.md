@@ -14,6 +14,7 @@ This change delivers part (a) of the brief, intake and pruning at each sprint's 
   - `gone HEADING`: the location gone: every path the entry names that the history ever held is absent at HEAD, and it names at least one; refused for a security entry.
 - A new `backlog-oldest FILE...` command prints the heading lines of the first `PRUNE_COUNT` (50) entries of the files, in order (the backlog is appended, so the oldest first), leaving out those the plan's `groom.txt` already removes: the entries the planner checks against the head each sprint.
 - The planner's sprint mode (`.claude/agents/planner.md`) and `.claude/workflows/sprint-planning.js` name the intake (a near-same note merged, never dropped; `duplicate` only for a text another entry already holds) and the pruning of the oldest 50 entries.
+- The guard's read profile (`tools/agent_guard.sh`), which the planner runs under, allows `backlog-oldest`, as it allows `backlog-dups`.
 - README.md pipeline step 11, CLAUDE.md Agents (Backlog), the `tools/run_state.sh` header, and the `docs/codebase-map.md` line of `tools/run_state.sh` describe them.
 
 Out of scope: parts (b) and (c) (queued as `backlog-throughput-b`); `backlog-pick`'s batch sizes; any change to `listed`, `fixed`, or `duplicate`; `tools/rules.sh`; the feature lane's files.
@@ -31,7 +32,7 @@ None: the change alters the delivery tooling only, no editor behavior, so it set
 ## Impact
 
 - `tools/run_state.sh` (`groom`, new `entry_paths`, `entry_added`, `backlog_oldest`, `PRUNE_COUNT`, the header and dispatch), `tools/tools_test.sh` (new expect cases).
-- `.claude/agents/planner.md`, `.claude/workflows/sprint-planning.js`.
+- `.claude/agents/planner.md`, `.claude/workflows/sprint-planning.js`, and `tools/agent_guard.sh` (the read profile, which the planner runs under, allows `backlog-oldest`).
 - README.md: changed, pipeline step 11 names the merge and the pruning.
 - docs/architecture.md: unchanged, it describes the editor's layers and roadmap, not the sprint grooming.
 - CLAUDE.md: changed, Agents (Backlog) names the merge and the pruning.
