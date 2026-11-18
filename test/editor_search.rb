@@ -128,7 +128,7 @@ module EditorSearchTest
     t.assert_equal([:cmdline, "/"], [h.mode, h.screen[9].strip], "slash opens the search prompt")
     h.type("b")
     t.assert_equal([0, 2], h.cursor, "incsearch moves the cursor to the first match")
-    t.assert_equal(Carat::Domain::Highlight::INC_SEARCH, group(h, 0, 2), "the previewed match is drawn in IncSearch")
+    t.assert_equal(Carat::Domain::Highlight::INC_SEARCH, group(h, 0, 2), "incsearch previews the match: the previewed match is drawn in IncSearch")
     h.type("x")
     t.assert_equal([0, 0], h.cursor, "with no match the cursor goes back")
     h.type("<Esc>")
@@ -167,7 +167,8 @@ module EditorSearchTest
     h = editor("a b a\n", 0, 0)
     h.type("/a<CR>")
     sea = Carat::Domain::Highlight::SEARCH
-    t.assert_equal([sea, sea], [group(h, 0, 0), group(h, 0, 4)], "hlsearch draws every match")
+    cur = Carat::Domain::Highlight::CURRENT_SEARCH
+    t.assert_equal([sea, cur], [group(h, 0, 0), group(h, 0, 4)], "hlsearch draws every match, the one under the cursor in CurSearch")
     t.assert_true(group(h, 0, 2) != sea, "and nothing else")
     h.type(":noh<CR>")
     t.assert_true(group(h, 0, 4) != sea, ":noh hides the highlight")

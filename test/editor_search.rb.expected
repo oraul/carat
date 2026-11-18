@@ -56,7 +56,7 @@ ok   star adds its pattern to the history
 ok   the command line has its own history
 ok   slash opens the search prompt
 ok   incsearch moves the cursor to the first match
-ok   the previewed match is drawn in IncSearch
+ok   incsearch previews the match: the previewed match is drawn in IncSearch
 ok   with no match the cursor goes back
 ok   escape puts the cursor back
 ok   and ends the preview
@@ -69,7 +69,7 @@ ok   Tilde after a substitute
 ok   :set ic keeps the replacement string of a ~ in the last pattern
 ok   A second caret is literal
 ok   An escaped bracket in a collection
-ok   hlsearch draws every match
+ok   hlsearch draws every match, the one under the cursor in CurSearch
 ok   and nothing else
 ok   :noh hides the highlight
 ok   n shows it again
