@@ -5,11 +5,12 @@ module Carat
     # (ExRange resolves it), the name is a run of letters or a single "&",
     # ">", or "<" (the rest of a run of ">" staying in the argument),
     # "!" directly after it sets bang, and the rest, trimmed, is the
-    # argument.
+    # argument; the rest with only its leading blanks skipped is the
+    # literal argument, its trailing blanks kept.
     module ExGrammar
       #: (String) -> ExCommand
       def self.parse(text)
-        s = text.strip
+        s = text.lstrip
         i = 0
         i += 1 while i < s.length && (s[i, 1] == ":" || s[i, 1] == " ")
         s = s[i, s.length - i]
@@ -26,7 +27,7 @@ module Carat
         rest = s[j, s.length - j]
         bang = rest.start_with?("!")
         rest = rest[1, rest.length - 1] if bang
-        ExCommand.new(range: range, name: name, bang: bang, args: rest.strip)
+        ExCommand.new(range: range, name: name, bang: bang, args: rest.strip, literal: rest.lstrip)
       end
 
       # Where the range at the start of s ends: digits, ". $ % , ; + -",

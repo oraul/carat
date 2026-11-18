@@ -72,12 +72,13 @@ module Carat
         end
         opened = buffer.begin_transaction(before)
         change = handler.repeat && mode != Domain::Mode::INSERT && mode != Domain::Mode::CMDLINE
+        edits = buffer.transaction_edits
         if change
           measure(state)
           buffer.start_at(start_of(state.selection)) if Domain::Mode.visual?(mode)
         end
         report(state, handler.call(state, command))
-        record(state, command, buffer) if change
+        record(state, command, buffer, edits) if change
         return unless opened
         same = state.buffer.equal?(buffer)
         return if same && state.mode == Domain::Mode::INSERT
@@ -127,14 +128,16 @@ module Carat
         Domain::Position.new(row: selection.top, col: left)
       end
 
-      # Keeps the command as the last change when it changed the text or
-      # entered insert mode, unless the dot command is running it.
-      #: (Domain::EditorState, Domain::Command, Domain::Buffer) -> void
-      def record(state, command, buffer)
+      # Keeps the command as the last change when it changed the text (the
+      # open transaction took edits past the count before it, which under
+      # :normal holds the keys before) or entered insert mode, unless the
+      # dot command is running it.
+      #: (Domain::EditorState, Domain::Command, Domain::Buffer, Integer) -> void
+      def record(state, command, buffer, edits)
         last = @last_change
         return if last.replaying
         entered = state.mode == Domain::Mode::INSERT
-        return unless entered || buffer.transaction_size > 0
+        return unless entered || buffer.transaction_edits > edits
         last.start(command)
         last.begin_session if entered
       end

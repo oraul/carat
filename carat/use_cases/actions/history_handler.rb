@@ -35,14 +35,18 @@ module Carat
       # @rbs command: Domain::Command
       def call(state, command)
         count = command.count_or(1)
-        case @variant
-        when :undo then @undo_step.call(state, count)
-        when :redo then @redo_step.call(state, count)
-        when :undo_line then @restore_line.call(state)
-        when :older then @travel_history.call(state, -count)
-        when :newer then @travel_history.call(state, count)
-        else @repeat_last.call(state, command)
-        end
+        return @restore_line.call(state) if @variant == :undo_line
+        return @repeat_last.call(state, command) if @variant == :repeat
+        # Among the keys :normal feeds the transaction holding the keys
+        # before is still open: it closes first, so its edits are an undo
+        # state the walk can take back, as Vim's u_undo syncs the undo
+        # first, and a new one opens for the keys after the walk.
+        buffer = state.buffer
+        synced = state.normal_depth > 0 && buffer.transaction_open?
+        buffer.commit_transaction(state.cursor.position) if synced
+        outcome = walk(state, count)
+        buffer.begin_transaction(state.cursor.position) if synced
+        outcome
       end
 
       #: (ActionTable, undo_step: UndoStep, redo_step: RedoStep, restore_line: RestoreLine, travel_history: TravelHistory, repeat_last: RepeatLast) -> void
@@ -54,6 +58,19 @@ module Carat
         while i < names.length
           table.register(names[i], HistoryHandler.new(undo_step: undo_step, redo_step: redo_step, restore_line: restore_line, travel_history: travel_history, repeat_last: repeat_last, variant: variants[i]), descriptions[i])
           i += 1
+        end
+      end
+
+      private
+
+      # Walks the undo tree by the variant's direction and count.
+      #: (Domain::EditorState, Integer) -> Outcome
+      def walk(state, count)
+        case @variant
+        when :undo then @undo_step.call(state, count)
+        when :redo then @redo_step.call(state, count)
+        when :older then @travel_history.call(state, -count)
+        else @travel_history.call(state, count)
         end
       end
     end

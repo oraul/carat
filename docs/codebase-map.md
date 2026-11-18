@@ -257,11 +257,11 @@ Flow: a use case calls a `Buffer` primitive (`insert`, `delete`, `replace`, `set
 
 Files:
 
-- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `transaction_size`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`, `icon_of` and `icon` (the file's icon name), `name_start`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `set_diagnostics`, `clear_diagnostics`, `diagnostic_at` (a language server's diagnostics as the `lsp.diagnostics` sign layer and per-line marks that move with the lines); `styled?`, `style_at` (a documentation buffer's `SyntaxLine` per row, kept for the row's string); `scratch?`; the `readonly` member (a file buffer never written). `track_folds` and `untrack_folds` name the window folds every splice moves (`fold_lists`).
+- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `transaction_size`, `transaction_edits` (the edits the open transaction took, merged ones included, which `Dispatcher` compares to tell a key under `:normal` that changed the text), `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`, `icon_of` and `icon` (the file's icon name), `name_start`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `set_diagnostics`, `clear_diagnostics`, `diagnostic_at` (a language server's diagnostics as the `lsp.diagnostics` sign layer and per-line marks that move with the lines); `styled?`, `style_at` (a documentation buffer's `SyntaxLine` per row, kept for the row's string); `scratch?`; the `readonly` member (a file buffer never written). `track_folds` and `untrack_folds` name the window folds every splice moves (`fold_lists`).
 - `carat/domain/text_lines.rb`: `TextLines.split`, text cut at its newlines by bytes, so bytes that are not UTF-8 stay in their lines; used by `from_text`, `joined`, `RegisterEntry#lines`, `:registers`, and messages of several lines.
 - `carat/domain/line_splice.rb`: `LineSplice.apply` (per-line `insert` and `delete_at` up to `SMALL` lines, one tail move above) and `shift_marks`.
 - `carat/domain/change_record.rb`: `ChangeRecord` (buffer id, row, removed and inserted lines sharing the buffer's strings); `delta`.
-- `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
+- `carat/domain/transaction.rb`: `Transaction` (records, cursor before and after, cause, merged row span, history flag, edit count); `add`, `seal`, `truncate`, `span`, `record_at`, `empty?`.
 - `carat/domain/buffer_feed.rb`: `BufferFeed`, the one sink of opens, closes, renames, and closed transactions, carrying the command's time and `undolevels`; `push`, `notice_at`, `count`, `clear`, `note`.
 - `carat/domain/buffer_notice.rb`: `BufferNotice`; `change?`.
 - `carat/domain/buffer_list.rb`: `BufferList` (listed buffers, their ids, the feed, keep or release policy: file buffers stay until `:bd`); `add` (also lists again a buffer a jump left unlisted, `Buffer#listed`), `remove`, `release`, `load` (the empty buffer's number reused, the cursor remembered and restored, the buffer left made the alternate one), `alternate_of`, `enter` (a switch: the position left joins the window's jump list, then `load`), `first_file`, `last_file`, `hand_tab` (a jump's target takes the tab of the buffer left, which goes unlisted; never for a scratch target), `for_path`, `with_id`, `scratch_for`, `hidden_modified`, `any_modified?`, `first_unsaved`, `bring`, `step_from`, `file_at` (the count-th buffer tab), `file_count`, `tab_row?`, `replacement_for`, `close_window`, `close_tab`, `close_windows_of` (a tab page's last file window beside side windows stays), `withdraw` (a buffer's tab closed: its windows show another buffer, then it leaves the list), `retire_startup` (the startup buffer, number 1 while unnamed and empty, leaves once a file opens elsewhere), `lone_file_window?`.
@@ -312,7 +312,7 @@ Files:
 - `carat/use_cases/history/restore_line.rb`: `RestoreLine#call` (`U`).
 - `carat/use_cases/history/list_undo.rb`: `ListUndo#call` (`:undolist`).
 - `carat/use_cases/repeat_last.rb`: `RepeatLast#call`.
-- `carat/use_cases/actions/history_handler.rb`: `HistoryHandler.register`.
+- `carat/use_cases/actions/history_handler.rb`: `HistoryHandler.register`; under `:normal` an undo key first closes the open transaction, so the keys before it are an undo state, and opens one after the walk.
 - `carat/use_cases/ex/history_command_handler.rb`: `HistoryCommandHandler.register`, `digits?`.
 
 Tests: `test/domain_undo_tree.rb`, `test/editor_undo.rb`, `test/editor_repeat.rb`.
@@ -408,7 +408,7 @@ Flow: `CommandLineHandler` runs `EnterCommandLine` (`:`), `EditCommandLine` (typ
 
 Files:
 
-- `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`).
+- `carat/domain/ex_command.rb`: `ExCommand` value (`range`, `name`, `bang`, `args`, and `literal`, the argument with its trailing blanks that `:normal` reads).
 - `carat/domain/ex_grammar.rb`: `ExGrammar.parse`, `range_end`, `letter?`; the `&` name.
 - `carat/domain/ex_range.rb`: `ExRange` value (`first`, `last`, `given`, `error`, `addresses`, the count of addresses typed); `resolve` (`%`, `.`, `$`, numbers, `'<`, `'>`, `E16`, `E20`, `E493`); `target`, the one address of `:m`, `:co`, and `:t`, as the row the lines are put at; `line_of`, the one reading of an address both use (`E16`, `E20`, `Not implemented`); `counted`, a count after a line command.
 - `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call, and `typed` (a `/` or `?` prompt's pattern and offset).

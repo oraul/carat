@@ -122,6 +122,14 @@ module EditorLineCommandsTest
       ["an unfinished operator is dropped", ["ab\n", [0, 0], ":normal d<CR>x"], [[0, 0], "", "b"]],
       ["the keys are read literally", ["a\n", [0, 0], ":normal A<lt>Esc><CR>"], [[0, 5], "", "a<Esc>"]],
       ["a bang runs the same keys", ["ab\n", [0, 0], ":normal! x<CR>"], [[0, 0], "", "b"]],
+      ["the trailing blanks are keys", ["a\n", [0, 0], ":normal A <CR>"], [[0, 1], "", "a "]],
+      ["an indent of trailing blanks on a range", ["a\nb\n", [0, 0], ":%normal I  <CR>"], [[1, 1], "", "  a|  b"]],
+      ["an undo takes back the keys before it", ["abc\n", [0, 0], ":normal xux<CR>"], [[0, 0], "", "bc"]],
+      ["the keys after an undo are an undo state", ["abc\n", [0, 0], ":normal xux<CR>u"], [[0, 0], "1 change; before #2  0 seconds ago", "abc"]],
+      ["a redo after the keys after an undo", ["abc\n", [0, 0], ":normal xux<CR>u<C-r>"], [[0, 0], "1 change; after #2  0 seconds ago", "bc"]],
+      ["the keys after an undo are one undo state", ["abcd\n", [0, 0], ":normal xuxx<CR>u"], [[0, 0], "1 change; before #2  0 seconds ago", "abcd"]],
+      ["a key that changed nothing is not the last change", ["a\n\nb\n", [0, 0], ":normal ddx<CR>."], [[0, 0], "", "b"]],
+      ["a change merged into the one before is the last change", ["abc def\n", [0, 0], ":normal xdw<CR>."], [[0, 0], "", ""]],
       ["the long name runs keys", ["ab\n", [0, 0], ":norm x<CR>"], [[0, 0], "", "b"]],
       # :p (scenarios: Print the cursor line, Print a range, Print a count
       # of lines, The printed lines are shown together).

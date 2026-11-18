@@ -47,3 +47,8 @@
 - Location: `docs/codebase-map.md:55`, `tools/docs_lint.sh:183`
 - Why: the map's `tools/docs_lint.sh` entry says a `## Sprint` of 0 to 2 items in the backlog lane, while the lint checks `backlog:3` since the 3 + 3 sprint of sprint-17 (`docs/goals.md`), so an agent reading the map plans one backlog item too few.
 - Fix: say 0 to 3 in the backlog lane in the map entry; accepted when the entry matches the lane shares `check_queue` reads.
+
+### An undo ex command among the keys :normal feeds does not sync the undo first
+- Location: carat/use_cases/ex/history_command_handler.rb:38
+- Why: the review fix makes u, Ctrl-R, g-, and g+ under :normal close the open transaction before walking the tree (HistoryHandler), as Vim's u_undo syncs; ':normal x:undo<CR>' still finds the keys before it in the open transaction, so :undo, :redo, :earlier, and :later there say the history ends or walk past the edits, against Neovim.
+- Fix: share the sync of HistoryHandler#call (close the open transaction when normal_depth is above 0, reopen it after the walk) with HistoryCommandHandler's :undo, :redo, :earlier, and :later variants, and test ':normal x:undo<CR>'.

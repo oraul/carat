@@ -21,4 +21,7 @@ ok   a left shift with a range
 ok   a bang after a shift
 ok   s with a delimiter
 ok   letters after s are the name
-domain_ex_grammar: 23 passed, 0 failed
+ok   the literal argument keeps its trailing blanks
+ok   the literal argument skips only its leading blanks
+ok   the literal argument of a name alone is empty
+domain_ex_grammar: 26 passed, 0 failed

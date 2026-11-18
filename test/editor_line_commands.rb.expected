@@ -62,6 +62,14 @@ ok   each marked line's keys are one undo step
 ok   an unfinished operator is dropped
 ok   the keys are read literally
 ok   a bang runs the same keys
+ok   the trailing blanks are keys
+ok   an indent of trailing blanks on a range
+ok   an undo takes back the keys before it
+ok   the keys after an undo are an undo state
+ok   a redo after the keys after an undo
+ok   the keys after an undo are one undo state
+ok   a key that changed nothing is not the last change
+ok   a change merged into the one before is the last change
 ok   the long name runs keys
 ok   Print the cursor line
 ok   Print a range
@@ -84,4 +92,4 @@ ok   Normal too deep
 ok   a binding that runs :normal once
 ok   A binding replaying itself after normal
 ok   A remap per line of a long range
-editor_line_commands: 86 passed, 0 failed
+editor_line_commands: 94 passed, 0 failed

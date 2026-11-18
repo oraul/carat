@@ -9,7 +9,7 @@ require_relative "ex_table"
 module Carat
   module UseCases
     # :[range]norm[al][!] {commands}: runs the characters of the argument,
-    # read literally, as keys typed in normal mode through HandleKey, as
+    # read literally with its trailing blanks (ExCommand#literal), as keys typed in normal mode through HandleKey, as
     # Neovim's ex_normal does: once at the cursor without a range, once on
     # each line of a range with the cursor on column 0 of the line, until
     # the buffer's last line. A command the keys leave unfinished ends as
@@ -51,7 +51,7 @@ module Carat
         return Outcome.failure(lines.error) unless lines.ok?
         return Outcome.failure(ARGUMENT_REQUIRED) if command.args.empty?
         return Outcome.failure(TOO_DEEP) if state.normal_depth >= MAX_DEPTH
-        codes = codes_of(command.args)
+        codes = codes_of(command.literal)
         buffer = state.buffer
         opened = buffer.begin_transaction(state.cursor.position)
         # No begin and ensure: Spinel's exception frames are 64 in all, and

@@ -22,8 +22,10 @@ module Carat
     # mark the plugin host takes to revert to) are never merged into.
     # history marks the transaction of an undo or a redo, which observers
     # see like any other but which is not kept as an undo state, and whose
-    # records are never merged. A Struct record.
-    class Transaction < Struct.new(:buffer_id, :before, :after, :records, :cause, :history, :sealed, keyword_init: true)
+    # records are never merged. edits counts the records added, merged ones
+    # included, so a caller sees whether a command joining an open
+    # transaction changed the text. A Struct record.
+    class Transaction < Struct.new(:buffer_id, :before, :after, :records, :cause, :history, :sealed, :edits, keyword_init: true)
       # @rbs @buffer_id: Integer
       # @rbs @before: Position
       # @rbs @after: Position
@@ -31,6 +33,7 @@ module Carat
       # @rbs @cause: String
       # @rbs @history: bool
       # @rbs @sealed: Integer
+      # @rbs @edits: Integer
 
       # The empty list is stored through the writer, not passed to super,
       # so its element type is the pinned one.
@@ -44,12 +47,14 @@ module Carat
         self.cause = ""
         self.history = false
         self.sealed = 0
+        self.edits = 0
       end
 
       # Adds a record made while the plugin named by cause ("" for none)
       # was running.
       #: (ChangeRecord, String) -> void
       def add(record, cause)
+        self.edits = edits + 1
         if records.empty?
           self.cause = cause
         elsif cause != self.cause

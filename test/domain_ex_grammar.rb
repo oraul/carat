@@ -40,6 +40,16 @@ module DomainExGrammarTest
       [c.range, c.name, c.bang, c.args]
     end
 
+    # Rows are [label, command line, literal argument]: :normal reads it
+    # with its trailing blanks.
+    t.table([
+      ["the literal argument keeps its trailing blanks", "normal A ", "A "],
+      ["the literal argument skips only its leading blanks", "normal!   I  ", "I  "],
+      ["the literal argument of a name alone is empty", "normal  ", ""]
+    ]) do |text|
+      G.parse(text).literal
+    end
+
     t.finish
   end
 end
