@@ -9,7 +9,7 @@ groom-proof made every removal of `groom` provable: `listed` by the sprint item'
 **Goals:**
 
 - A near-same note merges into its entry by a groom line, groom copying its lines so both reasons and locations stay.
-- An old entry closes with evidence: a fixing commit after the entry, or every path it names gone at HEAD; a security entry only by its fixing commit.
+- An old entry closes with evidence: a fixing commit after the entry, matched by its whole heading line (`entry_added`), or every path it names gone at HEAD; a security entry never by `closed` or `gone`, only by `listed` or its fixing commit in the sprint (`fixed`), and a heading merges once.
 - The planner gets the oldest 50 entries by a command, checks them against the head, and writes the lines.
 
 **Non-Goals:**
