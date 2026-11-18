@@ -13,7 +13,7 @@ The explorer's t pressed in a lone tree now opens the file in a new window besid
 - Add editor flows in test/editor_tab_flows.rb for t and the finder's tab pick from a lone tree under option.gt buffers and tabpages, and finder rows for the tab pick in test/editor_finder.rb, with their snapshots
 - Change the file-explorer spec's requirement on splits and tab pages to state the lone-tree case, and the file-finder spec's tab pick to follow option.gt
 - Document the tab opens as option.gt sets them in docs/actions.md, docs/compatibility.md, docs/plugins.md, the README, and the plugin comments
-- Update the feature queue and the metrics history for this delivery
+- Update the feature queue and the metrics history for this delivery, and record the review advisories left open in docs/findings/tab-close-d.md
 
 ---
 
@@ -30,4 +30,4 @@ The explorer's t pressed in a lone tree now opens the file in a new window besid
 
 ## Notes
 
-Plugins now activate on their first trigger, so the new flows reach the explorer and the finder through their first key, and every existing flow of test/editor_tab_flows.rb still passes. The quality advisory on the duplicated open_file call in the finder's tab branch is a style point and is left as it is.
+Plugins now activate on their first trigger, so the new flows reach the explorer and the finder through their first key, and every existing flow of test/editor_tab_flows.rb still passes. The quality advisories left open, the duplicated open_file call in the finder's tab branch, the host's open_as_tab fallback no shipped plugin reaches, and the lone-tree case missing from the finder's tab row in docs/compatibility.md, are recorded in docs/findings/tab-close-d.md for a follow-up.
