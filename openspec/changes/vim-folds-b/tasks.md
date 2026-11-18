@@ -8,7 +8,7 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Update `docs/compatibility.md` Folding (nesting at a shared first row) and `docs/plugins.md` `edit_buffer` (a failed request leaves the folds), checked by `make docs-lint`
+- [x] 3.1 Update `docs/compatibility.md` Folding (nesting at a shared first row) and `docs/plugins.md` `edit_buffer` (a failed request leaves the folds), checked by `make docs-lint`
 
 ## Workflow follow-up
 
