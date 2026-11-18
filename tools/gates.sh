@@ -408,12 +408,16 @@ gate_pushes() {
   pushes=$(state pushes)
   fixes=$(state ci_fixes)
   reviews=$(state review_fixes)
+  # A run state written before merge-main-path has no main_moved: 0.
+  moved=$(state main_moved)
   if [ "${reviews:-0}" -gt 1 ]; then
     bad "$reviews review fix pushes; one is allowed a run"
-  elif [ "${pushes:-0}" -gt $((1 + ${fixes:-0} + ${reviews:-0})) ]; then
-    bad "$pushes pushes for ${fixes:-0} CI fix(es) and ${reviews:-0} review fix(es); one is allowed, plus one per CI fix and one review fix"
+  elif [ "${moved:-0}" -gt 1 ]; then
+    bad "$moved main-moved pushes; one is allowed a run"
+  elif [ "${pushes:-0}" -gt $((1 + ${fixes:-0} + ${reviews:-0} + ${moved:-0})) ]; then
+    bad "$pushes pushes for ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), and ${moved:-0} main-moved push(es); one is allowed, plus one per CI fix, one review fix, and one main-moved push"
   else
-    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es)"
+    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), ${moved:-0} main-moved push(es)"
   fi
 }
 

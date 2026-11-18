@@ -38,7 +38,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 - Work on the branch you were assigned. Never push to `main` directly.
 - Do not create a pull request unless explicitly asked; running `/deliver` or the `contributor` agent counts.
 - Do not rewrite history on a shared branch (no rebase, amend, or force-push).
-- The checker's stages (`make stages`) pass before every push and CI runs the rest; `make check` runs them all by hand. Push once, plus once per CI fix and one review fix; `tools/run_state.sh push` enforces it.
+- The checker's stages (`make stages`) pass before every push and CI runs the rest; `make check` runs them all. Push once, plus once per CI fix, one review fix, one main-moved push; `run_state.sh push` enforces it.
 
 ## Branch naming
 

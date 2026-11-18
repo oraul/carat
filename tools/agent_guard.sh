@@ -60,7 +60,7 @@
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
 #                the project's tmp/.toolchain and build/spinel-cache,
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
-#                pending get trusted check scope bench metrics metric note
+#                pending get trusted check scope moved bench metrics metric note
 #                budget spent review-due backlog-dups; [BASE=REV] sh
 #                tools/gates.sh GATE...; sh tools/metrics.sh measure OUT
 #                [SCENARIO...], OUT
@@ -84,7 +84,7 @@
 #                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history groom plan-apply merge-main, push CHANGE
-#                [--ci-fix],
+#                [--ci-fix | --review-fix | --main-moved],
 #                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
 #                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
 #                [SECONDS], which push nothing; never a pull request
@@ -613,8 +613,8 @@ run_state_form() {
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main) ;;
     contributor:push)
-      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ]; } ||
-        refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix]" ;;
+      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ] || [ "$3" = --main-moved ]; } ||
+        refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix | --main-moved]" ;;
     merger:set|contributor:set)
       [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh set other than CHANGE KEY VALUE"
       case "$profile:$3" in
@@ -623,6 +623,9 @@ run_state_form() {
         contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
         *) refuse "tools/run_state.sh set of $3" ;;
       esac ;;
+    read:moved)
+      [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
+        refuse "tools/run_state.sh moved other than CHANGE COMMIT" ;;
     read:ci-stages)
       [ "$closing" = 1 ] && [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
         refuse "tools/run_state.sh ci-stages, which only the close profile runs, as CHANGE COMMIT" ;;
