@@ -12,4 +12,4 @@
 ## 3. Docs and checks
 
 - [x] 3.1 Update `README.md` and `docs/codebase-map.md` (docs only; `make docs-lint` and `make gates`)
-- [ ] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
