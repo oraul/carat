@@ -14,4 +14,4 @@
 ## 3. Docs and checks
 
 - [x] 3.1 README.md (pipeline step 5), `docs/codebase-map.md` (`tools/run_state.sh`), `docs/goals.md` (the in-place re-review rule)
-- [ ] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
