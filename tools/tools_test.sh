@@ -2211,7 +2211,7 @@ expect "guard: merger refuses another assignment before git" 2 "an assignment of
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
-expect "guard: merger lists and prints pr.md at the pushed head" 0 "^$" guard merger 'git ls-tree -r --name-only 0123456789abcdef0123456789abcdef01234567 openspec/changes/archive && git show 0123456789abcdef0123456789abcdef01234567:openspec/changes/archive/2026-01-01-c/pr.md | tail -n +3'
+expect "guard: merger lists and prints pr.md at the pushed head" 0 "^$" guard merger 'git ls-tree --name-only 0123456789abcdef0123456789abcdef01234567 openspec/changes/archive/ && git show 0123456789abcdef0123456789abcdef01234567:openspec/changes/archive/2026-01-01-c/pr.md | tail -n +3'
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
@@ -2643,6 +2643,11 @@ expect "guard: the merge tool refuses a shortened squash message" 2 'other than 
 expect "guard: the merge tool refuses a changed line of the squash message" 2 'line 3 of the message is "A body line" where it should be "A body line ..' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
 expect "guard: the merge tool refuses a squash message without the trailer" 2 'the message ends at line 9, before line 11, "Co-Authored-By: Claude' merge_call merger "$sha" squash "$body_json"
 expect "guard: the merge tool refuses a squash message going on past the trailer" 2 'the message goes on past the trailer at line 12 with "extra"' merge_call merger "$sha" squash "$exact${nl}extra"
+# A message past the environment's size limit is compared too, from a
+# file: the comparison prints "same" only on equality, so an awk that
+# never ran would refuse rather than allow.
+long=$(awk 'BEGIN { while (n++ < 2200) printf "%s", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }')
+expect "guard: the merge tool refuses a long message past the environment limit" 2 'the message goes on past the trailer at line 12 with "x' merge_call merger "$sha" squash "$exact${nl}$long"
 # A run state branch code planted naming the head too: the hook refuses
 # while two run states name it, and the merge gates' clear resets every
 # run state's gated, the planted one's included.

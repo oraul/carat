@@ -1022,22 +1022,34 @@ squash_message() {
   change=${found##*/}
   change=${change%.json}
   matches "$change" '^[a-z0-9][a-z0-9-]*$' || refuse "a merge for the run state $found, not a change name"
-  pr_md=$(git -C "$project_dir" ls-tree -r --name-only "$sha" -- openspec/changes/archive 2>/dev/null |
-    grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change/pr[.]md")
-  [ -n "$pr_md" ] && [ "$(printf '%s\n' "$pr_md" | wc -l)" -eq 1 ] ||
-    refuse "a merge of $sha, which holds no one archived pr.md of $change"
-  message=$(printf '%s' "$input" | json_text commit_message) ||
+  # The archive's own entries, not every file of every archived change.
+  pr_md=""
+  for dir in $(git -C "$project_dir" ls-tree --name-only "$sha" -- openspec/changes/archive/ 2>/dev/null |
+    grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change"); do
+    [ "$(git -C "$project_dir" cat-file -t "$sha:$dir/pr.md" 2>/dev/null)" = blob ] || continue
+    [ -z "$pr_md" ] || refuse "a merge of $sha, which holds no one archived pr.md of $change"
+    pr_md=$dir/pr.md
+  done
+  [ -n "$pr_md" ] || refuse "a merge of $sha, which holds no one archived pr.md of $change"
+  # The decoded message goes on a file, never the environment, whose size
+  # limit would stop awk from running.
+  message_file=$(mktemp "${TMPDIR:-/tmp}/carat-squash.XXXXXX") || refuse "a merge whose message has no temporary file"
+  trap 'rm -f "$message_file"' EXIT
+  printf '%s' "$input" | json_text commit_message > "$message_file" ||
     refuse "a commit message with a raw control byte, a NUL, a lone surrogate, or a bad escape"
-  [ -n "$message" ] || refuse "a merge without a commit message: pass the body of $pr_md, a blank line, and the trailer"
+  [ -n "$(tr -d '\n' < "$message_file")" ] || refuse "a merge without a commit message: pass the body of $pr_md, a blank line, and the trailer"
+  # The comparison prints "same" only on equality, so an awk that never
+  # ran refuses rather than allows.
   differs=$(git -C "$project_dir" show "$sha:$pr_md" | sed '1,2d' |
-    LC_ALL=C M="$message" T="$SQUASH_TRAILER" awk '
+    LC_ALL=C F="$message_file" T="$SQUASH_TRAILER" awk '
       function cut(s) { gsub(/[\001-\037\177-\377]/, "?", s); return length(s) > 80 ? substr(s, 1, 80) "..." : s }
       { want[++n] = $0 }
       END {
         while (n > 0 && want[n] == "") n--
         want[++n] = ""
         want[++n] = ENVIRON["T"]
-        g = split(ENVIRON["M"], got, "\n")
+        g = 0
+        while ((getline line < ENVIRON["F"]) > 0) got[++g] = line
         while (g > 0 && got[g] == "") g--
         for (i = 1; i <= n || i <= g; i++) {
           if (i > g) {
@@ -1048,8 +1060,9 @@ squash_message() {
           if (i > n) { printf "the message goes on past the trailer at line %d with \"%s\"", i, cut(got[i]); exit }
           if (got[i] != want[i]) { printf "line %d of the message is \"%s\" where it should be \"%s\"", i, cut(got[i]), cut(want[i]); exit }
         }
+        printf "same"
       }')
-  [ -z "$differs" ] || refuse "a squash message other than the body of $pr_md, a blank line, and the trailer: $differs"
+  [ "$differs" = same ] || refuse "a squash message other than the body of $pr_md, a blank line, and the trailer: ${differs:-the comparison did not run}"
 }
 
 input=$(cat)
