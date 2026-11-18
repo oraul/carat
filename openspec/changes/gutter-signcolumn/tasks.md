@@ -5,7 +5,7 @@
 
 ## 2. Docs
 
-- [x] 2.1 Say the sign column is one cell in `docs/compatibility.md` (beside the sign colors) and in the `FramePresenter` entry of `docs/architecture.md`, checked by `make docs-lint`
+- [x] 2.1 Say the sign column is one cell in README.md (the language server paragraph), `docs/compatibility.md` (beside the sign colors) and in the `FramePresenter` entry of `docs/architecture.md`, checked by `make docs-lint`
 
 ## Workflow follow-up
 

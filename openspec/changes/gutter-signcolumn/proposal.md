@@ -23,6 +23,6 @@ A buffer with signs gives its sign column two cells, the glyph in the first and 
 - Use cases: none changed; `ArrangeView`, `ShowCompletionDocs`, and `SplitWindow` read `gutter_width`, so the cursor and the width a split needs follow.
 - Tests: `test/adapters_frame_presenter.rb` (the sign column rows, the sign colors rows, the scratch window's sign) and any frame row of another test that shows a sign.
 - Docs: `docs/compatibility.md` (the sign column is one cell, where Neovim draws two) and `docs/architecture.md` (the `FramePresenter` entry), `docs/codebase-map.md` unchanged (no file added, moved, or removed).
-- README.md: unchanged, it does not describe the sign column's width.
+- README.md: changed, its language server paragraph says the signs take a one-cell column.
 - docs/architecture.md: changed, its `FramePresenter` entry says the sign column is one cell.
 - Assumptions: every glyph the icon sets give a sign is one cell wide, as the `DisplayWidth` table measures it (the Nerd Font private use glyphs included), so cutting a glyph to its first character loses nothing; a plugin's own glyph longer than one character shows its first.
