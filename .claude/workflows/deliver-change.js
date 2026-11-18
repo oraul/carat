@@ -913,12 +913,15 @@ function checkVerdict(line) {
 // only on a failed stage (checkerNeeded): a pass, a refusal (its message is
 // its log), and a check that did not finish start none. tools/tools_test.sh
 // runs these helpers. In an advisory-only round (settleFrom) the start
-// runs settled first and the check only when that exits 1 (review-lite).
+// runs settled first and the check only when that exits 1 (review-lite);
+// the run's figures then lead the settle line, so a settled round, which
+// runs no check, still records them, once.
 function checkLines(change, backed, movedFrom, metric, settleFrom = '') {
   const rs = 'sh tools/run_state.sh'
+  const figures = metric ? `${metric}; ` : ''
   return {
-    settle: settleFrom ? `${rs} settled ${change} ${settleFrom}` : '',
-    check: `${metric ? `${metric}; ` : ''}${rs} check ${change}${backed ? ` ${backed}` : ''}`,
+    settle: settleFrom ? `${figures}${rs} settled ${change} ${settleFrom}` : '',
+    check: `${settleFrom ? '' : figures}${rs} check ${change}${backed ? ` ${backed}` : ''}`,
     passed: `${rs} spent ${change}; ${rs} bench ${change}`,
     moved: movedFrom ? `${rs} moved ${change} ${movedFrom}` : '',
   }
@@ -957,6 +960,24 @@ function settled(line, head, from) {
   const m = SETTLED.exec(String(line || '').trim().replace(/^run_state: /, ''))
   return !!m && sameCommit(m[1], from) && sameCommit(m[2], head)
 }
+// The commit the next check may settle from: none after a merge of a
+// moved main (movedFrom), whose check must run in full.
+const settleBase = (moved, at) => (moved ? '' : at || '')
+// What the check start's verdict line means at AT: 'settled' (the settle
+// line named FROM and AT), 'rerun' (the check did not finish, or ran at
+// another commit), or 'check' (a pass or a failure at AT).
+function checkOutcome(line, at, from) {
+  if (from && settled(line, at, from)) return 'settled'
+  const v = checkVerdict(line)
+  return RERUN_WORDS.test(v.kind) || !sameCommit(v.at, at) ? 'rerun' : 'check'
+}
+// The commit an in-place round may settle from: only a round of its own
+// ('alone'; a blocking round never settles) offers one, settleFrom.
+const roundSettle = (place, records, offeredList) => (place === 'alone' ? settleFrom(records, offeredList) : '')
+// What the next check is asked to settle from after the in-place fix: FROM
+// only when the fix moved the head; a fix that made no commit leaves the
+// check passed at the head, and no settle waits for a later round.
+const settleAfter = (from, before, after) => (from && after && before !== after ? from : '')
 // The settled round at the head: the check, security, and bench passes
 // stay at FROM, where the gates settle them, and the run state notes the
 // skip naming both commits; the quality review alone runs, scoped by
@@ -974,7 +995,7 @@ const settledAtHead = () => !!settledRound && settledRound.at === head
 // What the package step is told after a settled round: Testing names the
 // check and the security review at the commit where they ran.
 function settledTesting() {
-  return settledRound ? `\nThe last fix round changed only records: the check, the security review, and the benchmark last ran at ${settledRound.from}; in Testing name each at ${settledRound.from}, never at the head.` : ''
+  return settledAtHead() ? `\nThe last fix round changed only records: the check, the security review, and the benchmark last ran at ${settledRound.from}; in Testing name each at ${settledRound.from}, never at the head.` : ''
 }
 
 // A merge refused because main moved (merge-main-path; #169 stopped there
@@ -1246,7 +1267,7 @@ async function rounds(fixes = true) {
       // it, so a record at the head that no workflow record backs runs again.
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); a check still running at this commit is rejoined.` : ''
-      const from = movedFrom ? '' : settleAt
+      const from = settleBase(movedFrom, settleAt)
       settleAt = ''
       const lines = checkLines(state.change, backed, movedFrom, metricLine(), from)
       const c = await measured('check', () => agent(`${intro()} ${checkRunTask(lines)}${again}${capLine('run')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK_RUN), label: 'checker: run' })), callCap('run'))
@@ -1254,11 +1275,12 @@ async function rounds(fixes = true) {
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
       const v = checkVerdict(c.verdict)
-      if (from && settled(c.verdict, head, from)) {
+      const outcome = checkOutcome(c.verdict, head, from)
+      if (outcome === 'settled') {
         reruns = 0
         rerunWhy = ''
         settleRound(from)
-      } else if (RERUN_WORDS.test(v.kind) || !sameCommit(v.at, head)) {
+      } else if (outcome === 'rerun') {
         const where = v.stage ? ` at stage ${v.stage}, log ${v.log}` : ''
         const why = v.kind === 'none' ? 'no verdict line' : `${v.kind}${where} at ${v.at}${sameCommit(v.at, head) ? '' : `, not the head ${head}`}`
         if (++reruns > RERUNS) { stopped = `the check did not finish at ${head} in ${reruns} starts: ${why}`; return false }
@@ -1320,11 +1342,12 @@ async function rounds(fixes = true) {
     if (place === 'alone') {
       // A records-only fix stands on this round's check, security, and
       // bench passes (settleFrom, settled); any other reruns them all.
-      const from = settleFrom(ran, fresh)
+      const from = roundSettle(place, ran, fresh)
       note(`fix in place: ${fresh.length} finding(s) in a round of their own; ${from ? `the check, security, and bench stand on ${from} when the fix changes only records, else they run again` : 'check, security, and quality run again'} at its head`)
       phase('Implement')
+      const before = head
       if (!(await contributor('fix', inPlaceTask(fresh)))) return false
-      settleAt = from
+      settleAt = settleAfter(from, before, head)
       continue
     }
     if (!blocked) return true

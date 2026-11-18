@@ -4043,7 +4043,7 @@ expect "guard: the checker's run start may run the check lines" 0 "^$" guard rea
 # check, security, and bench passes of the commit it started from; the
 # quality review alone runs, over the commits since (review-lite).
 settle_js() {
-  js "$wf" "COMMIT CHANGE SQUASH CLOSABLE passedAt sameCommit settleFrom SETTLED settled settleRound SETTLES settledAtHead doneAtHead reviewedAtHead queue settledTesting narrowedFrom priorQuality checkLines checkRunTask" "(() => { globalThis.head = 'def5678'; globalThis.state = { change: 'c' }; globalThis.pending = []; globalThis.notes = []; globalThis.log = () => {}; globalThis.note = (l) => notes.push(l); globalThis.settledRound = null; globalThis.qualityAt = ''; globalThis.qualityBlocking = []; globalThis.blockedAt = ''; globalThis.blockedFiles = []; globalThis.ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234', 'review.bench': 'pass abc1234', 'review.quality': 'pass abc1234' }; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH CLOSABLE passedAt sameCommit settleFrom SETTLED settled settleBase checkVerdict RERUN_WORDS checkOutcome roundSettle settleAfter settleRound SETTLES settledAtHead doneAtHead reviewedAtHead queue settledTesting narrowedFrom priorQuality checkLines checkRunTask" "(() => { globalThis.head = 'def5678'; globalThis.state = { change: 'c' }; globalThis.pending = []; globalThis.notes = []; globalThis.log = () => {}; globalThis.note = (l) => notes.push(l); globalThis.settledRound = null; globalThis.qualityAt = ''; globalThis.qualityBlocking = []; globalThis.blockedAt = ''; globalThis.blockedFiles = []; globalThis.ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234', 'review.bench': 'pass abc1234', 'review.quality': 'pass abc1234' }; return $1 })()"
 }
 expect "workflow: an advisory-only round settles from the commit of the check, security, and bench passes" 0 '^"abc1234"$' \
   settle_js "settleFrom(ran, ['quality advisory a.rb:1 a name; fix: rename'])"
@@ -4057,13 +4057,19 @@ expect "workflow: a settled round skips the check, security, and bench and recor
   settle_js "(() => { const before = [doneAtHead('check'), reviewedAtHead('security')]; settleRound('abc1234'); const after = [doneAtHead('check'), reviewedAtHead('security'), reviewedAtHead('bench'), reviewedAtHead('quality'), pending[0], CLOSABLE.test(pending[0])]; head = '0123456'; return before.concat(after, [doneAtHead('check')]) })()"
 expect "workflow: a settled round's quality review reads only the commits since its pass" 0 'Review only `git diff abc1234 HEAD`, the commits since that pass' \
   settle_js "(() => { settleRound('abc1234'); return priorQuality() })()"
-expect "workflow: the check start runs settled first only in an advisory-only round" 0 '^\["sh tools/run_state[.]sh settled c abc1234",true,true,"",false\]$' \
-  settle_js "(() => { const l = checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=1', 'abc1234'); const t = checkRunTask(l); const plain = checkLines('c', 'abc1234', '', ''); return [l.settle, t.indexOf(l.settle) < t.indexOf(l.check), t.includes('when it exits 0, return its last line, verbatim, as verdict, and run nothing else'), plain.settle, checkRunTask(plain).includes('settled')] })()"
-expect "workflow: a blocking round never settles" 0 '^inside$' \
-  awk '/if \(place === .alone.\) \{/ { on = 1 } on && /settleFrom\(ran, fresh\)/ { print "inside"; exit } on && /^      continue$/ { exit }' "$wf"
-expect "workflow: only the advisory round's fix asks the next check to settle" 0 '^1$' grep -c -F "settleAt = from" "$wf"
+expect "workflow: the check start runs settled first only in an advisory-only round" 0 '^\["sh tools/run_state[.]sh metric c rework=1; sh tools/run_state[.]sh settled c abc1234","sh tools/run_state[.]sh check c abc1234",true,true,"",false\]$' \
+  settle_js "(() => { const l = checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=1', 'abc1234'); const t = checkRunTask(l); const plain = checkLines('c', 'abc1234', '', ''); return [l.settle, l.check, t.indexOf(l.settle) < t.indexOf(l.check), t.includes('when it exits 0, return its last line, verbatim, as verdict, and run nothing else'), plain.settle, checkRunTask(plain).includes('settled')] })()"
+expect "guard: the checker's run start may run the settle line with the run's figures" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=1; sh tools/run_state.sh settled c abc1234'
+expect "workflow: a blocking round never settles" 0 '^\["","","abc1234"\]$' \
+  settle_js "['with', 'record', 'alone'].map((p) => roundSettle(p, ran, ['quality advisory a.rb:1 a name; fix: rename']))"
+expect "workflow: only the advisory round's fix asks the next check to settle" 0 '^\["abc1234","","",""\]$' \
+  settle_js "[settleAfter('abc1234', 'abc1234', 'def5678'), settleAfter('abc1234', 'abc1234', 'abc1234'), settleAfter('', 'abc1234', 'def5678'), settleAfter(roundSettle('with', ran, []), 'abc1234', 'def5678')]"
+expect "workflow: the check verdict settles, reruns, or stands, never settling after a moved main" 0 '^\["settled","check","check","rerun","rerun","rerun","abc1234",""\]$' \
+  settle_js "(() => { const ok = 'settled: only records changed from abc1234 to def5678: a'; return [checkOutcome(ok, head, 'abc1234'), checkOutcome('check: every stage passed at def5678', head, 'abc1234'), checkOutcome('check: stage lint failed at def5678; read build/stages/c/lint.log', head, ''), checkOutcome(ok, head, settleBase('0123456', 'abc1234')), checkOutcome('check: every stage passed at abc1234', head, ''), checkOutcome('check: stage test-run killed at def5678; read build/stages/c/test-run.log', head, ''), settleBase('', 'abc1234'), settleBase('0123456', 'abc1234')] })()"
 expect "workflow: the package step names the settled commit for Testing" 0 '^\["",true\]$' \
   settle_js "(() => { const none = settledTesting(); settleRound('abc1234'); return [none, settledTesting().includes('in Testing name each at abc1234, never at the head')] })()"
+expect "workflow: a full round after a settled one names no settled commit for Testing" 0 '^""$' \
+  settle_js "(() => { settleRound('abc1234'); head = '0123456'; return settledTesting() })()"
 # The quality first pass is asked for every blocking finding; a scoped or
 # continued review is not (pipeline-diet-b cut 4).
 expect "workflow: the quality first pass is asked for every blocking finding" 0 '^\[true,false,false\]$' \
