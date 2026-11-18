@@ -264,7 +264,9 @@
 #                               a security entry only into one), or
 #                               "duplicate HEADING" ("closed", "gone", and
 #                               "duplicate" never a security entry
-#                               (SECURITY_MARK), such as security Low),
+#                               (security_entry: security and a severity
+#                               in any wording, such as security Low or
+#                               a Low finding of the security review),
 #                               HEADING a whole heading line
 #                               of the backlog, and write nothing when one
 #                               fails; then copy queue-feature.md and
@@ -440,13 +442,16 @@ TIER_PRICES="cheap=100/125/10/500 session=4000/5000/200/20000"
 # The note kinds of a pending change that the planner places: retrospective
 # proposals, overruns, and periodic review findings.
 PLAN_NOTES='retro|overrun|security|quality'
-# What makes a backlog entry a security entry for groom: a severity as the
+# What makes a backlog entry a security entry for groom (security_entry,
+# the one place that reads it, over the entry's lines joined, without
+# case): the word security and a severity in any wording and order, as the
 # security reviewer records it ("security Low (6)", "periodic security
-# Medium", "security Lows"), the skeptic's "security disputed", or a
-# severity and confidence pair as a note records it ("High (8)"), read
-# without case; a text that only names security, such as a quoted section
-# title, is not one.
-SECURITY_MARK='(^|[^a-z])security (high|medium|low|disputed)s?([^a-z]|$)|(^|[^a-z])(high|medium|low) \([0-9]+\)'
+# Medium", "security Lows"), the skeptic's "security disputed", or a note
+# words it ("Low finding of the periodic security review"), or a severity
+# and confidence pair ("High (8)", "Critical (9)"); a text that names
+# security with no severity, such as a quoted section title, is not one.
+SECURITY_SEVERITY='(critical|high|medium|low|disputed)s?'
+SECURITY_MARK="(^|[^a-z])security[^a-z](.*[^a-z])?$SECURITY_SEVERITY([^a-z]|\$)|(^|[^a-z])$SECURITY_SEVERITY[^a-z](.*[^a-z])?security([^a-z]|\$)|(^|[^a-z])(critical|high|medium|low) \\([0-9]+\\)"
 # The awk functions backlog-pick and backlog-oldest share: load_groomed
 # fills groomed with every whole heading line a line of the plan's
 # groom.txt ends in, and backlog_entry_head is true for a heading that
@@ -2269,6 +2274,13 @@ backlog_entry() {
     on { print }'
 }
 
+# True when the entry under the heading line $1 is a security entry: its
+# lines joined, so a severity on another line than the word counts, match
+# SECURITY_MARK; groom's one judgement of security.
+security_entry() {
+  backlog_entry "$1" | tr '\n' ' ' | grep -q -i -E "$SECURITY_MARK"
+}
+
 # The pick of the backlog lane: the entries (a "## " or deeper heading, to
 # the next heading, with a "- Location:" or "- Where:" line or a path:line
 # in the heading; any other heading a section) of the FILEs in order, which
@@ -2552,8 +2564,11 @@ backlog_oldest() {
 # names at least one path the history held and none of them stands at
 # HEAD (entry_paths). The intake: a merged heading's lines are appended
 # under its kept heading after a "- Merged:" line, so both reasons and
-# locations stay; the kept heading must stand and no line may remove it.
-# A security entry (one carrying a severity, SECURITY_MARK) leaves only by
+# locations stay, each line passed on under its own prefix so no text in
+# it redirects the rest; the kept heading must stand and no line may
+# remove it.
+# A security entry (security and a severity in any wording, security_entry,
+# judged once per line before the proofs) leaves only by
 # a merged item's listed heading or its fixing commit in the sprint
 # (fixed), never closed, gone, or duplicate, since a later commit touching
 # its file proves no fix, and merges only into another security entry. A
@@ -2597,6 +2612,14 @@ groom() {
       esac
       stands=$(folded_backlog | grep -c -x -F -e "$heading")
       [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file or a findings file: $heading"
+      if security_entry "$heading"; then
+        case "$kind" in
+          closed|gone|duplicate)
+            die "groom: a security entry leaves only by a merged item's heading or its fixing commit in the sprint (listed or fixed), never $kind: $heading" ;;
+          merged)
+            security_entry "$word" || die "groom: a security entry merges only into another security entry: $line" ;;
+        esac
+      fi
       case "$kind" in
         listed)
           valid '[a-z0-9][a-z0-9-]*' "$word" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$word" ||
@@ -2613,9 +2636,6 @@ groom() {
           touches_entry "$word" "$heading" ||
             die "groom: $word changes no file the entry names: $line" ;;
         closed)
-          if backlog_entry "$heading" | grep -q -i -E "$SECURITY_MARK"; then
-            die "groom: a security entry leaves only by a merged item's heading or its fixing commit in the sprint (listed or fixed), never closed: $heading"
-          fi
           valid '[0-9a-f]{7,40}' "$word" && git merge-base --is-ancestor "$word" HEAD 2>/dev/null ||
             die "groom: $word is not a commit of HEAD: $line"
           added=$(entry_added "$heading")
@@ -2625,9 +2645,6 @@ groom() {
           touches_entry "$word" "$heading" ||
             die "groom: $word changes no file the entry names: $line" ;;
         gone)
-          if backlog_entry "$heading" | grep -q -i -E "$SECURITY_MARK"; then
-            die "groom: a security entry leaves only by a merged item's heading or its fixing commit: $heading"
-          fi
           held=""
           for p in $(entry_paths "$heading"); do
             [ -n "$(git log -1 --format=%H -- "$p" 2>/dev/null)" ] || continue
@@ -2641,20 +2658,17 @@ groom() {
           [ "$word" != "$heading" ] || die "groom: an entry merges into another, not into itself: $line"
           ! printf '%s' "$removals" | grep -q -x -F -e "$heading" ||
             die "groom: another line already removes $heading, so it merges once: $line"
-          if backlog_entry "$heading" | grep -q -i -E "$SECURITY_MARK" && ! backlog_entry "$word" | grep -q -i -E "$SECURITY_MARK"; then
-            die "groom: a security entry merges only into another security entry: $line"
-          fi
-          body=$(backlog_entry "$heading" | awk '/^#+ / { next } NF || on { on = 1; print }')
-          merges="$merges@@kept $word
-- Merged: $heading
+          # Each line of merges carries its prefix: "@" before a kept
+          # heading, "|" before a line to append under it, so no text of
+          # a merged body redirects or drops the rest.
+          body=$(backlog_entry "$heading" | awk '/^#+ / { next } NF { for (; held > 0; held--) print "|"; print "|" $0; on = 1; next } on { held++ }')
+          merges="$merges@$word
+|- Merged: $heading
 ${body:+$body
 }"
           kept="$kept$word
 " ;;
         duplicate)
-          if backlog_entry "$heading" | grep -q -i -E "$SECURITY_MARK"; then
-            die "groom: a security entry leaves only by a merged item's heading or its fixing commit: $heading"
-          fi
           if [ "$stands" -gt 1 ]; then
             repeats="$repeats$heading
 "
@@ -2684,8 +2698,8 @@ EOF
       n = split(ENVIRON["D"], d, "\n"); for (i = 1; i <= n; i++) if (d[i] != "") repeat[d[i]] = 1
       n = split(ENVIRON["A"], a, "\n"); if (n && a[n] == "") n--
       for (i = 1; i <= n; i++)
-        if (index(a[i], "@@kept ") == 1) cur = substr(a[i], 8)
-        else if (cur != "") add[cur] = add[cur] a[i] "\n"
+        if (substr(a[i], 1, 1) == "@") cur = substr(a[i], 2)
+        else add[cur] = add[cur] substr(a[i], 2) "\n"
     }
     # A merged entry goes after the last line of its kept entry, before
     # the blank lines that end it.
