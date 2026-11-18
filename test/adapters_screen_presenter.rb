@@ -323,7 +323,8 @@ module AdaptersScreenPresenterTest
     t.assert_equal(false, out.include?("method"), "l writes no buffer text")
     t.assert_true(out.match?(/\e\[59;\d+H\e\[0;1;38;5;254;48;5;237m2\e\[0m/), "l writes only the changed cell of the ruler")
 
-    # The theme's background: the Normal sequence is in effect when the
+    # Scenario: The theme paints, and Scrolled-in rows are painted. The
+    # theme's background: the Normal sequence is in effect when the
     # screen is cleared and when a region scrolls, so the terminal fills
     # the cleared cells with the palette's background.
     lines_text = +""
@@ -345,7 +346,8 @@ module AdaptersScreenPresenterTest
     t.assert_true(first.include?("#{normal}line 1"), "a Normal cell is written in the palette's colors")
     painted.type("jjjjjjjj")
     t.assert_true(painted.terminal.last_write.include?("#{normal}\e[1;8r\e[1S"), "a region scrolls after the painted Normal sequence")
-    h = Carat::Doubles::EditorHarness.default(files, 10, 40)
+    # The terminal's background, named by a line over the painted default.
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("option.background terminal\n"), rows: 10, cols: 40, plugins: [])
     h.open("a.txt")
     t.assert_equal(false, h.terminal.last_write.include?("\e[0m\e[2J"), "the terminal's background clears the screen as before")
     h.type("jjjjjjjj")

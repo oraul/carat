@@ -70,14 +70,14 @@ module Carat
       # @rbs @jumptab: String
       # @rbs @gt: String
 
-      # Vim's defaults, the unicode icon set, the default theme on the
-      # terminal's background, syntax highlighting on, and Neovim's search
+      # Vim's defaults, the unicode icon set, the default theme painting its
+      # own background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
       # the start screen on, with its animation; cursorline and the
       # indent guides off, as in Neovim, which draws none.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "terminal", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
       end
 
       # The options a configuration line may set, by name, with the kind

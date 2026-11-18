@@ -18,7 +18,27 @@ module EditorScreenTest
     t.assert_equal("\"a.txt\" 3L", h.message_row[0, 10], "message row shows the opened message")
     t.assert_true(h.terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
     t.assert_true(h.terminal.output.include?("\e[1;1H"), "first frame paints row 1")
-    t.assert_true(h.terminal.output.include?("  2 \e[0mtwo"), "first frame carries the gutter and the text")
+    # Scenario: The background is painted by default. With no
+    # option.background line of its own the configuration paints
+    # carat-dark's background: the screen is cleared and the text written
+    # after its Normal sequence at the harness's 256 colors.
+    painted = Carat::Adapters::SgrTable.sequence(Carat::Domain::Themes.find("carat-dark", "theme"), Carat::Domain::Highlight::NORMAL, Carat::Domain::ColorDepth::COLORS_256)
+    t.assert_equal("\e[0;38;5;252;48;5;234m", painted, "carat-dark's painted Normal is its text color on its background")
+    t.assert_true(h.terminal.output.include?("  2 #{painted}two"), "first frame carries the gutter and the text on the painted background")
+    t.assert_true(h.terminal.output.include?("#{painted}\e[2J"), "the background is painted by default: the screen is cleared after carat-dark's Normal")
+    # Scenario: A named background is kept. The terminal's background,
+    # named by a line, writes the text after the bare reset.
+    plain = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("option.background terminal\n"), rows: 6, cols: 12, plugins: [])
+    plain.open("a.txt")
+    t.assert_true(plain.terminal.output.include?("  2 \e[0mtwo"), "a named terminal background is kept: the text follows the bare reset")
+    t.assert_equal(false, plain.terminal.output.include?("#{painted}\e[2J"), "a named terminal background is kept: the screen is not cleared on the palette's")
+    # Scenario: A named theme is kept. carat-light, named by a line, is
+    # painted in place of carat-dark.
+    light = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("option.theme carat-light\n"), rows: 6, cols: 12, plugins: [])
+    light.open("a.txt")
+    light_normal = Carat::Adapters::SgrTable.sequence(Carat::Domain::Themes.find("carat-light", "theme"), Carat::Domain::Highlight::NORMAL, Carat::Domain::ColorDepth::COLORS_256)
+    t.assert_true(light.terminal.output.include?("  2 #{light_normal}two"), "a named theme is kept: carat-light paints the text's background")
+    t.assert_true(light.terminal.output.include?("#{light_normal}\e[2J"), "a named theme is kept: the screen is cleared after carat-light's Normal")
     t.assert_equal(1, h.terminal.entered, "terminal entered once")
 
     before = h.terminal.writes.length

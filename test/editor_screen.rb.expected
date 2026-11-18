@@ -3,7 +3,13 @@ ok   the status bar shows the mode and the file, cut at 12 columns
 ok   message row shows the opened message
 ok   output begins with the alternate screen
 ok   first frame paints row 1
-ok   first frame carries the gutter and the text
+ok   carat-dark's painted Normal is its text color on its background
+ok   first frame carries the gutter and the text on the painted background
+ok   the background is painted by default: the screen is cleared after carat-dark's Normal
+ok   a named terminal background is kept: the text follows the bare reset
+ok   a named terminal background is kept: the screen is not cleared on the palette's
+ok   a named theme is kept: carat-light paints the text's background
+ok   a named theme is kept: the screen is cleared after carat-light's Normal
 ok   terminal entered once
 ok   one write per frame
 ok   unchanged text row is not rewritten
@@ -25,4 +31,4 @@ ok   window scrolled with scrolloff capped at half the window
 ok   leaving restores the main screen last
 ok   leaving gives the cursor back the terminal's own shape and shows it
 ok   terminal left once
-editor_screen: 27 passed, 0 failed
+editor_screen: 33 passed, 0 failed
