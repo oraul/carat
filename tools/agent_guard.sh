@@ -60,7 +60,8 @@
 #                metrics-compare bench, and PREFIX and SPINEL_CACHE_DIR at
 #                the project's tmp/.toolchain and build/spinel-cache,
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
-#                pending get trusted check scope moved bench metrics metric note
+#                pending get trusted check scope settled moved bench metrics
+#                metric note
 #                budget spent review-due backlog-dups backlog-oldest;
 #                [BASE=REV] sh
 #                tools/gates.sh GATE...; sh tools/metrics.sh measure OUT
@@ -628,6 +629,9 @@ run_state_form() {
     read:moved)
       [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
         refuse "tools/run_state.sh moved other than CHANGE COMMIT" ;;
+    read:settled)
+      [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
+        refuse "tools/run_state.sh settled other than CHANGE COMMIT" ;;
     read:ci-stages)
       [ "$closing" = 1 ] && [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
         refuse "tools/run_state.sh ci-stages, which only the close profile runs, as CHANGE COMMIT" ;;
