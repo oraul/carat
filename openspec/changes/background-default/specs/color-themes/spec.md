@@ -7,7 +7,7 @@
 ## ADDED Requirements
 
 ### Requirement: The background option paints the theme by default
-The `option.background` line SHALL take `theme`, the default, or `terminal`. With `theme` every cell, the cleared screen included, SHALL be drawn on the palette's background; with `terminal` `Normal` and every group without a background of its own SHALL keep the terminal's colors. A background or theme a configuration line names SHALL be kept. Any other value SHALL be reported as `file:line: unknown background VALUE` and keep the value before it.
+The `option.background` line SHALL take `theme`, the default, or `terminal`. With `theme` every cell, the cleared screen included, SHALL be drawn on the palette's background; with `terminal`, `Normal` SHALL keep the terminal's own colors and every group without a background of its own the terminal's background. A background or theme a configuration line names SHALL be kept. Any other value SHALL be reported as `file:line: unknown background VALUE` and keep the value before it.
 
 #### Scenario: The background is painted by default
 - **WHEN** the editor starts with the shipped configuration and a frame is first written at 256 colors

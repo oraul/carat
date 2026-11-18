@@ -8,3 +8,8 @@
 
 - [x] 2.1 Update the option.background row of `docs/compatibility.md` and the colors paragraph of README.md, checked by `make docs-lint`
 - [x] 2.2 Append the plan's backlog entries to `docs/findings/background-default.md`
+
+## 3. Review fixes
+
+- [x] 3.1 Word the `terminal` case of the delta requirement as the replaced text does: `Normal` keeps the terminal's own colors and every group without a background of its own the terminal's background (quality review, spec precision)
+- [x] 3.2 Record in `design.md` why the delta removes the requirement and adds a renamed one rather than modifying it: OpenSpec refuses a MODIFIED block that drops the "Transparent by default" scenario, and keeping that name would state a false default
