@@ -141,6 +141,13 @@
 #                               matches TEST_ONLY, so the quality review of a
 #                               fix reads only its diff; "branch: ..." and
 #                               exit 1 otherwise or when nothing changed
+#   settled CHANGE COMMIT       print "settled: only records changed from COMMIT
+#                               to HEAD: ..." and exit 0 when COMMIT is an
+#                               ancestor, the tree clean, and every changed
+#                               path matches RECORDS_RE (docs/sprints.tsv
+#                               never), so an advisory-only round stands on
+#                               COMMIT's check and security review;
+#                               "unsettled: ..." and exit 1 otherwise
 #   moved CHANGE COMMIT         after merge-main took in a moved main (BASE,
 #                               origin/main), print "moved: the change is the
 #                               same ...", record moved ("HEAD COMMIT" in full),
@@ -658,8 +665,10 @@ stage_end() {
 # The order the stages need, "STAGE:BEFORE" pairs: STAGE starts only once
 # BEFORE passed (skipped, carried, scoped, or compiled counts) when both
 # are in the list. test-run runs test-build's runner and, in the smoke
-# test, dev-build's binary; metrics reads the reports of dev-build and
-# test-build and measures bench-budget's binary. Every other stage is
+# test, dev-build's binary; gates (its snapshots gate) runs test-build's
+# runner on the changed snapshots and fails without it; metrics reads the
+# reports of dev-build and test-build and measures bench-budget's binary.
+# diagnose reads the runner's source, not the runner. Every other stage is
 # free: each writes its own build path (build/dev, build/test,
 # build/bench, build/diagnose, build/metrics), and the compile cache
 # build/spinel-cache takes concurrent compilers, Spinel storing each
@@ -667,7 +676,7 @@ stage_end() {
 # with no stage running and hold every other start while they run, so
 # metrics measures time per key beside no compiler. CHECK_JOBS caps the
 # stages running at once (default 3: 4 CPUs, two lanes checking at once).
-STAGE_AFTER="test-run:test-build test-run:dev-build metrics:dev-build metrics:test-build metrics:bench-budget"
+STAGE_AFTER="test-run:test-build test-run:dev-build gates:test-build metrics:dev-build metrics:test-build metrics:bench-budget"
 STAGE_ALONE="metrics"
 
 # Prints why CHECK_JOBS is refused, nothing when it is a positive number.
@@ -1230,6 +1239,37 @@ fix_scope() {
     return 1
   fi
   echo "fix: review only git diff $since HEAD against the findings and the rules"
+}
+
+# Whether an advisory-only fix round may stand on the check, security
+# review, and benchmark of COMMIT, an ancestor of HEAD (review-lite): every
+# path changed from COMMIT to HEAD matches RECORDS_RE, the paths main's
+# merge gates settle a pass across (settled_at in tools/gates.sh), with
+# docs/sprints.tsv refused outright, since the gates take only groom's row
+# there; the tracked tree clean. Exit 1 names what keeps the full round.
+settled_round() {
+  since=$(commit_at "$1") || exit 1
+  now=$(git rev-parse --verify -q --short=12 HEAD) || die "settled: no HEAD"
+  if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+    echo "unsettled: tracked files differ from HEAD; run the full round"
+    return 1
+  fi
+  if ! git merge-base --is-ancestor "$since" HEAD 2>/dev/null; then
+    echo "unsettled: $since is not an ancestor of HEAD $now; run the full round"
+    return 1
+  fi
+  rest=$(git diff --no-renames --name-only --end-of-options "$since" HEAD --) || die "settled: git diff failed"
+  if [ -z "$rest" ]; then
+    echo "unsettled: nothing changed since $since; run the full round"
+    return 1
+  fi
+  other=$(printf '%s\n' "$rest" | grep -v -E "^($RECORDS_RE)" | tr '\n' ' ')
+  printf '%s\n' "$rest" | grep -q -x -F docs/sprints.tsv && other="${other}docs/sprints.tsv "
+  if [ -n "$other" ]; then
+    echo "unsettled: ${other% } changed since $since outside the records; run the full round"
+    return 1
+  fi
+  echo "settled: only records changed from $since to $now: $(printf '%s\n' "$rest" | tr '\n' ' ' | sed 's/ $//')"
 }
 
 # True when PATH has no parent step (..) as a segment.
@@ -3268,6 +3308,9 @@ case "$command" in
   scope)
     [ $# -ge 1 ] || usage
     fix_scope "$@" ;;
+  settled)
+    [ $# -eq 1 ] || usage
+    settled_round "$1" ;;
   check)
     [ $# -le 1 ] || usage
     backed=""

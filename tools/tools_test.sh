@@ -493,6 +493,10 @@ expect "run_state: each parallel stage keeps its own log" 0 "^EXIT 0$" tail -1 b
 expect "run_state: a parallel check with test-build passes" 0 "every stage passed" par_check "test-build test-run docs-lint"
 expect "run_state: check starts test-run only after test-build passed" 0 "^before$" order "end test-build" "start test-run"
 expect "run_state: a free stage runs beside test-build" 0 "^before$" order "start docs-lint" "end test-build"
+# gates' snapshots gate runs test-build's runner, so gates waits for it even
+# when queued first.
+expect "run_state: a parallel check with gates queued before test-build passes" 0 "every stage passed" par_check "gates test-build docs-lint"
+expect "run_state: check starts gates only after test-build ended" 0 "^before$" order "end test-build" "start gates"
 expect "run_state: a parallel check with metrics passes" 0 "every stage passed" par_check "slowa metrics slowb"
 expect "run_state: check runs metrics alone, after the first stage" 0 "^before$" order "end slowa" "start metrics"
 expect "run_state: check runs metrics alone, after the second stage" 0 "^before$" order "end slowb" "start metrics"
@@ -658,6 +662,37 @@ expect "run_state: scope counts both paths of a rename" 0 "^fix: " state scope s
 expect "run_state: scope falls back for a rename the findings do not name" 1 "^branch: tools/base.sh" state scope state "$reviewed_at" README.md
 git_q mv test/base.sh tools/base.sh
 commit "chore: move it back"
+# An advisory-only round stands on the check and security review of an
+# earlier commit only when the fix since it changed records alone, the
+# paths the merge gates settle a pass across (review-lite).
+settle_at=$(git rev-parse --short=12 HEAD)
+echo "spec text" >> openspec/changes/c/tasks.md
+mkdir -p docs/findings
+echo "### an advisory" >> docs/findings/settle.md
+commit "docs: answer an advisory in the records"
+expect "run_state: settled passes a records-only diff" 0 "^settled: only records changed from $settle_at to $(git rev-parse --short=12 HEAD): docs/findings/settle.md openspec/changes/c/tasks.md$" state settled state "$settle_at"
+echo "more" >> openspec/changes/c/tasks.md
+expect "run_state: settled refuses a dirty tree" 1 "^unsettled: tracked files differ from HEAD" state settled state "$settle_at"
+git_q checkout -- openspec/changes/c/tasks.md
+expect "run_state: settled refuses a round with nothing changed" 1 "^unsettled: nothing changed since" state settled state "$(git rev-parse --short=12 HEAD)"
+settle_at=$(git rev-parse --short=12 HEAD)
+echo "a docs line" >> README.md
+commit "docs: answer an advisory in the readme"
+expect "run_state: settled refuses a docs change outside the records" 1 "^unsettled: README.md changed since $settle_at outside the records" state settled state "$settle_at"
+settle_at=$(git rev-parse --short=12 HEAD)
+echo "# a comment" >> tools/base.sh
+commit "chore: answer an advisory in code"
+expect "run_state: settled refuses a code change" 1 "^unsettled: tools/base.sh changed since $settle_at outside the records" state settled state "$settle_at"
+settle_at=$(git rev-parse --short=12 HEAD)
+[ ! -f docs/sprints.tsv ] || cp docs/sprints.tsv "$work/sprints.keep"
+printf 'sprint-0\t1\n' >> docs/sprints.tsv
+commit "docs: append a sprint row"
+expect "run_state: settled refuses the sprints file" 1 "^unsettled: docs/sprints.tsv changed since $settle_at outside the records" state settled state "$settle_at"
+if [ -f "$work/sprints.keep" ]; then mv "$work/sprints.keep" docs/sprints.tsv; else git_q rm -q docs/sprints.tsv; fi
+commit "chore: drop the sprint row"
+orphan=$(git_q commit-tree -m orphan "$(git rev-parse HEAD^{tree})" | cut -c1-12)
+expect "run_state: settled refuses a commit that is no ancestor" 1 "^unsettled: $orphan is not an ancestor of HEAD" state settled state "$orphan"
+expect "run_state: settled refuses a commit that is not one" 1 "not a commit: HEAD" state settled state HEAD
 # An advisory a later round repeats is noted once.
 state note state quality-advisory "abc1234def01 tools/x.sh:3 a \"quoted\" reason; fix: an outline" > /dev/null
 expect "run_state: note keeps one advisory across commits" 0 "already recorded" state note state quality-advisory "0123456789ab tools/x.sh:3 a \"quoted\" reason; fix: an outline"
@@ -2510,6 +2545,10 @@ expect "guard: checker compares the change's files after a main-moved merge" 0 "
 expect "guard: checker refuses moved without a commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c'
 expect "guard: checker refuses moved at a symbolic commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c HEAD'
 expect "guard: checker refuses moved with an extra argument" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c abc1234 def5678'
+expect "guard: checker runs settled in an advisory-only round" 0 "^$" guard read 'sh tools/run_state.sh settled c abc1234'
+expect "guard: checker refuses settled without a commit" 2 "settled other than CHANGE COMMIT" guard read 'sh tools/run_state.sh settled c'
+expect "guard: checker refuses settled at a symbolic commit" 2 "settled other than CHANGE COMMIT" guard read 'sh tools/run_state.sh settled c HEAD'
+expect "guard: the contributor may not run settled" 2 "" guard contributor 'sh tools/run_state.sh settled c abc1234'
 expect "guard: contributor merges main" 0 "^$" guard contributor 'git fetch -q origin && git merge --no-edit origin/main'
 expect "guard: contributor moves and removes files" 0 "^$" guard contributor 'mkdir -p tools/x && git mv a.sh tools/x/a.sh && rm -f tmp/x && chmod +x tools/x/a.sh && touch tmp/y'
 expect "guard: contributor reads lines and the tree" 0 "^$" guard contributor 'cd /w && sed -n 1,70p tools/x.sh; sed -n \"300,\\$p\" docs/backlog.md; find tools -name x.sh; git status --short | head'
@@ -4004,6 +4043,37 @@ expect "workflow: a failed stage starts the checker to read its log" 0 '^true$' 
 expect "workflow: the check lines run spent and bench only after the check" 0 '^\["sh tools/run_state[.]sh metric c rework=0; sh tools/run_state[.]sh check c abc1234","sh tools/run_state[.]sh spent c; sh tools/run_state[.]sh bench c","",true,true\]$' \
   check_js "(l => [l.check, l.passed, l.moved, checkRunTask(l).indexOf(l.check) < checkRunTask(l).indexOf('Only when that line begins'), checkRunTask(l).includes('read nothing else')])(checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=0'))"
 expect "guard: the checker's run start may run the check lines" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=0; sh tools/run_state.sh check c abc1234; sh tools/run_state.sh spent c; sh tools/run_state.sh bench c; sh tools/run_state.sh moved c abc1234'
+# An advisory-only round whose fix changed only records stands on the
+# check, security, and bench passes of the commit it started from; the
+# quality review alone runs, over the commits since (review-lite).
+settle_js() {
+  js "$wf" "COMMIT CHANGE SQUASH CLOSABLE passedAt sameCommit settleFrom SETTLED settled settleBase checkVerdict RERUN_WORDS checkOutcome inPlaceRound settleAfter settleRound SETTLES settledAtHead doneAtHead reviewedAtHead queue settledTesting narrowedFrom priorQuality checkLines checkRunTask" "(() => { globalThis.head = 'def5678'; globalThis.state = { change: 'c' }; globalThis.pending = []; globalThis.notes = []; globalThis.log = () => {}; globalThis.note = (l) => notes.push(l); globalThis.settledRound = null; globalThis.qualityAt = ''; globalThis.qualityBlocking = []; globalThis.blockedAt = ''; globalThis.blockedFiles = []; globalThis.ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234', 'review.bench': 'pass abc1234', 'review.quality': 'pass abc1234' }; return $1 })()"
+}
+expect "workflow: an advisory-only round settles from the commit of the check, security, and bench passes" 0 '^"abc1234"$' \
+  settle_js "settleFrom(ran, ['quality advisory a.rb:1 a name; fix: rename'])"
+expect "workflow: a round offering a security finding keeps the security review" 0 '^\["","",""\]$' \
+  settle_js "[settleFrom(ran, ['security Low (5) a.sh:1 t; fix: f']), settleFrom({ ...ran, 'review.security': 'pass 0123456' }, []), settleFrom({ ...ran, 'review.bench': '' }, [])]"
+expect "workflow: a settled line naming the head skips the check" 0 '^\[true,true\]$' \
+  settle_js "[settled('settled: only records changed from abc1234 to def5678: openspec/changes/c/tasks.md', head, 'abc1234'), settled('run_state: settled: only records changed from abc1234def0 to def5678abc0: docs/findings/c.md', head, 'abc1234')]"
+expect "workflow: a line naming code changed runs the check" 0 '^\[false,false,false,false\]$' \
+  settle_js "[settled('unsettled: tools/x.sh changed since abc1234 outside the records; run the full round', head, 'abc1234'), settled('check: every stage passed at def5678', head, 'abc1234'), settled('settled: only records changed from abc1234 to 0123456: a', head, 'abc1234'), settled('settled: only records changed from 0123456 to def5678: a', head, 'abc1234')]"
+expect "workflow: a settled round skips the check, security, and bench and records the skip" 0 '^\[false,false,true,true,true,false,"sh tools/run_state[.]sh note c settled-round \\"advisory-only round at def5678: only records changed since abc1234, where the check, the security review, and the benchmark passed; none of them rerun, the quality review scoped to the commits since\\"",true,false\]$' \
+  settle_js "(() => { const before = [doneAtHead('check'), reviewedAtHead('security')]; settleRound('abc1234'); const after = [doneAtHead('check'), reviewedAtHead('security'), reviewedAtHead('bench'), reviewedAtHead('quality'), pending[0], CLOSABLE.test(pending[0])]; head = '0123456'; return before.concat(after, [doneAtHead('check')]) })()"
+expect "workflow: a settled round's quality review reads only the commits since its pass" 0 'Review only `git diff abc1234 HEAD`, the commits since that pass' \
+  settle_js "(() => { settleRound('abc1234'); return priorQuality() })()"
+expect "workflow: the check start runs settled first only in an advisory-only round" 0 '^\["sh tools/run_state[.]sh metric c rework=1; sh tools/run_state[.]sh settled c abc1234","sh tools/run_state[.]sh check c abc1234",true,true,"",false\]$' \
+  settle_js "(() => { const l = checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=1', 'abc1234'); const t = checkRunTask(l); const plain = checkLines('c', 'abc1234', '', ''); return [l.settle, l.check, t.indexOf(l.settle) < t.indexOf(l.check), t.includes('when it exits 0, return its last line, verbatim, as verdict, and run nothing else'), plain.settle, checkRunTask(plain).includes('settled')] })()"
+expect "guard: the checker's run start may run the settle line with the run's figures" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=1; sh tools/run_state.sh settled c abc1234'
+expect "workflow: a blocking round never settles" 0 '^\["with","with","with","alone","abc1234"\]$' \
+  settle_js "[inPlaceRound(true, 1, 0, 3), inPlaceRound(true, 2, 1, 3), inPlaceRound(true, 1, 2, 3), inPlaceRound(false, 1, 0, 3), settleFrom(ran, ['quality advisory a.rb:1 a name; fix: rename'])]"
+expect "workflow: only the advisory round's fix asks the next check to settle" 0 '^\["abc1234","","",""\]$' \
+  settle_js "[settleAfter('abc1234', 'abc1234', 'def5678'), settleAfter('abc1234', 'abc1234', 'abc1234'), settleAfter('', 'abc1234', 'def5678'), settleAfter('abc1234', 'abc1234', '')]"
+expect "workflow: the check verdict settles, reruns, or stands, never settling after a moved main" 0 '^\["settled","check","check","rerun","rerun","rerun","abc1234",""\]$' \
+  settle_js "(() => { const ok = 'settled: only records changed from abc1234 to def5678: a'; return [checkOutcome(ok, head, 'abc1234'), checkOutcome('check: every stage passed at def5678', head, 'abc1234'), checkOutcome('check: stage lint failed at def5678; read build/stages/c/lint.log', head, ''), checkOutcome(ok, head, settleBase('0123456', 'abc1234')), checkOutcome('check: every stage passed at abc1234', head, ''), checkOutcome('check: stage test-run killed at def5678; read build/stages/c/test-run.log', head, ''), settleBase('', 'abc1234'), settleBase('0123456', 'abc1234')] })()"
+expect "workflow: the package step names the settled commit for Testing" 0 '^\["",true\]$' \
+  settle_js "(() => { const none = settledTesting(); settleRound('abc1234'); return [none, settledTesting().includes('in Testing name each at abc1234, never at the head')] })()"
+expect "workflow: a full round after a settled one names no settled commit for Testing" 0 '^""$' \
+  settle_js "(() => { settleRound('abc1234'); head = '0123456'; return settledTesting() })()"
 # The quality first pass is asked for every blocking finding; a scoped or
 # continued review is not (pipeline-diet-b cut 4).
 expect "workflow: the quality first pass is asked for every blocking finding" 0 '^\[true,false,false\]$' \
