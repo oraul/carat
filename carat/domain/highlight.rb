@@ -4,7 +4,8 @@ module Carat
     # colors. The editor's own UI groups come first, with Neovim's names,
     # the status bar's mode pills and slots after them, then the indent
     # guides' two, then FloatTitle, then the popup menu's
-    # match and extra groups; then the syntax
+    # match and extra groups, then Neovim's Added, Changed, and Removed,
+    # which the git signs are drawn in; then the syntax
     # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
     # from ICON_FIRST on, named as nvim-web-devicons names them; then the
@@ -74,62 +75,65 @@ module Carat
       POPUP_MENU_MATCH_SELECTED = 57
       POPUP_MENU_EXTRA = 58
       POPUP_MENU_EXTRA_SELECTED = 59
+      ADDED = 60
+      CHANGED = 61
+      REMOVED = 62
 
-      SYNTAX_FIRST = 60
-      COMMENT = 60
-      CONSTANT = 61
-      STRING = 62
-      CHARACTER = 63
-      NUMBER = 64
-      BOOLEAN = 65
-      FLOAT = 66
-      IDENTIFIER = 67
-      FUNCTION = 68
-      STATEMENT = 69
-      CONDITIONAL = 70
-      REPEAT = 71
-      LABEL = 72
-      OPERATOR = 73
-      KEYWORD = 74
-      EXCEPTION = 75
-      PRE_PROC = 76
-      INCLUDE = 77
-      DEFINE = 78
-      MACRO = 79
-      TYPE = 80
-      STORAGE_CLASS = 81
-      STRUCTURE = 82
-      TYPEDEF = 83
-      SPECIAL = 84
-      SPECIAL_CHAR = 85
-      DELIMITER = 86
-      SPECIAL_COMMENT = 87
-      TODO = 88
-      ERROR = 89
+      SYNTAX_FIRST = 63
+      COMMENT = 63
+      CONSTANT = 64
+      STRING = 65
+      CHARACTER = 66
+      NUMBER = 67
+      BOOLEAN = 68
+      FLOAT = 69
+      IDENTIFIER = 70
+      FUNCTION = 71
+      STATEMENT = 72
+      CONDITIONAL = 73
+      REPEAT = 74
+      LABEL = 75
+      OPERATOR = 76
+      KEYWORD = 77
+      EXCEPTION = 78
+      PRE_PROC = 79
+      INCLUDE = 80
+      DEFINE = 81
+      MACRO = 82
+      TYPE = 83
+      STORAGE_CLASS = 84
+      STRUCTURE = 85
+      TYPEDEF = 86
+      SPECIAL = 87
+      SPECIAL_CHAR = 88
+      DELIMITER = 89
+      SPECIAL_COMMENT = 90
+      TODO = 91
+      ERROR = 92
 
-      ICON_FIRST = 90
-      ICON_DEFAULT = 90
-      ICON_FOLDER = 91
-      ICON_SYMLINK = 92
-      ICON_RUBY = 93
-      ICON_JSON = 94
-      ICON_MARKDOWN = 95
-      ICON_TOML = 96
-      ICON_MAKEFILE = 97
-      ICON_SHELL = 98
-      ICON_C = 99
-      ICON_YAML = 100
-      ICON_GIT = 101
-      ICON_LOCK = 102
+      ICON_FIRST = 93
+      ICON_DEFAULT = 93
+      ICON_FOLDER = 94
+      ICON_SYMLINK = 95
+      ICON_RUBY = 96
+      ICON_JSON = 97
+      ICON_MARKDOWN = 98
+      ICON_TOML = 99
+      ICON_MAKEFILE = 100
+      ICON_SHELL = 101
+      ICON_C = 102
+      ICON_YAML = 103
+      ICON_GIT = 104
+      ICON_LOCK = 105
 
-      MARKUP_FIRST = 103
-      MARKUP_HEADING = 103
-      MARKUP_STRONG = 104
-      MARKUP_ITALIC = 105
-      MARKUP_RAW = 106
-      MARKUP_LINK = 107
-      MARKUP_RAW_BLOCK = 108
-      COUNT = 109
+      MARKUP_FIRST = 106
+      MARKUP_HEADING = 106
+      MARKUP_STRONG = 107
+      MARKUP_ITALIC = 108
+      MARKUP_RAW = 109
+      MARKUP_LINK = 110
+      MARKUP_RAW_BLOCK = 111
+      COUNT = 112
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -151,7 +155,7 @@ module Carat
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
         "StatusLineDiagnosticError", "StatusLineDiagnosticWarn", "StatusLineDiagnosticInfo", "StatusLineDiagnosticHint",
-        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel",
+        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",
@@ -194,6 +198,32 @@ module Carat
       def self.base(id)
         return id - FLOAT_LAYER if id >= FLOAT_LAYER
         id >= CURSOR_LINE_LAYER ? id - CURSOR_LINE_LAYER : id
+      end
+
+      # The group a sign placed with the icon name is drawn in: the
+      # diagnostic icons in their Diagnostic groups, as Neovim's
+      # DiagnosticSign groups link to them, the git icons in Added,
+      # Changed, and Removed, as gitsigns links its own; SignColumn for
+      # any other icon.
+      #: (String) -> Integer
+      def self.sign_group(icon)
+        return DIAGNOSTIC_ERROR if icon == "error"
+        return DIAGNOSTIC_WARN if icon == "warning"
+        return DIAGNOSTIC_INFO if icon == "info"
+        return DIAGNOSTIC_HINT if icon == "hint"
+        return ADDED if icon == "git_added"
+        return CHANGED if icon == "git_changed"
+        return REMOVED if icon == "git_deleted"
+        SIGN_COLUMN
+      end
+
+      # The group a diagnostic sign of the severity (1 error to 4 hint)
+      # is drawn in, DiagnosticError to DiagnosticHint; a severity outside
+      # 1 to 3 is drawn as a hint.
+      #: (Integer) -> Integer
+      def self.diagnostic_group(severity)
+        return DIAGNOSTIC_HINT if severity < 1 || severity > 3
+        DIAGNOSTIC_ERROR + severity - 1
       end
     end
   end

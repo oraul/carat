@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 18
 
-1. `sign-colors` (T2 user request, a defect, estimated small, Facet wave 1 item 3): every sign is painted SignColumn yellow, error signs (`carat/domain/buffer.rb:374`) and git's added, changed, deleted (`carat/plugins/git_signs/plugin.rb:46`) alike; `place_sign` (`carat/use_cases/plugins/buffer_requests.rb:101`) takes an icon name but no group. Fix outline: a group per sign by its icon name, no API change. Accepted when frame rows on carat-dark and carat-light show an error sign red, a warning yellow, git added green and changed cyan. Backlog: none.
+Backlog 3 of 3 delivered: `groom-proof`, `backlog-throughput`, `sign-colors`.
 
 ## Pool
 
@@ -18,7 +18,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 8. `open-pr-retry` (T1 defect, estimated small): one API timeout fails open-pr, the re-run refused 403; a no-pull-request result on a moved main has no path; retry, then merge-main and the one push.
 9. `pr-testing-truth` (T1 defect, estimated small): Testing written before the reviews (vim-line-commands-c: 4 of 6 rounds); written from recorded reviews, gated.
 10. `stage-clean` (T1 defect, user request, estimated small): merged stages kept, 13 folders 1.4G pruned by hand; a deterministic `cleaner` agent runs `stage-clean` once after a recorded merge.
-11. `rework-review-repeat` (T1 efficiency, estimated medium): later rounds repeat notes (reviews 301 of 578 calls, 366,936 output); advisory-only rounds rerun every review (sprint-17-records: 2 of 3 rounds, reviews 41.9% of output; guide-colors rework 1 from 4 advisories, 147,140 to 230,744 output; groom-proof a 0-blocking round after its check pass at 200,212 of 200,000); 2 review-phase headings.
+11. `rework-review-repeat` (T1 efficiency, estimated medium): later rounds repeat notes (reviews 301 of 578 calls, 366,936 output; facet-palette re-raised a declined advisory); advisory-only rounds rerun every review (sprint-17-records: 2 of 3 rounds, reviews 41.9% of output; guide-colors rework 1 from 4 advisories, 147,140 to 230,744 output; groom-proof a 0-blocking round at 200,212 of 200,000; backlog-throughput a docs-only round 67,553; facet-palette rework 2, 0 blocking); 2 review-phase headings.
 12. `quality-first-pass` (T1 efficiency, estimated medium, with review-fix-treadmill): quality 91 of 162; re-reviews blocking on each fix round's code, 1, 3, 1, 1 (833,080 output); 7 of the next 10; 2 headings.
 13. `spinel-bump` (T2 user request, toolchain, estimated medium, alone in its lane): `SPINEL_REF` c0502112d8 656 commits behind; make check, figures compared.
 14. `check-clone-toolchain` (T1 defect, Medium (6), estimated medium, pushed back 2): `tools/run_state.sh:893`; 4 headings.
@@ -28,8 +28,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 18. `sprint-security-b` (T1 defect, Lows, estimated medium): `tools/gates.sh:112`; 4 headings.
 19. `ci-trust-gaps-b` (T1 defect, Low (6), estimated small), `ci-trust-gaps-c` (T1, Lows, estimated medium): 2 and 8 headings.
 20. `toolchain-clean-scope` (T1 defect, data loss, estimated small): `Makefile:203`.
-21. `check-pass-budget-flag` (T1 defect, estimated medium): false flags at 252,910 and 283,183 of 200,000, again groom-proof 200,212 to 306,481 and guide-colors 230,744; check output 30-fold for one verdict (groom-proof 62,263 over 4 passes, guide-colors 30,277 over 2, a clean pass 1,932); accepted at 5,000 or less per pass.
-22. `records-plan-apply`, `bench-skip-no-code`, `moved-review-diff`, `advisory-findings-auto`, `merge-output-cap` (guide-colors merge 26,423 output, 11 calls, green CI), `scout-prune-step` (T1 pipeline, estimated small each).
+21. `check-pass-budget-flag` (T1 defect, estimated medium): false flags at 252,910 and 283,183 of 200,000, again groom-proof 200,212 to 306,481, guide-colors 230,744, backlog-throughput 399,564 and 467,117, facet-palette 204,127 to 573,120; check output 30-fold for one verdict (groom-proof 62,263 over 4 passes, facet-palette 123,463 in 6 calls, a clean pass 1,932); accepted at 5,000 or less per pass.
+22. `records-plan-apply`, `bench-skip-no-code`, `moved-review-diff`, `advisory-findings-auto`, `merge-output-cap` (merge output on a green CI: guide-colors 26,423 in 11 calls, backlog-throughput 137,609 in 14), `scout-prune-step`, `doc-budget-room` (planner.md 8,190 of 8,192 bytes, CLAUDE.md 30,717 of 30,720; room by removing repeats) (T1 pipeline, estimated small each).
 23. `groom-fold-format` (T1 defect, estimated small): the vim-folds-b findings file folded 7 headings twice; removed findings files leave references (sprint-17-records: 3 hand edits); a findings file keeps entries fixed in place (groom-proof: 5 entries, 1 open at the last head); `merge-main-queue-conflict` (T1, estimated medium).
 24. `normal-command-fixes` (T3 Low (6), estimated large): `:normal` remap depth 100 hangs (`carat/use_cases/ex/normal_command_handler.rb:62`).
 25. `file-access-color` (T3 Low (3), estimated medium): 4 headings.
@@ -38,15 +38,13 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Decisions
 
-- `backlog-throughput` delivered off the queue as a Sprint 18 backlog change (T1 pipeline efficiency, user request): "Sprint 18 maybe if you can" (2026-11-18); backlog +35 headings a sprint, 1,151 to 1,328 over sprint-10 to sprint-15, about 1,450 now.
-- `lsp-tidy` to Pool 1 for Sprint 19, pushed back 1, its line kept as it stands (T6, the brief): Sprint 18 backlog `groom-proof`, `sign-colors`, `backlog-throughput`, 3 of 3.
-- Split in two (T1, size rule): 3 testable parts; part a, intake and pruning at groom on groom-proof's proof, delivered now; parts b and c to Pool 6 as `backlog-throughput-b`.
-- Part a accepted when tools-test cases show groom closing an entry only with its fixing commit or its location gone or changed at the head, a security entry only with its commit, a merged near-same entry keeping both reasons and locations, and the oldest 50 checked each sprint.
-- Estimate medium for part a (T1): merge-main-path 814,062 / 36.9 min, pipeline-diet 912,815 / 41.2, moved-review-carry 1,028,455 / 53.7; the whole brief large, the last 2 lane runs over (groom-proof 1,444,297 / 95.0 of 1.2M, sprint-17-records 857,102 / 32.0 of 500k), split as large outside the roadmap.
-- No merge-gate rule edit expected (T1): edits in `tools/run_state.sh`, the planner, `docs/goals.md`; `tools/rules.sh` untouched.
-- Security first empty (T0): groom-proof and guide-colors security high=0 medium=0; no `review.periodic` record in the 2 pending runs.
-- groom-proof retro 19 and guide-colors retro 7 into `rework-review-repeat`, near-duplicates (T1): 0-blocking rounds at 200,212 and 230,744 output.
-- groom-proof retro 21, guide-colors retro 9, and check overrun notes 16 to 18 and 5 into `check-pass-budget-flag`, up to medium (T1): 62,263 and 30,277 check output against 1,932.
-- groom-proof retro 20 into `groom-fold-format` (T1): 5 findings entries, 1 open at the last head.
-- guide-colors retro 8 into `merge-output-cap` (T1): merge 26,423 output in 11 calls.
-- Overrun sprint-17-records (T1 note 22): 857,102 / 32.0 of small; the next records change estimated medium. Overrun note 6 (vim-line-commands-c) placed already in `round-limit-resume`.
+- `sign-colors` delivered, off Sprint 18 (T2 user request, a defect): item 1 at d91f1ba as written; Sprint 18 backlog 3 of 3 with `groom-proof` and `backlog-throughput`.
+- Estimate medium, not small (T2, size rule): palette-narrow 736,843 / 51.2 min, bar-colors 879,991 / 48.2, guide-colors 922,993 / 73.0, all over small's 500k and 25 min; the last 2 comparable under 1.2M, no size up; the lane's last 2 over (sprint-17-records 857,102 of 500k, groom-proof 1,444,297 of 1.2M) are records and tooling runs.
+- No split (T2, the brief "delivered as written"): 1 mechanism, a group per sign by its icon name; 2 dependent paths (diagnostic, plugin); map areas 8, 13, 14 edited, 15 a pass-through; 1 acceptance check.
+- No `tools/rules.sh` edit (T1): the brief touches signs, themes, the presenter, and their tests.
+- Security first empty (T0): backlog-throughput and facet-palette security high=0 medium=0; no `review.periodic` record in the 2 pending runs.
+- backlog-throughput retro 12 and facet-palette retros 10, 11 into `rework-review-repeat` (T1): a docs-only round 67,553 output; rework 2 with 0 blocking.
+- backlog-throughput overruns 9, 10, facet-palette overruns 7 to 9 and retro 12's check part into `check-pass-budget-flag` (T1): 399,564 to 573,120 of 200,000.
+- backlog-throughput retro 11 and facet-palette retro 12's merge part into `merge-output-cap` (T1): merge 137,609 output in 14 calls, green CI.
+- backlog-throughput retro 13 as `doc-budget-room` in Pool 22 (T1): planner.md 8,190 of 8,192 bytes, CLAUDE.md 30,717 of 30,720.
+- backlog-throughput overrun 14 (groom-proof 1,444,297 of 1.2M) dropped, placed already by that run's size decision (T1).

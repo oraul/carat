@@ -91,7 +91,13 @@ ok   a scratch buffer is named by its title
 ok   a file buffer is named by its path
 ok   no signs at first
 ok   a sign is placed on its row
+ok   a sign keeps its group, a row without one has SignColumn
+ok   one glyph in two groups keeps each row's group
+ok   a later sign on a row replaces its group
+ok   the shown layer is the highest priority marking the row, -1 for none
+ok   the shown layer holds the row's glyph and group
 ok   a row shows its most severe diagnostic over a plugin's sign
+ok   A diagnostic sign takes its severity's group, a plugin's sign keeps its own
 ok   a row's diagnostic is the first of the most severe, one past the end is kept unmarked
 ok   no diagnostic outside the buffer
 ok   an inserted line moves the signs and the messages down
@@ -99,4 +105,4 @@ ok   a deleted line moves them up
 ok   a later list replaces the earlier one
 ok   an empty list clears the diagnostics and keeps the plugin's signs
 ok   clearing removes the signs and the messages
-domain_buffer: 101 passed, 0 failed
+domain_buffer: 107 passed, 0 failed

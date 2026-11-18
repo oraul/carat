@@ -92,10 +92,12 @@ ok   editing a missing buffer fails
 ok   an empty list succeeds
 ok   a sign is the icon's glyph with its owner
 ok   a plugin's later sign on a row replaces its own
+ok   a sign is drawn in the group of its icon
 ok   the plugin registered first shows when two mark a row
 ok   a plugin clears only its own signs
 ok   a row outside the buffer is refused
 ok   an unknown icon is refused
+ok   A sign of another icon keeps the sign column's group, git_added is in Added
 ok   clearing a missing buffer fails
 ok   list_dir answers the sorted entry names
 ok   stat answers size, mtime, and the directory and symlink flags
@@ -110,4 +112,4 @@ ok   reads, stats, and icons too
 ok   the plugin has a float in each tab page, beside another plugin's
 ok   a disabled plugin's segment is dropped when it is disabled
 ok   a disabled plugin's floats are closed in every tab page and another plugin's float stays
-use_cases_plugins: 112 passed, 0 failed
+use_cases_plugins: 114 passed, 0 failed

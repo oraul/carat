@@ -178,6 +178,17 @@ module AdaptersFramePresenterTest
     draw(s, 6, 14).cursor_shape
   end
 
+  # The 24-bit color a palette gives the role.
+  #: (Array[Integer], Integer) -> Integer
+  def self.palette_rgb(palette, role)
+    i = 0
+    while i + 3 < palette.length
+      return palette[i + 1] if palette[i] == role
+      i += 4
+    end
+    -1
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_frame_presenter")
 
@@ -493,7 +504,7 @@ module AdaptersFramePresenterTest
     s = state_for(["one", "two", "three"], "a.txt")
     f = draw(s, 6, 20)
     t.assert_equal("  1 one", f.row_text(0), "no sign column without signs")
-    s.buffer.place_sign("test", 0, 1, "X")
+    s.buffer.place_sign("test", 0, 1, "X", D::Highlight::SIGN_COLUMN)
     f = draw(s, 6, 20)
     t.assert_equal(["    1 one", "X   2 two", "    3 three"], [f.row_text(0), f.row_text(1), f.row_text(2)], "the sign sits in its column and the numbers move right")
     t.assert_equal([D::Highlight::SIGN_COLUMN, D::Highlight::SIGN_COLUMN], [f.cell(1, 0).hl, f.cell(0, 1).hl], "the sign column carries the SignColumn highlight")
@@ -504,6 +515,27 @@ module AdaptersFramePresenterTest
     s.buffer.clear_signs("test")
     f = draw(s, 6, 20)
     t.assert_equal("one", f.row_text(0), "clearing the signs removes the column")
+
+    # Scenarios "Diagnostic signs are red and yellow" and "Git signs are
+    # green and cyan" (color-themes): each sign glyph is drawn in its
+    # kind's group, which carat-dark and carat-light write in their red,
+    # yellow, green, and cyan; the empty sign cells keep SignColumn.
+    s = state_for(["e", "w", "a", "c"], "a.txt")
+    ["error", "warning", "git_added", "git_changed"].each_with_index do |icon, row|
+      s.buffer.place_sign("test", 0, row, D::Icons.glyph(icon, "unicode"), D::Highlight.sign_group(icon))
+    end
+    f = draw(s, 6, 20)
+    t.assert_equal(["✖   1 e", "▲   2 w", "┃   3 a", "┇   4 c"], [f.row_text(0), f.row_text(1), f.row_text(2), f.row_text(3)], "each sign's glyph in its column")
+    t.assert_equal([D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::ADDED, D::Highlight::CHANGED, D::Highlight::SIGN_COLUMN], [f.cell(0, 0).hl, f.cell(1, 0).hl, f.cell(2, 0).hl, f.cell(3, 0).hl, f.cell(0, 1).hl], "each sign in its kind's group, the blank cell in SignColumn")
+    ["carat-dark", "carat-light"].each do |name|
+      theme = D::Themes.find(name, "terminal")
+      palette = D::Themes::PALETTES[D::Themes::NAMES.index(name).to_i]
+      roles = [D::Themes::RED, D::Themes::YELLOW, D::Themes::GREEN, D::Themes::CYAN]
+      expected = roles.map { |role| palette_rgb(palette, role) }
+      t.assert_equal(expected, [theme.fg(f.cell(0, 0).hl), theme.fg(f.cell(1, 0).hl), theme.fg(f.cell(2, 0).hl), theme.fg(f.cell(3, 0).hl)], "Diagnostic signs are red and yellow, Git signs are green and cyan: #{name}")
+    end
+    s.buffer.place_sign("test", 0, 0, D::Icons.glyph("error", "unicode"), D::Highlight.sign_group("warning"))
+    t.assert_equal(D::Highlight::DIAGNOSTIC_WARN, draw(s, 6, 20).cell(0, 0).hl, "a row whose glyph stays but whose group changes is repainted")
 
     # The bar shows the current window's buffer, a scratch title too, and
     # the plugins' segments.
@@ -527,7 +559,7 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 40)
     t.assert_equal(" NORMAL  list ", f.row_text(4)[0, 14], "the bar follows the current window to the scratch title")
     t.assert_equal(["item", "  1 one"], [f.row_text(0)[0, 4], f.row_text(0)[13, 7]], "the side window has no line numbers while the file window keeps them")
-    scratch.place_sign("test", 0, 0, "!")
+    scratch.place_sign("test", 0, 0, "!", D::Highlight::SIGN_COLUMN)
     f = draw(s, 6, 40)
     t.assert_equal("! item", f.row_text(0)[0, 6], "its sign column still shows")
 

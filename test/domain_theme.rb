@@ -330,12 +330,12 @@ module DomainThemeTest
     # UI group is -1), The search groups have colors,
     # Every UI group has a color in every palette,
     # Every palette passes (the contrast tables), and Comments are readable.
-    # The group table: the 60 UI groups first, then the thirty syntax
+    # The group table: the 63 UI groups first, then the thirty syntax
     # groups, then the thirteen file-icon groups, then the six markup
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides and the popup menu's match and extra groups are the last UI groups")
-    t.assert_equal([60, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "60 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, and Removed are the last UI groups")
+    t.assert_equal([63, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "63 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
     # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
@@ -354,6 +354,7 @@ module DomainThemeTest
       ["a UI group is not a token group", "StatusLine", -1],
       ["nor is a new UI group", "CursorLine", -1],
       ["nor an indent guide group", "IblIndent", -1],
+      ["nor a git sign group", "Added", -1],
       ["Normal is not either", "Normal", -1],
       ["an unknown name", "Banana", -1],
       ["names are case sensitive", "comment", -1]
@@ -558,6 +559,30 @@ module DomainThemeTest
     t.assert_equal([0xeceef3, 0xeceef3, 0xeceef3], [light_carat.bg(H::TAB_LINE), light_carat.bg(H::STATUS_NC), light_carat.bg(H::NORMAL_FLOAT)], "The panel colors: carat-light's tab row, inactive bar, and floats are #eceef3")
     t.assert_equal([233, 233, -1], [dark_carat.bg256(H::TAB_LINE), dark_carat.bg256(H::STATUS_NC), dark_carat.bg256(H::NORMAL)], "The panel colors: carat-dark's panels are index 233 at 256 colors")
     t.assert_equal(234, Carat::Adapters::SgrTable.index_256(dark_carat.bg(H::NORMAL)), "carat-dark's background is the nearest index 234")
+    # Scenario: The git sign groups are green, cyan, and red. Every
+    # palette draws Added in its green, Changed in its cyan, and Removed
+    # in its red, on the terminal's own background like SignColumn.
+    D::Themes::NAMES.each_with_index do |name, i|
+      theme = D::Themes.find(name, "terminal")
+      palette = D::Themes::PALETTES[i]
+      t.assert_equal([role_row(palette, D::Themes::GREEN)[0], role_row(palette, D::Themes::CYAN)[0], role_row(palette, D::Themes::RED)[0]], [theme.fg(H::ADDED), theme.fg(H::CHANGED), theme.fg(H::REMOVED)], "The git sign groups are green, cyan, and red: #{name}")
+      t.assert_equal([theme.bg(H::SIGN_COLUMN), theme.bg(H::SIGN_COLUMN), theme.bg(H::SIGN_COLUMN)], [theme.bg(H::ADDED), theme.bg(H::CHANGED), theme.bg(H::REMOVED)], "the git sign groups share the sign column's background: #{name}")
+    end
+    # Each sign is drawn in the group of its kind: the group of each icon.
+    t.table([
+      ["an error sign in DiagnosticError", "error", H::DIAGNOSTIC_ERROR],
+      ["a warning sign in DiagnosticWarn", "warning", H::DIAGNOSTIC_WARN],
+      ["an info sign in DiagnosticInfo", "info", H::DIAGNOSTIC_INFO],
+      ["a hint sign in DiagnosticHint", "hint", H::DIAGNOSTIC_HINT],
+      ["git added in Added", "git_added", H::ADDED],
+      ["git changed in Changed", "git_changed", H::CHANGED],
+      ["git deleted in Removed", "git_deleted", H::REMOVED],
+      ["another icon in SignColumn", "ruby", H::SIGN_COLUMN],
+      ["an unknown name in SignColumn", "nope", H::SIGN_COLUMN]
+    ]) { |icon| H.sign_group(icon.to_s) }
+    t.assert_equal([H::DIAGNOSTIC_ERROR, H::DIAGNOSTIC_WARN, H::DIAGNOSTIC_INFO, H::DIAGNOSTIC_HINT], [H.diagnostic_group(1), H.diagnostic_group(2), H.diagnostic_group(3), H.diagnostic_group(4)], "a diagnostic sign's group by its severity")
+    t.assert_equal([H::DIAGNOSTIC_HINT, H::DIAGNOSTIC_HINT], [H.diagnostic_group(0), H.diagnostic_group(5)], "a severity outside 1 to 4 is drawn as a hint")
+
     # Scenario: The command pill is cyan. Every palette's command pill,
     # which the query pickers' prompts draw too, is on its cyan.
     D::Themes::NAMES.each_with_index do |name, i|

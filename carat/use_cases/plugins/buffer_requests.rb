@@ -96,7 +96,8 @@ module Carat
 
       # Places the plugin's sign on the row: its own sign there is
       # replaced, another plugin's stays, and the plugin registered first
-      # shows when two mark one row.
+      # shows when two mark one row; it is drawn in the group of its
+      # icon (Highlight.sign_group).
       #: (String, Integer, Integer, String) -> PluginApi::Response
       def place_sign(name, id, row, icon)
         buffer = buffer_for(id)
@@ -106,7 +107,7 @@ module Carat
         return PluginApi::Response.failure("No icon named #{icon}") if glyph.empty?
         owner = @registry.find(name)
         priority = owner.nil? ? @registry.count : owner.priority
-        buffer.place_sign(name, priority, row, glyph)
+        buffer.place_sign(name, priority, row, glyph, Domain::Highlight.sign_group(icon))
         PluginApi::Response.success("", 0)
       end
 

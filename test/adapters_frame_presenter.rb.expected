@@ -109,6 +109,11 @@ ok   the sign column carries the SignColumn highlight
 ok   the cursor moves right with the gutter
 ok   the sign column stays when numbers are off
 ok   clearing the signs removes the column
+ok   each sign's glyph in its column
+ok   each sign in its kind's group, the blank cell in SignColumn
+ok   Diagnostic signs are red and yellow, Git signs are green and cyan: carat-dark
+ok   Diagnostic signs are red and yellow, Git signs are green and cyan: carat-light
+ok   a row whose glyph stays but whose group changes is repainted
 ok   the bar shows the current file window
 ok   the plugins' segments stand in order before the position, the encoding dropped first
 ok   a segment of priority 5 is dropped before the encoding
@@ -173,4 +178,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 175 passed, 0 failed
+adapters_frame_presenter: 180 passed, 0 failed

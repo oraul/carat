@@ -1,0 +1,5 @@
+# Brief
+
+sign-colors: docs/queue-backlog.md Sprint 18 item 1 at d91f1ba, delivered as written, beside the feature-lane delivery then running, one per lane; touch no file of the feature lane (docs/queue-feature.md, docs/metrics-feature.tsv). The queue line: 1. `sign-colors` (T2 user request, a defect, estimated small, Facet wave 1 item 3): every sign is painted SignColumn yellow, error signs (`carat/domain/buffer.rb:374`) and git's added, changed, deleted (`carat/plugins/git_signs/plugin.rb:46`) alike; `place_sign` (`carat/use_cases/plugins/buffer_requests.rb:101`) takes an icon name but no group. Fix outline: a group per sign by its icon name, no API change. Accepted when frame rows on carat-dark and carat-light show an error sign red, a warning yellow, git added green and changed cyan. Backlog: none.
+
+Context: the user accepted the Facet plan; round 3 sign order is error, review, warning, AI, info, suggestion, git; warnings are ▲ in yellow, never ⚠. Targets: the built-in macOS Terminal (macOS 26+) and Ubuntu's Ptyxis (26.04+), truecolor.

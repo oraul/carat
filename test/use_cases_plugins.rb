@@ -489,12 +489,18 @@ module UseCasesPluginsTest
     q.host.place_sign(0, 0, "warning")
     p.host.place_sign(0, 1, "info")
     t.assert_equal(["▲", "◆"], [state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin's later sign on a row replaces its own")
+    t.assert_equal([D::Highlight::DIAGNOSTIC_WARN, D::Highlight::DIAGNOSTIC_INFO], [state.buffer.sign_group_at(0), state.buffer.sign_group_at(1)], "a sign is drawn in the group of its icon")
     q.host.place_sign(0, 1, "warning")
     t.assert_equal("◆", state.buffer.sign_at(1), "the plugin registered first shows when two mark a row")
     r = p.host.clear_signs(0)
     t.assert_equal([true, 1, "▲", "▲"], [r.ok, r.number, state.buffer.sign_at(0), state.buffer.sign_at(1)], "a plugin clears only its own signs")
     t.assert_equal("Row 7 is outside the buffer", p.host.place_sign(0, 7, "error").message, "a row outside the buffer is refused")
     t.assert_equal("No icon named nope", p.host.place_sign(0, 0, "nope").message, "an unknown icon is refused")
+    # Scenario: A sign of another icon keeps the sign column's group.
+    r = p.host.place_sign(0, 0, "ruby")
+    added = p.host.place_sign(0, 1, "git_added")
+    t.assert_equal([true, true, D::Highlight::SIGN_COLUMN, D::Highlight::ADDED], [r.ok, added.ok, state.buffer.sign_group_at(0), state.buffer.sign_group_at(1)], "A sign of another icon keeps the sign column's group, git_added is in Added")
+    p.host.clear_signs(0)
     t.assert_equal(false, p.host.clear_signs(99).ok, "clearing a missing buffer fails")
 
     # Requests: the file system.
