@@ -31,4 +31,4 @@ None: the delivery pipeline is described by no spec under `openspec/specs/` (`sk
 - docs/architecture.md: unchanged, section 10 names no stage order.
 - CLAUDE.md: unchanged, it says only that the checker's stages run before every push; the order is the script's.
 - docs/codebase-map.md: unchanged, it names `STAGE_AFTER` without its pairs and no file is added or removed.
-- Assumption: the check is a little longer for a change whose gates stage would otherwise have run beside test-build; gates is the last of `FAST_STAGES`, so it rarely started earlier anyway.
+- Assumption: the check is longer by up to test-build's remaining time for a change whose gates stage would otherwise have run beside test-build: gates is the last of `FAST_STAGES`, but with `CHECK_JOBS` at 3 it can start as soon as the fast free stages ahead of it end, as the defect shows (gates started while test-build still ran), so the pair delays it until test-build ends.
