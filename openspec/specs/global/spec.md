@@ -65,7 +65,7 @@ A global with no command SHALL list the marked lines, one per message line, and 
 - **THEN** the message is "a1" and " a2" on two lines and the cursor is on row 3, column 2
 
 ### Requirement: The global reports as Vim does
-When no line is marked the message SHALL be "Pattern not found: pat" for `:g` and "Pattern found in every line: pat" for `:g!` and `:v`, and nothing runs. The first command that fails SHALL stop the global and its message SHALL be shown; otherwise the last message a command gave SHALL be shown.
+When no line is marked the message SHALL be "Pattern not found: pat" for `:g` and "Pattern found in every line: pat" for `:g!` and `:v`, and nothing runs. The first command that fails SHALL stop the global and its message SHALL be shown; otherwise the lines every `:p` it ran showed SHALL be shown together, one per line, and else the last message a command gave.
 
 #### Scenario: Nothing matches
 - **WHEN** ":g/z/d" is run on the line "a"
@@ -78,6 +78,10 @@ When no line is marked the message SHALL be "Pattern not found: pat" for `:g` an
 #### Scenario: A failing command stops it
 - **WHEN** ":g/a/foo" is run on the lines "a", "a"
 - **THEN** the message is "E492: Not an editor command: foo"
+
+#### Scenario: The printed lines are shown together
+- **WHEN** ":g/x/p" is run on the lines "x1", "a", "x2"
+- **THEN** the message is "x1" and "x2" on two lines and the cursor is on row 3
 
 ### Requirement: The pattern is remembered and bounded
 The pattern SHALL be compiled by the search translation under `ignorecase` and `smartcase` and SHALL become the last search pattern, the `/` register, a search history entry when typed, and the last substitute pattern. The scan that marks the lines SHALL be charged to one work budget, and when it runs out nothing SHALL run and the message SHALL be "E363: search stopped, pattern too costly here".
