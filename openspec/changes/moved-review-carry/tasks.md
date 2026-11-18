@@ -7,9 +7,9 @@
 
 ## 2. Workflow
 
-- [ ] 2.1 Say in the comments of `carried` and `carryReviews` in `.claude/workflows/deliver-change.js` that the shell backs the carry (comments only; the existing "workflow:" carry cases)
+- [x] 2.1 Say in the comments of `carried` and `carryReviews` in `.claude/workflows/deliver-change.js` that the shell backs the carry (comments only; the existing "workflow:" carry cases)
 
 ## 3. Docs and checks
 
-- [ ] 3.1 Update `README.md` and `docs/codebase-map.md` (docs only; `make docs-lint` and `make gates`)
+- [x] 3.1 Update `README.md` and `docs/codebase-map.md` (docs only; `make docs-lint` and `make gates`)
 - [ ] 3.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass

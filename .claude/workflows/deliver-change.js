@@ -906,7 +906,11 @@ function carryFrom(records) {
 }
 // The moved line the checker returns verbatim stands the reviews only
 // when it says the change is the same at the head as at the reviewed
-// commit (from); any other line, or none, runs them again.
+// commit (from); any other line, or none, runs them again. The line only
+// decides: the record needs the run state's moved record at the head,
+// which only moved's exit-0 path writes (review refuses a carried=1
+// summary without it), so a forged line stops at the record, carrying
+// nothing (moved-review-carry).
 const CARRIED = /^moved: the change is the same at ([0-9a-f]{7,40}) as at ([0-9a-f]{7,40}):/
 function carried(line, head, from) {
   const m = CARRIED.exec(String(line || '').trim())
@@ -923,8 +927,9 @@ function movedTask(problem) {
 let movedFrom = ''
 let mainMovedPushes = 0
 // After the check passed at the merged head: both reviews carried to it
-// when the moved line says the merge changed no file of the change, else
-// they run again (reviews() finds no pass at the head).
+// when the moved line says the change is the same, recorded only where
+// moved exited 0 at the head (above), else they run again (reviews()
+// finds no pass at the head).
 function carryReviews(line) {
   const from = movedFrom
   movedFrom = ''
