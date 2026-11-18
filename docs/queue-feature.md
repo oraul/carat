@@ -41,7 +41,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 - `vim-folds-windows`, `vim-folds-c`, `vim-case-operators` to Sprint 19 in that order (T2, pushed back 1): the user's choice.
 - `facet-palette` before `ui-groups` (T2 user request): the developer plan's dependency, but its parts change roles and groups that exist (`themes.rb:103` to `:105`, `:137`).
 - Estimates small, small, medium (T2): the council's S, S, S to M, `background-default` up for its terminal reply.
-- `vim-folds-windows` first (T2 user request): 5 headings, 2 behaviors held from vim-folds-b (904,033 total, 44.8 min) plus the sprint-17 review's mark leak at `carat/domain/buffer.rb:648`, recorded as "Marked fold copies outlive a committed plugin edit".
+- `vim-folds-windows` first (T2 user request): 5 headings, 2 behaviors held from vim-folds-b (904,033 total, 44.8 min) plus the sprint-17 review's mark leak at `carat/domain/buffer.rb:648`, recorded as "### Marked fold copies outlive a committed plugin edit".
 - Old `vim-folds-c` split in two (T2, size rule): 6 keys, 3 ex commands, and 4 finding groups are 3 or more testable parts; keys now, ex commands and findings to `vim-folds-d`.
 - `vim-case-operators` drawn ahead of `git-panel`, `ux-pass-2`, `lint-panel` (T2): 3 operators with 0 rows (`docs/compatibility.md:106`), medium, against 2 large unsplit items and 1 with no item list; `<C-a>`, `<C-x>` split to `vim-increment`.
 - `markdown-reading-e` pushed back 4 (T2, aging reason): still no location for its rules and list gaps; drawn when a review or the user names them.

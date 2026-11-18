@@ -12,6 +12,8 @@
 - [x] 2.1 Name the backlog heading "### Marked fold copies outlive a committed plugin edit" in `docs/queue-feature.md` instead of `vim-folds-b.md:36`, a removed findings file. Checked by `grep vim-folds-b.md docs/queue-feature.md` finding nothing and `make docs-lint` keeping the queues' budget.
 - [x] 2.2 Say `round-limit-resume` is queued first of the pool's T1 defects in `docs/queue-backlog.md`, as the Pool orders it. Checked by the Decisions line.
 - [x] 2.3 Say in the proposal that 5 of groom's 14 headings left `docs/backlog.md` and 9 the findings files it folds. Checked by the proposal's What Changes.
+- [x] 2.4 Quote the heading in `docs/queue-feature.md` with its "### ", as the queues' Backlog lists do. Checked by the Decisions line and `make docs-lint` keeping the queues within their budget (17,966 of 17,969 bytes).
+- [x] 2.5 Say in the proposal that groom folds the findings files into `docs/backlog.md`, the referent lost after the inserted count. Checked by the proposal's What Changes.
 
 ## 3. Checks
 
