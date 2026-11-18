@@ -9,4 +9,4 @@
 ## 2. Docs and checks
 
 - [x] 2.1 The `groom` lines of the `tools/run_state.sh` header, README.md pipeline step 11, `docs/codebase-map.md` (`tools/run_state.sh`), and `.claude/agents/planner.md` step 1
-- [ ] 2.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 2.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
