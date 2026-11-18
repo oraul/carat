@@ -2211,6 +2211,7 @@ expect "guard: merger refuses another assignment before git" 2 "an assignment of
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
+expect "guard: merger lists and prints pr.md at the pushed head" 0 "^$" guard merger 'git ls-tree --name-only 0123456789abcdef0123456789abcdef01234567 openspec/changes/archive/ && git show 0123456789abcdef0123456789abcdef01234567:openspec/changes/archive/2026-01-01-c/pr.md | tail -n +3'
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
@@ -2587,7 +2588,7 @@ cd "$work" || exit 1
 # is origin's main; and every call is refused while the configuration sets
 # a risky key.
 merge_call() {
-  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s"}}' "$3" "$2" |
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s","commit_message":"%s"}}' "$3" "$2" "${4-$exact}" |
     CLAUDE_PROJECT_DIR=$PWD sh "$here/agent_guard.sh" "$1"
 }
 merge_hook() {
@@ -2601,6 +2602,18 @@ git_q remote add origin "$work/mtool.git"
 git_q push -q origin main 2>/dev/null
 git_q fetch -q origin
 echo code > tools/code.sh
+# The archived pr.md whose body the squash message carries, then a blank
+# line and the trailer; the message escapes its characters outside ASCII
+# (two adjacent ones and one past the basic plane, a surrogate pair) and
+# its tab as a JSON writer may, the raw form allowed below.
+mkdir -p openspec/changes/archive/2026-01-01-mtool
+printf 'fix: a title\n\n## Summary\n\nA body line \303\251\303\251 \360\235\220\200\tend.\n\n---\n\n## Notes\n\nNone\n' > openspec/changes/archive/2026-01-01-mtool/pr.md
+nl='\n'
+pre="## Summary${nl}${nl}"
+post="${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
+line3='A body line \u00e9\u00e9 \ud835\udc00\tend.'
+body_json="${pre}${line3}${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None"
+exact="$body_json$nl$nl$TRAILER"
 commit "feat: code"
 sha=$(git rev-parse HEAD)
 state init mtool chore/mtool > /dev/null
@@ -2611,6 +2624,30 @@ expect "guard: the merge tool refuses a short expected head" 2 "without the push
 expect "guard: the merge tool refuses a head the merge gates did not pass" 2 "no run state records both the push and the merge gates' pass" merge_call merger "$sha" squash
 sh "$here/run_state.sh" gated mtool pass > /dev/null
 expect "guard: the merge tool allows the gated pushed head" 0 "^$" merge_call merger "$sha" squash
+# The squash message is pr.md's body, a blank line, and the trailer,
+# exactly: the history on main keeps the pull request's four sections.
+expect "guard: the merge tool allows the exact squash message" 0 "^$" merge_call merger "$sha" squash "$exact"
+expect "guard: the merge tool allows the exact squash message with a final line break" 0 "^$" merge_call merger "$sha" squash "$exact$nl"
+expect "guard: the merge tool allows the exact squash message with raw text outside ASCII" 0 "^$" merge_call merger "$sha" squash "${pre}A body line $(printf '\303\251\303\251 \360\235\220\200')\\tend.$post"
+# The bytes are compared exactly: no fold of text outside ASCII, a tab,
+# or an escape lets a message pr.md does not hold through.
+expect "guard: the merge tool refuses a question mark for text outside ASCII" 2 'line 3 of the message is "A body line [?] [?]' merge_call merger "$sha" squash "${pre}A body line ? ?\\tend.$post"
+expect "guard: the merge tool refuses a longer run outside ASCII" 2 "line 3 of the message is" merge_call merger "$sha" squash "${pre}A body line \\uff41\\uff42\\uff43 \\ud835\\udc00\\tend.$post"
+expect "guard: the merge tool refuses a carriage return for text outside ASCII" 2 "line 3 of the message is" merge_call merger "$sha" squash "${pre}A body line \\r\\r \\ud835\\udc00\\tend.$post"
+expect "guard: the merge tool refuses a space for a tab" 2 "line 3 of the message is" merge_call merger "$sha" squash "${pre}A body line \\u00e9\\u00e9 \\ud835\\udc00 end.$post"
+expect "guard: the merge tool refuses a backspace escape for a letter" 2 'line 3 of the message is "A [?]ody line' merge_call merger "$sha" squash "${pre}A \\body line \\u00e9\\u00e9 \\ud835\\udc00\\tend.$post"
+expect "guard: the merge tool refuses a raw control byte in the message" 2 "a commit message with a raw control byte" merge_call merger "$sha" squash "${pre}A body line$(printf '\001')$post"
+expect "guard: the merge tool refuses a lone surrogate in the message" 2 "a lone surrogate" merge_call merger "$sha" squash "${pre}A body line \\ud835 end.$post"
+expect "guard: the merge tool refuses a merge without a message" 2 "a merge without a commit message: pass the body of openspec/changes/archive/2026-01-01-mtool/pr.md" merge_call merger "$sha" squash ""
+expect "guard: the merge tool refuses a shortened squash message" 2 'other than the body of openspec/changes/archive/2026-01-01-mtool/pr.md, a blank line, and the trailer: line 5 of the message is "Co-Authored-By: Claude [^"]*" where it should be "---"' merge_call merger "$sha" squash "${pre}${line3}${nl}${nl}$TRAILER"
+expect "guard: the merge tool refuses a changed line of the squash message" 2 'line 3 of the message is "A body line" where it should be "A body line ..' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
+expect "guard: the merge tool refuses a squash message without the trailer" 2 'the message ends at line 9, before line 11, "Co-Authored-By: Claude' merge_call merger "$sha" squash "$body_json"
+expect "guard: the merge tool refuses a squash message going on past the trailer" 2 'the message goes on past the trailer at line 12 with "extra"' merge_call merger "$sha" squash "$exact${nl}extra"
+# A message past the environment's size limit is compared too, from a
+# file: the comparison prints "same" only on equality, so an awk that
+# never ran would refuse rather than allow.
+long=$(awk 'BEGIN { while (n++ < 2200) printf "%s", "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" }')
+expect "guard: the merge tool refuses a long message past the environment limit" 2 'the message goes on past the trailer at line 12 with "x' merge_call merger "$sha" squash "$exact${nl}$long"
 # A run state branch code planted naming the head too: the hook refuses
 # while two run states name it, and the merge gates' clear resets every
 # run state's gated, the planted one's included.
@@ -2626,6 +2663,25 @@ expect "guard: the merge tool refuses another head than the gated one" 2 "no run
 git_q update-ref refs/remotes/origin/main HEAD
 expect "guard: the merge tool refuses a rewritten origin/main" 2 "fetch, or the ref was rewritten" merge_call merger "$sha" squash
 git_q fetch -q origin
+# A pushed head holding no archived pr.md of the change, or two, and a
+# run state whose name is no change name, are refused.
+mv openspec/changes/archive/2026-01-01-mtool/pr.md pr.keep
+commit "chore: no pr.md"
+nopr=$(git rev-parse HEAD)
+state set mtool pushed "$nopr" > /dev/null
+sh "$here/run_state.sh" gated mtool pass > /dev/null
+expect "guard: the merge tool refuses a head without the archived pr.md" 2 "which holds no one archived pr.md of mtool" merge_call merger "$nopr" squash
+mv pr.keep openspec/changes/archive/2026-01-01-mtool/pr.md
+mkdir -p openspec/changes/archive/2026-02-02-mtool
+cp openspec/changes/archive/2026-01-01-mtool/pr.md openspec/changes/archive/2026-02-02-mtool/pr.md
+commit "chore: a second pr.md"
+twopr=$(git rev-parse HEAD)
+state set mtool pushed "$twopr" > /dev/null
+sh "$here/run_state.sh" gated mtool pass > /dev/null
+expect "guard: the merge tool refuses a head with two archived pr.md" 2 "which holds no one archived pr.md of mtool" merge_call merger "$twopr" squash
+printf '{\n  "pushed": "%s",\n  "gated": "%s"\n}\n' "$nopr" "$nopr" > build/pipeline/Not_a_name.json
+expect "guard: the merge tool refuses a run state not named after a change" 2 "Not_a_name.json, not a change name" merge_call merger "$nopr" squash
+rm -f build/pipeline/Not_a_name.json
 expect "run_state: set refuses gated" 1 "gated is written only by its own command" state set mtool gated "$sha"
 expect "guard: no profile records gated" 2 "gated" guard merger 'sh tools/run_state.sh gated c pass'
 expect "guard: the contributor does not record gated" 2 "gated" guard contributor 'sh tools/run_state.sh gated c pass'
@@ -2654,6 +2710,8 @@ expect "guard: a risky configuration key refuses every call" 2 "every call while
 git_q config --unset core.hooksPath
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
+expect "guard: the squash trailer is the gates' trailer" 0 "^same$" \
+  sh -c '[ "$(grep "^SQUASH_TRAILER=" "$1/agent_guard.sh" | cut -d= -f2-)" = "$(grep "^TRAILER=" "$1/gates.sh" | cut -d= -f2-)" ] && echo same' _ "$here"
 # ci_scope reads it through documentation, in tools/rules.sh.
 expect "rules: the records-only list is named once" 0 "^tools/rules.sh,RECORDS_RE ci_scope gates run_state,\$" \
   sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q -E "RECORDS_RE|documentation \"[$]" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
