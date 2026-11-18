@@ -18,3 +18,5 @@ Goals: apply the sprint-16 plan once, with the history rows it needs, on a branc
 ## Risks / Trade-offs
 
 - The plan's queues are taken as the planner wrote them; a reorder belongs to the next planner run, not to this records change.
+- `make docs-lint` refused one folded line, a backticked path to the removed `vim-line-commands-b` findings file; it is put in prose, as in sprints 10, 12, and 13, the only hand edit.
+- `history` appended `moved-review-carry`'s row and not `plugin-lazy-activate`'s, which was appended on the feature lane's next branch (`bugfix/tab-close-d`) and is not on main. `sprint_row` reads only history rows, so the sprint-16 row `groom` wrote names `moved-review-carry`, the next sprint's security-first item, in place of `plugin-lazy-activate`, and its figures follow. It is committed as written, since the brief allows no hand edit of `groom`'s output and the missing row's figures are not on main; the defect, `sprint_row` skipping a merged change without a row while `sprint_names` counts it, is reported for a backlog change.

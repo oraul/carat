@@ -6,7 +6,7 @@ Sprint 16 closed with its six changes merged (`secret-patterns`, `git-signs-tran
 
 ## What Changes
 
-- `sh tools/run_state.sh history sprint-16-records` appends the pending history rows of both lanes to `docs/metrics-feature.tsv` and `docs/metrics-backlog.tsv`.
+- `sh tools/run_state.sh history sprint-16-records` appends the pending history rows: `moved-review-carry` to `docs/metrics-backlog.tsv`; `plugin-lazy-activate` already has its row on the feature lane's next branch, so none is appended to `docs/metrics-feature.tsv`.
 - `sh tools/run_state.sh groom sprint-16-records` applies the sprint-16 plan: removes the 8 headings of `build/plan/groom.txt` (1 listed by `secret-patterns`, 4 by `git-signs-transport`, 3 by `vim-line-commands-b`) from `docs/backlog.md`, folds the findings files under `docs/findings/` into it and removes them (those of `git-signs-transport`, `merge-main-path`, `moved-review-carry`, `plugin-lazy-activate`, `secret-patterns`, `sprint-15-records`, `sprint-size-six`, and `vim-line-commands-b`), appends `build/plan/groomed.md`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-16 row to `docs/sprints.tsv`.
 - The branch first takes in main at #199 (`merge-main`), so `moved-review-carry`'s findings file is folded and its history row is not appended twice.
 
