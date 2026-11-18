@@ -2587,7 +2587,7 @@ cd "$work" || exit 1
 # is origin's main; and every call is refused while the configuration sets
 # a risky key.
 merge_call() {
-  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s"}}' "$3" "$2" |
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s","commit_message":"%s"}}' "$3" "$2" "${4-$exact}" |
     CLAUDE_PROJECT_DIR=$PWD sh "$here/agent_guard.sh" "$1"
 }
 merge_hook() {
@@ -2601,6 +2601,14 @@ git_q remote add origin "$work/mtool.git"
 git_q push -q origin main 2>/dev/null
 git_q fetch -q origin
 echo code > tools/code.sh
+# The archived pr.md whose body the squash message carries, then a blank
+# line and the trailer; the message escapes its one character outside
+# ASCII as a JSON writer may, the raw form allowed below.
+mkdir -p openspec/changes/archive/2026-01-01-mtool
+printf 'fix: a title\n\n## Summary\n\nA body line \303\251.\n\n---\n\n## Notes\n\nNone\n' > openspec/changes/archive/2026-01-01-mtool/pr.md
+nl='\n'
+body_json="## Summary${nl}${nl}A body line \\u00e9.${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None"
+exact="$body_json$nl$nl$TRAILER"
 commit "feat: code"
 sha=$(git rev-parse HEAD)
 state init mtool chore/mtool > /dev/null
@@ -2611,6 +2619,16 @@ expect "guard: the merge tool refuses a short expected head" 2 "without the push
 expect "guard: the merge tool refuses a head the merge gates did not pass" 2 "no run state records both the push and the merge gates' pass" merge_call merger "$sha" squash
 sh "$here/run_state.sh" gated mtool pass > /dev/null
 expect "guard: the merge tool allows the gated pushed head" 0 "^$" merge_call merger "$sha" squash
+# The squash message is pr.md's body, a blank line, and the trailer,
+# exactly: the history on main keeps the pull request's four sections.
+expect "guard: the merge tool allows the exact squash message" 0 "^$" merge_call merger "$sha" squash "$exact"
+expect "guard: the merge tool allows the exact squash message with a final line break" 0 "^$" merge_call merger "$sha" squash "$exact$nl"
+expect "guard: the merge tool allows the exact squash message with raw text outside ASCII" 0 "^$" merge_call merger "$sha" squash "## Summary${nl}${nl}A body line $(printf '\303\251').${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
+expect "guard: the merge tool refuses a merge without a message" 2 "a merge without a commit message: pass the body of openspec/changes/archive/2026-01-01-mtool/pr.md" merge_call merger "$sha" squash ""
+expect "guard: the merge tool refuses a shortened squash message" 2 'other than the body of openspec/changes/archive/2026-01-01-mtool/pr.md, a blank line, and the trailer: line 5 of the message is "Co-Authored-By: Claude [^"]*" where it should be "---"' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line \\u00e9.${nl}${nl}$TRAILER"
+expect "guard: the merge tool refuses a changed line of the squash message" 2 'line 3 of the message is "A body line" where it should be "A body line ..' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
+expect "guard: the merge tool refuses a squash message without the trailer" 2 'the message ends at line 9, before line 11, "Co-Authored-By: Claude' merge_call merger "$sha" squash "$body_json"
+expect "guard: the merge tool refuses a squash message going on past the trailer" 2 'the message goes on past the trailer at line 12 with "extra"' merge_call merger "$sha" squash "$exact${nl}extra"
 # A run state branch code planted naming the head too: the hook refuses
 # while two run states name it, and the merge gates' clear resets every
 # run state's gated, the planted one's included.

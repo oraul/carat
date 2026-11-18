@@ -947,10 +947,54 @@ merge_tool() {
     grep -q -E "^  \"gated\": \"$sha\",?\$" "$f" && found=$f
   done
   [ -n "$found" ] || refuse "a merge of $sha, at which no run state records both the push and the merge gates' pass (gated)"
+  squash_message
   local_main=$(git -C "$project_dir" rev-parse --verify -q 'origin/main^{commit}')
   remote_main=$(git -C "$project_dir" ls-remote origin refs/heads/main 2>/dev/null | cut -f1)
   [ -n "$remote_main" ] && [ "$local_main" = "$remote_main" ] ||
     refuse "a merge while origin/main is ${local_main:-missing} and origin's main ${remote_main:-unknown}: fetch, or the ref was rewritten"
+}
+
+# The squash message (commit_message), which becomes the body of the
+# commit on main: exactly the body of the change's archived pr.md at the
+# pushed head (its lines after the title and the blank line), one blank
+# line, and SQUASH_TRAILER last, trailing blank lines ignored on both
+# sides; anything else, a shortened body included, is refused naming the
+# first line that differs. A tab is a space and a run of bytes outside
+# ASCII one "?" on both sides, as field reads a JSON tab or \u escape.
+SQUASH_TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
+squash_message() {
+  change=${found##*/}
+  change=${change%.json}
+  matches "$change" '^[a-z0-9][a-z0-9-]*$' || refuse "a merge for the run state $found, not a change name"
+  pr_md=$(git -C "$project_dir" ls-tree -r --name-only "$sha" -- openspec/changes/archive 2>/dev/null |
+    grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change/pr[.]md")
+  [ -n "$pr_md" ] && [ "$(printf '%s\n' "$pr_md" | wc -l)" -eq 1 ] ||
+    refuse "a merge of $sha, which holds no one archived pr.md of $change"
+  message=$(printf '%s' "$input" | field commit_message)
+  [ -n "$message" ] || refuse "a merge without a commit message: pass the body of $pr_md, a blank line, and the trailer"
+  differs=$(git -C "$project_dir" show "$sha:$pr_md" | sed '1,2d' |
+    LC_ALL=C M="$message" T="$SQUASH_TRAILER" awk '
+      function norm(s) { gsub(/\t/, " ", s); gsub(/\r/, "?", s); gsub(/[\200-\377]+/, "?", s); return s }
+      function cut(s) { return length(s) > 80 ? substr(s, 1, 80) "..." : s }
+      { want[++n] = norm($0) }
+      END {
+        while (n > 0 && want[n] == "") n--
+        want[++n] = ""
+        want[++n] = norm(ENVIRON["T"])
+        g = split(ENVIRON["M"], got, "\001")
+        for (i = 1; i <= g; i++) got[i] = norm(got[i])
+        while (g > 0 && got[g] == "") g--
+        for (i = 1; i <= n || i <= g; i++) {
+          if (i > g) {
+            while (want[i] == "") i++
+            printf "the message ends at line %d, before line %d, \"%s\"", g, i, cut(want[i])
+            exit
+          }
+          if (i > n) { printf "the message goes on past the trailer at line %d with \"%s\"", i, cut(got[i]); exit }
+          if (got[i] != want[i]) { printf "line %d of the message is \"%s\" where it should be \"%s\"", i, cut(got[i]), cut(want[i]); exit }
+        }
+      }')
+  [ -z "$differs" ] || refuse "a squash message other than the body of $pr_md, a blank line, and the trailer: $differs"
 }
 
 input=$(cat)
