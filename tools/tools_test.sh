@@ -1842,6 +1842,22 @@ cat > docs/backlog.md <<'EOB'
 - Location: tools/q.sh:6
 - Why: Low finding of the periodic security review; one shared path.
 
+## f periodic security note at tools/q.sh:8
+
+- Severity: low
+
+## e rated entry at tools/q.sh:9
+
+- Why: security review finding, rated Medium.
+
+## d critical entry at tools/q.sh:10
+
+- Why: security review finding, rated Critical.
+
+## c critical pair at tools/q.sh:11
+
+- Why: Critical (9) tools/q.sh:11 a thing.
+
 ## g marker in a body at tools/n.sh:2
 
 - Why: before.
@@ -1966,6 +1982,24 @@ printf 'duplicate ## k periodic low entry\n' > build/plan/groom.txt
 expect "run_state: groom refuses a duplicate entry marked only by a Low finding of the periodic security review" 1 "a security entry leaves only by .*never duplicate: ## k periodic low entry" state groom sprint-2-records
 printf 'merged ## y quality advisory at tools/a.sh:3 <= ## k periodic low entry\n' > build/plan/groom.txt
 expect "run_state: groom refuses a merge into a plain entry of an entry marked only by a Low finding of the periodic security review" 1 "a security entry merges only into another security entry" state groom sprint-2-records
+# Security on one line and its severity only on another: the entry's
+# lines are judged joined.
+printf 'closed %s ## f periodic security note at tools/q.sh:8\n' "$fixer" > build/plan/groom.txt
+expect "run_state: groom refuses closing an entry naming security in its heading and a severity only in its body" 1 "a security entry leaves only by .*never closed: ## f periodic security note at tools/q[.]sh:8" state groom sprint-2-records
+printf 'duplicate ## f periodic security note at tools/q.sh:8\n' > build/plan/groom.txt
+expect "run_state: groom refuses a duplicate entry naming security in its heading and a severity only in its body" 1 "a security entry leaves only by .*never duplicate: ## f periodic security note at tools/q[.]sh:8" state groom sprint-2-records
+# Security, then other words, then the severity; and the severity
+# critical, in words and in a severity and confidence pair.
+printf 'closed %s ## e rated entry at tools/q.sh:9\n' "$fixer" > build/plan/groom.txt
+expect "run_state: groom refuses closing an entry worded security review finding, rated Medium" 1 "a security entry leaves only by .*never closed: ## e rated entry at tools/q[.]sh:9" state groom sprint-2-records
+printf 'gone ## e rated entry at tools/q.sh:9\n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone entry worded security review finding, rated Medium" 1 "a security entry leaves only by .*never gone: ## e rated entry at tools/q[.]sh:9" state groom sprint-2-records
+printf 'closed %s ## d critical entry at tools/q.sh:10\n' "$fixer" > build/plan/groom.txt
+expect "run_state: groom refuses closing an entry worded security review finding, rated Critical" 1 "a security entry leaves only by .*never closed: ## d critical entry at tools/q[.]sh:10" state groom sprint-2-records
+printf 'gone ## d critical entry at tools/q.sh:10\n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone entry worded security review finding, rated Critical" 1 "a security entry leaves only by .*never gone: ## d critical entry at tools/q[.]sh:10" state groom sprint-2-records
+printf 'gone ## c critical pair at tools/q.sh:11\n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone entry carrying a Critical severity and confidence pair" 1 "a security entry leaves only by .*never gone: ## c critical pair at tools/q[.]sh:11" state groom sprint-2-records
 printf 'gone ## n never a path\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry naming no path the history held" 1 "names no path the history held" state groom sprint-2-records
 printf 'gone ## m standing entry\n' > build/plan/groom.txt
@@ -1986,7 +2020,7 @@ expect "run_state: a groom a delivery ran writes neither the fold nor the sprint
 printf 'listed b1 ## y quality advisory at tools/a.sh:3\nlisted b5 ## s dotted near miss\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\nduplicate ## v retro entry at tools/h.sh:4\nfixed %s ## Findings of z after its package step\nfixed %s ## u quoting\nclosed %s ## l old entry\ngone ## p gone entry\nmerged ### Kept entry at tools/b.sh:9 <= ## j near-same at tools/b.sh:10\nmerged ## r skeptic entry at tools/k.sh:1 <= ## q periodic note at tools/m.sh:2\nmerged ## m standing entry <= ## g marker in a body at tools/n.sh:2\n' "$fixer" "$fixer2" "$fixer3" "$fixer2" > build/plan/groom.txt
 printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
 expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 12 headings groomed, 2 findings file[(]s[)] folded" state groom sprint-2-records
-expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## w quality advisory at tools/e[.]sh:2,## v retro entry at tools/h[.]sh:4,## t near miss,## y quality advisory,## r skeptic entry at tools/k[.]sh:1,## o gone security entry,## n never a path,## m standing entry,## h prefixed at tools/c[.]sh:1,## k periodic low entry,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
+expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## w quality advisory at tools/e[.]sh:2,## v retro entry at tools/h[.]sh:4,## t near miss,## y quality advisory,## r skeptic entry at tools/k[.]sh:1,## o gone security entry,## n never a path,## m standing entry,## h prefixed at tools/c[.]sh:1,## k periodic low entry,## f periodic security note at tools/q[.]sh:8,## e rated entry at tools/q[.]sh:9,## d critical entry at tools/q[.]sh:10,## c critical pair at tools/q[.]sh:11,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
 expect "run_state: groom folds two changes' findings into the backlog and removes their files" 0 "^2 0$" sh -c "echo \$(grep -c -e '- Why: [ab][.]' docs/backlog.md) \$(ls docs/findings | grep -c .)"
 expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting docs/backlog.md
 expect "run_state: groom removes a group of findings with a commit touching a file it names" 1 "" grep -q 'Findings of z' docs/backlog.md

@@ -448,10 +448,10 @@ PLAN_NOTES='retro|overrun|security|quality'
 # security reviewer records it ("security Low (6)", "periodic security
 # Medium", "security Lows"), the skeptic's "security disputed", or a note
 # words it ("Low finding of the periodic security review"), or a severity
-# and confidence pair ("High (8)"); a text that names security with no
-# severity, such as a quoted section title, is not one.
+# and confidence pair ("High (8)", "Critical (9)"); a text that names
+# security with no severity, such as a quoted section title, is not one.
 SECURITY_SEVERITY='(critical|high|medium|low|disputed)s?'
-SECURITY_MARK="(^|[^a-z])security[^a-z](.*[^a-z])?$SECURITY_SEVERITY([^a-z]|\$)|(^|[^a-z])$SECURITY_SEVERITY[^a-z](.*[^a-z])?security([^a-z]|\$)|(^|[^a-z])(high|medium|low) \\([0-9]+\\)"
+SECURITY_MARK="(^|[^a-z])security[^a-z](.*[^a-z])?$SECURITY_SEVERITY([^a-z]|\$)|(^|[^a-z])$SECURITY_SEVERITY[^a-z](.*[^a-z])?security([^a-z]|\$)|(^|[^a-z])(critical|high|medium|low) \\([0-9]+\\)"
 # The awk functions backlog-pick and backlog-oldest share: load_groomed
 # fills groomed with every whole heading line a line of the plan's
 # groom.txt ends in, and backlog_entry_head is true for a heading that
