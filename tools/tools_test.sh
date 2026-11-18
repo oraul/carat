@@ -2211,6 +2211,7 @@ expect "guard: merger refuses another assignment before git" 2 "an assignment of
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
+expect "guard: merger lists and prints pr.md at the pushed head" 0 "^$" guard merger 'git ls-tree -r --name-only 0123456789abcdef0123456789abcdef01234567 openspec/changes/archive && git show 0123456789abcdef0123456789abcdef01234567:openspec/changes/archive/2026-01-01-c/pr.md | tail -n +3'
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
