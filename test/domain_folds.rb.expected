@@ -3,6 +3,8 @@ ok   a reversed range is put in order
 ok   an inner fold sorts after its outer one
 ok   an outer fold sorts before its inner one
 ok   an outer fold at the same first row sorts first
+ok   an inner fold at the same first row nests in the outer one
+ok   an outer fold at the same first row holds the inner one
 ok   a fold crossing another from above grows to hold it
 ok   a fold crossing another from below grows to hold it
 ok   an edit below leaves the fold
@@ -43,4 +45,4 @@ ok   zd on a closed fold succeeds
 ok   zd deletes the closed fold first
 ok   zd again deletes the outer fold
 ok   clear empties the record and a copy keeps its own folds
-domain_folds: 45 passed, 0 failed
+domain_folds: 47 passed, 0 failed

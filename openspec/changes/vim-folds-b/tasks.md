@@ -1,6 +1,6 @@
 ## 1. Nesting at a shared first row
 
-- [ ] 1.1 Change the crossing test of `Folds#create` (`carat/domain/folds.rb`) so a fold sharing the new fold's first row nests or is held, proven by the `[[2,6],[2,3]]` row in `test/domain_folds.rb` and the `zf3jzozfj` rows in `test/editor_folds.rb` (scenario "zf at the first row of an open fold nests in it")
+- [x] 1.1 Change the crossing test of `Folds#create` (`carat/domain/folds.rb`) so a fold sharing the new fold's first row nests or is held, proven by the `[[2,6],[2,3]]` row in `test/domain_folds.rb` and the `zf3jzozfj` rows in `test/editor_folds.rb` (scenario "zf at the first row of an open fold nests in it")
 
 ## 2. Folds back on a reverted edit
 

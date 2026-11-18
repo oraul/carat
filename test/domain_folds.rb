@@ -38,6 +38,8 @@ module DomainFoldsTest
       ["an inner fold sorts after its outer one", [[1, 6], [2, 3]], [[1, 6, true], [2, 3, true]]],
       ["an outer fold sorts before its inner one", [[2, 3], [1, 6]], [[1, 6, true], [2, 3, true]]],
       ["an outer fold at the same first row sorts first", [[2, 3], [2, 6]], [[2, 6, true], [2, 3, true]]],
+      ["an inner fold at the same first row nests in the outer one", [[2, 6], [2, 3]], [[2, 6, true], [2, 3, true]]],
+      ["an outer fold at the same first row holds the inner one", [[2, 3], [2, 6], [2, 4]], [[2, 6, true], [2, 4, true], [2, 3, true]]],
       ["a fold crossing another from above grows to hold it", [[3, 6], [1, 4]], [[1, 6, true], [3, 6, true]]],
       ["a fold crossing another from below grows to hold it", [[1, 4], [3, 6]], [[1, 6, true], [1, 4, true]]]
     ]) do |pairs|

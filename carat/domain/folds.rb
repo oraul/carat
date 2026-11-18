@@ -67,7 +67,10 @@ module Carat
       end
 
       # Adds a closed fold over rows from to to, grown to hold every fold
-      # it crosses.
+      # it crosses: one starting inside it past its first row and ending
+      # below it, or starting above it and ending inside it before its
+      # last row. A fold sharing its first row holds it or is held, as
+      # Neovim nests them.
       #: (Integer, Integer) -> void
       def create(from, to)
         if to < from
@@ -82,7 +85,7 @@ module Carat
           while i < starts.length
             s = starts[i]
             e = ends[i]
-            crosses = (s >= from && s <= to && e > to) || (s < from && e >= from && e < to)
+            crosses = (s > from && s <= to && e > to) || (s < from && e >= from && e < to)
             if crosses
               from = s if s < from
               to = e if e > to
