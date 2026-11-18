@@ -9,6 +9,7 @@ ok   zd deletes the fold under the cursor
 ok   a fold over a text object
 ok   a nested closed fold has a dash more
 ok   zd on a nested closed fold keeps the outer one
+ok   zf at the first row of an open fold nests in it
 ok   a fold below the first line
 ok   a count G into a closed fold lands on its first line
 ok   G into a closed fold at the end lands on its first line
@@ -29,6 +30,7 @@ ok   zf in linewise visual mode folds the selection
 ok   zf in visual mode folds the selected lines
 ok   zfk folds the line above too, the cursor on the first
 ok   zE deletes every fold
+ok   zf3jzozfj nests a fold at the outer fold's first row
 ok   a fold crossing another grows to hold it
 ok   u restores the lines of a deleted fold, not the fold
 ok   zo with no fold gives E490
@@ -46,4 +48,4 @@ ok   dd on the other window's closed fold deletes its lines
 ok   showing another buffer drops the window's folds, untracked, and draws the new buffer's lines
 ok   a syntax-highlighted line below a closed fold, past top plus the height
 ok   a float opens below a cursor under a closed fold where the rows below have room
-editor_folds: 48 passed, 0 failed
+editor_folds: 50 passed, 0 failed

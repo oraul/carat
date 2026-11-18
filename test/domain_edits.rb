@@ -33,6 +33,17 @@ module DomainEditsTest
     out
   end
 
+  # The folds as [first, last, closed] triples.
+  def self.fold_triples(folds)
+    list = []
+    i = 0
+    while i < folds.count
+      list << [folds.first_of(i), folds.last_of(i), folds.closed?(i)]
+      i += 1
+    end
+    list
+  end
+
   def self.main
     t = Carat::Testing.new("domain_edits")
 
@@ -188,6 +199,30 @@ module DomainEditsTest
     b.revert_to(mark)
     t.assert_equal([["xone", "two", "three"], 1, changes, "S"], [b.lines, b.transaction_size, b.changes, b.sign_at(2)], "the later records are undone, the earlier kept, and the signs moved back")
     b.commit_transaction(pos(0, 0))
+
+    # A reverted plugin edit leaves the folds as before: a closed fold over
+    # rows 1 to 2 and an open one over 3 to 4, both rows of the first
+    # deleted (dropping it) and a line inserted above the second.
+    b = D::Buffer.new(lines: ["a", "b", "c", "d", "e", "f"], path: nil, line_ending: "\n")
+    folds = D::Folds.new
+    folds.create(1, 2)
+    folds.create(3, 4)
+    folds.open_at(3)
+    b.track_folds(folds)
+    b.begin_transaction(pos(0, 0))
+    mark = b.transaction_mark
+    b.set_lines(3, 3, ["x"])
+    b.set_lines(1, 3, [])
+    moved = fold_triples(folds)
+    b.revert_to(mark)
+    b.commit_transaction(pos(0, 0))
+    t.assert_equal([[[2, 3, false]], ["a", "b", "c", "d", "e", "f"], [[1, 2, true], [3, 4, false]]], [moved, b.lines, fold_triples(folds)], "A reverted plugin edit leaves the folds as before")
+    b.begin_transaction(pos(0, 0))
+    size = b.transaction_size
+    b.set_lines(0, 0, ["y"])
+    b.revert_to(size)
+    b.commit_transaction(pos(0, 0))
+    t.assert_equal([[2, 3, true], [4, 5, false]], fold_triples(folds), "a revert with no fresh mark puts back no old copy")
 
     # Signs move with their lines, one layer per plugin in priority order.
     b = D::Buffer.new(lines: ["a", "b", "c", "d"], path: nil, line_ending: "\n")

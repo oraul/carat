@@ -40,6 +40,8 @@ ok   the first record gives the cause
 ok   records of the same cause keep it
 ok   a record of another cause makes it the editor's
 ok   the later records are undone, the earlier kept, and the signs moved back
+ok   A reverted plugin edit leaves the folds as before
+ok   a revert with no fresh mark puts back no old copy
 ok   a line inserted above moves the sign down
 ok   editing the line keeps its sign
 ok   splitting the line keeps the sign on its first part
@@ -50,4 +52,4 @@ ok   clearing one plugin's signs shows the other's
 ok   clearing signs never placed counts none
 ok   a large insertion moves the tail in one pass
 ok   a large deletion closes the gap
-domain_edits: 52 passed, 0 failed
+domain_edits: 54 passed, 0 failed

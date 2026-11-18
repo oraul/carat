@@ -85,6 +85,7 @@ module EditorFoldsTest
       ["a fold over a text object", "zfip", [[fold_row("+--  4 lines: one"), "", ""], [0, 0]]],
       ["a nested closed fold has a dash more", "zf3jzojzfj", [["one", fold_row("+---  2 lines: two"), "four"], [1, 0]]],
       ["zd on a nested closed fold keeps the outer one", "zf3jzojzfjzd", [["one", "two", "three"], [1, 0]]],
+      ["zf at the first row of an open fold nests in it", "zf3jzozfj", [[fold_row("+---  2 lines: one"), "three", "four"], [0, 0]]],
       ["a fold below the first line", "jzfj", [["one", fold_row("+--  2 lines: two"), "four"], [1, 0]]],
       ["a count G into a closed fold lands on its first line", "jzfjgg3G", [["one", fold_row("+--  2 lines: two"), "four"], [1, 0]]],
       ["G into a closed fold at the end lands on its first line", "jjzfjggG", [["one", "two", fold_row("+--  2 lines: three")], [2, 0]]]
@@ -123,6 +124,7 @@ module EditorFoldsTest
       ["zf in visual mode folds the selected lines", "jvjzf", [[[1, 2, true]], ["a", "b", "c", "d", "e"], [1, 0], :normal]],
       ["zfk folds the line above too, the cursor on the first", "jzfk", [[[0, 1, true]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["zE deletes every fold", "zfjjjzfjzE", [[], ["a", "b", "c", "d", "e"], [3, 0], :normal]],
+      ["zf3jzozfj nests a fold at the outer fold's first row", "zf3jzozfj", [[[0, 3, false], [0, 1, true]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["a fold crossing another grows to hold it", "jzfjzoggzfj", [[[0, 2, true], [1, 2, false]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["u restores the lines of a deleted fold, not the fold", "zfjddu", [[], ["a", "b", "c", "d", "e"], [0, 0], :normal]]
     ]) do |keys|

@@ -449,7 +449,7 @@ Manual folds, Neovim's `foldmethod=manual`, kept per window: a split copies them
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
-| `zf{motion}`, `{Visual}zf` | `fold.create` | A closed fold over the lines the motion or the selection covers, the cursor on its first line; inside a fold it nests, crossing one it grows to hold it | `editor_folds` |
+| `zf{motion}`, `{Visual}zf` | `fold.create` | A closed fold over the lines the motion or the selection covers, the cursor on its first line; inside a fold it nests, sharing its first or last row included, and over one it holds it; crossing one it grows to hold it | `editor_folds` |
 | `zo` | `fold.open` | Open the closed fold under the cursor; `E490: No fold found` without one | `editor_folds` |
 | `zc` | `fold.close` | Close the innermost open fold under the cursor, the cursor going to its first line; `E490` without one | `editor_folds` |
 | `za` | `fold.toggle` | Open the fold under the cursor when it is closed, else close it; `E490` without one | `editor_folds` |
