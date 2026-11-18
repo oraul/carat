@@ -15,3 +15,4 @@ sprint-12	lsp-container	6	checks-and-pr-lows,git-signs-status-b,windows-buffers-
 sprint-13	tab-close	6	sprint-security,lsp-container-b,check-parallel,palette-narrow,bar-colors,tab-close	364.1	60.7	5326850	0	check:6/6,quality:5/6,security:6/6,bench:6/6,ci:6/6,gates:5/6
 sprint-14	vim-line-commands-a	5	lsp-container-c,tab-close-b,markdown-reading-d,merge-record-check,vim-line-commands-a	286.9	57.4	4694044	0	check:5/5,quality:4/5,security:5/5,bench:5/5,ci:5/5,gates:4/5
 sprint-15	vim-folds-a	6	ci-trust-gaps,tab-close-c,ruby-structure-remove,motions-search-tidy,record-squash-commit,vim-folds-a	415.5	69.2	6237000	1	check:5/6,quality:4/6,security:5/6,bench:6/6,ci:6/6,gates:5/6
+sprint-16	moved-review-carry	6	secret-patterns,git-signs-transport,vim-line-commands-b,sprint-size-six,merge-main-path,moved-review-carry	271.9	45.3	5399298	0	check:6/6,quality:5/6,security:5/6,bench:6/6,ci:6/6,gates:4/6
