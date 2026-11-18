@@ -4511,7 +4511,7 @@ expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 expect "agents: the sprint planner merges near-same notes and prunes the oldest entries against HEAD" 0 "^1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md., against HEAD: .closed <commit> <heading>. (fixed later) or .gone <heading>.") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed., never .closed., and merges only into another security entry")"' _ "$agents/planner.md"
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md., against HEAD: .closed <commit> <heading>. (fixed later) or .gone <heading>.") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed.; a disputed one stays")"' _ "$agents/planner.md"
 expect "workflow: sprint-planning hands the planner the oldest entries and the merge of near-same notes" 0 "^1 1$" \
   sh -c 'echo "$(grep -c -F "(a near-same note merged, never dropped), the oldest entries to check against HEAD from" "$1") $(grep -c -F "run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md" "$1")"' _ "$swf"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
