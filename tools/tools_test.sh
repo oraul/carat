@@ -686,7 +686,7 @@ commit "docs: append a sprint row"
 expect "run_state: settled refuses the sprints file" 1 "^unsettled: docs/sprints.tsv changed since $settle_at outside the records" state settled state "$settle_at"
 if [ -f "$work/sprints.keep" ]; then mv "$work/sprints.keep" docs/sprints.tsv; else git_q rm -q docs/sprints.tsv; fi
 commit "chore: drop the sprint row"
-orphan=$(git commit-tree -m orphan "$(git rev-parse HEAD^{tree})" | cut -c1-12)
+orphan=$(git_q commit-tree -m orphan "$(git rev-parse HEAD^{tree})" | cut -c1-12)
 expect "run_state: settled refuses a commit that is no ancestor" 1 "^unsettled: $orphan is not an ancestor of HEAD" state settled state "$orphan"
 expect "run_state: settled refuses a commit that is not one" 1 "not a commit: HEAD" state settled state HEAD
 # An advisory a later round repeats is noted once.
