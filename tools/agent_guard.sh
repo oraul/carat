@@ -947,10 +947,122 @@ merge_tool() {
     grep -q -E "^  \"gated\": \"$sha\",?\$" "$f" && found=$f
   done
   [ -n "$found" ] || refuse "a merge of $sha, at which no run state records both the push and the merge gates' pass (gated)"
+  squash_message
   local_main=$(git -C "$project_dir" rev-parse --verify -q 'origin/main^{commit}')
   remote_main=$(git -C "$project_dir" ls-remote origin refs/heads/main 2>/dev/null | cut -f1)
   [ -n "$remote_main" ] && [ "$local_main" = "$remote_main" ] ||
     refuse "a merge while origin/main is ${local_main:-missing} and origin's main ${remote_main:-unknown}: fetch, or the ref was rewritten"
+}
+
+# The squash message (commit_message), which becomes the body of the
+# commit on main: exactly the body of the change's archived pr.md at the
+# pushed head (its lines after the title and the blank line), one blank
+# line, and SQUASH_TRAILER last, trailing blank lines ignored on both
+# sides; anything else, a shortened body included, is refused naming the
+# first line that differs. The bytes are compared exactly: json_text
+# decodes the message whole, every escape included, and only the display
+# of a differing line shows a control or non-ASCII byte as "?".
+SQUASH_TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
+# json_text KEY prints the string value of KEY decoded exactly (\uXXXX
+# and surrogate pairs as UTF-8, \b \f \n \r \t as their bytes), nothing
+# when KEY is absent; fails on a raw control byte, a NUL, a lone
+# surrogate, a bad escape, or an unterminated string.
+json_text() {
+  LC_ALL=C K="$1" awk '
+    function hex(h,   v, i, d) {
+      v = 0
+      for (i = 1; i <= 4; i++) {
+        d = index("0123456789abcdef", substr(h, i, 1))
+        if (!d) return -1
+        v = v * 16 + d - 1
+      }
+      return v
+    }
+    function utf8(v) {
+      if (v < 128) return sprintf("%c", v)
+      if (v < 2048) return sprintf("%c%c", 192 + int(v / 64), 128 + v % 64)
+      if (v < 65536) return sprintf("%c%c%c", 224 + int(v / 4096), 128 + int(v / 64) % 64, 128 + v % 64)
+      return sprintf("%c%c%c%c", 240 + int(v / 262144), 128 + int(v / 4096) % 64, 128 + int(v / 64) % 64, 128 + v % 64)
+    }
+    { all = all (NR > 1 ? "\n" : "") $0 }
+    END {
+      if (!match(all, "\"" ENVIRON["K"] "\"[ \t\n\r]*:[ \t\n\r]*\"")) exit 0
+      s = substr(all, RSTART + RLENGTH)
+      n = length(s)
+      out = ""
+      for (i = 1; i <= n; i++) {
+        c = substr(s, i, 1)
+        if (c == "\"") { printf "%s", out; exit 0 }
+        if (c ~ /[\001-\037]/) exit 1
+        if (c == "\\") {
+          i++
+          c = substr(s, i, 1)
+          if (c == "n") c = "\n"
+          else if (c == "t") c = "\t"
+          else if (c == "r") c = "\r"
+          else if (c == "b") c = "\b"
+          else if (c == "f") c = "\f"
+          else if (c == "u") {
+            v = hex(tolower(substr(s, i + 1, 4)))
+            i += 4
+            if (v >= 55296 && v < 56320 && substr(s, i + 1, 2) == "\\u") {
+              w = hex(tolower(substr(s, i + 3, 4)))
+              if (w >= 56320 && w < 57344) { v = 65536 + (v - 55296) * 1024 + w - 56320; i += 6 }
+            }
+            if (v <= 0 || (v >= 55296 && v < 57344)) exit 1
+            c = utf8(v)
+          } else if (c != "\"" && c != "\\" && c != "/") exit 1
+        }
+        out = out c
+      }
+      exit 1
+    }'
+}
+squash_message() {
+  change=${found##*/}
+  change=${change%.json}
+  matches "$change" '^[a-z0-9][a-z0-9-]*$' || refuse "a merge for the run state $found, not a change name"
+  # The archive's own entries, not every file of every archived change.
+  pr_md=""
+  for dir in $(git -C "$project_dir" ls-tree --name-only "$sha" -- openspec/changes/archive/ 2>/dev/null |
+    grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change"); do
+    [ "$(git -C "$project_dir" cat-file -t "$sha:$dir/pr.md" 2>/dev/null)" = blob ] || continue
+    [ -z "$pr_md" ] || refuse "a merge of $sha, which holds no one archived pr.md of $change"
+    pr_md=$dir/pr.md
+  done
+  [ -n "$pr_md" ] || refuse "a merge of $sha, which holds no one archived pr.md of $change"
+  # The decoded message goes on a file, never the environment, whose size
+  # limit would stop awk from running.
+  message_file=$(mktemp "${TMPDIR:-/tmp}/carat-squash.XXXXXX") || refuse "a merge whose message has no temporary file"
+  trap 'rm -f "$message_file"' EXIT
+  printf '%s' "$input" | json_text commit_message > "$message_file" ||
+    refuse "a commit message with a raw control byte, a NUL, a lone surrogate, or a bad escape"
+  [ -n "$(tr -d '\n' < "$message_file")" ] || refuse "a merge without a commit message: pass the body of $pr_md, a blank line, and the trailer"
+  # The comparison prints "same" only on equality, so an awk that never
+  # ran refuses rather than allows.
+  differs=$(git -C "$project_dir" show "$sha:$pr_md" | sed '1,2d' |
+    LC_ALL=C F="$message_file" T="$SQUASH_TRAILER" awk '
+      function cut(s) { gsub(/[\001-\037\177-\377]/, "?", s); return length(s) > 80 ? substr(s, 1, 80) "..." : s }
+      { want[++n] = $0 }
+      END {
+        while (n > 0 && want[n] == "") n--
+        want[++n] = ""
+        want[++n] = ENVIRON["T"]
+        g = 0
+        while ((getline line < ENVIRON["F"]) > 0) got[++g] = line
+        while (g > 0 && got[g] == "") g--
+        for (i = 1; i <= n || i <= g; i++) {
+          if (i > g) {
+            while (want[i] == "") i++
+            printf "the message ends at line %d, before line %d, \"%s\"", g, i, cut(want[i])
+            exit
+          }
+          if (i > n) { printf "the message goes on past the trailer at line %d with \"%s\"", i, cut(got[i]); exit }
+          if (got[i] != want[i]) { printf "line %d of the message is \"%s\" where it should be \"%s\"", i, cut(got[i]), cut(want[i]); exit }
+        }
+        printf "same"
+      }')
+  [ "$differs" = same ] || refuse "a squash message other than the body of $pr_md, a blank line, and the trailer: ${differs:-the comparison did not run}"
 }
 
 input=$(cat)
