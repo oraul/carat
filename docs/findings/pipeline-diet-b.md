@@ -42,3 +42,12 @@
 - Location: .claude/workflows/deliver-change.js:1268
 - Why: an in-place-only round goes through contributor('fix'), which increments rework, so metric.rework, the first-pass picture the planner reads, and the 'still blocked after N fix rounds' stop mix advisory clean-ups with blocking fixes.
 - Fix: count in-place rounds in their own metric while still bounding them by ROUNDS.
+### The Sprint 17 feature decision still places tab-close-d at place 1
+- Location: `docs/queue-feature.md:30`.
+- Why: the merge resolution of tab-close-d removed it from the Sprint 17 list, but the decision still places tab-close-d and vim-folds-b at places 1 and 2 and vim-line-commands-c third, while the list holds vim-folds-b at 1 and vim-line-commands-c at 2 (tab-close-d late finding at 5982df4f5353, quality advisory).
+- Fix: say tab-close-d merged from place 1, vim-folds-b and vim-line-commands-c now at places 1 and 2.
+
+### The tab-close-d findings entries drop the file's backticks and periods
+- Location: `docs/findings/tab-close-d.md:11`.
+- Why: the three late entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use, two formats in one file (tab-close-d late finding at 5982df4f5353, quality advisory).
+- Fix: backtick the locations and end each Location, Why, and Fix line with a period as the earlier entries do.
