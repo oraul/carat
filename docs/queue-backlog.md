@@ -28,24 +28,25 @@ The user-approved exception (2026-11-18): pipeline speedups, not defects, in thi
 15. `glyph-audit` (T2 user request, estimated small): 5 glyphs mean two things each.
 16. `sprint-review-continuation` (T1 defect, Low (5), estimated medium): `sprint-planning.js:104`, `:175`; 2 headings.
 17. `backlog-throughput-b` (T1, user request, estimated medium): +35 headings a sprint.
-18. `round-limit-resume`, `open-pr-retry`, `pr-testing-truth`, `stage-clean` (T1 defects, estimated small each).
-19. `rework-review-repeat` (T1, estimated medium, with review-fix-treadmill): later rounds repeat notes and block on each fix round's code (1, 3, 1, 1, 833,080 output); "### A re-review re-raised an advisory declined for the brief's reason"; 2 review-phase headings.
+18. `round-limit-resume`, `open-pr-retry`, `pr-testing-truth`, `stage-clean` (T1 defects, estimated small each); `tools-test-identity` (T1 defect, estimated small): tools-test passed 1752 of 1752 locally, CI 1751 (`tools_test.sh:689` bare commit-tree, no git identity; review-lite retro 16); accepted when such a case fails `make check-stage S=tools-test`.
+19. `rework-review-repeat` (T1, estimated medium, with review-fix-treadmill): later rounds repeat notes and block on each fix round's code (1, 3, 1, 1, 833,080 output); "### A re-review re-raised an advisory declined for the brief's reason"; 2 review-phase headings; review-lite retro 14: round 2 answered 3 advisories at 0 blocking for 108,402 output, then drew 2 on its own fixes.
 20. `spinel-bump` (T2 user request, estimated medium): 656 commits behind.
 21. `check-clone-toolchain`, `periodic-clear-rules` (T1 defects, Medium (6), estimated medium each, pushed back 2): 4 and 7 headings.
 22. `review-scope-pins` (T1 defect, Medium (4), estimated medium): 4 headings.
 23. `sprint-security-b` (T1 defect, Lows, estimated medium, with batch 1 part b): `tools/gates.sh:112`; "## A security review after a quality-only fix reads the whole branch again", "## The review continuations run one after the other".
 24. `ci-trust-gaps-b`, `ci-trust-gaps-c` (T1, Lows, estimated medium): 10 headings; `ci.yml:54` (sweep Low (3)).
 25. `toolchain-clean-scope` (T1 defect, estimated small): `Makefile:203`.
-26. `check-pass-budget-flag` (T1 defect, estimated medium): 204,127 to 573,120 of 200,000; accepted at 5,000 or less a pass.
+26. `check-pass-budget-flag` (T1 defect, estimated medium): 204,127 to 573,120 of 200,000; accepted at 5,000 or less a pass; review-lite retro 15: 3 overrun notes (284,010 to 482,944 of 200,000) changed no step; keep the close's line.
 27. `records-plan-apply`, `bench-skip-no-code`, `moved-review-diff`, `advisory-findings-auto`, `merge-output-cap`, `scout-prune-step`, `doc-budget-room`, `groom-fold-format`, `merge-main-queue-conflict` (T1, estimated small each); sprint-18-records retro: groom output failed docs-lint, first.check=0 at 399adffe0be5, to `groom-fold-format`; groom-output advisories took rework 2 at 0 blocking, reviews=25498/34, to `advisory-findings-auto`; bench=4721/14 with no `carat/` file to `bench-skip-no-code`.
 28. `normal-command-fixes` (T3 Low (6), estimated large): `normal_command_handler.rb:62`.
 29. `motions-search-tidy-b` (T4, estimated medium), `plugin-host-tidy`, `input-bytes-tidy`, `frame-presenter-tidy`, `motions-search-tidy-c` (T6, estimated medium each).
 
 ## Decisions
 
-- `review-lite` delivered (T1, the user-approved exception of 2026-11-18): Sprint 19 backlog item 1, its 3 headings listed; sign-colors rework 2 at 0 blocking, 71,651 output.
-- Security first (T0), none open: sprint-18 periodic security Medium (9) `tools/run_state.sh:449` and Low (3) `:2648` fixed by b5b0aec (#214).
-- Estimate medium (T1): pipeline-diet 912,815 in 41.2 min, squash-body-full 1,206,650, pipeline-diet-b 1,314,641; only sign-colors 1,231,042 of the last two over, no size up.
-- Merge gate (T1, plan rule): main's settled_at accepts records-only diffs (`tools/gates.sh:121`), so `review-lite` skips only over those; widening to README and docs is `review-lite-docs`, Pool 2, its own change first.
-- Overrun (T1): sprint-18-records 2,636,747 of 2,500,000 total, 62.0 min, rework 2 at 0 blocking.
-- sprint-18-records retro 11 to 13 (T1) into Pool 27: `groom-fold-format`, `advisory-findings-auto`, `bench-skip-no-code`.
+- `check-stage-order` delivered first (T0, the user's go-ahead of 2026-11-18, exempt from the sprint count): gates failed after 1 s at 118500e1d053 before test-build, killed at 28 s; restates the gutter-signcolumn findings entry.
+- Estimate medium (T0): backlog rows pipeline-diet 912,815 in 41.2 min, squash-body-full 1,206,650, pipeline-diet-b 1,314,641, none under 500,000; groom-security-mark 995,203 of 2,500,000 under, so not the last two over, no size up.
+- Security first (T0), none open: no periodic finding in pending `review-lite`; sprint-18 Medium (9) fixed by b5b0aec (#214).
+- Merge gate (T0): the fix is STAGE_AFTER at `tools/run_state.sh:677`, not `tools/rules.sh`, so no rules change goes first.
+- `review-lite` closed (T1): 1,488,741 of 1,200,000 total, 81.0 min, rework 3; overrun notes 11 to 13 at 284,010 to 482,944 output.
+- review-lite retro 14 to 16 (T1) placed: Pool 19 `rework-review-repeat`, Pool 26 `check-pass-budget-flag`, Pool 18 `tools-test-identity` (ci first pass 166/174).
+- Sprint 19 kept (T1, the user-approved exception): `quality-first-pass`, `contributor-checklist`; quality first pass 97/173.
