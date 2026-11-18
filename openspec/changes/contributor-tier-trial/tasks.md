@@ -7,6 +7,6 @@
 
 ## 2. Docs and records
 
-- [ ] 2.1 `docs/goals.md`, Calibration: the `agent` label, older rows' `cheap`, and the trial with its revert rule; `README.md`: the pipeline paragraph. Verified by `make docs-lint`.
-- [ ] 2.2 `docs/findings/contributor-tier-trial.md`: the plan's `tier-price-mid` finding appended with `>>`. Verified by reading the appended entry.
+- [x] 2.1 `docs/goals.md`, Calibration: the `agent` label, older rows' `cheap`, and the trial with its revert rule; `README.md`: the pipeline paragraph. Verified by `make docs-lint`.
+- [x] 2.2 `docs/findings/contributor-tier-trial.md`: the plan's `tier-price-mid` finding appended with `>>`. Verified by reading the appended entry.
 - [ ] 2.3 Self-check: `make gates` and `make spec-validate` pass.
