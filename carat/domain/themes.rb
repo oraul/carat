@@ -81,7 +81,14 @@ module Carat
       # behind the text: every guide, and the guide of the cursor's block.
       GUIDE = 43
       GUIDE_SCOPE = 44
-      ROLES = 45
+      # The float border, apart from the text roles so it frames a float
+      # without reading as text; secondary text on the status bar's
+      # background; and the text on the search tint, black at 16 colors
+      # where the tint is a bright basic color.
+      BORDER = 45
+      PANEL_DIM = 46
+      ON_SEARCH = 47
+      ROLES = 48
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -104,7 +111,7 @@ module Carat
         Highlight::TAB_LINE_FILL, NONE, PANEL_NC, 0, 0,
         Highlight::VISUAL, NONE, SELECTION, 0, REVERSE,
         Highlight::SIGN_COLUMN, YELLOW, NONE, 0, 0,
-        Highlight::SEARCH, ON_ACCENT, SEARCH, 0, 0,
+        Highlight::SEARCH, ON_SEARCH, SEARCH, 0, 0,
         Highlight::INC_SEARCH, ON_ACCENT, INC_SEARCH, BOLD, BOLD,
         Highlight::CURRENT_SEARCH, ON_ACCENT, INC_SEARCH, BOLD, BOLD,
         Highlight::CURSOR_LINE, NONE, CURSOR_LINE, 0, UNDERLINE,
@@ -124,7 +131,7 @@ module Carat
         Highlight::POPUP_MENU_SCROLLBAR, NONE, FLOAT, 0, 0,
         Highlight::POPUP_MENU_THUMB, NONE, FAINT, 0, REVERSE,
         Highlight::NORMAL_FLOAT, FG, FLOAT, 0, 0,
-        Highlight::FLOAT_BORDER, FAINT, FLOAT, 0, 0,
+        Highlight::FLOAT_BORDER, BORDER, FLOAT, 0, 0,
         Highlight::DIFF_ADD, NONE, DIFF_ADD, 0, 0,
         Highlight::DIFF_CHANGE, NONE, DIFF_CHANGE, 0, 0,
         Highlight::DIFF_DELETE, RED, DIFF_DELETE, 0, 0,
@@ -138,7 +145,7 @@ module Carat
         Highlight::STATUS_MODE_INSERT, ON_STRONG, GREEN, BOLD, BOLD,
         Highlight::STATUS_MODE_VISUAL, ON_STRONG, PURPLE, BOLD, BOLD,
         Highlight::STATUS_MODE_REPLACE, ON_STRONG, RED, BOLD, BOLD,
-        Highlight::STATUS_MODE_COMMAND, ON_STRONG, YELLOW, BOLD, BOLD,
+        Highlight::STATUS_MODE_COMMAND, ON_STRONG, CYAN, BOLD, BOLD,
         Highlight::STATUS_LSP_STARTING, PANEL_YELLOW, PANEL, 0, 0,
         Highlight::STATUS_LSP_READY, PANEL_GREEN, PANEL, 0, 0,
         Highlight::STATUS_LSP_ERROR, PANEL_RED, PANEL, BOLD, BOLD,
@@ -181,7 +188,7 @@ module Carat
         Highlight::SPECIAL_CHAR, ESCAPE, NONE, 0, 0,
         Highlight::DELIMITER, FG, NONE, 0, 0,
         Highlight::SPECIAL_COMMENT, COMMENT, NONE, ITALIC, ITALIC,
-        Highlight::TODO, ON_ACCENT, SEARCH, BOLD, BOLD,
+        Highlight::TODO, ON_SEARCH, SEARCH, BOLD, BOLD,
         Highlight::ERROR, RED, NONE, UNDERLINE, UNDERLINE,
         Highlight::ICON_DEFAULT, DIM, NONE, 0, 0,
         Highlight::ICON_FOLDER, BLUE, NONE, 0, 0,
@@ -213,13 +220,16 @@ module Carat
         FAINT, 0x6c7286, -1, 8,
         GUIDE, 0x30364b, -1, 8,
         GUIDE_SCOPE, 0x46506e, -1, 8,
+        BORDER, 0x3b4157, -1, 8,
+        PANEL_DIM, 0xa4aabd, -1, 0,
+        ON_SEARCH, 0xc8ccd8, -1, 0,
         PANEL, 0x2e3346, -1, 7,
         PANEL_FG, 0xe2e5ee, -1, 0,
-        PANEL_NC, 0x15171e, -1, 7,
+        PANEL_NC, 0x15171e, 233, 7,
         FLOAT, 0x15171e, -1, 0,
         SELECTION, 0x323a55, -1, -1,
         CURSOR_LINE, 0x21242f, -1, -1,
-        SEARCH, 0xe8c46a, -1, 11,
+        SEARCH, 0x4a4129, -1, 11,
         INC_SEARCH, 0xf0a35e, -1, 9,
         ON_ACCENT, 0x1b1d26, -1, 0,
         ON_STRONG, 0x1b1d26, -1, 0,
@@ -263,13 +273,16 @@ module Carat
         FAINT, 0x7a8094, -1, 8,
         GUIDE, 0xd8dce8, -1, 8,
         GUIDE_SCOPE, 0xa9b4d6, -1, 8,
+        BORDER, 0xc9cdd9, -1, 8,
+        PANEL_DIM, 0x5c6173, -1, 0,
+        ON_SEARCH, 0x2f3340, -1, 0,
         PANEL, 0xe3e6ef, -1, 7,
         PANEL_FG, 0x2f3340, -1, 0,
-        PANEL_NC, 0xf0f1f5, -1, 7,
-        FLOAT, 0xf0f1f5, -1, 7,
-        SELECTION, 0xdce1f2, -1, -1,
+        PANEL_NC, 0xeceef3, -1, 7,
+        FLOAT, 0xeceef3, -1, 7,
+        SELECTION, 0xc2ccef, -1, -1,
         CURSOR_LINE, 0xf2f3f7, -1, -1,
-        SEARCH, 0xf5dc8f, -1, 11,
+        SEARCH, 0xf7e3a1, -1, 11,
         INC_SEARCH, 0xf2b06e, -1, 9,
         ON_ACCENT, 0x2f3340, -1, 0,
         ON_STRONG, 0xfbfbfd, -1, 15,
@@ -313,6 +326,9 @@ module Carat
         FAINT, 0x737a8a, -1, 8,
         GUIDE, 0x737a8a, -1, 8,
         GUIDE_SCOPE, 0x959ca8, -1, 8,
+        BORDER, 0x737a8a, -1, 8,
+        PANEL_DIM, 0xd7dae0, -1, 0,
+        ON_SEARCH, 0x282c34, -1, 0,
         PANEL, 0x3e4452, -1, 7,
         PANEL_FG, 0xd7dae0, -1, 0,
         PANEL_NC, 0x21252b, -1, 7,
@@ -363,6 +379,9 @@ module Carat
         FAINT, 0x84868e, -1, 8,
         GUIDE, 0x84868e, -1, 8,
         GUIDE_SCOPE, 0x696c77, -1, 8,
+        BORDER, 0x84868e, -1, 8,
+        PANEL_DIM, 0x383a42, -1, 0,
+        ON_SEARCH, 0x383a42, -1, 0,
         PANEL, 0xe5e5e6, -1, 7,
         PANEL_FG, 0x383a42, -1, 0,
         PANEL_NC, 0xf0f0f1, -1, 7,
@@ -413,6 +432,9 @@ module Carat
         FAINT, 0x737373, -1, 8,
         GUIDE, 0x737373, -1, 8,
         GUIDE_SCOPE, 0x8f8f8f, -1, 8,
+        BORDER, 0x737373, -1, 8,
+        PANEL_DIM, 0xffffff, -1, 15,
+        ON_SEARCH, 0xffffff, -1, 15,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_NC, 0x252526, -1, 7,
@@ -464,6 +486,9 @@ module Carat
         FAINT, 0x858585, -1, 8,
         GUIDE, 0x858585, -1, 8,
         GUIDE_SCOPE, 0x1f6b82, -1, 8,
+        BORDER, 0x858585, -1, 8,
+        PANEL_DIM, 0xffffff, -1, 15,
+        ON_SEARCH, 0x000000, -1, 0,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_NC, 0xf3f3f3, -1, 7,
