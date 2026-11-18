@@ -7,3 +7,18 @@
 - Location: `.claude/workflows/deliver-change.js`, the scout plan from the areas start.
 - Why: plugin-lazy-activate spent 57,113 output tokens and 40 calls on scouts (16.6 percent of 343,926 output, 16.5 percent of 242 calls) for 3 packs, one (build-and-ci) for 8 of 813 changed lines; scout shares tab-close-b 25 percent, tab-close 21 percent, secret-patterns 33.6 percent.
 - Fix: skip or fold the scout of an area whose planned edit is a few lines; accepted when the scout share of output over the next 10 feature runs has a median at or under 12 percent with first.check and first.quality rates not lower.
+
+### The finder's tab pick repeats the open_file call of its default branch
+- Location: carat/plugins/finder/plugin.rb:332 (open_path, the when :tab branch)
+- Why: the :tab branch's target == 0 arm repeats the else branch's host.open_file(target, path) inside a ternary, so the default open lives in two places and can drift (two quality advisories, duplication and simplicity, merged here)
+- Fix: before the case, map how to the default when it is :tab and target is 0 (or guard so :tab reaches open_as_tab only when target != 0), leaving when :tab to call open_as_tab alone and the zero case to fall through to the one open_file call
+
+### The host's open_as_tab fallback with no file window is reached by no shipped caller
+- Location: carat/use_cases/plugins/window_requests.rb:214, docs/plugins.md:79
+- Why: every shipped plugin now checks editing_window before open_as_tab, so the host's no-file-window fallback to a tab page is dead for shipped callers, and docs/plugins.md asks each plugin to repeat the check
+- Fix: at the next plugin API minor step make open_as_tab with no file window open in the current window as open_file does, and drop the finder's own check
+
+### The finder's <C-t> row leaves out the lone-tree case
+- Location: docs/compatibility.md:528
+- Why: the explorer's row (line 508) and the file-finder spec state that with no file window the tab open opens as <CR> does, but the finder's <C-t> row omits it, so the table under-describes the behavior
+- Fix: append "and with no file window as <CR> opens" to the row
