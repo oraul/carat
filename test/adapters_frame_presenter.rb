@@ -509,7 +509,7 @@ module AdaptersFramePresenterTest
     s.buffer.place_sign("test", 0, 1, "X", D::Highlight::SIGN_COLUMN)
     f = draw(s, 6, 20)
     t.assert_equal(["   1 one", "X  2 two", "   3 three"], [f.row_text(0), f.row_text(1), f.row_text(2)], "One sign: the sign sits in its one cell and the numbers move right by one")
-    t.assert_equal([D::Highlight::SIGN_COLUMN, D::Highlight::SIGN_COLUMN, false], [f.cell(1, 0).hl, f.cell(0, 0).hl, f.cell(0, 1).hl == D::Highlight::SIGN_COLUMN], "the sign column is one cell in SignColumn, the next cell is the number column's")
+    t.assert_equal([D::Highlight::SIGN_COLUMN, D::Highlight::SIGN_COLUMN, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(0, 0).hl, f.cell(0, 1).hl], "the sign column is one cell in SignColumn, the next cell is the number column's")
     t.assert_equal([0, 5], [f.cursor_row, f.cursor_col], "the cursor moves right with the gutter")
     s.options.number = false
     f = draw(s, 6, 20)
@@ -538,7 +538,7 @@ module AdaptersFramePresenterTest
       t.assert_equal(expected, [theme.fg(f.cell(0, 0).hl), theme.fg(f.cell(1, 0).hl), theme.fg(f.cell(2, 0).hl), theme.fg(f.cell(3, 0).hl)], "Diagnostic signs are red and yellow, Git signs are green and cyan: #{name}")
     end
     s.buffer.place_sign("test", 0, 0, D::Icons.glyph("error", "unicode"), D::Highlight.sign_group("warning"))
-    t.assert_equal(D::Highlight::DIAGNOSTIC_WARN, draw(s, 6, 20).cell(0, 0).hl, "a row whose glyph stays but whose group changes is repainted")
+    t.assert_equal(D::Highlight::DIAGNOSTIC_WARN, draw(s, 7, 20).cell(0, 0).hl, "a row whose glyph stays but whose group changes is repainted")
 
     # The bar shows the current window's buffer, a scratch title too, and
     # the plugins' segments.
