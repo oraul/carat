@@ -244,7 +244,7 @@
 #                               (COMMIT in the sprint's range, after its
 #                               base up to HEAD, changing a file the entry
 #                               names), or "duplicate HEADING" (never an
-#                               entry with a security severity, such as
+#                               security entry (SECURITY_MARK), such as
 #                               security Low), HEADING a whole heading line
 #                               of the backlog, and write nothing when one
 #                               fails; then copy queue-feature.md and
@@ -417,9 +417,11 @@ TIER_PRICES="cheap=100/125/10/500 session=4000/5000/200/20000"
 PLAN_NOTES='retro|overrun|security|quality'
 # What makes a backlog entry a security entry for groom: a severity as the
 # security reviewer records it ("security Low (6)", "periodic security
-# Medium", "security Lows"), read without case; a text that only names
-# security, such as a quoted section title, is not one.
-SECURITY_MARK='(^|[^a-z])security (high|medium|low)s?([^a-z]|$)'
+# Medium", "security Lows"), the skeptic's "security disputed", or a
+# severity and confidence pair as a note records it ("High (8)"), read
+# without case; a text that only names security, such as a quoted section
+# title, is not one.
+SECURITY_MARK='(^|[^a-z])security (high|medium|low|disputed)s?([^a-z]|$)|(^|[^a-z])(high|medium|low) \([0-9]+\)'
 TAB=$(printf '\t')
 # Columns 16 and 17 came after estimate, and 19 to 22 after calibration,
 # so rates ($5, $6) read the same columns in every row.
@@ -2122,19 +2124,31 @@ merged_of() {
 # first parenthesis: a change beyond the sprint, which a sprint does not
 # count (up to SPRINT_EXCEPTIONS).
 exception_item() {
-  valid '[0-9a-f]{7,40}' "$2" || return 1
+  queue_items "$1" "$2" | M="$EXCEPTION_MARK" awk '
+    index(substr($0, 1, index($0, ")")), ENVIRON["M"]) { found = 1; exit }
+    END { exit !found }'
+}
+
+# Prints the item naming NAME (numbered, or the line "The user-approved
+# exception: `NAME` (...)", its continuation lines joined by a space, to a
+# blank line, a heading, or the next item) on one line, first from the
+# queue at the parent of COMMIT, the queue it was delivered from, then from
+# the queue at COMMIT, whose package step may have applied the plan naming
+# it; nothing for a queue without it or a COMMIT that is no hash.
+queue_items() {
+  valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do
-    queue_at "$at" | C="$1" M="$EXCEPTION_MARK" awk '
+    queue_at "$at" | C="$1" awk '
       {
         item = $0
-        if (!sub(/^[0-9]+[.] /, "", item) && !sub(/^The user-approved exception: /, "", item)) next
-        if (index(item, "`" ENVIRON["C"] "` (") != 1) next
-        found = index(substr(item, 1, index(item, ")")), ENVIRON["M"]) > 0
-        exit
+        start = sub(/^[0-9]+[.] /, "", item) || sub(/^The user-approved exception: /, "", item)
       }
-      END { exit !found }' && return 0
+      start && on { exit }
+      start { on = index(item, "`" ENVIRON["C"] "` (") == 1; out = item; next }
+      !NF || /^#/ { if (on) exit; next }
+      on { line = $0; sub(/^[ \t]+/, "", line); out = out " " line }
+      END { if (on) print out }'
   done
-  return 1
 }
 
 # True when a sprint plan waits in PLAN_DIR for a package step: its marker
@@ -2229,7 +2243,10 @@ backlog_entry() {
 # an entry whose heading text a queue file holds, not as the start of a
 # longer word, is queued, and one whose whole heading line ends a line of
 # PLAN_DIR/groom.txt is groomed: the closed sprint's removals, which stay
-# in the backlog until the sprint's records change.
+# in the backlog until the sprint's records change. Any entry naming
+# security ranks first here, wider than groom's SECURITY_MARK on purpose:
+# a wider ranking only orders the batches, while groom's guard decides
+# what may leave.
 backlog_pick() {
   for f in "$@"; do [ -f "$f" ] || die "no $f"; done
   cat "$@" |
@@ -2372,31 +2389,34 @@ sprint_row() {
     }'
 }
 
-# True when the item naming NAME ("N. `NAME` (", its continuation lines
-# joined by a space, to a blank line, a heading, or the next item) in the
-# queue at the parent of COMMIT, the queue it was delivered from, or else at
-# COMMIT, holds the whole heading line HEADING: groom's proof that a merged
-# item listed it.
+# True when the item naming NAME (queue_items) in the queue at the parent
+# of COMMIT, the queue it was delivered from, or else at COMMIT, holds the
+# whole heading line HEADING, bounded: no "#" before it, and after it the
+# end of the item, a comma, or the closing quote the planner writes
+# (Backlog: "### title"), so a shorter heading that prefixes a quoted
+# longer one is not listed. Groom's proof that a merged item listed it.
 item_lists() {
-  valid '[0-9a-f]{7,40}' "$2" || return 1
-  for at in "$2^" "$2"; do
-    queue_at "$at" | C="$1" H="$3" awk '
-      /^[0-9]+[.] / { item = $0; sub(/^[0-9]+[.] /, "", item); on = index(item, "`" ENVIRON["C"] "` (") == 1 }
-      !NF || /^#/ { on = 0 }
-      on && !/^[0-9]+[.] / { line = $0; sub(/^[ \t]+/, "", line); item = item " " line }
-      on && index(item, ENVIRON["H"]) { found = 1; exit }
-      END { exit !found }' && return 0
-  done
-  return 1
+  queue_items "$1" "$2" | H="$3" awk '
+    {
+      h = ENVIRON["H"]; o = 0
+      while ((p = index(substr($0, o + 1), h)) > 0) {
+        p += o; o = p
+        before = p > 1 ? substr($0, p - 1, 1) : ""
+        after = substr($0, p + length(h), 1)
+        if (before != "#" && (after == "" || after ~ /["`,]/)) { found = 1; exit }
+      }
+    }
+    END { exit !found }'
 }
 
 # True when COMMIT changes a file the entry under the heading line HEADING
-# names, as a whole path token (a "./" prefix allowed, a "." after it ending
-# a sentence): in the heading or its "- Location:" or "- Where:" lines, or
-# anywhere in an entry with neither, such as a group of findings. Groom's
-# proof that the commit fixed it.
+# names, as a whole path token (a "./" prefix allowed, a "." after it only
+# ending a sentence, so not tools/c.sh.bak for tools/c.sh): in the heading
+# or its "- Location:" or "- Where:" lines, or anywhere in an entry with
+# neither, such as a group of findings. A merge commit lists no file, so it
+# proves nothing. Groom's proof that the commit fixed it.
 touches_entry() {
-  files=$(git diff-tree --no-commit-id --name-only -r -m --root --end-of-options "$1" 2>/dev/null)
+  files=$(git diff-tree --no-commit-id --name-only -r --root --end-of-options "$1" 2>/dev/null)
   [ -n "$files" ] || return 1
   backlog_entry "$2" | F="$files" awk '
     /^#+ / || /^- (Location|Where):/ { named = named "\n" $0; marked += !/^#+ / }
@@ -2411,7 +2431,8 @@ touches_entry() {
           before = substr(rest, p - 1, 1)
           if (before == "/" && substr(rest, p - 2, 1) == ".") before = substr(rest, p - 3, 1)
           after = substr(rest, p + length(f[i]), 1)
-          if (before !~ /[A-Za-z0-9_.\/-]/ && after !~ /[A-Za-z0-9_\/-]/) found = 1
+          if (after == ".") after = substr(rest, p + length(f[i]) + 1, 1)
+          if (before !~ /[A-Za-z0-9_.\/-]/ && after !~ /[A-Za-z0-9_.\/-]/) found = 1
           rest = substr(rest, p + 1)
         }
       }
@@ -2449,6 +2470,7 @@ groom() {
   [ "$rows" -ge "$sprint_size" ] || die "groom: sprint-$sprint_n has $rows of $sprint_size history rows; run history first"
   removals=""
   repeats=""
+  base_ok=""
   if [ -f "$plan_dir/groom.txt" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
       [ -n "$line" ] || continue
@@ -2470,8 +2492,8 @@ groom() {
         fixed)
           valid '[0-9a-f]{7,40}' "$word" && git merge-base --is-ancestor "$word" HEAD 2>/dev/null ||
             die "groom: $word is not a commit of HEAD: $line"
-          valid '[0-9a-f]{7,40}' "$sprint_base" && git rev-parse -q --verify --end-of-options "$sprint_base^{commit}" > /dev/null ||
-            die "groom: the base of sprint-$sprint_n, $sprint_base, names no commit, so no fix is in its range: $line"
+          [ -n "$base_ok" ] || { valid '[0-9a-f]{7,40}' "$sprint_base" && git rev-parse -q --verify --end-of-options "$sprint_base^{commit}" > /dev/null ||
+            die "groom: the base of sprint-$sprint_n, $sprint_base, names no commit, so no fix is in its range: $line"; base_ok=1; }
           ! git merge-base --is-ancestor "$word" "$sprint_base" 2>/dev/null ||
             die "groom: $word is outside the range of sprint-$sprint_n, $sprint_base..HEAD: $line"
           touches_entry "$word" "$heading" ||
