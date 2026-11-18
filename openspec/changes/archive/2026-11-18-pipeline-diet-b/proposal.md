@@ -17,7 +17,7 @@ Out of scope: `tools/rules.sh` is not edited; `.claude/agents/contributor.md` is
 
 ## Figures
 
-The run state's figures before the implement step: 366,680 total tokens recorded by earlier starts of this run (the first run's stop included), against the 1,091,490 total average; its output tokens and the final total are filled at the package step from `sh tools/run_state.sh budget pipeline-diet-b`, against the 183,053 output average.
+The run state's figures before the implement step: 366,680 total tokens recorded by earlier starts of this run (the first run's stop included), against the 1,091,490 total average; at the package step `sh tools/run_state.sh budget pipeline-diet-b` reports 366,680 total tokens recorded (the package, CI, and merge starts not yet counted) against the 1,091,490 total average, and 350,870 output tokens against the 183,053 output average, an output overrun the run state notes for the planner (pillar 3: it never stops the run).
 
 ## Capabilities
 
