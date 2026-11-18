@@ -141,8 +141,13 @@ ok   the current window, at the bottom, draws its selection
 ok   the other window on the same buffer draws none
 ok   on any row
 ok   nothing is highlighted before a search
-ok   every match is in the Search group
+ok   every match is in the Search group, the one under the cursor in CurSearch
 ok   the row is repainted when the highlight appears
+ok   The current match is bold: the cursor on the second match moves CurSearch there
+ok   the row is repainted when the current match moves
+ok   with the cursor off every match, all are in Search
+ok   The current match is bold: the current window draws CurSearch on its cursor's match
+ok   The current match is bold: the other window on the buffer draws CurSearch on the match under its own cursor
 ok   a hidden highlight is not drawn
 ok   nohlsearch draws nothing
 ok   an empty match is not drawn, a longer one is
@@ -168,4 +173,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 170 passed, 0 failed
+adapters_frame_presenter: 175 passed, 0 failed

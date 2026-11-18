@@ -13,7 +13,8 @@ module DomainThemeTest
   DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
   NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
   # The palettes whose indent guides recede behind the text, ordered
-  # below Comment rather than held to 3:1, and the guide groups.
+  # below Comment rather than held to 3:1, and whose float border keeps
+  # its own 1.3:1 floor, and the guide groups.
   RECEDING = ["carat-dark", "carat-light"]
   GUIDES = [H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
 
@@ -134,14 +135,14 @@ module DomainThemeTest
   # color with the palette's, "unpaired"; with layer
   # H::CURSOR_LINE_LAYER, each group as drawn on the cursor line, held to
   # the same thresholds. The guides of a RECEDING palette are left to
-  # guide_order.
+  # guide_order, its float border to border_low.
   #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
   def self.low_contrast(theme, at256, layer)
     out = []
     id = 0
     receding = RECEDING.include?(theme.name)
     while id < H::COUNT
-      unless NO_TEXT.include?(id) || (receding && GUIDES.include?(id))
+      unless NO_TEXT.include?(id) || (receding && (GUIDES.include?(id) || id == H::FLOAT_BORDER))
         fg = theme.fg(id + layer)
         bg = theme.bg(id + layer)
         if fg < 0 || bg < 0
@@ -191,6 +192,34 @@ module DomainThemeTest
     out << "IblScope #{ratios[1]} not below Comment #{ratios[2]}" unless ratios[1] < ratios[2]
     out << "IblIndent #{ratios[0]} below 1.1:1" if ratios[0] < 110
     out
+  end
+
+  # FloatBorder's contrast on its background, on layer 0 or on
+  # H::CURSOR_LINE_LAYER, at 24 bits or at 256 colors, when below 1.3:1.
+  #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
+  def self.border_low(theme, at256, layer)
+    id = H::FLOAT_BORDER + layer
+    fg = theme.fg(id)
+    bg = theme.bg(id)
+    if at256
+      fg = shown_256(fg, theme.fg256(id))
+      bg = shown_256(bg, theme.bg256(id))
+    end
+    ratio = contrast(fg, bg)
+    ratio < 130 ? ["FloatBorder #{ratio}"] : []
+  end
+
+  # A role's row of a palette: its 24-bit color, its 256-color index,
+  # and its 16-color index, read from the palette's table, for any role,
+  # drawn by a group or not.
+  #: (Array[Integer], Integer) -> Array[Integer]
+  def self.role_row(palette, role)
+    i = 0
+    while i + 3 < palette.length
+      return [palette[i + 1], palette[i + 2], palette[i + 3]] if palette[i] == role
+      i += 4
+    end
+    [-1, -1, -1]
   end
 
   # The groups drawn on the status bar's background: the lsp slot's and
@@ -365,7 +394,7 @@ module DomainThemeTest
       ["insert pill", [H::STATUS_MODE_INSERT], [0x282c34, 0x98c379, D::Theme::BOLD, 0, 10]],
       ["visual pill", [H::STATUS_MODE_VISUAL], [0x282c34, 0xc97fe0, D::Theme::BOLD, 0, 13]],
       ["replace pill", [H::STATUS_MODE_REPLACE], [0x282c34, 0xe8757e, D::Theme::BOLD, 0, 9]],
-      ["command pill", [H::STATUS_MODE_COMMAND], [0x282c34, 0xe5c07b, D::Theme::BOLD, 0, 11]],
+      ["The command pill is cyan: one_dark", [H::STATUS_MODE_COMMAND], [0x282c34, 0x56b6c2, D::Theme::BOLD, 0, 14]],
       ["lsp starting", [H::STATUS_LSP_STARTING], [0xe5c07b, 0x3e4452, 0, 0, 7]],
       ["lsp ready", [H::STATUS_LSP_READY], [0x98c379, 0x3e4452, 0, 0, 7]],
       ["lsp error", [H::STATUS_LSP_ERROR], [0xf5a3a8, 0x3e4452, D::Theme::BOLD, 1, 7]]
@@ -474,6 +503,66 @@ module DomainThemeTest
     ]) do |input|
       theme = D::Themes.find(input[0].to_s, "terminal")
       [theme.fg(H::INDENT_GUIDE), theme.fg(H::INDENT_GUIDE_SCOPE), theme.fg16(H::INDENT_GUIDE), theme.fg16(H::INDENT_GUIDE_SCOPE)]
+    end
+
+    # Scenario: The border colors. Carat's palettes give FloatBorder its
+    # own color, basic color 8 at 16 colors.
+    t.cases([
+      ["The border colors: carat-dark", ["carat-dark"], [0x3b4157, 0x15171e, 8]],
+      ["The border colors: carat-light", ["carat-light"], [0xc9cdd9, 0xeceef3, 8]]
+    ]) do |input|
+      theme = D::Themes.find(input[0].to_s, "terminal")
+      [theme.fg(H::FLOAT_BORDER), theme.bg(H::FLOAT_BORDER), theme.fg16(H::FLOAT_BORDER)]
+    end
+    # Scenario: The border stays apart from the float. Out of the 3:1
+    # floor, Carat's float border keeps 1.3:1 on the float's background,
+    # on its own and on the cursor line, at 24 bits and at 256 colors.
+    RECEDING.each do |name|
+      theme = D::Themes.find(name, "theme")
+      [0, H::CURSOR_LINE_LAYER].each do |layer|
+        where = layer == 0 ? "the float" : "the cursor line"
+        t.assert_equal([], border_low(theme, false, layer), "The border stays apart from the float: #{name} on #{where} at 24 bits")
+        t.assert_equal([], border_low(theme, true, layer), "The border stays apart from the float: #{name} on #{where} at 256 colors")
+      end
+    end
+    t.assert_equal([177, 174, 136, 132], [contrast(0x3b4157, 0x15171e), contrast(shown_256(0x3b4157, -1), shown_256(0x15171e, -1)), contrast(0xc9cdd9, 0xeceef3), contrast(shown_256(0xc9cdd9, -1), shown_256(0xeceef3, -1))], "the borders' ratios on the float: 1.77:1 and 1.74:1 dark, 1.36:1 and 1.32:1 light, rounded down")
+
+    # Scenario: The search colors. Search and Todo on the soft tint in
+    # their own text color, black on bright yellow at 16 colors;
+    # CurSearch on the strong INC_SEARCH color, bold, where Search is not.
+    t.cases([
+      ["The search colors: carat-dark", ["carat-dark"], [0xc8ccd8, 0x4a4129, 0, 11, 0xc8ccd8, 0x4a4129, 0xf0a35e, D::Theme::BOLD, D::Theme::BOLD, 0]],
+      ["The search colors: carat-light", ["carat-light"], [0x2f3340, 0xf7e3a1, 0, 11, 0x2f3340, 0xf7e3a1, 0xf2b06e, D::Theme::BOLD, D::Theme::BOLD, 0]]
+    ]) do |input|
+      theme = D::Themes.find(input[0].to_s, "terminal")
+      cur = H::CURRENT_SEARCH
+      [theme.fg(H::SEARCH), theme.bg(H::SEARCH), theme.fg16(H::SEARCH), theme.bg16(H::SEARCH), theme.fg(H::TODO), theme.bg(H::TODO), theme.bg(cur), theme.attr(cur) & D::Theme::BOLD, theme.attr16(cur) & D::Theme::BOLD, theme.attr(H::SEARCH) & D::Theme::BOLD]
+    end
+    # Scenario: The light selection shows. carat-light's Visual is
+    # #c2ccef, 1.5:1 from its background, where it was 1.26:1.
+    light_carat = D::Themes.find("carat-light", "theme")
+    selection = light_carat.bg(H::VISUAL)
+    t.assert_equal([0xc2ccef, true, 126], [selection, contrast(selection, light_carat.bg(H::NORMAL)) >= 150, contrast(0xdce1f2, 0xfbfbfd)], "The light selection shows: #c2ccef at 1.5:1 or more from the background, above the old 1.26:1")
+    # Scenario: The panel colors. carat-light's panels #eceef3;
+    # carat-dark's panels at index 233 at 256 colors, apart from the
+    # background's 234.
+    dark_carat = D::Themes.find("carat-dark", "theme")
+    t.cases([
+      ["The panel colors: carat-dark", ["carat-dark"], [0x2e3346]],
+      ["The panel colors: carat-light", ["carat-light"], [0xe3e6ef]]
+    ]) do |input|
+      name = input[0].to_s
+      theme = D::Themes.find(name, "theme")
+      [theme.bg(H::STATUS)]
+    end
+    t.assert_equal([0xeceef3, 0xeceef3, 0xeceef3], [light_carat.bg(H::TAB_LINE), light_carat.bg(H::STATUS_NC), light_carat.bg(H::NORMAL_FLOAT)], "The panel colors: carat-light's tab row, inactive bar, and floats are #eceef3")
+    t.assert_equal([233, 233, -1], [dark_carat.bg256(H::TAB_LINE), dark_carat.bg256(H::STATUS_NC), dark_carat.bg256(H::NORMAL)], "The panel colors: carat-dark's panels are index 233 at 256 colors")
+    t.assert_equal(234, Carat::Adapters::SgrTable.index_256(dark_carat.bg(H::NORMAL)), "carat-dark's background is the nearest index 234")
+    # Scenario: The command pill is cyan. Every palette's command pill,
+    # which the query pickers' prompts draw too, is on its cyan.
+    D::Themes::NAMES.each_with_index do |name, i|
+      theme = D::Themes.find(name, "terminal")
+      t.assert_equal(role_row(D::Themes::PALETTES[i], D::Themes::CYAN)[0], theme.bg(H::STATUS_MODE_COMMAND), "The command pill is cyan: #{name}")
     end
 
     lit = H::CURSOR_LINE_LAYER

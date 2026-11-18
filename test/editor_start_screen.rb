@@ -96,7 +96,8 @@ module EditorStartScreenTest
     t.assert_equal([5, true, last, 1.125], [start.step, start.showing, h.screen, h.clock.now], "the last frame stays, the loop back at its idle wait")
 
     # The theme's groups.
-    t.assert_equal([D::Highlight::TITLE, D::Highlight::TYPE, D::Highlight::OPERATOR, D::Highlight::FUNCTION, D::Highlight::KEYWORD, D::Highlight::SPECIAL, D::Highlight::COMMENT],
+    # Scenario: Colors. The sparkle is sapphire, in Title.
+    t.assert_equal([D::Highlight::TITLE, D::Highlight::TITLE, D::Highlight::OPERATOR, D::Highlight::FUNCTION, D::Highlight::KEYWORD, D::Highlight::SPECIAL, D::Highlight::COMMENT],
       [h.frame.hl_at(13, 35), h.frame.hl_at(3, 44), h.frame.hl_at(4, 36), h.frame.hl_at(6, 32), h.frame.hl_at(6, 46), h.frame.hl_at(15, 30), h.frame.hl_at(15, 39)],
       "wordmark, sparkle, table, crown, hint key, and hint text in their groups")
     t.assert_equal([D::StartArt::SPARKLE, 0x2588, 0x25E2], [h.frame.code_at(3, 44), h.frame.code_at(4, 36), h.frame.code_at(4, 35)], "the sparkle, a facet, and an edge")

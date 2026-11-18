@@ -30,7 +30,7 @@ ok   normal pill
 ok   insert pill
 ok   visual pill
 ok   replace pill
-ok   command pill
+ok   The command pill is cyan: one_dark
 ok   lsp starting
 ok   lsp ready
 ok   lsp error
@@ -167,6 +167,31 @@ ok   The guides order below Comment: carat-light on the cursor line at 24 bits
 ok   The guides order below Comment: carat-light on the cursor line at 256 colors
 ok   The guide colors: carat-dark
 ok   The guide colors: carat-light
+ok   The border colors: carat-dark
+ok   The border colors: carat-light
+ok   The border stays apart from the float: carat-dark on the float at 24 bits
+ok   The border stays apart from the float: carat-dark on the float at 256 colors
+ok   The border stays apart from the float: carat-dark on the cursor line at 24 bits
+ok   The border stays apart from the float: carat-dark on the cursor line at 256 colors
+ok   The border stays apart from the float: carat-light on the float at 24 bits
+ok   The border stays apart from the float: carat-light on the float at 256 colors
+ok   The border stays apart from the float: carat-light on the cursor line at 24 bits
+ok   The border stays apart from the float: carat-light on the cursor line at 256 colors
+ok   the borders' ratios on the float: 1.77:1 and 1.74:1 dark, 1.36:1 and 1.32:1 light, rounded down
+ok   The search colors: carat-dark
+ok   The search colors: carat-light
+ok   The light selection shows: #c2ccef at 1.5:1 or more from the background, above the old 1.26:1
+ok   The panel colors: carat-dark
+ok   The panel colors: carat-light
+ok   The panel colors: carat-light's tab row, inactive bar, and floats are #eceef3
+ok   The panel colors: carat-dark's panels are index 233 at 256 colors
+ok   carat-dark's background is the nearest index 234
+ok   The command pill is cyan: carat-dark
+ok   The command pill is cyan: carat-light
+ok   The command pill is cyan: one_dark
+ok   The command pill is cyan: one_light
+ok   The command pill is cyan: dark_plus
+ok   The command pill is cyan: light_plus
 ok   carat-dark: the terminal's background leaves the text color and background to it at 256 colors too
 ok   The cursor line on the terminal's background: carat-dark's Normal takes the palette's text color over CursorLine's background
 ok   carat-light: the terminal's background leaves the text color and background to it at 256 colors too
@@ -250,4 +275,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 252 passed, 0 failed
+domain_theme: 277 passed, 0 failed

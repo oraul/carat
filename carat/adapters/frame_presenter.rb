@@ -148,6 +148,7 @@ module Carat
       # @rbs @pattern: Domain::SearchPattern
       # @rbs @drawn: Integer
       # @rbs @row_of: Integer
+      # @rbs @cursor_col: Integer
       # @rbs @current: bool
       # @rbs @number_hl: Integer
       # @rbs @float_key: Array[Integer]
@@ -178,6 +179,7 @@ module Carat
         @pattern = Domain::SearchPattern.none
         @drawn = 0
         @row_of = -1
+        @cursor_col = -1
         @current = false
         @number_hl = Domain::Highlight::LINE_NUMBER
         @float_key = []
@@ -850,6 +852,7 @@ module Carat
           end
           unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
             @row_of = row
+            @cursor_col = fold >= 0 ? -1 : cur
             @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
@@ -1099,15 +1102,18 @@ module Carat
       end
 
       # Gives the matches of the highlighted pattern on the row being
-      # painted the Search group, up to the right edge of the window and
-      # while the frame's budget lasts, and the match a search prompt
-      # previews on it, in the current window, IncSearch. An empty match
-      # is not drawn.
+      # painted the Search group, the one holding the window's cursor
+      # CurSearch, up to the right edge of the window and while the
+      # frame's budget lasts, and the match a search prompt previews on
+      # it, in the current window, IncSearch. An empty match is not drawn.
+      # The row cache keys on the cursor's column, so a row repaints when
+      # its current match changes.
       #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, String) -> void
       def paint_matches(frame, frame_row, col, decoded, width, left, line)
         pattern = @pattern
         size = decoded.size
         limit = left + width
+        cursor = @cursor_col
         if pattern.ok?
           text = Domain::Search.searchable(line)
           length = text.length
@@ -1120,7 +1126,8 @@ module Carat
             last = found.end(0)
             break if first >= size || decoded.col(first) >= limit
             if last > first
-              fill_columns(frame, frame_row, col, decoded, left, limit, first, last, Domain::Highlight::SEARCH)
+              group = cursor >= first && cursor < last ? Domain::Highlight::CURRENT_SEARCH : Domain::Highlight::SEARCH
+              fill_columns(frame, frame_row, col, decoded, left, limit, first, last, group)
               from = last
             else
               from = first + 1
