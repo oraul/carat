@@ -14,7 +14,7 @@
 
 ## 4. Docs
 
-- [ ] 4.1 Update `docs/compatibility.md` (63 UI groups and the sign colors), `docs/architecture.md` and `docs/codebase-map.md` (the `Highlight` entry), checked by `make docs-lint`
+- [x] 4.1 Update `docs/compatibility.md` (63 UI groups and the sign colors), `docs/architecture.md` and `docs/codebase-map.md` (the `Highlight` entry), and `docs/plugins.md` (`place_sign`), checked by `make docs-lint`
 
 ## Workflow follow-up
 

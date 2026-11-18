@@ -80,7 +80,7 @@ Every method of the host takes plain values and returns a value; nothing calls b
 | `message(text, error)` | shows text in the message row |
 | `set_status(text)` | sets the plugin's segment on the status bar at priority `STATUS_PRIORITY` (10); `""` removes it |
 | `set_segment(text, priority)` | sets the plugin's segment with a priority from 0 to `PRIORITY_MAX` (99), 2.2; failed with "priority must be 0 to 99" outside it. Segments stand in the order first set, before the `lsp` slot, and a narrow bar drops the lowest priority first: the editor's own are the encoding 20, the file type 30, the branch 40, the percent 50, `lsp` 60, diagnostics 70, the position 80, the file 90, and the mode 100 |
-| `place_sign(buffer, row, icon)` | places the named icon as the plugin's sign on the row, replacing its own sign there and never another plugin's; when two plugins mark one row, the one registered first shows; a sign moves with its line and goes away with it |
+| `place_sign(buffer, row, icon)` | places the named icon as the plugin's sign on the row, drawn in the group of its icon (the diagnostic icons in their Diagnostic groups, the git icons in `Added`, `Changed`, and `Removed`, any other in `SignColumn`), replacing its own sign there and never another plugin's; when two plugins mark one row, the one registered first shows; a sign moves with its line and goes away with it |
 | `clear_signs(buffer)` | removes the signs this plugin placed in the buffer; `number` is how many |
 | `run_ex(text)` | runs an ex command line and returns its outcome; refused with `E169: Command too recursive` when plugin calls are already nested 4 deep |
 | `list_dir(path)` | the sorted entries of a directory in `lines` |

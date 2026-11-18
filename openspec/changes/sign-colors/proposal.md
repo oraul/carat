@@ -23,7 +23,7 @@ Every sign is drawn in `SignColumn`, which every palette colors yellow, so an er
 - Use cases: `BufferRequests#place_sign` passes `Highlight.sign_group(icon)`.
 - Adapters: `FramePresenter#paint_row` draws the glyph in the sign's group; `PaintedRows` repaints a row whose sign group changed.
 - Tests: `test/adapters_frame_presenter.rb` (frame rows on carat-dark and carat-light), `test/domain_buffer.rb`, `test/domain_theme.rb`, `test/use_cases_plugins.rb`, and the callers of `Buffer#place_sign` in `test/domain_edits.rb`.
-- Docs: `docs/compatibility.md` (the UI group count and the sign colors), `docs/codebase-map.md` (the `Highlight` line), `docs/architecture.md` (the `Highlight` group count).
+- Docs: `docs/compatibility.md` (the UI group count, the sign colors, and the git signs row), `docs/codebase-map.md` (the `Highlight`, `SignLayer`, and `Buffer` lines), `docs/architecture.md` (the `Highlight` group count), `docs/plugins.md` (`place_sign` draws the sign in its icon's group).
 - README.md: unchanged, its feature list names the sign column and the themes but no group colors.
 - docs/architecture.md: changed, its `Highlight` entry counts 63 UI groups.
 - Assumptions: git's deleted sign is red, as Neovim's `Removed` is; the diagnostic info and hint signs take `DiagnosticInfo` (blue) and `DiagnosticHint` (cyan); the empty sign cells keep `SignColumn`.
