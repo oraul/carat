@@ -61,7 +61,8 @@
 #                the project's tmp/.toolchain and build/spinel-cache,
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
 #                pending get trusted check scope moved bench metrics metric note
-#                budget spent review-due backlog-dups; [BASE=REV] sh
+#                budget spent review-due backlog-dups backlog-oldest;
+#                [BASE=REV] sh
 #                tools/gates.sh GATE...; sh tools/metrics.sh measure OUT
 #                [SCENARIO...], OUT
 #                build/metrics/current.tsv of the project or a worktree
@@ -610,7 +611,7 @@ make_form() {
 run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
-    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups) ;;
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     contributor:push)

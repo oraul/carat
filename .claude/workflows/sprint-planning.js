@@ -219,7 +219,7 @@ const reviewed = ran && !missed && noted && skeptical && swept
 
 phase('Plan')
 const plan = !reviewed ? null : await agent(
-  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
+  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 
 phase('Record')
