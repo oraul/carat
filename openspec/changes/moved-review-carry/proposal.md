@@ -11,7 +11,7 @@ After a merge of a moved main, `tools/run_state.sh moved` decides whether the qu
 - `review CHANGE KIND RESULT SUMMARY COMMIT` refuses a summary carrying `carried=1` unless the run state's `moved` record names COMMIT as its head and, as its reviewed commit, another commit, the one the existing `review.KIND` pass record names, so a carried review is recorded only after `moved` exited 0 at that head against the commit that review passed at, whatever line the checker returned; `moved` run at the head against itself, which always exits 0, backs nothing.
 - `tools/agent_guard.sh`: the read profile runs `moved` only as `moved CHANGE COMMIT`, a change name and a hexadecimal commit.
 - `.claude/workflows/deliver-change.js`: comments of `carried` and `carryReviews` say the shell backs the carry; the behavior is unchanged (a matching line still decides whether the reviews run again, and the record now needs the `moved` record).
-- `tools/tools_test.sh`: cases for a merge reverting a main-only file, a `:(exclude)carat` file name, and a failing `git diff`, each exiting 1 with no `moved` record and a carried review refused; a carried review recorded after `moved` exits 0; `set` refusing `moved`.
+- `tools/tools_test.sh`: cases for a merge reverting a main-only file, a `:(exclude)tools` file name, and a failing `git diff`, each exiting 1 with no `moved` record, the reverting and failing cases also refusing a carried review; a carried review recorded after `moved` exits 0; `set` refusing `moved`.
 
 Out of scope: the narrowed re-review after a main-moved merge (merge-main-path quality note 3, recorded in its findings); the merge gates (`tools/gates.sh`) and `tools/rules.sh`, which this change does not edit; main's workflow and gates judge this run as they are.
 
