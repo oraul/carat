@@ -7,7 +7,7 @@ export const meta = {
     { title: 'Plan', detail: 'planner: the next queue from the metrics history; security findings first' },
     { title: 'Scout', detail: 'one scout per edited map area without a current pack, at most three' },
     { title: 'Implement', detail: 'contributor: propose and apply, committing early' },
-    { title: 'Check', detail: 'checker: the fast stages through make; CI runs the rest' },
+    { title: 'Check', detail: 'the fast stages through make in a start that runs only the check lines; the checker reads a failed stage\'s log; CI runs the rest' },
     { title: 'Quality', detail: 'quality reviewer: code-review and the repository rules, beside security on the same commit' },
     { title: 'Security', detail: 'security reviewer on the committed diff, beside quality; never skipped' },
     { title: 'Benchmark', detail: 'allocations and rounds against the figures recorded for main; the agent against main only when they differ' },
@@ -41,8 +41,8 @@ export const meta = {
 // write them; the closing start runs every other line at the end, where
 // the package, CI, and merge phases wait (a resume reads pushed, pr, and
 // merged instead), under the guard's close profile, which allows only the
-// phases no merge gate reads. The checker and the merger run the metric
-// line first, so a fix round is counted before its check.
+// phases no merge gate reads. The check's run start and the merger run the
+// metric line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
 // script received. Each start's model tier and effort come from
@@ -116,7 +116,7 @@ let estimate = ''
 // return the schema; tools/tools_test.sh compares them with these lines.
 const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, moved: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
-const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10 }
+const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10, run: 8 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
 const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
 const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
@@ -227,6 +227,16 @@ const CHECK = {
   },
   required: ['passed', 'head', 'stages', 'verdict'],
 }
+// The check's run start (checkRunTask): the lines' last lines, nothing read.
+const CHECK_RUN = {
+  type: 'object',
+  properties: {
+    verdict: CHECK.properties.verdict, bench_same: CHECK.properties.bench_same, bench_report: LINES,
+    budget: CHECK.properties.budget, moved: CHECK.properties.moved,
+  },
+  required: ['verdict'],
+}
+const FIXED_IN_PLACE = { ...LINES, description: 'each finding the input lists as fixed in place that the fix removed, verbatim as listed; empty when the input lists none' }
 const FINDING = {
   type: 'object',
   properties: {
@@ -238,12 +248,12 @@ const FINDING = {
 const NOT_REVIEWED = { ...LINES, description: 'the files of the diff you did not review when the cap stopped you, empty when none' }
 const QUALITY = {
   type: 'object',
-  properties: { head: HEAD, blocking: LINES, advisory: LINES, not_reviewed: NOT_REVIEWED },
+  properties: { head: HEAD, blocking: LINES, advisory: LINES, not_reviewed: NOT_REVIEWED, fixed_in_place: FIXED_IN_PLACE },
   required: ['head', 'blocking', 'advisory'],
 }
 const SECURITY = {
   type: 'object',
-  properties: { ran: { type: 'boolean' }, head: HEAD, findings: { type: 'array', items: FINDING }, not_reviewed: NOT_REVIEWED },
+  properties: { ran: { type: 'boolean' }, head: HEAD, findings: { type: 'array', items: FINDING }, not_reviewed: NOT_REVIEWED, fixed_in_place: FIXED_IN_PLACE },
   required: ['ran', 'head', 'findings'],
 }
 const BENCH = {
@@ -319,14 +329,17 @@ function reviewLeft(r) {
   return Array.isArray(r.not_reviewed) ? r.not_reviewed.filter(Boolean) : []
 }
 // A continued review's result: the later start's head and coverage, the
-// findings of both without duplicates.
+// findings and the confirmed in-place fixes of both without duplicates, a
+// list only one start returned kept (a continued start is never given the
+// in-place list, so it returns no fixed_in_place of its own).
 function combineReviews(a, b) {
   if (!a || !b) return b || a
   const out = { ...b }
-  for (const key of ['findings', 'blocking', 'advisory']) {
-    if (!Array.isArray(a[key]) || !Array.isArray(b[key])) continue
+  for (const key of ['findings', 'blocking', 'advisory', 'fixed_in_place']) {
+    if (!Array.isArray(a[key]) && !Array.isArray(b[key])) continue
     const seen = new Set()
-    out[key] = a[key].concat(b[key]).filter((f) => { const k = JSON.stringify(f); return seen.has(k) ? false : seen.add(k) })
+    const both = (Array.isArray(a[key]) ? a[key] : []).concat(Array.isArray(b[key]) ? b[key] : [])
+    out[key] = both.filter((f) => { const k = JSON.stringify(f); return seen.has(k) ? false : seen.add(k) })
   }
   return out
 }
@@ -779,7 +792,7 @@ const addAdvisories = (list) => {
 }
 const findings = () => backlog.concat(qualityAdvisory.map((a) => `quality advisory ${a}`))
 function handOver() {
-  const fresh = findings().filter((f) => !handed.has(f))
+  const fresh = findings().filter((f) => !handed.has(f) && !fixedInPlace.has(f))
   for (const f of fresh) handed.add(f)
   return fresh
 }
@@ -893,6 +906,28 @@ function checkVerdict(line) {
   if (m) return { kind: 'running', at: m[1], stage: '', log: '' }
   return { kind: 'none', at: '', stage: '', log: '' }
 }
+// The check's lines, which the workflow builds and a start of the checker
+// file's Mode: run runs exactly, reading nothing (each a form the guard's
+// read profile allows): the run's figures and the check; after a pass,
+// spent and bench; and moved when asked. The checker's reading start runs
+// only on a failed stage (checkerNeeded): a pass, a refusal (its message is
+// its log), and a check that did not finish start none. tools/tools_test.sh
+// runs these helpers.
+function checkLines(change, backed, movedFrom, metric) {
+  const rs = 'sh tools/run_state.sh'
+  return {
+    check: `${metric ? `${metric}; ` : ''}${rs} check ${change}${backed ? ` ${backed}` : ''}`,
+    passed: `${rs} spent ${change}; ${rs} bench ${change}`,
+    moved: movedFrom ? `${rs} moved ${change} ${movedFrom}` : '',
+  }
+}
+function checkRunTask(lines) {
+  return `Mode: run. Run each line below exactly as written, as your Mode run section says, and read nothing else.\n1. \`${lines.check}\`: while it exits 3, run it again, at most three times; return its last line, verbatim, as verdict.\n2. Only when that line begins \`check: every stage passed\`: \`${lines.passed}\`; return the line spent printed as budget, bench_same true when the line exited 0, and the last 20 lines bench printed as bench_report.${lines.moved ? `\n3. Then \`${lines.moved}\`; return its last line, verbatim, as moved.` : ''}`
+}
+function checkerLogTask(v) {
+  return `Mode: log. The check failed at stage ${v.stage} at ${v.at}: read only its log, ${v.log}, as your Mode log section says, and return passed false, the verdict \`check: stage ${v.stage} failed at ${v.at}; read ${v.log}\`, and the lines that show the cause. Run no check.`
+}
+const checkerNeeded = (v) => v.kind === 'failed' && v.stage !== 'refused'
 const sameCommit = (a, b) => COMMIT.test(a || '') && COMMIT.test(b || '') && (a.startsWith(b) || b.startsWith(a))
 let reruns = 0
 let rerunWhy = ''
@@ -972,15 +1007,18 @@ function mayFix() {
   return false
 }
 
-// The metric line as the first instruction of an agent that may run it.
-const figuresFirst = () => {
-  const line = metricLine()
-  return line ? ` First run this line of the run's figures, exactly as written: \`${line}\`\n` : ''
-}
 
+// The quality review's request: a first pass (no earlier review scopes it)
+// is asked for every blocking finding at once, so one fix round answers
+// them (vim-folds-a found six one round at a time, in three rounds).
+// tools/tools_test.sh runs this helper.
+function qualityTask(scope, more) {
+  const first = more || scope ? '' : ' This is the first pass: review the whole diff and return every blocking finding you can find, not only the first, so one fix round answers them all.'
+  return `Review the committed diff and return the findings.${first}${more || scope}`
+}
 // The quality review at the head, with the scope priorQuality gives.
 function qualityReview(scope, more) {
-  return agent(`${intro()} Review the committed diff and return the findings.${more || scope}${capLine('quality')}`,
+  return agent(`${intro()} ${qualityTask(scope, more)}${capLine('quality')}`,
     calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Quality', label: more ? 'quality-reviewer: continued' : 'quality-reviewer' }))
 }
 // The security reviewer's scope in a fix round: the commits since this
@@ -996,7 +1034,7 @@ function priorSecurity() {
 function securityReview(more) {
   return agent(more
     ? `${intro()} ${continuedSecurity(more)}${capLine('security')}`
-    : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${capLine('security')}`,
+    : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${inPlaceCheck('security')}${capLine('security')}`,
   calibrate('security', { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' }))
 }
 // The continued security request, its closing sentence on a line of its
@@ -1032,7 +1070,7 @@ async function continueReview(kind, scope, first) {
 async function reviews() {
   const kinds = ['quality', 'security'].filter((k) => !reviewedAtHead(k))
   if (!kinds.length) return ''
-  const scope = kinds.includes('quality') ? priorQuality() : ''
+  const scope = kinds.includes('quality') ? `${priorQuality()}${inPlaceCheck('quality')}` : ''
   const run = { quality: () => qualityReview(scope, ''), security: () => securityReview('') }
   if (kinds.length > 1) { phase('Quality'); phase('Security') } else phase(kinds[0] === 'quality' ? 'Quality' : 'Security')
   const reviewCap = (r) => callCap('ran' in r ? 'security' : 'quality')
@@ -1055,7 +1093,9 @@ async function reviews() {
     for (const f of s.findings.filter((f) => !blocking.includes(f))) {
       const line = `security ${f.severity} (${f.confidence}) ${f.file}:${f.line || 0} ${f.title}; fix: ${f.fix}`
       addBacklog(line)
+      if (f.in_change) reviewFindings.push(line)
     }
+    confirmInPlace('security', s.fixed_in_place)
     note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
     const count = (severity) => s.findings.filter((f) => f.severity === severity).length
     reviewed('security', !blocking.length, s.head, { high: count('High'), medium: count('Medium'), low: count('Low'), blocking: blocking.length })
@@ -1076,6 +1116,8 @@ async function reviews() {
     qualityBlocking = q.blocking
     qualityAt = q.head
     addAdvisories(q.advisory)
+    reviewFindings.push(...q.advisory.map((a) => `quality advisory ${String(a).replace(/^[0-9a-f]{7,40} /, '')}`))
+    confirmInPlace('quality', q.fixed_in_place)
     verdict('quality', !q.blocking.length)
     note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
     reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
@@ -1110,6 +1152,45 @@ function resumePush(pushed, head, used) {
   return 'push'
 }
 
+// Fix in place (cut 4b, the user's decision of 2026-11-18): each security
+// finding in code the change touches, of any severity, and each quality
+// advisory of a review this start ran is offered to the contributor once,
+// in the round of the blocking findings, or in a round of its own when
+// nothing blocks and a round remains after it, so a blocking finding the
+// fix brings still has one; at the last round it is recorded, not fixed.
+// The contributor fixes those in files the change edits whose fix stays
+// there and adds no behavior, each a task of tasks.md; the check and both
+// reviews run again at the new head, whose reviewers list, verbatim, the
+// ones they confirm fixed (fixed_in_place). Only those leave the findings
+// handed to docs/findings/CHANGE.md; every other stays recorded. A resume
+// past the push offers none. tools/tools_test.sh runs these helpers.
+let reviewFindings = []
+const offered = new Set()
+const fixedInPlace = new Set()
+let awaiting = { quality: [], security: [] }
+function inPlaceRound(blocked, count, used, limit) {
+  if (!count) return 'none'
+  if (blocked) return 'with'
+  return used + 1 < limit ? 'alone' : 'record'
+}
+function inPlaceTask(list) {
+  return `Fix in place, in this round, each finding below that lies in a file the change edits when its fix stays in those files and adds no behavior: each one a task of the change's tasks.md, marked done with its fix, its delta spec updated when specified behavior moves. Leave any other; it stays recorded for docs/findings/${state.change}.md.\n- ${list.join('\n- ')}`
+}
+// What a reviewer after an in-place round is asked: the findings of its
+// kind offered then, to confirm fixed.
+function inPlaceCheck(kind) {
+  const list = awaiting[kind]
+  return list.length ? `\nFindings fixed in place since the last review, to check: list in fixed_in_place, verbatim as written here, each one the fix removed; one still present is a finding as before.\n- ${list.join('\n- ')}` : ''
+}
+function confirmInPlace(kind, listed) {
+  for (const f of listed || []) if (awaiting[kind].includes(f)) fixedInPlace.add(f)
+  awaiting[kind] = []
+}
+function offer(list, awaited) {
+  for (const f of list) offered.add(f)
+  if (awaited) awaiting = { quality: list.filter((f) => f.startsWith('quality ')), security: list.filter((f) => f.startsWith('security ')) }
+}
+
 async function rounds(fixes = true) {
   for (;;) {
     let blocked = ''
@@ -1119,11 +1200,10 @@ async function rounds(fixes = true) {
       // The check the workflow last recorded: stage records count only at
       // it, so a record at the head that no workflow record backs runs again.
       const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
-      const how = backed ? ` The last check the workflow recorded passed at ${backed}: run \`sh tools/run_state.sh check ${state.change} ${backed}\`.` : ''
-      const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); run it again: a check still running at this commit is rejoined.` : ''
-      const moved = movedFrom ? ` Once the check passed, run \`sh tools/run_state.sh moved ${state.change} ${movedFrom}\` and return its last line, verbatim, as moved.` : ''
-      const c = await measured('check', () => agent(`${intro()}${figuresFirst()} Run the checks and report.${how}${again}${moved}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK) })), callCap('checker'))
-      if (!c) { stopped = 'the checker returned no result'; return false }
+      const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); a check still running at this commit is rejoined.` : ''
+      const lines = checkLines(state.change, backed, movedFrom, metricLine())
+      const c = await measured('check', () => agent(`${intro()} ${checkRunTask(lines)}${again}${capLine('run')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK_RUN), label: 'checker: run' })), callCap('run'))
+      if (!c) { stopped = 'the check start returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
       const v = checkVerdict(c.verdict)
@@ -1146,7 +1226,11 @@ async function rounds(fixes = true) {
         benchSameAt = c.bench_same ? head : ''
         benchReport = c.bench_report || []
         if (movedFrom) carryReviews(c.moved)
-      } else blocked = v.stage === 'refused' ? `The check refused to run: ${v.log}` : `The stage ${v.stage} failed; its log, ${v.log}:\n${c.log_excerpt || ''}`
+      } else if (checkerNeeded(v)) {
+        // The checker starts only here, to read the failed stage's log.
+        const r = await measured('check', () => agent(`${intro()} ${checkerLogTask(v)}${capLine('checker')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK), label: 'checker: log' })), callCap('checker'))
+        blocked = `The stage ${v.stage} failed; its log, ${v.log}:\n${(r && r.log_excerpt) || ''}`
+      } else blocked = `The check refused to run: ${v.log}`
     }
     if (!blocked) {
       const r = await reviews()
@@ -1173,6 +1257,19 @@ async function rounds(fixes = true) {
         reviewed('bench', !b.blocking.length, b.head, { blocking: b.blocking.length })
         if (b.blocking.length) { blocked = `Blocking regressions:\n- ${b.blocking.join('\n- ')}`; by = 'bench' }
       }
+    }
+    // Fix in place: the findings of this round's reviews, offered once.
+    const fresh = fixes ? reviewFindings.filter((f) => !offered.has(f)) : []
+    reviewFindings = []
+    const place = inPlaceRound(Boolean(blocked), fresh.length, rework, ROUNDS + extra)
+    if (place === 'record') note(`fix in place: ${fresh.length} finding(s) left at the round limit, recorded for docs/findings/`)
+    offer(fresh, place === 'with' || place === 'alone')
+    if (place === 'with') blocked += `\n\n${inPlaceTask(fresh)}`
+    if (place === 'alone') {
+      note(`fix in place: ${fresh.length} finding(s) in a round of their own; check, security, and quality run again at its head`)
+      phase('Implement')
+      if (!(await contributor('fix', inPlaceTask(fresh)))) return false
+      continue
     }
     if (!blocked) return true
     const refused = fixes ? '' : resumeFix(by, Number(state.review_fixes || 0) + reviewFixRounds)

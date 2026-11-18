@@ -274,7 +274,8 @@
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
 #                               total tokens and wall minutes, and its output
-#                               tokens
+#                               tokens; a sprint-N-records change's total
+#                               without sprint-planning's own starts
 #   spent CHANGE                print "under:", "over:", or "no estimate:" with
 #                               the output tokens spent so far against the
 #                               output budget of the change's estimate
@@ -1779,13 +1780,21 @@ estimate_of() {
 
 # The budget line: the run's total tokens and wall minutes against the
 # budgets of its estimate (TOKEN_BUDGETS, MINUTE_BUDGETS), its output tokens
-# beside them, for the retrospective to flag an overrun.
+# beside them, for the retrospective to flag an overrun. A sprint's records
+# change counts its own work: the total tokens of sprint-planning's starts
+# (metric.weighted.sprint, which tokens keys) are set apart and named.
 budget_line() {
   [ -f "$(state_file)" ] || die "no run state for $change"
   size=$(estimate_of)
   total=$(value metric.total_tokens)
   minutes=$(read_key metric.wall_min)
-  actual="actual $total total tokens${minutes:+ in $minutes minutes}, $(out_tokens) output tokens"
+  apart=""
+  review=$(read_key metric.weighted.sprint | cut -d/ -f1)
+  if records_change "$change" && valid '[0-9]+' "$review" && valid '[0-9]+' "$total"; then
+    total=$(awk -v a="$total" -v b="$review" 'BEGIN { d = a - b; printf "%.0f", d < 0 ? 0 : d }')
+    apart=", $review total tokens of sprint-planning's reviews set apart"
+  fi
+  actual="actual $total total tokens${minutes:+ in $minutes minutes}, $(out_tokens) output tokens$apart"
   if [ "$size" = "-" ]; then
     echo "no estimate: neither the run state nor a queue item of $change states a size; $actual"
     return
@@ -1854,7 +1863,9 @@ ci_stages() {
 # message's id, model, and usage (a message repeated on several lines
 # counts once, its last line), and agent-ID.meta.json, its label and
 # workflow phase. A start's key is its phase in lowercase, record for the
-# record starts; its tier is cheap when its model contains a tier alias of
+# record starts, sprint for sprint-planning's own (a label beginning
+# "sprint:" or naming a sprint, skeptic, or periodic review), which budget
+# sets apart from a records change's work; its tier is cheap when its model contains a tier alias of
 # an agent file's model: line, else session. Records metric.start.N
 # "KEY/TIER/TOTAL/WEIGHTED", adds to metric.weighted.KEY
 # "TOTAL/WEIGHTED/STARTS" and metric.weighted_tokens, and appends DIR's
@@ -1876,8 +1887,11 @@ add_tokens() {
     [ -f "$file" ] || continue
     meta=${file%.jsonl}.meta.json
     label=$(sed -n 's/.*"description":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1)
-    key=record
-    [ "$label" = record ] || key=$(sed -n 's/.*"workflowPhase":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9')
+    case $label in
+      record) key=record ;;
+      sprint:*|*': sprint'*|*': skeptic'|*periodic*) key=sprint ;;
+      *) key=$(sed -n 's/.*"workflowPhase":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9') ;;
+    esac
     [ -n "$key" ] || key=other
     line=$(A="$aliases" P="$TIER_PRICES" awk '
       function num(s, field,   m) {
