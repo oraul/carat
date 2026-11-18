@@ -262,7 +262,9 @@
 #                               (the waiting sprint plan's), and is not a
 #                               sprint's records change, or a
 #                               pending change holds a proposal or finding
-#                               (PLAN_NOTES) to place, or a review run records
+#                               (PLAN_NOTES) to place that no sprint
+#                               records change merged after it placed, or
+#                               the head item names no estimate, or a review run records
 #                               a failing periodic security review with no
 #                               change planned and merged since
 #                               (merged_since) nor a later periodic
@@ -280,6 +282,12 @@
 #                               tokens earlier starts recorded against
 #                               TOKEN_BUDGETS; a note after a passing check,
 #                               always exit 0
+#   reviewed-edits CHANGE       list the files changed since the commit
+#                               the security review passed at (commits,
+#                               working tree, untracked) outside the
+#                               records-only paths (RECORDS_RE) and exit 1
+#                               when any is, or when no pass is recorded:
+#                               the package step edits no reviewed file
 #   pending                     the merged changes with no history row yet
 #   history [CHANGE]            nothing when CHANGE's run state sets
 #                               records=skip; else append a history row for
@@ -1665,6 +1673,31 @@ pending_list() {
   done
 }
 
+# The files the package step may not edit: those changed since the commit
+# of the security review's pass record, which the push gate settles at
+# HEAD, in commits, the working tree, or untracked, outside the
+# records-only paths (RECORDS_RE). Exit 1 names them, or the missing pass
+# (package-advisory-edit); a reviewed file stays as reviewed and an
+# advisory not fixed in review goes to the findings file.
+reviewed_edits() {
+  record=$(read_key review.security)
+  case "$record" in
+    pass\ *) ;;
+    *) echo "reviewed-edits: no passing security review is recorded for $change: ${record:-none}"; return 1 ;;
+  esac
+  at=${record#pass }
+  at=${at%% *}
+  valid '[0-9a-f]{7,40}' "$at" && git rev-parse --verify -q --end-of-options "$at^{commit}" > /dev/null 2>&1 ||
+    { echo "reviewed-edits: the security review's commit $at names no commit"; return 1; }
+  edited=$({ git diff --no-renames --name-only --end-of-options "$at" -- && git ls-files --others --exclude-standard; } 2>/dev/null |
+    grep -v -E -e "^($RECORDS_RE)" -e '^$' | sort -u | tr '\n' ' ')
+  if [ -n "$edited" ]; then
+    echo "reviewed-edits: files changed since the security review at $at: ${edited% }; restore each with git restore --source=$at -- FILE and record the finding in docs/findings/$change.md instead"
+    return 1
+  fi
+  echo "reviewed-edits: none since the security review at $at"
+}
+
 # The run states whose merged value is a commit hash naming no commit on
 # main and that have no history row, as "NAME VALUE" lines: never merged.
 unmerged_list() {
@@ -2538,7 +2571,9 @@ descends() {
 # else needs it; then when the change is not the first item of
 # a lane queue (docs/queue-feature.md or docs/queue-backlog.md), or when another merged change without a history row
 # holds a note of a PLAN_NOTES kind (a retrospective proposal, an
-# overrun, a periodic finding) that only the planner places; otherwise the head item is taken as written, its size
+# overrun, a periodic finding) that only the planner places, unless a
+# sprint's records change merged after it (placed_by_sprint), or when the
+# head item names no estimate; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in its lane queue.
 plan_needed() {
@@ -2575,6 +2610,7 @@ plan_needed() {
   fi
   for other in $(pending_list); do
     [ "$other" != "$change" ] || continue
+    ! placed_by_sprint "$(change=$other; merged_commit)" || continue
     n=$(change=$other; grep -c -E "^  \"note[.][0-9]+\": \"($PLAN_NOTES) " "$(state_file)")
     if [ "$n" -gt 0 ]; then
       echo "needed: $other holds $n proposal(s) or finding(s) to place"
@@ -2582,7 +2618,27 @@ plan_needed() {
     fi
   done
   size=$(printf '%s\n' "$head_item" | awk 'match($0, /estimated (small|medium|large)/) { print substr($0, RSTART + 10, RLENGTH - 10) }')
-  echo "not needed: $change heads $queue, estimated ${size:--}, and no pending change holds a proposal or finding"
+  if [ -z "$size" ]; then
+    echo "needed: $change heads $queue with no estimate"
+    return 0
+  fi
+  echo "not needed: $change heads $queue, estimated $size, and no pending change holds a proposal or finding"
+  return 1
+}
+
+# True when a sprint's records change (sprint-N-records) merged after the
+# merged commit MERGED: that sprint's planner read the notes of every
+# change merged before it and wrote the queue the records change applied,
+# so they wait for no delivery's planner (plan-skip-placed).
+placed_by_sprint() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  placed_since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  for placed_file in "$state_dir"/sprint-*-records.json; do
+    [ -f "$placed_file" ] || continue
+    placed_merged=$(change=$(basename "$placed_file" .json); merged_commit)
+    [ -n "$placed_merged" ] || continue
+    descends "$placed_since" "$placed_merged" && return 0
+  done
   return 1
 }
 
@@ -2983,6 +3039,9 @@ case "$command" in
   plan-needed)
     [ $# -eq 0 ] || usage
     plan_needed ;;
+  reviewed-edits)
+    [ $# -eq 0 ] || usage
+    reviewed_edits ;;
   *)
     usage ;;
 esac

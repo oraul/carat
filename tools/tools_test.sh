@@ -1946,6 +1946,41 @@ state review review-20261117 periodic-security pass "high=0 medium=0 low=0 block
 expect "run_state: plan-needed leaves a failing periodic security review a later passing one superseded" 1 "^not needed" state plan-needed next
 printf '# Queue\n\n1. UI track: themes (T5, estimated medium).\n' > docs/queue-backlog.md
 expect "run_state: plan-needed names a head without a change name" 0 "^needed: next is not the head of docs/queue-feature[.]md docs/queue-backlog[.]md [(]no named item, no named item[)]" state plan-needed next
+# A placed, estimated head runs no planner (plan-skip-placed): the notes
+# of a change merged before a sprint's records change were placed by that
+# sprint's planner; the records change's own notes and an unestimated head
+# still need one.
+fresh placed
+printf '# Queue\n\n1. `next` (T1, estimated small): one.\n' > docs/queue-backlog.md
+commit "docs: the queue"
+state init next chore/next > /dev/null
+state init done1 chore/done1 > /dev/null
+echo d1 > d1.txt && commit "chore: done1" && state set done1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+state note done1 retro "drop a step; evidence: 9000 tokens" > /dev/null
+expect "run_state: plan-needed names a pending proposal no sprint plan placed" 0 "^needed: done1 holds 1 proposal" state plan-needed next
+state init sprint-3-records chore/sprint-3-records > /dev/null
+echo r3 > r3.txt && commit "chore: the records" && state set sprint-3-records merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: plan-needed leaves notes a later sprint plan placed" 1 "^not needed: next heads docs/queue-backlog[.]md, estimated small," state plan-needed next
+state note sprint-3-records retro "fold the rows; evidence: 9000 tokens" > /dev/null
+expect "run_state: plan-needed keeps a records change's own notes" 0 "^needed: sprint-3-records holds 1 proposal" state plan-needed next
+printf '# Queue\n\n1. `next` (T1): one.\n' > docs/queue-backlog.md
+expect "run_state: plan-needed asks for an estimate of an unestimated head" 0 "^needed: next heads docs/queue-backlog[.]md with no estimate\$" sh -c "rm -f build/pipeline/sprint-3-records.json build/pipeline/done1.json; sh '$here/run_state.sh' plan-needed next"
+
+# The package step edits no reviewed file (package-advisory-edit):
+# reviewed-edits lists the files changed since the security review's
+# commit outside the records-only paths, committed, edited, or new.
+fresh revedits
+state init rev chore/rev > /dev/null
+echo work >> tools/base.sh && commit "feat: work"
+expect "run_state: reviewed-edits refuses without a security review" 1 "^reviewed-edits: no passing security review is recorded for rev" state reviewed-edits rev
+state review rev security pass "no finding" > /dev/null
+mkdir -p docs/findings openspec/changes/rev
+echo "### a finding" >> docs/findings/rev.md && echo "title" > openspec/changes/rev/pr.md && commit "docs: records"
+expect "run_state: reviewed-edits passes records-only edits" 0 "^reviewed-edits: none since the security review at [0-9a-f]*\$" state reviewed-edits rev
+echo advisory >> tools/base.sh && echo new > tools/new.sh
+expect "run_state: reviewed-edits refuses an edit of a reviewed file" 1 "^reviewed-edits: files changed since the security review at [0-9a-f]*: tools/base[.]sh tools/new[.]sh; restore each" state reviewed-edits rev
+commit "fix: an advisory"
+expect "run_state: reviewed-edits refuses a committed edit of a reviewed file" 1 ": tools/base[.]sh tools/new[.]sh; restore each" state reviewed-edits rev
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {
@@ -2096,6 +2131,8 @@ expect "guard: retrospective records its notes" 0 "^$" guard close 'sh tools/run
 expect "guard: the read profile lists backlog duplicates" 0 "^$" guard read 'sh tools/run_state.sh backlog-dups && sh tools/run_state.sh review-due' build/plan
 expect "guard: the contributor applies the sprint plan" 0 "^$" guard contributor 'sh tools/run_state.sh history && sh tools/run_state.sh groom'
 expect "guard: the contributor applies its plan" 0 "^$" guard contributor 'sh tools/run_state.sh plan-apply c && sh tools/run_state.sh history c'
+expect "guard: the contributor runs reviewed-edits" 0 "^$" guard contributor 'sh tools/run_state.sh reviewed-edits c'
+expect "contributor: the package step runs reviewed-edits" 0 '^1$' grep -c -E '^4[.] Run `sh tools/run_state[.]sh reviewed-edits <change>`, as it says' "$here/../.claude/agents/contributor.md"
 expect "guard: only the contributor applies the sprint plan" 2 "which the workflow or another agent runs" guard read 'sh tools/run_state.sh groom' build/plan
 # The closing start runs the run's last records: the phases no merge gate
 # reads, notes, and the figures, never a review or a gated phase.
@@ -2715,6 +2752,14 @@ expect "docs_lint: refuses a dead path and names it" 1 "docs/notes.md:1:tools/go
 docs line
 echo 'See `tools/x.sh:3-9`.' >> docs/notes.md
 expect "docs_lint: reads a path with a line suffix" 0 "ok   paths: 2 path" doclint
+# lint-own-queue-paths: the queue item of the change being checked may
+# name the paths it removes; another item's dead path still fails.
+docs ownqueue
+printf '# Queue\n\n1. `gone-tidy` (T6, estimated small): drop `tools/gone.sh:3`.\n2. `other` (T6, estimated small): see `tools/lost.sh`.\n' > docs/queue-backlog.md
+expect "docs_lint: passes a dead path on the change's own queue item" 0 "ok   paths: 2 path" env DOCS_LINT_CHANGE=gone-tidy sh -c "sed -i '/lost/d' docs/queue-backlog.md; sh '$here/docs_lint.sh' ."
+printf '2. `other` (T6, estimated small): see `tools/lost.sh`.\n' >> docs/queue-backlog.md
+expect "docs_lint: fails a dead path on another queue item" 1 "docs/queue-backlog[.]md:4:tools/lost[.]sh" env DOCS_LINT_CHANGE=gone-tidy sh "$here/docs_lint.sh" .
+expect "docs_lint: fails the change's dead path when another change is checked" 1 "docs/queue-backlog[.]md:3:tools/gone[.]sh:3" env DOCS_LINT_CHANGE=other sh "$here/docs_lint.sh" .
 docs queue
 printf '# Queue\n\n1. `a` (T2 user request, estimated small): one.\n2. `b` (T3 with T6 folded, estimated large): two.\n\n- An idea, not an item.\n' > docs/queue-backlog.md
 expect "docs_lint: passes a queue whose items carry a tier and a size" 0 "ok   queue: 2 item" doclint
@@ -3509,7 +3554,7 @@ for pair in benchmark:bench checker:checker contributor:implement,fix,package,pu
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
 done
-expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 10 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
+expect "caps: the merger file's maxTurns is its ceiling" 0 "^maxTurns: $(($(cap_of merger) + 14 + margin))$" grep -E '^maxTurns: ' "$agents/merger.md"
 # The periodic review's starts: a fixed cap stated in every start, which
 # leaves the margin under both reviewers' maxTurns, and the record start's
 # the record cap; a security review without a result is retried once and
@@ -3528,9 +3573,10 @@ expect "periodic: a security review without a commit head is retried" 0 "s[.]ran
 expect "periodic: a security review without a result is recorded as not run" 0 "^[}] else record[(]'periodic-security', 'not-run'" grep "record('periodic-security', 'not-run'" "$pwf"
 expect "periodic: a review with areas not reviewed is recorded as partial" 0 "missed[.]length [?] 'partial'" grep '^const result = ' "$pwf"
 # A first green: the merger file's calls of one each, the branch deletion
-# among them, and two waits of two calls stay within its cap of at most 12.
+# among them, stay within its work cap of at most 10, its waits counted
+# apart (merge-cap-ci-wait).
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
-expect "caps: the merger's first green fits its cap" 0 "^within$" sh -c '[ "$1" -le 12 ] && [ "$2" -ge 7 ] && [ $(($2 + 4)) -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
+expect "caps: the merger's first green fits its cap" 0 "^within$" sh -c '[ "$1" -le 10 ] && [ "$2" -ge 7 ] && [ "$2" -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
 expect "caps: the merger counts the branch deletion" 0 "push origin --delete <branch>. [(]one call[)]" grep -o 'push origin --delete <branch>. (one call)' "$agents/merger.md"
 
 # ------------------------------------------------------------ calibration
@@ -3689,10 +3735,20 @@ expect "workflow: the areas beyond the room are cut" 0 '^\[\["p"\],\["a","b"\],\
   scout_js "(t => [t.current, t.needed.map((n) => n.area), t.beyond.map((n) => n.area)])(scoutTargets({ current: ['p'], needed: ['a', 'b', 'c'].map((a) => ({ area: a, question: 'q', locations: ['x'] })) }, 3))"
 expect "workflow: the scout prompt carries the locations" 0 '^"Area: 1[.] Build and CI[.] Locations: a[.]js:9, b[.]md; read only what these locations need[.] Question: q[.]' \
   scout_js "scoutPrompt({ area: '1. Build and CI', question: 'q', locations: ['a.js:9', 'b.md'] }, 'the brief')"
-expect "workflow: a pack is current only when its Locations: cover the area's" 0 '^\[true,true\]$' \
-  js "$wf" "PACK_CURRENT" "[/Locations: line lists every location the change edits in that area/.test(PACK_CURRENT), /missing any of those locations is not current/.test(PACK_CURRENT)]"
-expect "workflow: the area plan applies the pack currency rule" 0 '^1$' grep -c -F 'Then ${PACK_CURRENT}. List current packs' "$wf"
-expect "scout: a pack is reused only when it lists every given location" 0 '^1$' grep -c -E '^3[.] Reuse: .*`Locations:` line lists every location you were given.*A pack missing any of your locations is not current' "$agents/scout.md"
+expect "workflow: a pack missing a location is reused with its unread locations" 0 '^\[true,true,false\]$' \
+  js "$wf" "PACK_CURRENT" "[/reuse it even when its Locations: line lacks some location/.test(PACK_CURRENT), /list each location it lacks under unread/.test(PACK_CURRENT), /is not current/.test(PACK_CURRENT)]"
+# scout-pack-reuse: an area whose every location the brief names by path
+# starts no scout, its locations and a current pack's unread ones going to
+# the contributor; an area the brief does not name is scouted.
+expect "workflow: an area whose locations the brief names starts no scout" 0 '^\[\[\],\["1"\],\["p:3","tools/x.sh:3","b.md"\]\]$' \
+  scout_js "(t => [t.needed.map((n) => n.area), t.named.map((n) => n.area), t.unread])(scoutTargets({ current: ['k'], unread: ['p:3'], needed: [{ area: '1', question: 'q', locations: ['tools/x.sh:3', 'b.md'] }] }, 3, 'edit tools/x.sh and b.md'))"
+expect "workflow: an area the brief does not name is scouted" 0 '^\[\["1"\],\[\],\[\]\]$' \
+  scout_js "(t => [t.needed.map((n) => n.area), t.named.map((n) => n.area), t.unread])(scoutTargets({ current: [], needed: [{ area: '1', question: 'q', locations: ['tools/x.sh:3', 'c.md'] }] }, 3, 'edit tools/x.sh'))"
+expect "workflow: the contributor is told the locations no pack covers" 0 '^\[" Locations no pack covers, read them yourself at those locations only: a.sh:3, b.md.",""\]$' \
+  js "$wf" "unreadLine" "[unreadLine(['a.sh:3', 'b.md']), unreadLine([])]"
+expect "workflow: the implement start carries the unread locations" 0 '^1$' grep -c -F "Scout packs: \${packs.join(', ') || 'none'}.\${unreadLine(unread)}" "$wf"
+expect "workflow: the area plan applies the pack currency rule" 0 '^1$' grep -c -F 'Then ${PACK_CURRENT}. List current packs by path, the locations they lack under unread' "$wf"
+expect "scout: a current pack is reused even when it lacks a given location" 0 '^1$' grep -c -E '^3[.] Reuse: .*still current, even when its `Locations:` line lacks some of your locations' "$agents/scout.md"
 expect "workflow: the area plan is measured apart from the scouts" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "measured(.areas., () => agent(" "$1") $(grep -c "measured(.scout.," "$1")"' _ "$wf"
 expect "scout: the steps read only the locations" 0 '^4[.] Read only what the locations need; never a whole file' grep -E '^4[.] ' "$agents/scout.md"
@@ -3790,7 +3846,7 @@ expect "workflow: a fix round narrows both reviews only from this start's pass" 
   speed_js '[narrowedFrom({ "review.quality": "pass abc1234" }, "quality", "def5678"), narrowedFrom({ "review.security": "pass def5678" }, "security", "def5678"), narrowedFrom({ "review.security": "blocked abc1234" }, "security", "def5678"), narrowedFrom({}, "quality", "def5678"), narrowedFrom({ "review.quality": "pass x" }, "quality", "def5678")]'
 expect "workflow: the closing start records the CI stages at a full commit only" 0 '^\[true,false,false\]$' \
   speed_js '["sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567", "sh tools/run_state.sh ci-stages c abc1234", "sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && x"].map((l) => CLOSABLE.test(l))'
-expect "workflow: the merger's waits come from its minutes, its cap from the waits beyond the second" 0 '^\[0,1,2,3,4,12,12,14,16\]$' \
+expect "workflow: the merger's cap is its work and 2 for every wait" 0 '^\[0,1,2,3,4,10,14,16,18\]$' \
   js "$wf" "FIXED_CAPS waitsOf mergerCap" '[0, 3, 7, 12, 17].map((w) => waitsOf({ waited: w })).concat([0, 7, 12, 17].map((w) => mergerCap({ waited: w })))'
 expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = 4; estimate = ''; planned = null; state = { change: 'c' }; return metricLine() })()"

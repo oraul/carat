@@ -103,26 +103,27 @@ let estimate = ''
 // estimate, from the history's calls per phase; CALL_SCALE scales it by the
 // estimate, rounded up, the medium figure applying while no estimate exists
 // (the planner's start). FIXED_CAPS holds the starts whose work does not
-// grow with the change (areas is the scout plan); the merger's grows by 2
-// for each CI wait beyond the second (mergerCap). The prompt states the cap
+// grow with the change (areas is the scout plan); the merger's is its work,
+// fixed whatever CI does, plus 2 for every CI wait (mergerCap), so a
+// first-pass green CI that waits long overruns nothing (merge-cap-ci-wait). The prompt states the cap
 // (capLine) and the agent stops at it; a start that reports more calls is
 // noted and leaves an overrun note for the planner (measured). The hard
 // ceiling is each agent file's maxTurns, its largest cap at a large
-// estimate plus a return margin of 5 turns (the merger's: its cap, which
-// holds two waits, 2 for each of the other five of its 30 minutes, and the
-// margin), so a start
+// estimate plus a return margin of 5 turns (the merger's: its work cap, 2
+// for each of the seven waits its 30 minutes hold, and the margin), so a
+// start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
 const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, push: 15, moved: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
-const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 12 }
+const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
 const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
 const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
 // The merger's waits are 3, 4, then 5 minutes (.claude/agents/merger.md), so
-// the minutes it waited give its waits, and those beyond the second its cap.
+// the minutes it waited give its waits, and every wait 2 calls of its cap.
 const waitsOf = (r) => { const w = Number(r && r.waited); return w > 0 ? (w <= 3 ? 1 : w <= 7 ? 2 : 2 + Math.ceil((w - 7) / 5)) : 0 }
-const mergerCap = (r) => FIXED_CAPS.merger + 2 * Math.max(0, waitsOf(r) - 2)
+const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // The model tier and reasoning effort of each kind of agent start, as
 // TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
 // The tier is cheap, the model: line of the agent's file, the only place a
@@ -169,28 +170,41 @@ const SCOUT_PLAN = {
   type: 'object',
   properties: {
     current: LINES,
+    unread: { ...LINES, description: 'the locations the change edits that a current pack does not list, each path or path:line, for the contributor to read itself' },
     needed: { type: 'array', items: SCOUT_AREA },
   },
   required: ['current', 'needed'],
 }
-// When a pack an earlier change left serves this one: packs are bounded to
-// their locations, so a pack of the same area and commit that names other
-// locations holds no facts about this change's (.claude/agents/scout.md
-// step 3 applies the same rule).
-const PACK_CURRENT = 'a pack under tmp/scout/ is current for an area only when its Locations: line lists every location the change edits in that area, each the same path or path:line, and its Commit: is origin/main or `git diff --quiet <its commit> origin/main -- <its Files read>` passes; a pack of the area missing any of those locations is not current, however recent its commit'
+// When a pack an earlier change left serves this one: a pack of the area
+// whose files read are unchanged at main is reused, and the locations it
+// does not list go to the contributor to read itself, never to a new scout
+// of the whole area (scout-pack-reuse; .claude/agents/scout.md step 3
+// applies the same rule).
+const PACK_CURRENT = 'a pack under tmp/scout/ is current for an area when its Commit: is origin/main or `git diff --quiet <its commit> origin/main -- <its Files read>` passes; reuse it even when its Locations: line lacks some location the change edits in that area, and list each location it lacks under unread; an area with a current pack needs no scout'
 // The scouts a plan starts: an area given no location the change edits
 // there (a file the map places in no area, such as a root LICENSE) starts
-// none, and the rest are cut at the room the current packs leave.
-function scoutTargets(plan, max) {
-  if (!plan) return { current: [], needed: [], unplaced: [], beyond: [] }
+// none, nor one whose every location the brief names by path (named: the
+// contributor, which holds the brief, reads them itself), and the rest are
+// cut at the room the current packs leave. tools/tools_test.sh runs this
+// helper.
+function scoutTargets(plan, max, brief = '') {
+  if (!plan) return { current: [], needed: [], unplaced: [], beyond: [], named: [], unread: [] }
   const placed = plan.needed.filter((n) => Array.isArray(n.locations) && n.locations.some((l) => String(l).trim()))
+  const pathOf = (l) => String(l).trim().replace(/:[0-9][0-9,-]*$/, '')
+  const named = placed.filter((n) => n.locations.every((l) => !pathOf(l) || String(brief).includes(pathOf(l))))
+  const scouted = placed.filter((n) => !named.includes(n))
   const room = Math.max(0, max - plan.current.length)
-  return { current: plan.current, needed: placed.slice(0, room), unplaced: plan.needed.filter((n) => !placed.includes(n)), beyond: placed.slice(room) }
+  return { current: plan.current, needed: scouted.slice(0, room), unplaced: plan.needed.filter((n) => !placed.includes(n)), beyond: scouted.slice(room), named, unread: (plan.unread || []).concat(...named.map((n) => n.locations.filter((l) => pathOf(l)))) }
 }
 // A scout's prompt: its area, the locations the change edits there, which
 // bound what it reads (.claude/agents/scout.md), and the question.
 function scoutPrompt(n, brief) {
   return `Area: ${n.area}. Locations: ${n.locations.join(', ')}; read only what these locations need. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.`
+}
+// The contributor's line for the locations no pack covers, which it reads
+// itself at those locations only. tools/tools_test.sh runs this helper.
+function unreadLine(unread) {
+  return unread && unread.length ? ` Locations no pack covers, read them yourself at those locations only: ${unread.join(', ')}.` : ''
 }
 const PACK = { type: 'object', properties: { pack: { type: 'string' } }, required: ['pack'] }
 const WORK = {
@@ -1223,8 +1237,8 @@ function resumeBrief(change, line) {
 function planDir(change) {
   return `build/plan/${change}/`
 }
-// The package step's plan line: plan-apply and history for the change's
-// own lane, never groom, which only a sprint's records change runs, in its
+// The package step's plan line: plan-apply, first, and history for the
+// change's own lane, never groom, which only a sprint's records change runs, in its
 // implement step, so the fold and the sprint row are written once.
 function packagePlan(state, planned) {
   if (/^sprint-[0-9]+-records$/.test(state.change)) return 'This is the sprint\'s records change: your implement step ran history and groom; run neither again, nor plan-apply, and copy nothing from build/plan/.'
@@ -1233,7 +1247,7 @@ function packagePlan(state, planned) {
     : `run \`sh tools/run_state.sh history ${state.change}\`, which appends only its lane's rows`
   return planned === 0
     ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/ and run no plan-apply; ${history}; never run groom, which the sprint's records change runs; then remove this change's item from its lane queue and renumber the rest.`
-    : `Run \`sh tools/run_state.sh plan-apply ${state.change}\`, which applies ${planDir(state.change)} for this change's lane only, and ${history}; never run groom, which the sprint's records change runs.`
+    : `Run \`sh tools/run_state.sh plan-apply ${state.change}\`, which applies ${planDir(state.change)} for this change's lane only, before any edit of a lane queue, which it overwrites, and ${history}; never run groom, which the sprint's records change runs.`
 }
 // Whether the Plan phase is skipped: no merge, plan, or implement record
 // yet, and plan-needed's line says not needed, whatever the brief says.
@@ -1297,14 +1311,17 @@ if (!stopped && !state.merged) {
   if (!state['phase.implement']) {
     phase('Scout')
     let packs = input.packs || []
+    let unread = []
     if (!packs.length) {
       // The plan's calls are its own key, so phase.scout holds only the
       // scouts' starts, the figure their packs' Tool calls lines match.
       const plan = await measured('areas', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, first name its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack. Then ${PACK_CURRENT}. List current packs by path and the areas still needing one, each with its locations and question.${capLine('areas')}`,
+        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, first name its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack. Then ${PACK_CURRENT}. List current packs by path, the locations they lack under unread, and the areas still needing one, each with its locations and question.${capLine('areas')}`,
         calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
-      const targets = scoutTargets(plan, MAX_AREAS)
+      const targets = scoutTargets(plan, MAX_AREAS, brief)
       if (targets.unplaced.length) note(`not scouted, no location in the area: ${targets.unplaced.map((n) => n.area).join(', ')}`)
+      if (targets.named.length) note(`not scouted, the brief names every location: ${targets.named.map((n) => n.area).join(', ')}`)
+      unread = targets.unread
       if (targets.beyond.length) note(`not scouted, beyond ${MAX_AREAS} areas: ${targets.beyond.map((n) => n.area).join(', ')}`)
       const fresh = targets.needed.length ? await measured('scout', () => parallel(targets.needed.map((n) => () =>
         agent(scoutPrompt(n, brief) + capLine('scout'), calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
@@ -1312,7 +1329,7 @@ if (!stopped && !state.merged) {
       note(`scout packs: ${packs.join(', ') || 'none'}`)
     }
     phase('Implement')
-    const done = await contributor('implement', `Scout packs: ${packs.join(', ') || 'none'}.${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
+    const done = await contributor('implement', `Scout packs: ${packs.join(', ') || 'none'}.${unreadLine(unread)}${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
     if (done) phaseDone('implement', head)
   }
 
@@ -1379,7 +1396,7 @@ if (!stopped && !state.merged) {
       if (!pushed) { stopped = `the pushed head ${state.pushed || 'none'} is not a full sha beginning with the reported head ${head}`; break }
       const lines = mergeLines(pushed)
       const m = await measured('merge', () => agent(
-        `${intro()}${MERGER_CLOSE}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start when CI passes within your first two waits, and 2 more for each later wait.`,
+        `${intro()}${MERGER_CLOSE}${mergeTarget()} The pushed head is ${pushed}. Wait for CI at it${waits ? ' (it was still running when you last returned; keep waiting)' : ''}, and merge the pull request if CI is green and every merge gate passes.\nThe green line: \`${lines.green}\`\nThe red line: \`${lines.red}\`\nTool calls: at most ${FIXED_CAPS.merger} in this start besides your CI waits, and 2 more for each wait.`,
         calibrate('merger', { agentType: 'merger', schema: withCalls(MERGE) })), mergerCap)
       if (!m) { stopped = 'the merger returned no result'; break }
       ciWaitCalls = (ciWaitCalls || 0) + 2 * waitsOf(m)
