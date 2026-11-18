@@ -31,7 +31,7 @@ A command the keys of `:normal` leave unfinished SHALL end as if Esc were typed:
 - **THEN** the line is "abc"
 
 ### Requirement: :normal refuses what Neovim refuses
-`:normal` without an argument SHALL be refused with "E471: Argument required", and a `:normal` run by more than 100 nested `:normal` commands with "E192: Recursive use of :normal too deep".
+`:normal` without an argument SHALL be refused with "E471: Argument required", and a `:normal` run by more than 100 nested `:normal` commands with "E192: Recursive use of :normal too deep". The keys `:normal` feeds SHALL keep the remap count of the key whose remap ran it, so a binding that runs `:normal` and then replays itself SHALL stop with "E223: Recursive mapping", while each line of a range SHALL count its own remaps.
 
 #### Scenario: Normal without keys
 - **WHEN** ":normal" is run
@@ -40,6 +40,14 @@ A command the keys of `:normal` leave unfinished SHALL end as if Esc were typed:
 #### Scenario: Normal too deep
 - **WHEN** a key bound to ":normal" with that same key is typed
 - **THEN** the message is "E192: Recursive use of :normal too deep"
+
+#### Scenario: A binding replaying itself after normal
+- **WHEN** a key bound to ":normal x" followed by that same key is typed
+- **THEN** the message is "E223: Recursive mapping"
+
+#### Scenario: A remap per line of a long range
+- **WHEN** ":%normal Q" is run on 150 lines with Q bound to the keys "x"
+- **THEN** the first character of every line is deleted and no message is shown
 
 ### Requirement: :p shows the lines of a range
 `:[range]p[rint] [count]` SHALL show the lines of the range, the cursor line without one, or count lines from the range's last line, one per message line, and SHALL put the cursor on the last of them at the wanted column. An empty buffer SHALL be refused with "E749: Empty buffer", a bang with "E477: No ! allowed", and text after the count with "E488: Trailing characters: x".

@@ -11,6 +11,7 @@
 
 - [x] 2.1 Add `PrintCommandHandler` (`:p[rint]`) (`test/editor_line_commands.rb`, `test/use_cases_ex.rb`)
 - [x] 2.2 Add `NormalCommandHandler` (`:norm[al]`), and build `HandleKey` before the ex commands are registered in `EditorAssembly`, registering both commands after `:>` and `:<` (`test/editor_line_commands.rb`, `test/use_cases_ex.rb`, `test/adapters_assembly.rb`)
+- [x] 2.3 Keep the remap count of the key whose remap ran `:normal` across the keys it feeds in `HandleKey`, so a self-replaying binding stops at E223 (`test/editor_line_commands.rb`)
 
 ## 3. Docs
 

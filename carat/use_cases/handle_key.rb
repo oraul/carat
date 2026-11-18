@@ -138,11 +138,15 @@ module Carat
       end
 
       # Domain::Key::TIMEOUT is no key: it says the wait for more keys of
-      # a binding ran out, which resolves the pending keys.
+      # a binding ran out, which resolves the pending keys. The remap count
+      # is the key's own and is restored when it is done, so a key :normal
+      # feeds from inside a remap neither resets nor adds to the count of
+      # the key whose remap ran :normal.
       #: (Domain::EditorState, Integer) -> Symbol
       def call(state, code)
         return timeout(state) if code == Domain::Key::TIMEOUT
         @hide_key_hints.call(state) if @key_hints.showing?
+        outer = @replays
         @replays = 0
         queue = [code]
         result = :handled
@@ -151,6 +155,7 @@ module Carat
           @arrange_view.call(state) unless queue.empty?
         end
         follow(state)
+        @replays = outer
         result
       end
 
@@ -180,6 +185,7 @@ module Carat
         input = @input
         keys = input.pending_keys
         return :idle if keys.empty?
+        outer = @replays
         @replays = 0
         match = lookup(state, keys)
         input.pending_keys = []
@@ -196,6 +202,7 @@ module Carat
           step(state, queue.shift, queue)
         end
         follow(state)
+        @replays = outer
         :handled
       end
 

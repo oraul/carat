@@ -82,4 +82,6 @@ ok   the other shift character is trailing text
 ok   a bad range for join
 ok   Normal too deep
 ok   a binding that runs :normal once
-editor_line_commands: 84 passed, 0 failed
+ok   A binding replaying itself after normal
+ok   A remap per line of a long range
+editor_line_commands: 86 passed, 0 failed

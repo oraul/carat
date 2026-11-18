@@ -154,7 +154,13 @@ module EditorLineCommandsTest
     # deep). Rows are [label, [binding, text, keys], [message, lines]].
     t.cases([
       ["Normal too deep", ["Q :normal<Space>Q<CR>", "a\n", "Q"], ["E192: Recursive use of :normal too deep", "a"]],
-      ["a binding that runs :normal once", ["Q :normal<Space>x<CR>", "ab\n", "Q"], ["", "b"]]
+      ["a binding that runs :normal once", ["Q :normal<Space>x<CR>", "ab\n", "Q"], ["", "b"]],
+      # The keys :normal feeds keep the remap count of the key whose remap
+      # ran it (scenario: A binding replaying itself after normal).
+      ["A binding replaying itself after normal", ["Q :normal<Space>x<CR>Q", "abc\n", "Q"], ["E223: Recursive mapping", ""]],
+      # Each line of a range counts its own remaps (scenario: A remap per
+      # line of a long range).
+      ["A remap per line of a long range", ["Q x", "ab\n" * 150, ":%normal<Space>Q<CR>"], ["", "b|" * 149 + "b"]]
     ]) do |input|
       run_bound(input[0], input[1], input[2])
     end
