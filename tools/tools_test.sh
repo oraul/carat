@@ -1343,6 +1343,21 @@ expect "run_state: a stored word that is not a size leaves the queue item's" 0 "
 state init minuteless chore/minuteless > /dev/null
 state metric minuteless estimate=small total_tokens=1000 > /dev/null
 expect "run_state: budget names no minutes when none were recorded" 0 "^under: estimated small, budget 500000 total tokens and 25 minutes, actual 1000 total tokens, " state budget minuteless
+# A sprint's records change counts its own work: tokens keys
+# sprint-planning's own starts sprint, and budget sets their total apart
+# (records-budget-scope, pipeline-diet-b cut 6).
+mkdir -p "$work/wf_sprint"
+echo '{"type":"assistant","message":{"id":"msg_5","model":"vendor-large-1","content":[],"usage":{"input_tokens":1500000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}' > "$work/wf_sprint/agent-d.jsonl"
+echo '{"description":"security-reviewer: sprint","workflowPhase":"Review"}' > "$work/wf_sprint/agent-d.meta.json"
+echo '{"type":"assistant","message":{"id":"msg_6","model":"vendor-large-1","content":[],"usage":{"input_tokens":100000,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":0}}}' > "$work/wf_sprint/agent-e.jsonl"
+echo '{"description":"contributor: implement","workflowPhase":"Implement"}' > "$work/wf_sprint/agent-e.meta.json"
+state init sprint-9-records chore/sprint-9-records > /dev/null
+state metric sprint-9-records estimate=small phase.implement=30000/5 > /dev/null
+state usage sprint-9-records 1900000 20 > /dev/null
+state tokens sprint-9-records "$work/wf_sprint" > /dev/null
+expect "run_state: tokens keys a sprint review start sprint" 0 "^1500000/1500000/1 100000/100000/1$" \
+  sh -c 'echo "$(sh "$1" get sprint-9-records metric.weighted.sprint) $(sh "$1" get sprint-9-records metric.weighted.implement)"' _ "$here/run_state.sh"
+expect "run_state: budget of a records change sets sprint-planning's reviews apart" 0 "^under: estimated small, budget 500000 total tokens and 25 minutes, actual 400000 total tokens in 20[.]0 minutes, 30000 output tokens, 1500000 total tokens of sprint-planning's reviews set apart$" state budget sprint-9-records
 rm build/pipeline/minuteless.json
 # spent, which the checker prints after a passing check: the output tokens
 # so far against the output budget (TOKEN_BUDGETS / OUTPUT_SHARE) and the
@@ -3644,6 +3659,39 @@ expect "workflow: the package step applies its lane's plan and history, never gr
   plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom'), /run_state[.]sh groom/.test(p)])(packagePlan({ change: 'c' }, 1))"
 expect "workflow: an unplanned package step copies no plan and runs no groom" 0 '^\[false,true,true\]$' \
   plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('never run groom')])(packagePlan({ change: 'c' }, 0))"
+# The check runs in a start of the checker file's Mode: run, whose lines
+# the workflow builds; the checker reads a log only on a failed stage
+# (pipeline-diet-b cut 3).
+check_js() {
+  js "$wf" "checkVerdict checkerNeeded checkLines checkRunTask" "(() => { globalThis.head = 'abc1234'; return $1 })()"
+}
+expect "workflow: a passing check starts no checker relay" 0 '^\[false,false,false\]$' \
+  check_js "['check: every stage passed at abc1234', 'run_state: check: refused: the tracked tree is dirty', 'check: stage test-run killed at abc1234; read build/stages/c/test-run.log'].map((l) => checkerNeeded(checkVerdict(l)))"
+expect "workflow: a failed stage starts the checker to read its log" 0 '^true$' \
+  check_js "checkerNeeded(checkVerdict('check: stage lint failed at abc1234; read build/stages/c/lint.log'))"
+expect "workflow: the check lines run spent and bench only after the check" 0 '^\["sh tools/run_state[.]sh metric c rework=0; sh tools/run_state[.]sh check c abc1234","sh tools/run_state[.]sh spent c; sh tools/run_state[.]sh bench c","",true,true\]$' \
+  check_js "(l => [l.check, l.passed, l.moved, checkRunTask(l).indexOf(l.check) < checkRunTask(l).indexOf('Only when that line begins'), checkRunTask(l).includes('read nothing else')])(checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=0'))"
+expect "guard: the checker's run start may run the check lines" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=0; sh tools/run_state.sh check c abc1234; sh tools/run_state.sh spent c; sh tools/run_state.sh bench c; sh tools/run_state.sh moved c abc1234'
+# The quality first pass is asked for every blocking finding; a scoped or
+# continued review is not (pipeline-diet-b cut 4).
+expect "workflow: the quality first pass is asked for every blocking finding" 0 '^\[true,false,false\]$' \
+  js "$wf" "qualityTask" "[qualityTask('', ''), qualityTask('\nThe last quality review, at abc1234, was blocked. Review the whole branch diff.', ''), qualityTask('', '\nThe last start reached its cap')].map((t) => t.includes('every blocking finding'))"
+# Fix in place (pipeline-diet-b cut 4b): the findings of the change's files
+# ride with the blocking ones, or get a round of their own with a round to
+# spare, are re-reviewed at the new head, and leave the hand-over only when
+# a reviewer confirms them fixed.
+place_js() {
+  js "$wf" "inPlaceRound inPlaceTask inPlaceCheck confirmInPlace offer findings handOver passedAt" "(() => { globalThis.state = { change: 'c' }; globalThis.offered = new Set(); globalThis.fixedInPlace = new Set(); globalThis.awaiting = { quality: [], security: [] }; globalThis.handed = new Set(); globalThis.backlog = ['security Low (6) a.sh:3 t; fix: f', 'security Low (5) b.sh:1 u; fix: g']; globalThis.qualityAdvisory = ['a.rb:2 name; fix: rename']; return $1 })()"
+}
+expect "workflow: findings in place ride with the blocking ones" 0 '^"with"$' place_js "inPlaceRound(true, 2, 2, 3)"
+expect "workflow: findings in place get a round of their own only with a round to spare" 0 '^\["alone","alone","record","none"\]$' \
+  place_js "[inPlaceRound(false, 2, 0, 3), inPlaceRound(false, 2, 1, 3), inPlaceRound(false, 2, 2, 3), inPlaceRound(false, 0, 0, 3)]"
+expect "workflow: each finding fixed in place is a task of tasks.md" 0 '^\[true,true,true\]$' \
+  place_js "(t => [t.includes(\"a task of the change's tasks.md\"), t.includes('adds no behavior'), t.endsWith('- security Low (6) a.sh:3 t; fix: f')])(inPlaceTask(['security Low (6) a.sh:3 t; fix: f']))"
+expect "workflow: a fix-in-place round runs check, security, and quality again at its head" 0 '^\[true,true,true,false,false,false,true,true\]$' \
+  place_js "(() => { const ran = { 'phase.check': 'abc1234', 'review.quality': 'pass abc1234', 'review.security': 'pass abc1234' }; offer(findings(), true); const keys = ['phase.check', 'review.quality', 'review.security']; return keys.map((k) => passedAt(ran, k, 'abc1234')).concat(keys.map((k) => passedAt(ran, k, 'def5678')), [inPlaceCheck('quality').includes('- quality advisory a.rb:2 name; fix: rename'), inPlaceCheck('security').includes('- security Low (5) b.sh:1 u; fix: g')]) })()"
+expect "workflow: a finding confirmed fixed in place leaves the hand-over" 0 '^\["security Low [(]5[)] b[.]sh:1 u; fix: g","quality advisory a[.]rb:2 name; fix: rename"\]$' \
+  place_js "(() => { offer(findings(), true); confirmInPlace('security', ['security Low (6) a.sh:3 t; fix: f', 'not offered']); confirmInPlace('quality', ['a.rb:2 name, reworded']); return handOver() })()"
 # Each delivery runs in its own worktree, its merge gates a worktree under
 # the lane's own tmp/, so two never share one (parallel-lanes-b).
 lane_js() {
@@ -3815,7 +3863,7 @@ cd "$close_back" || exit 1
 # resume's seed hands to its package step, never held, so none is written
 # twice.
 late_js() {
-  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.fixedInPlace = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
 }
 expect "workflow: an unmerged close holds its late findings, a merged one notes them late" 0 '^\[1,true,1,0,1,true\]$' \
   late_js "(() => { state.pushed = 'abc1234'; recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
@@ -3938,6 +3986,8 @@ expect "workflow: a covered review is done" 0 '^[{]"next":"done"' \
   work_js "(r => continuation(r, reviewLeft(r), 0))({ ran: true, head: 'abc1234', findings: [], not_reviewed: [] })"
 expect "workflow: a continued review keeps the findings of both starts" 0 '^[{]"head":"abc1234","blocking":\["a","c"\],"advisory":\["b"\],"not_reviewed":\[\][}]$' \
   work_js "combineReviews({ head: 'abc1234', blocking: ['a'], advisory: ['b'], not_reviewed: ['f'] }, { head: 'abc1234', blocking: ['c'], advisory: ['b'], not_reviewed: [] })"
+expect "workflow: a continued review keeps the in-place fixes the first start confirmed" 0 '^\[\["x","y"\],\["x"\]\]$' \
+  work_js "[combineReviews({ head: 'abc1234', blocking: [], advisory: [], fixed_in_place: ['x'] }, { head: 'abc1234', blocking: [], advisory: [], fixed_in_place: ['x', 'y'] }).fixed_in_place, combineReviews({ ran: true, head: 'abc1234', findings: [], fixed_in_place: ['x'] }, { ran: true, head: 'abc1234', findings: [], not_reviewed: [] }).fixed_in_place]"
 expect "workflow: a security review with files left never passes" 0 "if [(]!s [|][|] reviewLeft[(]s[)][.]length[)]" grep -F 'if (!s || reviewLeft(s).length)' "$wf"
 full=abcdef0123456789abcdef0123456789abcdef01
 expect "workflow: the merger gets the full pushed sha" 0 "^\"$full\"$" work_js "pushedHead('$full', 'abcdef012345')"
@@ -3997,7 +4047,7 @@ expect "workflow: the reviews carry over only at one commit both passed at" 0 '^
 expect "workflow: the reviews stand only on a moved line naming the head and the reviewed commit" 0 '^\[true,false,false,false\]$' \
   js "$wf" "COMMIT sameCommit CARRIED carried" "[carried('moved: the change is the same at abcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('moved: the merge changed files of the change: a.rb; the reviews run again at abcdef012345', 'abcdef012345', '111111222222'), carried('moved: the change is the same at bbcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('', 'abcdef012345', '111111222222')]"
 expect "workflow: the check after a main-moved merge asks for the moved line and carries only on a pass" 0 "^2$" \
-  sh -c 'grep -c -F -e "run \\\`sh tools/run_state.sh moved \${state.change} \${movedFrom}\\\`" -e "        if (movedFrom) carryReviews(c.moved)" "$1"' _ "$wf"
+  grep -c -F -e 'moved: movedFrom ? `${rs} moved ${change} ${movedFrom}`' -e '        if (movedFrom) carryReviews(c.moved)' "$wf"
 expect "workflow: a conflict merge-main cannot resolve stops naming its files" 0 '^true$' \
   js "$wf" "movedTask" "(() => { globalThis.state = { change: 'mm' }; const t = movedTask('405'); return /run_state.sh merge-main mm/.test(t) && /both sides changed the same logic, return stopped, with the question naming each such file/.test(t) })()"
 expect "workflow: first.ci keeps the green read before main moved" 0 '^1$' \
@@ -4159,7 +4209,7 @@ state init sprint-9 main > /dev/null 2>&1
 expect "sprint: each security finding is recorded verbatim from the reviewer's result, no skeptic" 0 "^security High [(]9[)] a[.]rb:3 it's [$][(]touch pwned[)] \"q\" .n; fix: x y|security Low [(]4[)] b[.]rb:0 .id.; fix: z|no file$" \
   sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s\n" "$(sh "$2" get sprint-9 note.1)" "$(sh "$2" get sprint-9 note.2)" "$( [ -e pwned ] && echo pwned || echo no file)"' _ "$note_lines" "$here/run_state.sh"
 expect "sprint: the notes are recorded before the skeptic starts" 0 "^first$" \
-  sh -c 'n=$(grep -n "label: .notes. })" "$1" | cut -d: -f1); k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$k" ] && [ "$n" -lt "$k" ] && echo first' _ "$swf"
+  sh -c 'n=$(grep -n "label: .sprint: notes. })" "$1" | cut -d: -f1); k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$k" ] && [ "$n" -lt "$k" ] && echo first' _ "$swf"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
   grep -c -F 'if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)' "$swf"
 expect "sprint: the report names a partial security review" 0 '^\["partial, 2 file\(s\) not reviewed \(a.rb, b.rb\); 1 finding\(s\), 0 blocking; run /sprint again","1 finding\(s\), 1 blocking, 0 disputed","did not run; run /sprint again"\]$' \

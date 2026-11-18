@@ -134,6 +134,9 @@ function securityLine(r, blocking, disputed) {
 // contributor runs history (every lane's rows) and groom in its implement
 // step, so the backlog fold, the sprint's lane queues, and its sprints row
 // are written once and pass the checker, the reviews, and the merge gates.
+// Every start of this workflow's own carries a label beginning "sprint:" or
+// naming a sprint, skeptic, or periodic review, so tools/run_state.sh tokens
+// keys it sprint and the records change's budget counts only its own work.
 // tools/tools_test.sh runs this helper.
 function recordsRun(sprint) {
   const change = `${sprint.sprint}-records`
@@ -155,7 +158,7 @@ function recordsLine(name, merged, delivered) {
 phase('Due')
 const due = await agent(
   `Run \`sh tools/run_state.sh review-due\` with the Bash tool from the repository root and return its one line verbatim as line (exit 1 means not due, not a failure). Only when the line begins with \`due: sprint-N\`, run \`sh tools/run_state.sh init sprint-N main\`, and when it ends with \`sweep: yes\` also \`sh tools/run_state.sh init sprint-N-sweep main\`, N being its number; return initialized true when they exited 0.${capLine(CAPS.due)}`,
-  { schema: DUE, effort: 'low', label: 'due' })
+  { schema: DUE, effort: 'low', label: 'sprint: due' })
 const sprint = due ? parseDue(due.line.split('\n')[0]) : null
 if (!sprint || !due.initialized) return { due: false, report: `sprint-planning not due: ${due ? due.line.split('\n')[0] : 'no result'}` }
 
@@ -196,7 +199,7 @@ phase('Notes')
 const notes = ran ? securityNotes(sprint.sprint, security.findings) : []
 const notesRun = !notes.length ? null : await agent(
   `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { schema: RAN, effort: 'low', label: 'notes' })
+  { schema: RAN, effort: 'low', label: 'sprint: notes' })
 const noted = !notes.length || Boolean(notesRun && notesRun.ok)
 
 phase('Skeptic')
@@ -241,7 +244,7 @@ for (const [kind, r] of starts) {
 }
 const recorded = await agent(
   `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${lines.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { schema: RAN, effort: 'low', label: 'record' })
+  { schema: RAN, effort: 'low', label: 'sprint: record' })
 
 phase('Records')
 // Only a plan written after a complete review, with the results recorded,
@@ -259,7 +262,7 @@ if (plan && recorded && recorded.ok) {
   // Whether it merged is read from its run state, never from its report.
   const read = await agent(
     `Run \`sh tools/run_state.sh get ${recordsName} merged\` with the Bash tool from the repository root, exactly as written, and nothing else. Return its output, trimmed, as merged (empty when it printed nothing or failed).${capLine(CAPS.record)}`,
-    { schema: { type: 'object', properties: { merged: { type: 'string' } }, required: ['merged'] }, effort: 'low', label: 'records-merged' })
+    { schema: { type: 'object', properties: { merged: { type: 'string' } }, required: ['merged'] }, effort: 'low', label: 'sprint: records-merged' })
   merged = read ? read.merged.trim() : ''
 }
 
