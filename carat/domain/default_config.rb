@@ -61,7 +61,7 @@ module Carat
       option.indentguides true
       option.indentguides.char ┊
       option.theme carat-dark
-      option.background terminal
+      option.background theme
       option.startscreen true
       option.reducedmotion false
 

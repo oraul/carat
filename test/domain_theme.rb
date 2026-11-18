@@ -641,7 +641,7 @@ module DomainThemeTest
 
     # Options read the theme from the option.theme line and the
     # background from the option.background line.
-    t.assert_equal(["carat-dark", "terminal", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: carat-dark on the terminal's background, syntax on")
+    t.assert_equal(["carat-dark", "theme", true], [D::Options.new.theme, D::Options.new.background, D::Options.new.syntax_on], "the defaults: carat-dark painting its own background, syntax on")
     # Scenario: Light theme. The line selects light_plus, whose Comment
     # color adapters_screen_presenter writes.
     t.assert_equal("light_plus", theme_of("option.theme light_plus\n").theme, "the theme line selects a palette")
@@ -651,12 +651,13 @@ module DomainThemeTest
     t.assert_equal(["carat-dark", [".caratrc:1: unknown theme solarized"]], [D::Options.from_config(unknown).theme, unknown.report], "Unknown theme: it keeps the default and is reported")
     t.assert_equal("carat-dark", theme_of("option.theme \"carat light\" x\n").theme, "a theme of the wrong kind keeps the default")
     t.assert_equal("theme", theme_of("option.background theme\n").background, "the background line paints the background")
+    # Scenario: Unknown value. The background stays the default, theme.
     background = D::Config.new
     background.read(".caratrc", "option.background dark\n", false)
-    t.assert_equal(["terminal", [".caratrc:1: unknown background dark"]], [D::Options.from_config(background).background, background.report], "an unknown background keeps the default and is reported")
+    t.assert_equal(["theme", [".caratrc:1: unknown background dark"]], [D::Options.from_config(background).background, background.report], "an unknown background keeps the default and is reported")
     shipped = D::Config.new
     shipped.read_defaults("config/default.caratrc", D::DEFAULT_CARATRC)
-    t.assert_equal(["carat-dark", "terminal"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "Default theme: the shipped configuration names carat-dark on the terminal's background")
+    t.assert_equal(["carat-dark", "theme"], [D::Options.from_config(shipped).theme, D::Options.from_config(shipped).background], "Default theme: the shipped configuration names carat-dark painting its own background")
 
     # The color depth from COLORTERM and TERM.
     t.cases([
