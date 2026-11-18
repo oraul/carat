@@ -993,9 +993,10 @@ module Carat
       end
 
       # One text row of a window, every cell written once: the tilde past
-      # the end of the buffer, or the sign column (the glyph in its sign's
-      # group), the number, the text, and blanks between and after, then
-      # the token groups, then the selection.
+      # the end of the buffer, or the one-cell sign column (the glyph in its
+      # sign's group, else a blank in SignColumn), the number, the text,
+      # and blanks between and after, then the token groups, then the
+      # selection.
       #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
       def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
         if line.equal?(PaintedRows::TILDE)
