@@ -8,7 +8,8 @@ After a merge of a moved main, `tools/run_state.sh moved` decides whether the qu
 
 - `tools/run_state.sh` `moved`: the reviews stand only when no file of the change changed from the reviewed commit to HEAD and HEAD matches the new main in every file the reviewed change never touched (outside the records-only paths, as before); a file HEAD differs from main in that the change never touched prints `moved: HEAD differs from BASE in files the change never touched: FILES; the reviews run again at HEAD` and exits 1. The names are compared as text, never passed to git as pathspecs, and a failing `git diff` prints `moved: git diff failed ...; the reviews run again` and exits 1.
 - `moved` drops the run state's `moved` record when it starts and writes `moved` = "HEAD COMMIT" (full shas) only on its exit-0 path; `set` refuses the `moved` key.
-- `review CHANGE KIND RESULT SUMMARY COMMIT` refuses a summary carrying `carried=1` unless the run state's `moved` record names COMMIT as its head, so a carried review is recorded only after `moved` exited 0 at that head, whatever line the checker returned.
+- `review CHANGE KIND RESULT SUMMARY COMMIT` refuses a summary carrying `carried=1` unless the run state's `moved` record names COMMIT as its head and, as its reviewed commit, another commit, the one the existing `review.KIND` pass record names, so a carried review is recorded only after `moved` exited 0 at that head against the commit that review passed at, whatever line the checker returned; `moved` run at the head against itself, which always exits 0, backs nothing.
+- `tools/agent_guard.sh`: the read profile runs `moved` only as `moved CHANGE COMMIT`, a change name and a hexadecimal commit.
 - `.claude/workflows/deliver-change.js`: comments of `carried` and `carryReviews` say the shell backs the carry; the behavior is unchanged (a matching line still decides whether the reviews run again, and the record now needs the `moved` record).
 - `tools/tools_test.sh`: cases for a merge reverting a main-only file, a `:(exclude)carat` file name, and a failing `git diff`, each exiting 1 with no `moved` record and a carried review refused; a carried review recorded after `moved` exits 0; `set` refusing `moved`.
 
@@ -26,7 +27,7 @@ None: the merge loop and the run state are the delivery pipeline's, which no spe
 
 ## Impact
 
-- `tools/run_state.sh`, `.claude/workflows/deliver-change.js`, `tools/tools_test.sh`.
+- `tools/run_state.sh`, `tools/agent_guard.sh`, `.claude/workflows/deliver-change.js`, `tools/tools_test.sh`.
 - README.md: changed, the main-moved paragraph says what `moved` compares and that the shell backs a carried review.
 - docs/codebase-map.md: changed, the `run_state.sh` entry names the `moved` record and `set` refusing it; no file is added, moved, or removed.
 - CLAUDE.md: unchanged, it does not describe how the reviews carry after a main-moved merge (README.md does).

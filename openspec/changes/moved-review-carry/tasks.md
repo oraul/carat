@@ -5,6 +5,8 @@
 - [x] 1.1 Rewrite `moved_change` in `tools/run_state.sh`: three name lists with their statuses checked, the change's files compared as text, HEAD matching main in every file the reviewed change never touched, the `moved` record written only on the exit-0 path; proved by "moved reruns the reviews when the merge reverted a main-only file", "moved compares a file named like a pathspec literally", "moved reruns the reviews when git diff fails", and the existing "moved keeps the reviews when the merge changed no file of the change" and "moved reruns the reviews when a file of the change changed" in `tools/tools_test.sh`
 - [x] 1.2 Refuse a `carried=1` review in `tools/run_state.sh` `review` unless the `moved` record names its commit, and refuse `moved` in `set`; proved by "a carried review is refused without moved at the head", "a carried review is recorded after moved exits 0", and "set refuses the moved record"
 
+- [x] 1.3 Tie a carried review in `carried_backed` to the commit its existing `review.KIND` pass names, the `moved` record's reviewed commit differing from its head, and limit the read profile's `moved` in `tools/agent_guard.sh` to `moved CHANGE COMMIT`; proved by "moved at the head against itself exits 0 and records the head twice", "a carried review is refused when moved compared the head with itself", "a carried review is refused when the review did not pass at the reviewed commit", and the three "guard: checker refuses moved" cases
+
 ## 2. Workflow
 
 - [x] 2.1 Say in the comments of `carried` and `carryReviews` in `.claude/workflows/deliver-change.js` that the shell backs the carry (comments only; the existing "workflow:" carry cases)
