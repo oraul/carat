@@ -1,0 +1,5 @@
+# Brief
+
+gutter-signcolumn: docs/queue-feature.md Sprint 19 item 1 at d6b4cc6, delivered as written, beside the backlog-lane delivery then running, one per lane; touch no file of the backlog lane (docs/queue-backlog.md, docs/metrics-backlog.tsv). The queue line: `gutter-signcolumn` (T2 user request, estimated medium, Facet wave 2, after `sign-colors`): a buffer with signs gives them 2 cells (`carat/domain/window.rb:27`, `:144`) drawn (`carat/adapters/frame_presenter.rb:961`, `:1011`); the Facet plan draws one. Fix outline: one cell. Accepted when frame rows show a sign in one cell in SignColumn, the text column one cell nearer, and the `lh` bench held. Backlog: none.
+
+Context: the user accepted the Facet plan (tmp/briefs/council-elements/synthesis.md, decision 5: option.signcolumn yes, one cell, git and diagnostics sharing it, the most severe wins; round 3: the sign column is always 1 cell). sign-colors (#213) gave each sign kind its color. Targets: the built-in macOS Terminal (macOS 26+) and Ubuntu's Ptyxis (26.04+), truecolor.

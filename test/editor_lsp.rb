@@ -108,12 +108,12 @@ module EditorLspTest
     when "diagnostics"
       h = published
       h.redraw
-      return "#{h.message_row.strip}|#{h.row(0)[0, 6]}|#{h.status_row.strip}"
+      return "#{h.message_row.strip}|#{h.row(0)[0, 5]}|#{h.status_row.strip}"
     when "diagnostics after an edit"
       h = published
       h.type("O<Esc>")
       h.redraw
-      above = "#{h.message_row.strip}|#{h.row(0)[0, 6]}|#{h.row(1)[0, 6]}"
+      above = "#{h.message_row.strip}|#{h.row(0)[0, 5]}|#{h.row(1)[0, 5]}"
       h.type("j")
       h.redraw
       return "#{above}|#{h.message_row.strip}"
@@ -128,11 +128,11 @@ module EditorLspTest
       h.messages.push(Carat::Domain::ServiceMessage.new(handle: 1, kind: "exit", text: ""))
       h.wait
       h.redraw
-      before = h.row(0)[0, 6]
+      before = h.row(0)[0, 5]
       h.type(":LspStart<CR>")
       h.wait
       h.redraw
-      return "#{before}|#{h.row(0)[0, 6]}|#{h.status_row.strip}"
+      return "#{before}|#{h.row(0)[0, 5]}|#{h.status_row.strip}"
     when "start a text buffer"
       h = untrusted("b.txt")
       h.type(":LspStart<CR>")
@@ -173,10 +173,10 @@ module EditorLspTest
       [":LspStart leaves a running server alone", "start a running server", "ruby-lsp |ruby-lsp starting"],
       [":LspStart starts the server again after a crash", "start after a crash", "2 |ruby-lsp starting"],
       [":LspStart on a buffer without a server", "start a text buffer", "No language server for this buffer|NORMAL  b.txt                              utf-8  1:1  All"],
-      ["a published error is drawn as a sign, the cursor line's message, and a count", "diagnostics", "expected end found EOF[31m|X   1 |NORMAL  a.rb  X 1 ? 1      ruby-lsp  ruby  utf-8  1:1  All"],
-      ["the sign and the message move with an inserted line", "diagnostics after an edit", "|    1|X   2 |expected end found EOF[31m"],
+      ["a published error is drawn as a sign, the cursor line's message, and a count", "diagnostics", "expected end found EOF[31m|X  1 |NORMAL  a.rb  X 1 ? 1      ruby-lsp  ruby  utf-8  1:1  All"],
+      ["the sign and the message move with an inserted line", "diagnostics after an edit", "|   1|X  2 |expected end found EOF[31m"],
       ["another buffer shows its own counts, none", "diagnostics in another buffer", "\"b.txt\" 1L, 5B|NORMAL  b.txt                              utf-8  1:1  All"],
-      ["a start after a crash clears the drawn diagnostics", "diagnostics after a crash and a start", "X   1 |  1 x |NORMAL  a.rb      ruby-lsp starting  ruby  utf-8  1:1  All"],
+      ["a start after a crash clears the drawn diagnostics", "diagnostics after a crash and a start", "X  1 |  1 x|NORMAL  a.rb      ruby-lsp starting  ruby  utf-8  1:1  All"],
       [":LspStart refuses arguments", "start arguments", "E488: Trailing characters: x|NORMAL  a.rb  ruby-lsp untrusted :LspStart  ruby  1:1  All"]
     ]) { |name| run(name) }
 

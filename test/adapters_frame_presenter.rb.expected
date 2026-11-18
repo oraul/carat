@@ -103,11 +103,12 @@ ok   the second tab page's window is drawn
 ok   with one tab page and no files listed there is no tabs row
 ok   two listed files show their tabs, the current one selected
 ok   the selected tab's icon is in the selected group, TabLineSel
-ok   no sign column without signs
-ok   the sign sits in its column and the numbers move right
-ok   the sign column carries the SignColumn highlight
+ok   No signs: no sign column
+ok   One sign: the sign sits in its one cell and the numbers move right by one
+ok   the sign column is one cell in SignColumn, the next cell is the number column's
 ok   the cursor moves right with the gutter
-ok   the sign column stays when numbers are off
+ok   The sign column is one cell: the text starts in the cell after the sign
+ok   The sign column is one cell: a blank SignColumn cell, the cursor at column 1
 ok   clearing the signs removes the column
 ok   each sign's glyph in its column
 ok   each sign in its kind's group, the blank cell in SignColumn
@@ -119,7 +120,7 @@ ok   the plugins' segments stand in order before the position, the encoding drop
 ok   a segment of priority 5 is dropped before the encoding
 ok   the bar follows the current window to the scratch title
 ok   the side window has no line numbers while the file window keeps them
-ok   its sign column still shows
+ok   its one-cell sign column still shows
 ok   the prompt row and the cursor after it
 ok   an ex command line keeps its colon
 ok   charwise: the anchor's cell is selected, the cursor's cell keeps its highlight
@@ -178,4 +179,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 180 passed, 0 failed
+adapters_frame_presenter: 181 passed, 0 failed

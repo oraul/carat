@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 19
 
-1. `gutter-signcolumn` (T2 user request, estimated medium, Facet wave 2, after `sign-colors`): a buffer with signs gives them 2 cells (`carat/domain/window.rb:27`, `:144`) drawn (`carat/adapters/frame_presenter.rb:961`, `:1011`); the Facet plan draws one. Fix outline: one cell. Accepted when frame rows show a sign in one cell in SignColumn, the text column one cell nearer, and the `lh` bench held. Backlog: none.
-2. `match-paren` (T2 user request, estimated medium, Facet wave 2): MatchParen has a theme row (`carat/domain/themes.rb:126`) no frame paints: the bracket matching the cursor's, shown by Neovim, is never shown. Fix outline: paint the pair in view, under a search budget. Accepted when frame rows show both brackets of `(`, `[`, `{` in MatchParen with the cursor on either, none for an unmatched or off-screen pair, and the `lh` bench held. Backlog: none.
-3. `cursor-and-messages` (T2 user request, estimated small, Facet wave 2): the Facet plan's cursor and message-line styling; no source names its files, its first step draws them. Accepted when frame rows show the plan's cursor and message styling in both themes. Backlog: none.
+1. `match-paren` (T2 user request, estimated medium, Facet wave 2): MatchParen has a theme row (`carat/domain/themes.rb:126`) no frame paints: the bracket matching the cursor's, shown by Neovim, is never shown. Fix outline: paint the pair in view, under a search budget. Accepted when frame rows show both brackets of `(`, `[`, `{` in MatchParen with the cursor on either, none for an unmatched or off-screen pair, and the `lh` bench held. Backlog: none.
+2. `cursor-and-messages` (T2 user request, estimated small, Facet wave 2): the Facet plan's cursor and message-line styling; no source names its files, its first step draws them. Accepted when frame rows show the plan's cursor and message styling in both themes. Backlog: none.
 
 ## Pool
 
@@ -38,10 +37,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- 3 features (T2, the user's request): `gutter-signcolumn`, `match-paren`, `cursor-and-messages`, no vim item.
-- Vim items to Sprint 20 (T2, the user's request): 3 items pushed back 2 each.
-- Wave 1 rest to Pool 1 to 3 (T2, the user's request): `background-detect`, `search-count`, `ui-groups`, pushed back 1 each, ahead of the vim items.
-- Roadmap (T2, the user's request): waves, `git-panel` (pushed back 5), AI; `lint-panel` pushed back 2.
-- Design values (T2, the user's request): width 36 in `explorer-rows`, #111319 in `window-surfaces`.
-- Estimate (T2): facet-palette 1,273,459 over, guide-colors 922,993 under, no size up.
-- `background-default` delivered (T2): 1,095,842 total, 61.0 min, rework 2; its advisories 1 to 4 dropped (T6): archived spec wording.
+- `gutter-signcolumn` delivered first (T2, the user's request, Facet decision 5): Sprint 19 item 1, removed; 2 features left.
+- Security first (T0): sprint-18 periodic security Medium (9) `tools/run_state.sh:449` and Low (3) `:2648` fixed by b5b0aec (#214); none open.
+- Estimate medium (T2): guide-colors 922,993, background-default 1,095,842 under; facet-palette 1,273,459 over; last two not both over, no size up.
+- No split (T2, size rule): one behavior, one cell, 2 locations per layer.
+- sprint-18-records retros 11 to 13 (T1): backlog lane, recorded in this plan's backlog.md; 13 joins `bench-skip-no-code`.
+- Pool unchanged (T2, the user's request): Facet waves, then vim items in Sprint 20.

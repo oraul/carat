@@ -24,7 +24,7 @@ module Carat
     # copies and showing another buffer drops; a closed one is one row.
     # A Struct record: mutable, with a reader and a writer per member.
     class Window < Struct.new(:buffer, :cursor, :top, :left, :row, :col, :height, :width, :fixed_width, :fixed_height, :anchor, :last_selection, :id, :jumps, :alternate, :winbar, :folds, keyword_init: true)
-      SIGN_WIDTH = 2
+      SIGN_WIDTH = 1
 
       # @rbs @buffer: Buffer
       # @rbs @cursor: Cursor
@@ -135,7 +135,7 @@ module Carat
         folds.last_row(folds.down(top, height - 1, buffer.line_count - 1)) + 1
       end
 
-      # The gutter is the sign column, two cells while the buffer has
+      # The gutter is the sign column, one cell while the buffer has
       # signs, plus max(3, digits of the line count) and one space when
       # numbers are shown. A plugin's scratch buffer shows no numbers, as
       # Neovim's tree plugins set nonumber in their windows.
