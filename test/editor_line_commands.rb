@@ -170,6 +170,11 @@ module EditorLineCommandsTest
       ["A binding replaying itself after normal", ["Q :normal<Space>x<CR>Q", "abc\n", "Q"], ["E223: Recursive mapping", ""]],
       # Each line of a range counts its own remaps (scenario: A remap per
       # line of a long range).
+      # An undo command among the keys first closes the keys before it,
+      # as the u key does: it takes them back, and the keys after it are
+      # one undo state of their own.
+      ["an undo command among the keys undoes the keys before it", ["Q :undo<CR>", "abc\n", ":normal xQ<CR>"], ["1 change; before #1  0 seconds ago", "abc"]],
+      ["the keys after an undo command are one undo state", ["Q :undo<CR>", "abc\n", ":normal xQxu<CR>"], ["1 change; before #2  0 seconds ago", "abc"]],
       ["A remap per line of a long range", ["Q x", "ab\n" * 150, ":%normal<Space>Q<CR>"], ["", "b|" * 149 + "b"]]
     ]) do |input|
       run_bound(input[0], input[1], input[2])

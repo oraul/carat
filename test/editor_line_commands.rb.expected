@@ -93,5 +93,7 @@ ok   a bad range for join
 ok   Normal too deep
 ok   a binding that runs :normal once
 ok   A binding replaying itself after normal
+ok   an undo command among the keys undoes the keys before it
+ok   the keys after an undo command are one undo state
 ok   A remap per line of a long range
-editor_line_commands: 96 passed, 0 failed
+editor_line_commands: 98 passed, 0 failed

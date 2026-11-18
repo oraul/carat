@@ -312,8 +312,9 @@ Files:
 - `carat/use_cases/history/restore_line.rb`: `RestoreLine#call` (`U`).
 - `carat/use_cases/history/list_undo.rb`: `ListUndo#call` (`:undolist`).
 - `carat/use_cases/repeat_last.rb`: `RepeatLast#call`.
-- `carat/use_cases/actions/history_handler.rb`: `HistoryHandler.register`; under `:normal` an undo key first closes the open transaction, so the keys before it are an undo state, and opens one after the walk.
-- `carat/use_cases/ex/history_command_handler.rb`: `HistoryCommandHandler.register`, `digits?`.
+- `carat/use_cases/concerns/undo_syncing.rb`: `UndoSyncing#synced_walk`, the one sync of an undo walk: under `:normal` the walk first closes the open transaction, so the keys before it are an undo state, and opens one after it.
+- `carat/use_cases/actions/history_handler.rb`: `HistoryHandler.register`; its walks go through `UndoSyncing`.
+- `carat/use_cases/ex/history_command_handler.rb`: `HistoryCommandHandler.register`, `digits?`; its walks go through `UndoSyncing`.
 
 Tests: `test/domain_undo_tree.rb`, `test/editor_undo.rb`, `test/editor_repeat.rb`.
 

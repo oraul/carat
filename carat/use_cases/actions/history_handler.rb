@@ -3,6 +3,7 @@ require_relative "../history/redo_step"
 require_relative "../history/restore_line"
 require_relative "../history/travel_history"
 require_relative "../repeat_last"
+require_relative "../concerns/undo_syncing"
 require_relative "action_handler"
 require_relative "action_table"
 
@@ -13,6 +14,8 @@ module Carat
     # TravelHistory, and the dot command through RepeatLast. None of them
     # is a change the dot command repeats.
     class HistoryHandler < ActionHandler
+      include UndoSyncing
+
       # @rbs @undo_step: UndoStep
       # @rbs @redo_step: RedoStep
       # @rbs @restore_line: RestoreLine
@@ -37,16 +40,7 @@ module Carat
         count = command.count_or(1)
         return @restore_line.call(state) if @variant == :undo_line
         return @repeat_last.call(state, command) if @variant == :repeat
-        # Among the keys :normal feeds the transaction holding the keys
-        # before is still open: it closes first, so its edits are an undo
-        # state the walk can take back, as Vim's u_undo syncs the undo
-        # first, and a new one opens for the keys after the walk.
-        buffer = state.buffer
-        synced = state.normal_depth > 0 && buffer.transaction_open?
-        buffer.commit_transaction(state.cursor.position) if synced
-        outcome = walk(state, count)
-        buffer.begin_transaction(state.cursor.position) if synced
-        outcome
+        synced_walk(state) { walk(state, count) }
       end
 
       #: (ActionTable, undo_step: UndoStep, redo_step: RedoStep, restore_line: RestoreLine, travel_history: TravelHistory, repeat_last: RepeatLast) -> void

@@ -5,6 +5,7 @@ require_relative "../history/redo_step"
 require_relative "../history/undo_to_state"
 require_relative "../history/travel_history"
 require_relative "../history/list_undo"
+require_relative "../concerns/undo_syncing"
 require_relative "ex_handler"
 require_relative "ex_table"
 
@@ -15,6 +16,8 @@ module Carat
     # A time or file-write argument (10s, 5m, 1h, 1d, 2f) is not
     # implemented yet.
     class HistoryCommandHandler < ExHandler
+      include UndoSyncing
+
       # @rbs @undo_step: UndoStep
       # @rbs @redo_step: RedoStep
       # @rbs @undo_to_state: UndoToState
@@ -36,17 +39,8 @@ module Carat
       # @rbs state: Domain::EditorState
       # @rbs command: Domain::ExCommand
       def call(state, command)
-        args = command.args
-        case @variant
-        when :undo
-          return @undo_step.call(state, 1) if args.empty?
-          return Outcome.failure("E474: Invalid argument") unless HistoryCommandHandler.digits?(args)
-          @undo_to_state.call(state, args.to_i)
-        when :redo then @redo_step.call(state, 1)
-        when :list then @list_undo.call(state)
-        when :earlier then travel(state, args, -1, "earlier")
-        else travel(state, args, 1, "later")
-        end
+        return @list_undo.call(state) if @variant == :list
+        synced_walk(state) { walk(state, command.args) }
       end
 
       # Registers the undo commands after the window and tab commands.
@@ -69,6 +63,21 @@ module Carat
       end
 
       private
+
+      # The walk of the variant: :undo with an optional state number,
+      # :redo, :earlier, or :later.
+      #: (Domain::EditorState, String) -> Outcome
+      def walk(state, args)
+        case @variant
+        when :undo
+          return @undo_step.call(state, 1) if args.empty?
+          return Outcome.failure("E474: Invalid argument") unless HistoryCommandHandler.digits?(args)
+          @undo_to_state.call(state, args.to_i)
+        when :redo then @redo_step.call(state, 1)
+        when :earlier then travel(state, args, -1, "earlier")
+        else travel(state, args, 1, "later")
+        end
+      end
 
       # :earlier and :later: a count of changes, one when none is given.
       #: (Domain::EditorState, String, Integer, String) -> Outcome
