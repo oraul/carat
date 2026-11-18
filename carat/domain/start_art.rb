@@ -80,7 +80,7 @@ module Carat
           base = frame * size
           StartArt.draw_gem(codes, hls, base, frame, plain)
           if frame >= SPARKLE_FRAME
-            StartArt.place(codes, hls, base + SPARKLE_ROW * WIDTH + SPARKLE_COL, plain ? ASCII_SPARKLE : SPARKLE, plain ? Highlight::NORMAL : Highlight::TYPE)
+            StartArt.place(codes, hls, base + SPARKLE_ROW * WIDTH + SPARKLE_COL, plain ? ASCII_SPARKLE : SPARKLE, plain ? Highlight::NORMAL : Highlight::TITLE)
           end
           frame += 1
         end
