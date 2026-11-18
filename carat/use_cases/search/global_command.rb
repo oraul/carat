@@ -116,7 +116,7 @@ module Carat
         found = matches?(compiled, state.buffer.line(row))
         return Outcome.failure(Domain::Search::STOPPED) if @budget.stopped
         return Outcome.none if found == invert
-        return listed(state, [row]) if command.empty?
+        return listed(state, [row]) if command.strip.empty?
         @runner.call(state, command)
       end
 

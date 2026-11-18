@@ -38,6 +38,7 @@ ok   the search register holds it
 ok   one undo step
 ok   dot does not repeat it
 ok   a nested global acts on the cursor line
+ok   a nested global with a blank command lists the line
 ok   a nested global with a range
 ok   :d deletes the cursor line
 ok   :d leaves the cursor on the first non-blank
@@ -55,4 +56,4 @@ ok   :d of the only line
 ok   :d is one undo step
 ok   a global whose scan runs out of budget changes nothing
 ok   a command that leaves the buffer stops the global
-editor_global: 57 passed, 0 failed
+editor_global: 58 passed, 0 failed

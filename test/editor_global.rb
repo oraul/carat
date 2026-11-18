@@ -79,6 +79,7 @@ module EditorGlobalTest
       ["dot does not repeat it", ["abc\nabc\nabc\n", [0, 0], "x:2g/b/s/b/X/<CR>j."], [[2, 0], "", "bc|aXc|bc"]],
       # A global inside a global.
       ["a nested global acts on the cursor line", ["ab\na\nb\n", [0, 0], ":g/a/g/b/d<CR>"], [[0, 0], "", "a|b"]],
+      ["a nested global with a blank command lists the line", ["ab\na\nb\n", [0, 0], ":g/a/g/b/ <CR>"], [[1, 0], "ab", "ab|a|b"]],
       ["a nested global with a range", ["ab\nc\n", [0, 0], ":g/a/1g/b/d<CR>"], [[0, 0], "E147: Cannot do :global recursive with a range", "ab|c"]],
       # :d.
       [":d deletes the cursor line", ["a\n b\nc\n", [1, 0], ":d<CR>"], [[1, 0], "", "a|c"]],
