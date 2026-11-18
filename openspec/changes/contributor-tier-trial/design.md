@@ -9,11 +9,11 @@ See proposal.md, Why. The workflow passes no model to a start: an agent start ru
 **Goals:**
 
 - Contributor starts run on the mid tier and record `calib.contributor=agent/session` in the run state.
-- No label in the workflow, the run state, or the history claims a mid-tier start is cheap.
+- No calibration profile claims a mid-tier start is cheap: the workflow's `CALIBRATION`, the run state's `calib.KIND`, and the history's `calibration` column. The token labels `tools/run_state.sh` writes (`metric.start.N` and `weighted_phases`) still call a start on any agent file's alias `cheap` until the queued `tier-price-mid` change; recorded as a finding.
 
 **Non-Goals:**
 
-- Pricing tokens by tier (the queued `tier-price-mid` finding).
+- Pricing and labelling tokens by tier in `tools/run_state.sh` (the queued `tier-price-mid` finding).
 - Moving any other kind.
 
 ## Decisions
@@ -31,4 +31,4 @@ See proposal.md, Why. The workflow passes no model to a start: an agent start ru
 
 ## Migration Plan
 
-Takes effect at the first delivery started after the merge. Revert: drop the `model:` line and set the contributor back to `session/session`.
+Takes effect at the first delivery started after the merge. Revert: drop the `model:` line, set the contributor back to `session/session`, and drop the tools-test check "calibration: the contributor runs on its agent file's tier at the session's effort", which would fail otherwise.

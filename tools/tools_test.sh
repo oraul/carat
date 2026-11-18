@@ -3993,13 +3993,14 @@ done
 expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
 expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
 # The contributor tier trial (docs/goals.md, Calibration): the contributor
-# alone runs on its agent file's tier, the judgment starts on the session's.
+# alone runs on its agent file's tier; the planner, quality, security, and
+# close starts keep the session's, by the user's decision.
 expect "calibration: the contributor runs on its agent file's tier at the session's effort" 0 "^agent/session$" profile_of contributor
 judged=""
 for kind in planner quality security close; do
   judged="$judged $kind=$(profile_of "$kind" | cut -d/ -f1)"
 done
-expect "calibration: the judgment starts but the contributor keep the session's tier" 0 "^ planner=session quality=session security=session close=session$" echo "$judged"
+expect "calibration: the planner, quality, security, and close starts keep the session's tier" 0 "^ planner=session quality=session security=session close=session$" echo "$judged"
 
 # ------------------------------------------------------------ workflow helpers
 # The workflows' pure helpers, run by node (which make doctor requires for
