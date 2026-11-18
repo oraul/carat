@@ -77,7 +77,11 @@ module Carat
       PANEL_RED = 40
       PANEL_BLUE = 41
       PANEL_CYAN = 42
-      ROLES = 43
+      # The indent guides, apart from the text roles so they recede
+      # behind the text: every guide, and the guide of the cursor's block.
+      GUIDE = 43
+      GUIDE_SCOPE = 44
+      ROLES = 45
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -142,8 +146,8 @@ module Carat
         Highlight::STATUS_DIAGNOSTIC_WARN, PANEL_YELLOW, PANEL, 0, 0,
         Highlight::STATUS_DIAGNOSTIC_INFO, PANEL_BLUE, PANEL, 0, 0,
         Highlight::STATUS_DIAGNOSTIC_HINT, PANEL_CYAN, PANEL, 0, 0,
-        Highlight::INDENT_GUIDE, FAINT, NONE, 0, 0,
-        Highlight::INDENT_GUIDE_SCOPE, DIM, NONE, 0, 0,
+        Highlight::INDENT_GUIDE, GUIDE, NONE, 0, 0,
+        Highlight::INDENT_GUIDE_SCOPE, GUIDE_SCOPE, NONE, 0, 0,
         Highlight::FLOAT_TITLE, BLUE, FLOAT, BOLD, BOLD,
         Highlight::POPUP_MENU_MATCH, BLUE, FLOAT, BOLD, BOLD,
         Highlight::POPUP_MENU_MATCH_SELECTED, FG, SELECTION, BOLD | UNDERLINE, REVERSE | BOLD | UNDERLINE,
@@ -207,6 +211,8 @@ module Carat
         FG, 0xc8ccd8, -1, 7,
         DIM, 0x9298ab, -1, 8,
         FAINT, 0x6c7286, -1, 8,
+        GUIDE, 0x30364b, -1, 8,
+        GUIDE_SCOPE, 0x46506e, -1, 8,
         PANEL, 0x2e3346, -1, 7,
         PANEL_FG, 0xe2e5ee, -1, 0,
         PANEL_NC, 0x15171e, -1, 7,
@@ -255,6 +261,8 @@ module Carat
         FG, 0x2f3340, -1, 0,
         DIM, 0x5c6173, -1, 8,
         FAINT, 0x7a8094, -1, 8,
+        GUIDE, 0xd8dce8, -1, 8,
+        GUIDE_SCOPE, 0xa9b4d6, -1, 8,
         PANEL, 0xe3e6ef, -1, 7,
         PANEL_FG, 0x2f3340, -1, 0,
         PANEL_NC, 0xf0f1f5, -1, 7,
@@ -303,6 +311,8 @@ module Carat
         FG, 0xabb2bf, -1, 7,
         DIM, 0x959ca8, -1, 8,
         FAINT, 0x737a8a, -1, 8,
+        GUIDE, 0x737a8a, -1, 8,
+        GUIDE_SCOPE, 0x959ca8, -1, 8,
         PANEL, 0x3e4452, -1, 7,
         PANEL_FG, 0xd7dae0, -1, 0,
         PANEL_NC, 0x21252b, -1, 7,
@@ -351,6 +361,8 @@ module Carat
         FG, 0x383a42, -1, 0,
         DIM, 0x696c77, -1, 8,
         FAINT, 0x84868e, -1, 8,
+        GUIDE, 0x84868e, -1, 8,
+        GUIDE_SCOPE, 0x696c77, -1, 8,
         PANEL, 0xe5e5e6, -1, 7,
         PANEL_FG, 0x383a42, -1, 0,
         PANEL_NC, 0xf0f0f1, -1, 7,
@@ -399,6 +411,8 @@ module Carat
         FG, 0xd4d4d4, -1, 7,
         DIM, 0x8f8f8f, -1, 8,
         FAINT, 0x737373, -1, 8,
+        GUIDE, 0x737373, -1, 8,
+        GUIDE_SCOPE, 0x8f8f8f, -1, 8,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_NC, 0x252526, -1, 7,
@@ -448,6 +462,8 @@ module Carat
         FG, 0x000000, -1, 0,
         DIM, 0x1f6b82, -1, 8,
         FAINT, 0x858585, -1, 8,
+        GUIDE, 0x858585, -1, 8,
+        GUIDE_SCOPE, 0x1f6b82, -1, 8,
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_NC, 0xf3f3f3, -1, 7,

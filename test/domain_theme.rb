@@ -12,6 +12,10 @@ module DomainThemeTest
   # the groups that carry no text, exempt from the contrast rule.
   DECORATIONS = [H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
   NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
+  # The palettes whose indent guides recede behind the text, ordered
+  # below Comment rather than held to 3:1, and the guide groups.
+  RECEDING = ["carat-dark", "carat-light"]
+  GUIDES = [H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
 
   # The linear light of one sRGB component, WCAG 2's formula.
   #: (Integer) -> Float
@@ -129,13 +133,15 @@ module DomainThemeTest
   # 256 colors, each with its ratio, and those pairing the terminal's
   # color with the palette's, "unpaired"; with layer
   # H::CURSOR_LINE_LAYER, each group as drawn on the cursor line, held to
-  # the same thresholds.
+  # the same thresholds. The guides of a RECEDING palette are left to
+  # guide_order.
   #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
   def self.low_contrast(theme, at256, layer)
     out = []
     id = 0
+    receding = RECEDING.include?(theme.name)
     while id < H::COUNT
-      unless NO_TEXT.include?(id)
+      unless NO_TEXT.include?(id) || (receding && GUIDES.include?(id))
         fg = theme.fg(id + layer)
         bg = theme.bg(id + layer)
         if fg < 0 || bg < 0
@@ -151,6 +157,29 @@ module DomainThemeTest
       end
       id += 1
     end
+    out
+  end
+
+  # What breaks the indent guides' order on a theme, on layer 0 or on
+  # H::CURSOR_LINE_LAYER, at 24 bits or at 256 colors: IblIndent at or
+  # above IblScope, IblScope at or above Comment, or IblIndent below
+  # 1.1:1, each with the ratios.
+  #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
+  def self.guide_order(theme, at256, layer)
+    ratios = []
+    [H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE, H::COMMENT].each do |id|
+      fg = theme.fg(id + layer)
+      bg = theme.bg(id + layer)
+      if at256
+        fg = shown_256(fg, theme.fg256(id + layer))
+        bg = shown_256(bg, theme.bg256(id + layer))
+      end
+      ratios << contrast(fg, bg)
+    end
+    out = []
+    out << "IblIndent #{ratios[0]} not below IblScope #{ratios[1]}" unless ratios[0] < ratios[1]
+    out << "IblScope #{ratios[1]} not below Comment #{ratios[2]}" unless ratios[1] < ratios[2]
+    out << "IblIndent #{ratios[0]} below 1.1:1" if ratios[0] < 110
     out
   end
 
@@ -402,6 +431,33 @@ module DomainThemeTest
         t.assert_equal([], low_contrast(D::Themes.find(name, background), true, H::CURSOR_LINE_LAYER), "#{name} on the cursor line on the #{background}'s background at 256 colors")
       end
     end
+    # Scenario: The other palettes' guides keep 3:1. The two tables above
+    # hold IblIndent and IblScope of one_dark, one_light, dark_plus, and
+    # light_plus to 3:1 on the background and on the cursor line.
+    t.assert_equal([false, false, true, true], [RECEDING.include?("one_dark"), RECEDING.include?("light_plus"), DECORATIONS.include?(H::INDENT_GUIDE), DECORATIONS.include?(H::INDENT_GUIDE_SCOPE)], "The other palettes' guides keep 3:1: only Carat's palettes leave the guides to their order")
+
+    # Scenario: The guides order below Comment. In Carat's palettes
+    # IblIndent is below IblScope, IblScope below Comment, and IblIndent
+    # at least 1.1:1, on the background and on the cursor line, at 24
+    # bits and at 256 colors.
+    RECEDING.each do |name|
+      theme = D::Themes.find(name, "theme")
+      [0, H::CURSOR_LINE_LAYER].each do |layer|
+        where = layer == 0 ? "the background" : "the cursor line"
+        t.assert_equal([], guide_order(theme, false, layer), "The guides order below Comment: #{name} on #{where} at 24 bits")
+        t.assert_equal([], guide_order(theme, true, layer), "The guides order below Comment: #{name} on #{where} at 256 colors")
+      end
+    end
+    # Scenario: The guide colors. Carat's palettes give the guides their
+    # own colors, basic color 8 at 16 colors.
+    t.cases([
+      ["The guide colors: carat-dark", ["carat-dark"], [0x30364b, 0x46506e, 8, 8]],
+      ["The guide colors: carat-light", ["carat-light"], [0xd8dce8, 0xa9b4d6, 8, 8]]
+    ]) do |input|
+      theme = D::Themes.find(input[0].to_s, "terminal")
+      [theme.fg(H::INDENT_GUIDE), theme.fg(H::INDENT_GUIDE_SCOPE), theme.fg16(H::INDENT_GUIDE), theme.fg16(H::INDENT_GUIDE_SCOPE)]
+    end
+
     lit = H::CURSOR_LINE_LAYER
     D::Themes::NAMES.each do |name|
       terminal = D::Themes.find(name, "terminal")

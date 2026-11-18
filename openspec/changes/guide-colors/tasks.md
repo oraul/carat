@@ -1,7 +1,7 @@
 ## 1. Palette roles
 
-- [ ] 1.1 Add the roles GUIDE and GUIDE_SCOPE to every palette in `carat/domain/themes.rb` and map `IblIndent` and `IblScope` to them, proven by "The guide colors" and "The guides order below Comment" rows in `test/domain_theme.rb`
-- [ ] 1.2 Exempt Carat's two palettes' guides from the 3:1 floor in the contrast tables of `test/domain_theme.rb`, the other palettes keeping it ("Every palette passes", "Every palette passes on the cursor line")
+- [x] 1.1 Add the roles GUIDE and GUIDE_SCOPE to every palette in `carat/domain/themes.rb` and map `IblIndent` and `IblScope` to them, proven by "The guide colors" and "The guides order below Comment" rows in `test/domain_theme.rb`
+- [x] 1.2 Exempt Carat's two palettes' guides from the 3:1 floor in the contrast tables of `test/domain_theme.rb`, the other palettes keeping it ("Every palette passes", "Every palette passes on the cursor line")
 
 ## 2. The solid scope guide
 
