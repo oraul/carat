@@ -17,3 +17,8 @@
 - Location: `.claude/agents/checker.md`, `.claude/agents/merger.md`, `.claude/workflows/deliver-change.js:126` (mergerCap); backlog queue item `merge-output-cap`
 - Why: facet-palette check 123,463 output in 6 calls (16.8 percent, 3 passes all green first), merge 101,948 in 13 calls (13.8 percent, ci_wait_calls 6), together 30.6 percent of output for 8.4 percent of calls; guide-colors merge 26,423 in 11 calls (facet-palette retro 12).
 - Fix: the checker and merger read the stage and CI results the run state holds and generate little; accepted when check stays under 10,000 output per pass and merge under 30,000 over the next 5 feature runs with first passes unchanged. Fold into `merge-output-cap`.
+
+### Background delta spec removes and re-adds the requirement instead of modifying it
+- Location: openspec/changes/archive/2026-11-18-background-default/specs/color-themes/spec.md:1 (quality advisory, raised at openspec/changes/background-default/specs/color-themes/spec.md:1)
+- Why: one clear way: the delta removes 'The background option chooses who paints the background' and adds a renamed copy repeating three of its four scenarios word for word, where only the default and one scenario changed, so the history reads as a new requirement rather than a changed default.
+- Fix: a MODIFIED block under the existing header with the new default, the painted-by-default scenario in place of Transparent by default, and the two named-kept scenarios; the contributor tried a MODIFIED block in a scratch copy and openspec validate refused it for dropping 'Transparent by default' (design.md records it), so a follow-up first checks whether the validator allows a modified requirement to drop a scenario, else closes this finding.
