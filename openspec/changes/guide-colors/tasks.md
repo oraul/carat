@@ -10,4 +10,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Update `docs/compatibility.md` (UI groups, Indent guides) and README.md's option line, checked by `make docs-lint`
+- [x] 3.1 Update `docs/compatibility.md` (UI groups, Indent guides) and README.md's option line, checked by `make docs-lint`
