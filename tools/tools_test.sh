@@ -493,6 +493,10 @@ expect "run_state: each parallel stage keeps its own log" 0 "^EXIT 0$" tail -1 b
 expect "run_state: a parallel check with test-build passes" 0 "every stage passed" par_check "test-build test-run docs-lint"
 expect "run_state: check starts test-run only after test-build passed" 0 "^before$" order "end test-build" "start test-run"
 expect "run_state: a free stage runs beside test-build" 0 "^before$" order "start docs-lint" "end test-build"
+# gates' snapshots gate runs test-build's runner, so gates waits for it even
+# when queued first.
+expect "run_state: a parallel check with gates queued before test-build passes" 0 "every stage passed" par_check "gates test-build docs-lint"
+expect "run_state: check starts gates only after test-build ended" 0 "^before$" order "end test-build" "start gates"
 expect "run_state: a parallel check with metrics passes" 0 "every stage passed" par_check "slowa metrics slowb"
 expect "run_state: check runs metrics alone, after the first stage" 0 "^before$" order "end slowa" "start metrics"
 expect "run_state: check runs metrics alone, after the second stage" 0 "^before$" order "end slowb" "start metrics"
