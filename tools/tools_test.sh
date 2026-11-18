@@ -3986,6 +3986,8 @@ expect "workflow: a covered review is done" 0 '^[{]"next":"done"' \
   work_js "(r => continuation(r, reviewLeft(r), 0))({ ran: true, head: 'abc1234', findings: [], not_reviewed: [] })"
 expect "workflow: a continued review keeps the findings of both starts" 0 '^[{]"head":"abc1234","blocking":\["a","c"\],"advisory":\["b"\],"not_reviewed":\[\][}]$' \
   work_js "combineReviews({ head: 'abc1234', blocking: ['a'], advisory: ['b'], not_reviewed: ['f'] }, { head: 'abc1234', blocking: ['c'], advisory: ['b'], not_reviewed: [] })"
+expect "workflow: a continued review keeps the in-place fixes the first start confirmed" 0 '^\[\["x","y"\],\["x"\]\]$' \
+  work_js "[combineReviews({ head: 'abc1234', blocking: [], advisory: [], fixed_in_place: ['x'] }, { head: 'abc1234', blocking: [], advisory: [], fixed_in_place: ['x', 'y'] }).fixed_in_place, combineReviews({ ran: true, head: 'abc1234', findings: [], fixed_in_place: ['x'] }, { ran: true, head: 'abc1234', findings: [], not_reviewed: [] }).fixed_in_place]"
 expect "workflow: a security review with files left never passes" 0 "if [(]!s [|][|] reviewLeft[(]s[)][.]length[)]" grep -F 'if (!s || reviewLeft(s).length)' "$wf"
 full=abcdef0123456789abcdef0123456789abcdef01
 expect "workflow: the merger gets the full pushed sha" 0 "^\"$full\"$" work_js "pushedHead('$full', 'abcdef012345')"

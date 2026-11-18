@@ -329,14 +329,17 @@ function reviewLeft(r) {
   return Array.isArray(r.not_reviewed) ? r.not_reviewed.filter(Boolean) : []
 }
 // A continued review's result: the later start's head and coverage, the
-// findings of both without duplicates.
+// findings and the confirmed in-place fixes of both without duplicates, a
+// list only one start returned kept (a continued start is never given the
+// in-place list, so it returns no fixed_in_place of its own).
 function combineReviews(a, b) {
   if (!a || !b) return b || a
   const out = { ...b }
-  for (const key of ['findings', 'blocking', 'advisory']) {
-    if (!Array.isArray(a[key]) || !Array.isArray(b[key])) continue
+  for (const key of ['findings', 'blocking', 'advisory', 'fixed_in_place']) {
+    if (!Array.isArray(a[key]) && !Array.isArray(b[key])) continue
     const seen = new Set()
-    out[key] = a[key].concat(b[key]).filter((f) => { const k = JSON.stringify(f); return seen.has(k) ? false : seen.add(k) })
+    const both = (Array.isArray(a[key]) ? a[key] : []).concat(Array.isArray(b[key]) ? b[key] : [])
+    out[key] = both.filter((f) => { const k = JSON.stringify(f); return seen.has(k) ? false : seen.add(k) })
   }
   return out
 }

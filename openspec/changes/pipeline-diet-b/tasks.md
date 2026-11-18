@@ -11,6 +11,7 @@
 ## 3. Fix in place
 
 - [x] 3.1 `inPlaceRound`, `inPlaceTask`, `fixed_in_place` in the review schemas, the confirmation request, and the hand-over filter; proved by "findings in place ride with the blocking ones", "a round of its own only with a round to spare", "a fix-in-place round runs check, security, and quality again at its head", and "a finding confirmed fixed in place leaves the hand-over"
+- [x] 3.2 `combineReviews` merges `fixed_in_place` too and keeps a list only one start returned, so a capped review after a fix-in-place round, continued without the in-place list, keeps the fixes its first start confirmed out of the findings file (the quality finding at e436864e0ca7, `.claude/workflows/deliver-change.js` combineReviews); proved by "a continued review keeps the in-place fixes the first start confirmed"
 
 ## 4. Records budget
 
