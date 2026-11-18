@@ -207,6 +207,9 @@ module EditorGitSignsTest
     h = repository("one\nTWO\nthree\nnew\nfour\n", "one\ntwo\nthree\nfour\nfive\n")
     start(h, "a.txt")
     t.assert_equal(["", "┇", "", "┃", "▁"], signs(h, 5), "each sign kind shows on its lines: changed, added, and deleted on the line above")
+    # Scenario "Git signs are green and cyan" (color-themes): each kind in its group.
+    hl = Carat::Domain::Highlight
+    t.assert_equal([hl::SIGN_COLUMN, hl::CHANGED, hl::SIGN_COLUMN, hl::ADDED, hl::REMOVED], [h.buffer.sign_group_at(0), h.buffer.sign_group_at(1), h.buffer.sign_group_at(2), h.buffer.sign_group_at(3), h.buffer.sign_group_at(4)], "Git signs are green and cyan: changed in Changed, added in Added, deleted in Removed")
     t.assert_equal(true, h.row(1).include?("┇"), "and the gutter draws them")
 
     # Scenario "The text capture refuses ext:: and fsmonitor".

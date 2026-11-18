@@ -303,22 +303,22 @@ module Carat
         sign_layers[i]
       end
 
-      # Places the glyph on the row in the owner's layer, which is made,
-      # in priority order, when the owner has none yet. The row must be
-      # inside the buffer.
-      #: (String, Integer, Integer, String) -> void
-      def place_sign(owner, priority, row, glyph)
+      # Places the glyph, drawn in the highlight group, on the row in the
+      # owner's layer, which is made, in priority order, when the owner has
+      # none yet. The row must be inside the buffer.
+      #: (String, Integer, Integer, String, Integer) -> void
+      def place_sign(owner, priority, row, glyph, group)
         i = 0
         while i < sign_layers.length
           layer = layer_at(i)
           if layer.owner == owner
-            layer.place(row, glyph)
+            layer.place(row, glyph, group)
             return
           end
           i += 1
         end
         fresh = SignLayer.new(owner: owner, priority: priority, line_count: lines.length)
-        fresh.place(row, glyph)
+        fresh.place(row, glyph, group)
         at = 0
         at += 1 while at < sign_layers.length && layer_at(at).priority <= priority
         sign_layers.insert(at, fresh)
@@ -344,7 +344,8 @@ module Carat
       # Shows a language server's diagnostics for the file: keeps the list,
       # marks each row inside the buffer with its most severe diagnostic
       # (the lowest severity number, the first on a tie), and places that
-      # one's glyph, glyphs[severity - 1], as the row's diagnostic sign.
+      # one's glyph, glyphs[severity - 1], as the row's diagnostic sign,
+      # drawn in the group of its severity.
       #: (DiagnosticList, Array[String]) -> void
       def set_diagnostics(list, glyphs)
         clear_diagnostics
@@ -371,7 +372,10 @@ module Carat
         row = 0
         while row < n
           mark = marks[row]
-          place_sign(DIAGNOSTIC_OWNER, DIAGNOSTIC_PRIORITY, row, glyphs[list.at(mark - 1).severity - 1]) if mark > 0
+          if mark > 0
+            severity = list.at(mark - 1).severity
+            place_sign(DIAGNOSTIC_OWNER, DIAGNOSTIC_PRIORITY, row, glyphs[severity - 1], Highlight.diagnostic_group(severity))
+          end
           row += 1
         end
         nil
@@ -407,6 +411,19 @@ module Carat
           i += 1
         end
         ""
+      end
+
+      # The highlight group of the sign shown on the row, the same layer
+      # sign_at reads, Highlight::SIGN_COLUMN for none.
+      #: (Integer) -> Integer
+      def sign_group_at(row)
+        i = 0
+        while i < sign_layers.length
+          layer = layer_at(i)
+          return layer.group_at(row) unless layer.glyph_at(row).empty?
+          i += 1
+        end
+        Highlight::SIGN_COLUMN
       end
 
       # Splits file text into lines. The line ending is "\r\n" when the first

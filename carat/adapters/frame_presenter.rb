@@ -821,6 +821,7 @@ module Carat
           syntax = Domain::SyntaxLine::NONE
           number = -1
           sign = ""
+          sign_group = Domain::Highlight::SIGN_COLUMN
           cur = -1
           layer = 0
           guide = guided ? @guides.key(i) : 0
@@ -834,6 +835,7 @@ module Carat
             line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
+            sign_group = buffer.sign_group_at(row) if signs
             if cursor.row >= row && cursor.row <= shown_last
               cur = 0
               layer = lit
@@ -844,20 +846,21 @@ module Carat
             syntax = buffer.style_at(row, line) if styled
             number = number_shown(row, cursor.row, options, gutter, signs)
             sign = buffer.sign_at(row) if signs
+            sign_group = buffer.sign_group_at(row) if signs
             if row == cursor.row
               cur = cursor.col
               layer = lit
             end
             select_columns(selection, buffer, row, line, tabstop, block) if selecting
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
             @row_of = row
             @cursor_col = fold >= 0 ? -1 : cur
             @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
-            paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
+            paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
             frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
-            @back_rows.store(seg, line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -867,7 +870,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
           end
           row = shown_last + 1
           i += 1
@@ -986,11 +989,12 @@ module Carat
       end
 
       # One text row of a window, every cell written once: the tilde past
-      # the end of the buffer, or the sign column, the number, the text,
+      # the end of the buffer, or the sign column (the glyph in its sign's
+      # group), the number, the text,
       # and blanks between and after, then the token groups, then the
       # selection.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
-      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, signs, text_width, left, tabstop, syntax)
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
+      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
         if line.equal?(PaintedRows::TILDE)
           frame.blank(frame_row, x, x + width)
           frame.put(frame_row, x, "~", Domain::Highlight::NON_TEXT)
@@ -1003,7 +1007,7 @@ module Carat
           if signs
             frame.fill(frame_row, x, x + Domain::Window::SIGN_WIDTH, Domain::Highlight::SIGN_COLUMN)
             shown = sign.length > Domain::Window::SIGN_WIDTH ? sign[0, Domain::Window::SIGN_WIDTH] : sign
-            frame.put(frame_row, x, shown, Domain::Highlight::SIGN_COLUMN)
+            frame.put(frame_row, x, shown, sign_group)
             start = x + Domain::Window::SIGN_WIDTH
             numbers = gutter - Domain::Window::SIGN_WIDTH
           end

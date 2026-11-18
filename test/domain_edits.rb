@@ -189,7 +189,7 @@ module DomainEditsTest
 
     # revert_to undoes the open transaction's records after a count.
     b = D::Buffer.new(lines: ["one", "two", "three"], path: nil, line_ending: "\n")
-    b.place_sign("p", 0, 2, "S")
+    b.place_sign("p", 0, 2, "S", D::Highlight::SIGN_COLUMN)
     b.begin_transaction(pos(0, 0))
     b.insert(pos(0, 0), "x")
     mark = b.transaction_size
@@ -226,7 +226,7 @@ module DomainEditsTest
 
     # Signs move with their lines, one layer per plugin in priority order.
     b = D::Buffer.new(lines: ["a", "b", "c", "d"], path: nil, line_ending: "\n")
-    b.place_sign("git", 1, 2, "G")
+    b.place_sign("git", 1, 2, "G", D::Highlight::SIGN_COLUMN)
     b.set_lines(0, 0, ["new"])
     t.assert_equal(["", "G"], [b.sign_at(2), b.sign_at(3)], "a line inserted above moves the sign down")
     b.insert(pos(3, 0), "x")
@@ -238,9 +238,9 @@ module DomainEditsTest
     b.set_lines(1, 2, [])
     t.assert_equal([false, ""], [b.sign_at(1) == "G", b.sign_at(0)], "deleting its line removes it")
     b = D::Buffer.new(lines: ["a", "b"], path: nil, line_ending: "\n")
-    b.place_sign("second", 5, 0, "2")
-    b.place_sign("first", 1, 0, "1")
-    b.place_sign("first", 1, 0, "!")
+    b.place_sign("second", 5, 0, "2", D::Highlight::SIGN_COLUMN)
+    b.place_sign("first", 1, 0, "1", D::Highlight::SIGN_COLUMN)
+    b.place_sign("first", 1, 0, "!", D::Highlight::SIGN_COLUMN)
     t.assert_equal(["!", "first"], [b.sign_at(0), b.layer_at(0).owner], "the higher priority shows and a plugin replaces only its own sign")
     t.assert_equal([1, "2"], [b.clear_signs("first"), b.sign_at(0)], "clearing one plugin's signs shows the other's")
     t.assert_equal(0, b.clear_signs("nobody"), "clearing signs never placed counts none")

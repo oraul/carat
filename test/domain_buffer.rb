@@ -242,17 +242,24 @@ module DomainBufferTest
     named = D::Buffer.new(lines: ["ab"], path: "a.txt", line_ending: "\n")
     t.assert_equal("a.txt", named.display_name, "a file buffer is named by its path")
     t.assert_equal(false, b.signs?, "no signs at first")
-    b.place_sign("hello", 0, 0, "X")
+    b.place_sign("hello", 0, 0, "X", D::Highlight::SIGN_COLUMN)
     t.assert_equal([true, "X", ""], [b.signs?, b.sign_at(0), b.sign_at(1)], "a sign is placed on its row")
+    t.assert_equal([D::Highlight::SIGN_COLUMN, D::Highlight::SIGN_COLUMN], [b.sign_group_at(0), b.sign_group_at(1)], "a sign keeps its group, a row without one has SignColumn")
+    b.place_sign("hello", 0, 1, "X", D::Highlight::DIAGNOSTIC_ERROR)
+    t.assert_equal([["X", D::Highlight::SIGN_COLUMN], ["X", D::Highlight::DIAGNOSTIC_ERROR]], [[b.sign_at(0), b.sign_group_at(0)], [b.sign_at(1), b.sign_group_at(1)]], "one glyph in two groups keeps each row's group")
+    b.place_sign("hello", 0, 0, "X", D::Highlight::ADDED)
+    t.assert_equal([D::Highlight::ADDED, D::Highlight::DIAGNOSTIC_ERROR], [b.sign_group_at(0), b.sign_group_at(1)], "a later sign on a row replaces its group")
 
     # Diagnostics: the most severe per row, drawn over a plugin's sign.
     d = D::Buffer.new(lines: ["a", "b", "c"], path: "a.rb", line_ending: "\n")
-    d.place_sign("git", 0, 1, "+")
-    d.place_sign("git", 0, 2, "+")
+    d.place_sign("git", 0, 1, "+", D::Highlight::SIGN_COLUMN)
+    d.place_sign("git", 0, 2, "+", D::Highlight::SIGN_COLUMN)
     glyphs = ["E", "W", "I", "H"]
     list = listed([diag(1, 4, "hint"), diag(1, 2, "warn"), diag(0, 1, "err"), diag(1, 2, "later"), diag(9, 1, "past the end")])
     d.set_diagnostics(list, glyphs)
     t.assert_equal(["E", "W", "+"], [d.sign_at(0), d.sign_at(1), d.sign_at(2)], "a row shows its most severe diagnostic over a plugin's sign")
+    # Scenario: A diagnostic sign takes its severity's group.
+    t.assert_equal([D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::SIGN_COLUMN], [d.sign_group_at(0), d.sign_group_at(1), d.sign_group_at(2)], "A diagnostic sign takes its severity's group, a plugin's sign keeps its own")
     t.assert_equal(["err", "warn", true, 5], [d.diagnostic_at(0).message, d.diagnostic_at(1).message, d.diagnostic_at(2).nil?, d.diagnostics.count], "a row's diagnostic is the first of the most severe, one past the end is kept unmarked")
     t.assert_equal([true, true], [d.diagnostic_at(-1).nil?, d.diagnostic_at(9).nil?], "no diagnostic outside the buffer")
     d.set_lines(0, 0, ["new"])
