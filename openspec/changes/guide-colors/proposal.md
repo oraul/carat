@@ -20,7 +20,7 @@ The indent guides are painted in the palettes' text roles, FAINT and DIM, so eve
 
 ## Impact
 
-- Domain: `Themes` (roles GUIDE and GUIDE_SCOPE in every palette, the two guide groups mapped to them), `Options` (the scope guide's code point, `SCOPE_GUIDE_CHAR`).
+- Domain: `Themes` (roles GUIDE and GUIDE_SCOPE in every palette, the two guide groups mapped to them), `Options` (the scope guide's code point, `SCOPE_GUIDE`).
 - Adapters: `IndentGuides#paint` draws the scope guide's code; `configure` folds the ascii fallback into its stamp.
 - Tests: `test/domain_theme.rb` (the guide ordering rows, the guides out of the 3:1 list only in Carat's palettes), `test/adapters_indent_guides.rb` (frame rows with `┊` and `│`, the scope glyph's ascii fallback), `test/domain_options_config.rb` (the scope code).
 - Docs: `docs/compatibility.md` (UI groups and Indent guides), README.md option line.

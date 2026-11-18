@@ -30,7 +30,7 @@ module Carat
     # or more file windows, "always", or "never". indentguides draws a
     # guide at each shiftwidth level of file windows' indentation, in
     # indentguides_char, one character one column wide, the cursor's block
-    # in the solid SCOPE_GUIDE_CHAR. winborder is the
+    # in the solid SCOPE_GUIDE. winborder is the
     # border style of floats, Neovim's option (BorderStyle). jumptab is
     # "replace" when a jump takes the tab of the buffer it leaves, or
     # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
@@ -117,9 +117,9 @@ module Carat
       # place with the ascii icon set.
       GUIDE_CHAR = "┊"
       GUIDE_ASCII = 124
-      # The solid guide of the cursor's block, drawn as GUIDE_ASCII with the
-      # ascii icon set.
-      SCOPE_GUIDE_CHAR = "│"
+      # The code point of the solid guide of the cursor's block, │, drawn
+      # as GUIDE_ASCII with the ascii icon set.
+      SCOPE_GUIDE = 0x2502
 
       # The largest slot size, in columns or rows.
       SLOT_SIZE_MAX = 500
@@ -162,11 +162,11 @@ module Carat
       end
 
       # The code point the guides of the cursor's block are drawn with: the
-      # solid SCOPE_GUIDE_CHAR, or | in its place when the icon set is ascii.
+      # solid SCOPE_GUIDE, or | in its place when the icon set is ascii.
       #: () -> Integer
       def scope_guide_code
         return GUIDE_ASCII if icons == "ascii"
-        Utf8.code_at(SCOPE_GUIDE_CHAR, 0, SCOPE_GUIDE_CHAR.bytesize)
+        SCOPE_GUIDE
       end
 
       # Whether a word can be the guide character: one character, one
