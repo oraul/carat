@@ -22,8 +22,8 @@ Adds the `:normal` and `:p` ex commands as Neovim runs them, alone, with a range
 
 ## Testing
 
-- Run the security review of the committed diff, pass with 0 high, 0 medium, and 0 low findings.
-- Run the quality review, pass with 0 blocking findings after the remap-count fix, its advisories recorded in `docs/findings/vim-line-commands-c.md`.
+- Run the security review of the committed diff in every review round, the last at the head after the main merge and the :g fix, pass with 0 high, 0 medium, and 0 low findings.
+- Run the quality review over four rounds, its blocking findings fixed in place (the recursive remap count; the trailing blanks, undo states, and last change of :normal; the trailing blanks of a :normal that :g runs), the last round passing with 0 blocking findings, its advisories recorded in `docs/findings/vim-line-commands-c.md`.
 - Run the checker's stages docs-lint, dev-build, test-build, test-run, diagnose, tools-test, bench-budget, gates, and metrics, all pass.
 - Run the benchmark comparison against main's recorded figures, pass with no allocation or round increase.
 - Run `make spec-validate` after the archive, 54 of 54 pass.
