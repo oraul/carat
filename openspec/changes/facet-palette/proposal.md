@@ -8,7 +8,7 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 - In carat-dark and carat-light `FloatBorder` leaves the 3:1 decoration floor, as the guides did, and stays apart from the float's background by at least 1.3:1; the other palettes' borders keep 3:1.
 - Search softens to a tint the text keeps reading on: SEARCH #4a4129 / #f7e3a1, `Search` and `Todo` drawn in ON_SEARCH.
 - The match under the cursor, in every window, is drawn in `CurSearch` (the strong orange INC_SEARCH, bold) while "hlsearch" shows the matches, as Neovim draws it.
-- carat-light's SELECTION becomes #c5cff0 (1.50:1 on the background, was 1.26:1); its panel surfaces PANEL_NC and FLOAT become #eceef3, a step of 1.12:1 from the background (was 1.09:1).
+- carat-light's SELECTION becomes #c2ccef (1.54:1 on the background, was 1.26:1); its panel surfaces PANEL_NC and FLOAT become #eceef3, a step of 1.12:1 from the background (was 1.09:1).
 - carat-dark's PANEL_NC is pinned to index 233 at 256 colors, apart from the background's 234.
 - `StatusLineModeCommand`, the pill of the command line and of every query picker's prompt, is cyan in every palette.
 - The start screen's sparkle is drawn in `Title`, sapphire, in place of `Type`.
@@ -32,4 +32,4 @@ Carat's two palettes miss the Facet plan's contrast targets in the places read o
 - Docs: `docs/compatibility.md` (UI groups, search highlighting).
 - README.md: unchanged, it names no palette color, group, or pill color.
 - docs/architecture.md: unchanged, it names neither the palette roles nor the search groups' painting.
-- Assumptions: the queue line's "light PANEL #eceef3" is the designer's proposal for the light panel surfaces PANEL_NC and FLOAT (designer.md lists PANEL #e3e6ef as kept); the stronger light SELECTION is #c5cff0, meeting the researcher's 1.5:1 on the background, 1.3:1 on the cursor line, and 7:1 for text; the current match is the match holding the cursor in each window, as Neovim's CurSearch; the query pickers' prompts already draw the command-line pill, so the one group covers them.
+- Assumptions: the queue line's "light PANEL #eceef3" is the designer's proposal for the light panel surfaces PANEL_NC and FLOAT (designer.md lists PANEL #e3e6ef as kept); the stronger light SELECTION is #c2ccef, meeting the researcher's 1.5:1 on the background, 1.3:1 on the cursor line, and 7:1 for text; the current match is the match holding the cursor in each window, as Neovim's CurSearch; the query pickers' prompts already draw the command-line pill, so the one group covers them.

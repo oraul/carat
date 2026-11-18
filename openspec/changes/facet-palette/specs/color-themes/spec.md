@@ -54,11 +54,11 @@ Every palette SHALL color `FloatBorder` with a border role of its own, apart fro
 - **THEN** `Search` is #c8ccd8 on #4a4129 and #2f3340 on #f7e3a1, black on bright yellow at 16 colors, and `CurSearch` has INC_SEARCH's background and is bold
 
 ### Requirement: Carat's palettes give the selection and the panels their Facet colors
-`carat-light`'s selection SHALL be #c5cff0, at least 1.5:1 from its background, and its panel surfaces #eceef3. Each palette SHALL hold a dim text color for the status bar, #a4aabd and #5c6173 in Carat's, at least 4.5:1 on the bar. At 256 colors `carat-dark`'s panel surfaces SHALL be index 233, apart from the background's 234.
+`carat-light`'s selection SHALL be #c2ccef, at least 1.5:1 from its background, and its panel surfaces #eceef3. Each palette SHALL hold a dim text color for the status bar, #a4aabd and #5c6173 in Carat's, at least 4.5:1 on the bar. At 256 colors `carat-dark`'s panel surfaces SHALL be index 233, apart from the background's 234.
 
 #### Scenario: The light selection shows
 - **WHEN** `carat-light`'s `Visual` is drawn
-- **THEN** its background is #c5cff0, above 1.26:1 and at least 1.5:1 from the background
+- **THEN** its background is #c2ccef, above 1.26:1 and at least 1.5:1 from the background
 
 #### Scenario: The panel colors
 - **WHEN** `carat-dark` and `carat-light` are drawn
