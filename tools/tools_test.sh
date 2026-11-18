@@ -1698,6 +1698,17 @@ expect "run_state: review-due is not due while the sprint plan waits, its sweep 
 printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue-backlog.md
 expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue-backlog[.]md, estimated small" state plan-needed b6
 # The backlog grooming: duplicates by location, removals by heading.
+# The sprint's range starts at a5's merged commit, which touched
+# tools/c.sh; b1's queue item lists a heading, wrapped; b2 to b5 merge
+# last, so groom's listed and fixed lines have real commits to prove.
+echo c > tools/c.sh
+commit "chore: c before the sprint"
+old=$(git rev-parse --short=12 HEAD)
+printf '# Queue\n\n## Sprint 2\n\n1. `b1` (T5, estimated small): one. Backlog: "## y quality advisory at\n   tools/a.sh:3".\n2. `b2` (T5, estimated small): two.\n' > docs/queue-backlog.md
+commit "docs: queue b1"
+echo b1 >> README.md
+commit "fix: b1"
+b1c=$(git rev-parse --short=12 HEAD)
 cat > docs/backlog.md <<'EOB'
 # Backlog
 
@@ -1728,12 +1739,40 @@ cat > docs/backlog.md <<'EOB'
 ## w quality advisory at tools/e.sh:2
 
 - Why: twice.
+
+## v retro entry at tools/h.sh:4
+
+- Why: it quotes the Security first section of CLAUDE.md.
+
+## v retro entry at tools/h.sh:4
+
+- Why: again.
+
+## t near miss
+
+- Location: tools/c.shx:1
+- Why: it sits next to tools/c.sh.
+
+## u quoting
+
+- Location: ./tools/u.sh.
+- Why: quoting.
 EOB
 expect "run_state: backlog-dups names entries at one location" 0 "^tools/a[.]sh:3: ## x quality advisory at tools/a[.]sh:3 [|] ## y quality advisory at tools/a[.]sh:3$" state backlog-dups
 expect "run_state: backlog-dups names no single location" 1 "" sh -c "sh '$here/run_state.sh' backlog-dups | grep tools/b"
-mkdir -p openspec/changes/archive/2026-11-11-b1
+mkdir -p openspec/changes/archive/2026-11-11-b1 openspec/changes/archive/2026-11-11-a1
 commit "docs: backlog"
+noted=$(git rev-parse --short=12 HEAD)
+echo fix >> tools/c.sh
+commit "fix: quote c"
 fixer=$(git rev-parse --short=12 HEAD)
+echo d > tools/d.sh
+commit "fix: d"
+fixer2=$(git rev-parse --short=12 HEAD)
+echo u > tools/u.sh
+commit "fix: u"
+fixer3=$(git rev-parse --short=12 HEAD)
+awk -F'\t' -v OFS='\t' -v o="$old" -v b="$b1c" -v f="$fixer2" '$1 == "a5" { $3 = o } $1 == "b1" { $3 = b } $1 ~ /^b[2-5]$/ { $3 = f } 1' docs/metrics-backlog.tsv > "$work/rows" && mv "$work/rows" docs/metrics-backlog.tsv
 cp docs/backlog.md backlog.before
 mkdir -p docs/findings
 printf '\n### Fa finding at tools/f.sh:1\n\n- Why: a.\n' > docs/findings/fa.md
@@ -1751,9 +1790,24 @@ expect "run_state: a refused groom leaves the backlog" 0 "" cmp docs/backlog.md 
 printf 'duplicate ### Kept entry at tools/b.sh:9\n' > build/plan/groom.txt
 expect "run_state: groom refuses a duplicate alone at its location" 1 "no other heading names the location" state groom sprint-2-records
 printf 'listed nope ## y quality advisory at tools/a.sh:3\n' > build/plan/groom.txt
-expect "run_state: groom refuses a listed change that is not archived" 1 "nope is not an archived change" state groom sprint-2-records
+expect "run_state: groom refuses a listed change that never merged" 1 "nope is not a change of sprint-2" state groom sprint-2-records
+printf 'listed a1 ## y quality advisory at tools/a.sh:3\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed change outside the sprint" 1 "a1 is not a change of sprint-2: listed a1" state groom sprint-2-records
+printf 'listed b1 ## w quality advisory at tools/e.sh:2\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed change whose item lacks the heading" 1 "the queue item of b1 does not list the heading" state groom sprint-2-records
+printf 'listed b2 ## y quality advisory at tools/a.sh:3\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed change whose item lists no heading" 1 "the queue item of b2 does not list the heading" state groom sprint-2-records
 printf 'fixed 0123456789ab ## x security Low at tools/c.sh:5\n' > build/plan/groom.txt
 expect "run_state: groom refuses a fixing commit not in HEAD" 1 "is not a commit of HEAD" state groom sprint-2-records
+printf 'fixed %s ## x security Low at tools/c.sh:5\n' "$old" > build/plan/groom.txt
+expect "run_state: groom refuses a fixing commit at or before the sprint's base" 1 "$old is outside the range of sprint-2, $old[.][.]HEAD" state groom sprint-2-records
+printf 'fixed %s ## x security Low at tools/c.sh:5\n' "$noted" > build/plan/groom.txt
+expect "run_state: groom refuses a fixing commit touching no file of the entry" 1 "$noted changes no file the entry names" state groom sprint-2-records
+printf 'fixed %s ## Findings of z after its package step\n' "$fixer" > build/plan/groom.txt
+expect "run_state: groom refuses a group's fix by a commit touching none of its files" 1 "$fixer changes no file the entry names" state groom sprint-2-records
+printf 'fixed %s ## t near miss\n' "$fixer" > build/plan/groom.txt
+expect "run_state: groom refuses a fix whose file only prefixes the entry's path, its Why lines unread" 1 "$fixer changes no file the entry names" state groom sprint-2-records
+expect "run_state: a refused proof leaves the backlog" 0 "" cmp docs/backlog.md backlog.before
 # The fold and the sprint row are written once, by the sprint's records
 # change that sprint-planning delivers, never by a delivery's package step
 # (parallel-lanes).
@@ -1761,12 +1815,15 @@ cp docs/sprints.tsv "$work/sprints.before"
 expect "run_state: groom refuses a delivery's change, leaving the plan to its records change" 1 "applied once, by its records change sprint-2-records, which sprint-planning delivers; not by b6" state groom b6
 expect "run_state: groom refuses a run with no change" 1 "not by a run with no change" state groom
 expect "run_state: a groom a delivery ran writes neither the fold nor the sprint row" 0 "" sh -c "cmp docs/backlog.md backlog.before && cmp docs/sprints.tsv '$work/sprints.before' && [ -f build/plan/sprint ]"
-printf 'listed b1 ## y quality advisory at tools/a.sh:3\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\n' "$fixer" > build/plan/groom.txt
+printf 'listed b1 ## y quality advisory at tools/a.sh:3\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\nduplicate ## v retro entry at tools/h.sh:4\nfixed %s ## Findings of z after its package step\nfixed %s ## u quoting\n' "$fixer" "$fixer2" "$fixer3" > build/plan/groom.txt
 printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
-expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 3 headings groomed, 2 findings file[(]s[)] folded" state groom sprint-2-records
-expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## Findings of z after its package step,## w quality advisory at tools/e[.]sh:2,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
+expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 6 headings groomed, 2 findings file[(]s[)] folded" state groom sprint-2-records
+expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## w quality advisory at tools/e[.]sh:2,## v retro entry at tools/h[.]sh:4,## t near miss,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
 expect "run_state: groom folds two changes' findings into the backlog and removes their files" 0 "^2 0$" sh -c "echo \$(grep -c -e '- Why: [ab][.]' docs/backlog.md) \$(ls docs/findings | grep -c .)"
 expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting docs/backlog.md
+expect "run_state: groom removes a group of findings with a commit touching a file it names" 1 "" grep -q 'Findings of z' docs/backlog.md
+expect "run_state: groom removes an entry fixed at its ./ path ending a sentence" 1 "" grep -q 'u quoting' docs/backlog.md
+expect "run_state: groom removes a duplicate whose text only mentions security" 0 "^Security first$" sh -c "grep -o -E 'Security first|again' docs/backlog.md"
 expect "run_state: groom keeps the first of a repeated heading" 0 "^once$" sh -c "grep -o -E 'once|twice' docs/backlog.md"
 expect "run_state: groom copies the sprint's queue" 0 "^## Sprint 3$" grep '^## Sprint' docs/queue-backlog.md
 expect "run_state: groom appends the sprint row" 0 "^sprint-2 b5 5 b1,b2,b3,b4,b5 5[.]0 1[.]0 5 0 -$" sh -c "tail -1 docs/sprints.tsv | tr '\t' ' '"

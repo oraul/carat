@@ -239,9 +239,13 @@
 #                               security review pass or blocked; else the
 #                               plan waits): check every line of
 #                               groom.txt, "listed CHANGE HEADING" (CHANGE
-#                               archived), "fixed COMMIT HEADING" (COMMIT in
-#                               HEAD), or "duplicate HEADING" (never a
-#                               security entry), HEADING a whole heading line
+#                               a change of the sprint whose queue item
+#                               holds HEADING), "fixed COMMIT HEADING"
+#                               (COMMIT in the sprint's range, after its
+#                               base up to HEAD, changing a file the entry
+#                               names), or "duplicate HEADING" (never an
+#                               entry with a security severity, such as
+#                               security Low), HEADING a whole heading line
 #                               of the backlog, and write nothing when one
 #                               fails; then copy queue-feature.md and
 #                               queue-backlog.md over their docs/ lane files,
@@ -411,6 +415,11 @@ TIER_PRICES="cheap=100/125/10/500 session=4000/5000/200/20000"
 # The note kinds of a pending change that the planner places: retrospective
 # proposals, overruns, and periodic review findings.
 PLAN_NOTES='retro|overrun|security|quality'
+# What makes a backlog entry a security entry for groom: a severity as the
+# security reviewer records it ("security Low (6)", "periodic security
+# Medium", "security Lows"), read without case; a text that only names
+# security, such as a quoted section title, is not one.
+SECURITY_MARK='(^|[^a-z])security (high|medium|low)s?([^a-z]|$)'
 TAB=$(printf '\t')
 # Columns 16 and 17 came after estimate, and 19 to 22 after calibration,
 # so rates ($5, $6) read the same columns in every row.
@@ -2363,12 +2372,62 @@ sprint_row() {
     }'
 }
 
+# True when the item naming NAME ("N. `NAME` (", its continuation lines
+# joined by a space, to a blank line, a heading, or the next item) in the
+# queue at the parent of COMMIT, the queue it was delivered from, or else at
+# COMMIT, holds the whole heading line HEADING: groom's proof that a merged
+# item listed it.
+item_lists() {
+  valid '[0-9a-f]{7,40}' "$2" || return 1
+  for at in "$2^" "$2"; do
+    queue_at "$at" | C="$1" H="$3" awk '
+      /^[0-9]+[.] / { item = $0; sub(/^[0-9]+[.] /, "", item); on = index(item, "`" ENVIRON["C"] "` (") == 1 }
+      !NF || /^#/ { on = 0 }
+      on && !/^[0-9]+[.] / { line = $0; sub(/^[ \t]+/, "", line); item = item " " line }
+      on && index(item, ENVIRON["H"]) { found = 1; exit }
+      END { exit !found }' && return 0
+  done
+  return 1
+}
+
+# True when COMMIT changes a file the entry under the heading line HEADING
+# names, as a whole path token (a "./" prefix allowed, a "." after it ending
+# a sentence): in the heading or its "- Location:" or "- Where:" lines, or
+# anywhere in an entry with neither, such as a group of findings. Groom's
+# proof that the commit fixed it.
+touches_entry() {
+  files=$(git diff-tree --no-commit-id --name-only -r -m --root --end-of-options "$1" 2>/dev/null)
+  [ -n "$files" ] || return 1
+  backlog_entry "$2" | F="$files" awk '
+    /^#+ / || /^- (Location|Where):/ { named = named "\n" $0; marked += !/^#+ / }
+    { all = all "\n" $0 }
+    END {
+      text = marked ? named : all
+      n = split(ENVIRON["F"], f, "\n")
+      for (i = 1; i <= n && !found; i++) {
+        if (f[i] == "") continue
+        rest = text; off = 0
+        while (!found && (p = index(rest, f[i])) > 0) {
+          before = substr(rest, p - 1, 1)
+          if (before == "/" && substr(rest, p - 2, 1) == ".") before = substr(rest, p - 3, 1)
+          after = substr(rest, p + length(f[i]), 1)
+          if (before !~ /[A-Za-z0-9_.\/-]/ && after !~ /[A-Za-z0-9_\/-]/) found = 1
+          rest = substr(rest, p + 1)
+        }
+      }
+      exit !found
+    }'
+}
+
 # Applies a waiting sprint plan, every line of groom.txt checked before
-# anything is written. A listed or fixed heading loses every entry under
-# it; a duplicate heading that stands more than once keeps its first entry,
-# one that stands once needs another heading at its location
-# (backlog-dups). A security entry (any line naming security) leaves only
-# by a merged item's listed heading or its fixing commit.
+# anything is written. A listed heading (its change one of the sprint's,
+# whose queue item holds it, item_lists) or a fixed one (its commit in the
+# sprint's range, sprint_base..HEAD, changing a file the entry names,
+# touches_entry) loses every entry under it; a duplicate heading that
+# stands more than once keeps its first entry, one that stands once needs
+# another heading at its location (backlog-dups). A security entry (one
+# carrying a severity, SECURITY_MARK) leaves only by a merged item's listed
+# heading or its fixing commit.
 # A plan is applied once: the marker is the clone's and the sprints file
 # each branch's, so applying it, or finding its row in the sprints file or
 # BASE's, retires the marker to PLAN_DIR/sprint.applied.
@@ -2404,13 +2463,21 @@ groom() {
       [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file or a findings file: $heading"
       case "$kind" in
         listed)
-          valid '[a-z0-9][a-z0-9-]*' "$word" && ls -d openspec/changes/archive/*-"$word" > /dev/null 2>&1 ||
-            die "groom: $word is not an archived change: $line" ;;
+          valid '[a-z0-9][a-z0-9-]*' "$word" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$word" ||
+            die "groom: $word is not a change of sprint-$sprint_n: $line"
+          item_lists "$word" "$(merged_of "$word")" "$heading" ||
+            die "groom: the queue item of $word does not list the heading: $line" ;;
         fixed)
           valid '[0-9a-f]{7,40}' "$word" && git merge-base --is-ancestor "$word" HEAD 2>/dev/null ||
-            die "groom: $word is not a commit of HEAD: $line" ;;
+            die "groom: $word is not a commit of HEAD: $line"
+          valid '[0-9a-f]{7,40}' "$sprint_base" && git rev-parse -q --verify --end-of-options "$sprint_base^{commit}" > /dev/null ||
+            die "groom: the base of sprint-$sprint_n, $sprint_base, names no commit, so no fix is in its range: $line"
+          ! git merge-base --is-ancestor "$word" "$sprint_base" 2>/dev/null ||
+            die "groom: $word is outside the range of sprint-$sprint_n, $sprint_base..HEAD: $line"
+          touches_entry "$word" "$heading" ||
+            die "groom: $word changes no file the entry names: $line" ;;
         duplicate)
-          if backlog_entry "$heading" | grep -q -i security; then
+          if backlog_entry "$heading" | grep -q -i -E "$SECURITY_MARK"; then
             die "groom: a security entry leaves only by a merged item's heading or its fixing commit: $heading"
           fi
           if [ "$stands" -gt 1 ]; then
