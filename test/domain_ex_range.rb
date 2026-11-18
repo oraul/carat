@@ -92,8 +92,21 @@ module DomainExRangeTest
       ["a count stops at the last row", [0, 0, 9, 3], [0, 2]],
       ["a count of one is the last row", [0, 3, 1, 9], [3, 3]]
     ]) do |input|
-      r = D::ExRange.new(first: input[0].to_i, last: input[1].to_i, given: true, error: "").counted(input[2].to_i, input[3].to_i)
+      r = D::ExRange.new(first: input[0].to_i, last: input[1].to_i, given: true, error: "", addresses: 1).counted(input[2].to_i, input[3].to_i)
       [r.first, r.last]
+    end
+
+    # How many addresses a range typed, as :j reads it. Rows are [label,
+    # [text, row, lines], addresses].
+    t.cases([
+      ["no address", ["", 1, 5], 0],
+      ["one address", ["2", 1, 5], 1],
+      ["two addresses", ["1,2", 1, 5], 2],
+      ["three addresses count as two", ["1,2,3", 1, 5], 2],
+      ["percent counts as two", ["%", 1, 5], 2],
+      ["a refused range has none", ["9", 1, 5], 0]
+    ]) do |input|
+      D::ExRange.resolve(input[0].to_s, input[1].to_i, input[2].to_i, D::Selection.none).addresses
     end
 
     t.finish

@@ -50,10 +50,50 @@ ok   a shift left stops at column 0
 ok   a shift with blanks between the characters
 ok   a shift count from the range's last line
 ok   a shift of the visual lines
+ok   Append on the cursor line
+ok   Run keys on a range
+ok   Run keys on each marked line
+ok   An unfinished insert ends
+ok   the keys after an unfinished insert are normal-mode keys
+ok   An unfinished command line is not run
+ok   The keys are one undo step
+ok   an insert under a range is one undo step
+ok   each marked line's keys are one undo step
+ok   an unfinished operator is dropped
+ok   the keys are read literally
+ok   a bang runs the same keys
+ok   the trailing blanks are keys
+ok   an indent of trailing blanks on a range
+ok   the trailing blanks are keys on each marked line
+ok   an indent of trailing blanks on each marked line
+ok   an undo takes back the keys before it
+ok   the keys after an undo are an undo state
+ok   a redo after the keys after an undo
+ok   the keys after an undo are one undo state
+ok   a key that changed nothing is not the last change
+ok   a change merged into the one before is the last change
+ok   the long name runs keys
+ok   Print the cursor line
+ok   Print a range
+ok   Print a count of lines
+ok   The printed lines are shown together
+ok   a print keeps the wanted column
+ok   a print records a jump
+ok   the long name prints
+ok   Normal without keys
+ok   Print an empty buffer
+ok   a bang on print
+ok   a flag after print is trailing text
 ok   A zero count for join
 ok   Text after the shift
 ok   A bang on a shift
 ok   a register is no count for join
 ok   the other shift character is trailing text
 ok   a bad range for join
-editor_line_commands: 58 passed, 0 failed
+ok   Normal too deep
+ok   a binding that runs :normal once
+ok   A binding replaying itself after normal
+ok   an undo command among the keys undoes the keys before it
+ok   the keys after an undo command are one undo state
+ok   A remap per line of a long range
+editor_line_commands: 98 passed, 0 failed

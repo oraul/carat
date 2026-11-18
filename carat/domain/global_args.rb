@@ -26,10 +26,11 @@ module Carat
         GlobalArgs.new(pattern: "", command: "", error: message)
       end
 
-      # Parses text, the argument after the name.
+      # Parses text, the literal argument after the name, its trailing
+      # blanks kept for the command; a blank-only text is missing.
       #: (String) -> GlobalArgs
       def self.parse(text)
-        return refused(MISSING) if text.empty?
+        return refused(MISSING) if text.strip.empty?
         delimited = DelimitedPattern.parse(text, ":g")
         return refused(delimited.error) unless delimited.ok?
         GlobalArgs.new(pattern: delimited.pattern, command: delimited.rest, error: "")

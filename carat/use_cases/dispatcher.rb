@@ -51,7 +51,8 @@ module Carat
       # session's undo state and starts a new one, as an arrow key or a
       # page key in Neovim's insert mode does. Outside insert mode an
       # open transaction is a session that ended without LeaveInsert, and
-      # is closed first.
+      # is closed first, but for keys :normal feeds (normal_depth above 0),
+      # which join the transaction :normal keeps open.
       #: (Domain::EditorState, Domain::Command) -> void
       def call(state, command)
         @feed.now = @clock.now
@@ -66,17 +67,18 @@ module Carat
         mode = state.mode
         if mode == Domain::Mode::INSERT
           return split(state, handler, command) if handler.kind == :motion || handler.breaks_insert?
-        elsif buffer.transaction_open?
+        elsif buffer.transaction_open? && state.normal_depth == 0
           buffer.commit_transaction(before)
         end
         opened = buffer.begin_transaction(before)
         change = handler.repeat && mode != Domain::Mode::INSERT && mode != Domain::Mode::CMDLINE
+        edits = buffer.transaction_edits
         if change
           measure(state)
           buffer.start_at(start_of(state.selection)) if Domain::Mode.visual?(mode)
         end
         report(state, handler.call(state, command))
-        record(state, command, buffer) if change
+        record(state, command, buffer, edits) if change
         return unless opened
         same = state.buffer.equal?(buffer)
         return if same && state.mode == Domain::Mode::INSERT
@@ -126,14 +128,16 @@ module Carat
         Domain::Position.new(row: selection.top, col: left)
       end
 
-      # Keeps the command as the last change when it changed the text or
-      # entered insert mode, unless the dot command is running it.
-      #: (Domain::EditorState, Domain::Command, Domain::Buffer) -> void
-      def record(state, command, buffer)
+      # Keeps the command as the last change when it changed the text (the
+      # open transaction took edits past the count before it, which under
+      # :normal holds the keys before) or entered insert mode, unless the
+      # dot command is running it.
+      #: (Domain::EditorState, Domain::Command, Domain::Buffer, Integer) -> void
+      def record(state, command, buffer, edits)
         last = @last_change
         return if last.replaying
         entered = state.mode == Domain::Mode::INSERT
-        return unless entered || buffer.transaction_size > 0
+        return unless entered || buffer.transaction_edits > edits
         last.start(command)
         last.begin_session if entered
       end

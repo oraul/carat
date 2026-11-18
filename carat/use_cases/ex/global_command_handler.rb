@@ -11,7 +11,8 @@ module Carat
     # :[range]g[lobal]/{pattern}/[cmd], :g! (inverted), and
     # :[range]v[global]/{pattern}/[cmd] through GlobalCommand on the
     # range, every line without one. A bad range reports what ExRange
-    # gives, :v! E477.
+    # gives, :v! E477. The argument is the literal one, so a :normal it
+    # runs keeps its trailing blanks.
     class GlobalCommandHandler < ExHandler
       attr_reader :global_command #: GlobalCommand
 
@@ -38,7 +39,7 @@ module Carat
         range = command.range.empty? ? "%" : command.range
         lines = Domain::ExRange.resolve(range, state.cursor.row, count, state.window.last_selection)
         return Outcome.failure(lines.error) unless lines.ok?
-        @global_command.call(state, lines.first, lines.last, command.args, @invert || command.bang)
+        @global_command.call(state, lines.first, lines.last, command.literal, @invert || command.bang)
       end
 
       # Registers :global and :vglobal after :&, in the order of

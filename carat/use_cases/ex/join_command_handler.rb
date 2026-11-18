@@ -15,7 +15,7 @@ module Carat
     # follow one space, as J does; with one they are put together as they
     # are. The cursor goes to the first non-blank of the joined line. One
     # undo step: the edit joins the caller's transaction or is its own. A
-    # bad range reports what ExRange gives, a bad count what RegisterCount
+    # bad range reports what ExRange gives,, a bad count what RegisterCount
     # gives.
     class JoinCommandHandler < LineCommandHandler
       #: (spec: String) -> void
@@ -37,7 +37,7 @@ module Carat
         args = Domain::RegisterCount.parse_count(command.args)
         return Outcome.failure(args.error) unless args.ok?
         buffer = state.buffer
-        addresses = addresses_in(command.range)
+        addresses = lines.addresses
         if args.count > 0
           lines = lines.counted(args.count, buffer.line_count)
           addresses += 1
@@ -63,14 +63,6 @@ module Carat
       end
 
       private
-
-      # How many addresses the range text typed, as Neovim's addr_count:
-      # none, one, or two for "%" or a comma.
-      #: (String) -> Integer
-      def addresses_in(text)
-        return 0 if text.empty?
-        text == "%" || text.include?(",") ? 2 : 1
-      end
 
       # Nothing joined: the cursor goes to row, its column clamped, as
       # Neovim's ex_join sets the line before it returns.

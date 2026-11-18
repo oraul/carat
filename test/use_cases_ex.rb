@@ -522,7 +522,12 @@ module UseCasesExTest
       ["j is join", "j", "join"],
       ["joi is join", "joi", "join"],
       ["> shifts right", ">", ">"],
-      ["< shifts left", "<", "<"]
+      ["< shifts left", "<", "<"],
+      ["norm is normal", "norm", "normal"],
+      ["normal is normal", "normal", "normal"],
+      ["nor is not normal", "nor", ""],
+      ["p is print", "p", "print"],
+      ["prin is print", "prin", "print"]
     ]) do |typed|
       handler = table.find(typed)
       handler.nil? ? "" : handler.name.full

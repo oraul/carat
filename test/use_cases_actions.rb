@@ -124,7 +124,7 @@ module UseCasesActionsTest
       # The table's value is untyped; the ex command takes a typed name.
       name = typed.to_s
       handler = commands.find(name)
-      handler.nil? ? "" : handler.call(state, D::ExCommand.new(range: "", name: name, bang: false, args: "")).message
+      handler.nil? ? "" : handler.call(state, D::ExCommand.new(range: "", name: name, bang: false, args: "", literal: "")).message
     end
     ordered = U::ExTable.new
     ordered.register(EchoCommandHandler.new(spec: "ma[rk]"), "Mark")

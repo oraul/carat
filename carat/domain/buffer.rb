@@ -622,6 +622,15 @@ module Carat
         open.nil? ? 0 : open.size
       end
 
+      # The number of edits the open transaction has taken, merged records
+      # included, 0 when none is open: a command joining it changed the
+      # text when the number grew.
+      #: () -> Integer
+      def transaction_edits
+        open = transaction
+        open.nil? ? 0 : open.edits
+      end
+
       # Moves the cursor position before the open transaction to where an
       # operator starts, while it has no record yet: Vim records the
       # cursor of an undo state at its first change, after an operator

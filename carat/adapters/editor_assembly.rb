@@ -110,6 +110,8 @@ require_relative "../use_cases/ex/move_command_handler"
 require_relative "../use_cases/ex/copy_command_handler"
 require_relative "../use_cases/ex/join_command_handler"
 require_relative "../use_cases/ex/shift_command_handler"
+require_relative "../use_cases/ex/normal_command_handler"
+require_relative "../use_cases/ex/print_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -186,7 +188,8 @@ module Carat
     # read once through its port; a value it leaves out falls back to
     # Vim's default in the domain, never here. The ex table and its runner
     # are built before the plugin host, which receives the runner; the
-    # handlers are registered afterwards, the core ex commands before the
+    # handlers are registered afterwards, after HandleKey, which :normal
+    # receives, the core ex commands before the
     # plugin commands, which is their order of precedence. The plugins are
     # registered first, activated once every ex command is registered (so
     # a plugin may run ex commands in activate), and before the
@@ -446,6 +449,12 @@ module Carat
         @follow_definition = UseCases::FollowDefinition.new(definition: @definition, close_float: @close_float)
         @walk_jumps = UseCases::WalkJumps.new(buffers: @buffers)
 
+        @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
+        @hide_key_hints = UseCases::HideKeyHints.new(hints: @key_hints, close_float: @close_float)
+        @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
+        @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
+
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file, buffers: @buffers)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
         UseCases::TabCommandHandler.register(@commands, open_tab: @open_tab, close_tab: @close_tab, close_other_tabs: @close_other_tabs, switch_tab: @switch_tab)
@@ -465,11 +474,12 @@ module Carat
         UseCases::CopyCommandHandler.register(@commands)
         UseCases::JoinCommandHandler.register(@commands)
         UseCases::ShiftCommandHandler.register(@commands)
+        UseCases::NormalCommandHandler.register(@commands, handle_key: @handle_key)
+        UseCases::PrintCommandHandler.register(@commands)
         UseCases::PluginCommandHandler.register(@commands, plugins: @plugins)
         @plugins.prepare_all(value)
 
         @enter_command_line = UseCases::EnterCommandLine.new(plugin_ui: @plugin_ui, search_prompt: @search_prompt, command_history: @command_history)
-        @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
         @cancel_command_line = UseCases::CancelCommandLine.new(plugins: @plugins, plugin_ui: @plugin_ui, search_prompt: @search_prompt, last_search: @last_search)
         @execute_command_line = UseCases::ExecuteCommandLine.new(runner: @runner, plugins: @plugins, plugin_ui: @plugin_ui, registers: @registers, search_prompt: @search_prompt, last_search: @last_search, command_history: @command_history, search_history: @search_history, palette: @palette)
         erase_command_line = UseCases::EraseCommandLine.new(cancel_command_line: @cancel_command_line, preview_search: @preview_search)
@@ -515,11 +525,7 @@ module Carat
           i += 1
         end
 
-        @hide_key_hints = UseCases::HideKeyHints.new(hints: @key_hints, close_float: @close_float)
         @show_key_hints = UseCases::ShowKeyHints.new(keymap: @keymap, input: @input, actions: @actions, plugins: @plugins, hints: @key_hints, open_float: @open_float, hide_key_hints: @hide_key_hints)
-        @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
-        @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices, plugins: @plugins)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)

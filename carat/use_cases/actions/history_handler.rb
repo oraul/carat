@@ -3,6 +3,7 @@ require_relative "../history/redo_step"
 require_relative "../history/restore_line"
 require_relative "../history/travel_history"
 require_relative "../repeat_last"
+require_relative "../concerns/undo_syncing"
 require_relative "action_handler"
 require_relative "action_table"
 
@@ -13,6 +14,8 @@ module Carat
     # TravelHistory, and the dot command through RepeatLast. None of them
     # is a change the dot command repeats.
     class HistoryHandler < ActionHandler
+      include UndoSyncing
+
       # @rbs @undo_step: UndoStep
       # @rbs @redo_step: RedoStep
       # @rbs @restore_line: RestoreLine
@@ -35,14 +38,9 @@ module Carat
       # @rbs command: Domain::Command
       def call(state, command)
         count = command.count_or(1)
-        case @variant
-        when :undo then @undo_step.call(state, count)
-        when :redo then @redo_step.call(state, count)
-        when :undo_line then @restore_line.call(state)
-        when :older then @travel_history.call(state, -count)
-        when :newer then @travel_history.call(state, count)
-        else @repeat_last.call(state, command)
-        end
+        return @restore_line.call(state) if @variant == :undo_line
+        return @repeat_last.call(state, command) if @variant == :repeat
+        synced_walk(state) { walk(state, count) }
       end
 
       #: (ActionTable, undo_step: UndoStep, redo_step: RedoStep, restore_line: RestoreLine, travel_history: TravelHistory, repeat_last: RepeatLast) -> void
@@ -54,6 +52,19 @@ module Carat
         while i < names.length
           table.register(names[i], HistoryHandler.new(undo_step: undo_step, redo_step: redo_step, restore_line: restore_line, travel_history: travel_history, repeat_last: repeat_last, variant: variants[i]), descriptions[i])
           i += 1
+        end
+      end
+
+      private
+
+      # Walks the undo tree by the variant's direction and count.
+      #: (Domain::EditorState, Integer) -> Outcome
+      def walk(state, count)
+        case @variant
+        when :undo then @undo_step.call(state, count)
+        when :redo then @redo_step.call(state, count)
+        when :older then @travel_history.call(state, -count)
+        else @travel_history.call(state, count)
         end
       end
     end

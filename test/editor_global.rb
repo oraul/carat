@@ -59,6 +59,11 @@ module EditorGlobalTest
       ["ignorecase without smartcase", ["a\nb\n", [0, 0], ":set ic noscs<CR>:g/A/d<CR>"], [[0, 0], "", "b"]],
       # Listing and messages.
       ["without a command the lines are listed", ["a1\nb\n a2\n", [0, 0], ":g/a<CR>"], [[2, 1], "a1\n a2", "a1|b| a2"]],
+      # The argument reaches GlobalCommand with its trailing blanks: an
+      # unclosed pattern keeps them, as Neovim does, and a blank-only
+      # command lists the lines, where Neovim runs the blank command.
+      ["an unclosed pattern keeps its trailing blank", ["a b\nab\nxa c\n", [0, 0], ":g/a <CR>"], [[2, 0], "a b\nxa c", "a b|ab|xa c"]],
+      ["a blank command lists the lines", ["a1\nb\n a2\n", [0, 0], ":g/a/ <CR>"], [[2, 1], "a1\n a2", "a1|b| a2"]],
       ["nothing matches", ["a\n", [0, 0], ":g/z/d<CR>"], [[0, 0], "Pattern not found: z", "a"]],
       ["every line matches", ["a\nab\n", [0, 0], ":v/a/d<CR>"], [[0, 0], "Pattern found in every line: a", "a|ab"]],
       ["a failing command stops it", ["a\na\n", [1, 0], ":g/a/foo<CR>"], [[0, 0], "E492: Not an editor command: foo", "a|a"]],
@@ -74,6 +79,7 @@ module EditorGlobalTest
       ["dot does not repeat it", ["abc\nabc\nabc\n", [0, 0], "x:2g/b/s/b/X/<CR>j."], [[2, 0], "", "bc|aXc|bc"]],
       # A global inside a global.
       ["a nested global acts on the cursor line", ["ab\na\nb\n", [0, 0], ":g/a/g/b/d<CR>"], [[0, 0], "", "a|b"]],
+      ["a nested global with a blank command lists the line", ["ab\na\nb\n", [0, 0], ":g/a/g/b/ <CR>"], [[1, 0], "ab", "ab|a|b"]],
       ["a nested global with a range", ["ab\nc\n", [0, 0], ":g/a/1g/b/d<CR>"], [[0, 0], "E147: Cannot do :global recursive with a range", "ab|c"]],
       # :d.
       [":d deletes the cursor line", ["a\n b\nc\n", [1, 0], ":d<CR>"], [[1, 0], "", "a|c"]],
