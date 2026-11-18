@@ -40,4 +40,10 @@ ok   a percent target is no address
 ok   a count from the last row
 ok   a count stops at the last row
 ok   a count of one is the last row
-domain_ex_range: 42 passed, 0 failed
+ok   no address
+ok   one address
+ok   two addresses
+ok   three addresses count as two
+ok   percent counts as two
+ok   a refused range has none
+domain_ex_range: 48 passed, 0 failed

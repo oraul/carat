@@ -10,12 +10,15 @@ module Carat
     # line, or one address or two joined by ",", each ".", "$", a line
     # number, "'<" or "'>" (the window's last visual selection), or empty
     # for the cursor line. Line 0 is line 1, as for every command Carat
-    # has. A Data value.
-    class ExRange < Data.define(:first, :last, :given, :error)
+    # has. addresses is how many addresses the range typed, as Neovim's
+    # addr_count reads for the checks Carat has: 0 for none, 1, or 2 for
+    # "%" or two or more. A Data value.
+    class ExRange < Data.define(:first, :last, :given, :error, :addresses)
       # @rbs @first: Integer
       # @rbs @last: Integer
       # @rbs @given: bool
       # @rbs @error: String
+      # @rbs @addresses: Integer
 
       INVALID = Messages::E16
       BACKWARDS = "E493: Backwards range given"
@@ -31,7 +34,7 @@ module Carat
 
       #: (String) -> ExRange
       def self.refused(message)
-        ExRange.new(first: 0, last: 0, given: true, error: message)
+        ExRange.new(first: 0, last: 0, given: true, error: message, addresses: 0)
       end
 
       # The range of text on a buffer of line_count lines with the cursor
@@ -40,8 +43,8 @@ module Carat
       # with the whole range.
       #: (String, Integer, Integer, Selection) -> ExRange
       def self.resolve(text, row, line_count, selection)
-        return ExRange.new(first: row, last: row, given: false, error: "") if text.empty?
-        return ExRange.new(first: 0, last: line_count - 1, given: true, error: "") if text == "%"
+        return ExRange.new(first: row, last: row, given: false, error: "", addresses: 0) if text.empty?
+        return ExRange.new(first: 0, last: line_count - 1, given: true, error: "", addresses: 2) if text == "%"
         numbers = Array.new(0, 0)
         start = 0
         size = text.bytesize
@@ -59,7 +62,7 @@ module Carat
         low = numbers.length > 1 ? numbers[numbers.length - 2].to_i : numbers[0].to_i
         high = numbers[numbers.length - 1].to_i
         return refused(BACKWARDS) if low > high
-        ExRange.new(first: low > 0 ? low - 1 : 0, last: high > 0 ? high - 1 : 0, given: true, error: "")
+        ExRange.new(first: low > 0 ? low - 1 : 0, last: high > 0 ? high - 1 : 0, given: true, error: "", addresses: numbers.length > 1 ? 2 : 1)
       end
 
       # The target address of :m, :co, and :t as the row the lines are put
@@ -86,7 +89,7 @@ module Carat
         return refused(NO_MARK) if number == -2
         return refused(unread?(text) ? "#{UNREAD}address #{text}" : INVALID) if number < 0
         return refused(INVALID) if number > line_count
-        ExRange.new(first: number, last: number, given: true, error: "")
+        ExRange.new(first: number, last: number, given: true, error: "", addresses: 1)
       end
 
       # Whether text, which address could not read, is an address Neovim
@@ -112,7 +115,7 @@ module Carat
       def counted(count, line_count)
         stop = last + count - 1
         stop = line_count - 1 if stop > line_count - 1
-        ExRange.new(first: last, last: stop, given: true, error: "")
+        ExRange.new(first: last, last: stop, given: true, error: "", addresses: addresses)
       end
 
       # The line number one address names, -2 for a mark that is not set,

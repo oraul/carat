@@ -46,16 +46,15 @@ module Carat
         Domain::ExRange.target(command.args, state.cursor.row, state.buffer.line_count, state.window.last_selection)
       end
 
-      # The cursor on row at the wanted column, clamped as in normal mode,
-      # the wanted column kept, as Neovim's beginline(BL_SOL | BL_FIX)
-      # does under nostartofline.
+      # The cursor on row at the wanted column, clamped by
+      # EditorState#clamp_col (the end of the line for a wanted column
+      # past it, -1), the wanted column kept, as Neovim's
+      # beginline(BL_SOL | BL_FIX) does under nostartofline.
       #: (Domain::EditorState, Integer) -> void
       def place_cursor(state, row)
         cursor = state.cursor
-        length = state.buffer.line(row).length
-        max = length > 0 ? length - 1 : 0
         want = cursor.want_col
-        col = want < 0 || want > max ? max : want
+        col = want < 0 ? state.max_col(row) : state.clamp_col(row, want)
         cursor.row = row
         cursor.col = col
       end
