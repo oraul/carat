@@ -6,4 +6,4 @@
 
 ## 2. Checks
 
-- [ ] 2.1 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 2.1 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
