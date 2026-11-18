@@ -1783,6 +1783,10 @@ noted=$(git rev-parse --short=12 HEAD)
 echo fix >> tools/c.sh
 commit "fix: quote c"
 fixer=$(git rev-parse --short=12 HEAD)
+# b2's item, delivered from the queue at its merged commit's parent,
+# gains a heading only at that commit: the parent's queue holds the item,
+# so the commit's is not read.
+awk '{ sub(/two[.]$/, "two. Backlog: \"## w quality advisory at tools/e.sh:2\".") } 1' docs/queue-backlog.md > "$work/queue" && mv "$work/queue" docs/queue-backlog.md
 echo d > tools/d.sh
 commit "fix: d"
 fixer2=$(git rev-parse --short=12 HEAD)
@@ -1792,7 +1796,7 @@ fixer3=$(git rev-parse --short=12 HEAD)
 # b5's package step applied the plan that names its item, so the item
 # first stands in the queue at its merged commit; a merge of a side
 # branch that changed tools/c.sh lies in the range too.
-printf '3. `b5` (T5, estimated small): five. Backlog: "## s dotted near miss".\n' >> docs/queue-backlog.md
+printf '3. `b5` (T5, estimated small): five. Backlog: "## s dotted near miss", "### t near miss", "## r skeptic entry at tools/k.sh:1, again".\n' >> docs/queue-backlog.md
 commit "fix: b5"
 b5c=$(git rev-parse --short=12 HEAD)
 git_q checkout -q -b side
@@ -1842,6 +1846,12 @@ printf 'fixed %s ## x security Low at tools/c.sh:5\n' "$merger" > build/plan/gro
 expect "run_state: groom refuses a merge commit as a fix, though a side it merged touched the file" 1 "$merger changes no file the entry names" state groom sprint-2-records
 printf 'listed b1 ## y quality advisory\n' > build/plan/groom.txt
 expect "run_state: groom refuses a listed heading that only prefixes a longer quoted one" 1 "the queue item of b1 does not list the heading" state groom sprint-2-records
+printf 'listed b5 ## t near miss\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed heading standing only inside a quoted deeper one" 1 "the queue item of b5 does not list the heading" state groom sprint-2-records
+printf 'listed b5 ## r skeptic entry at tools/k.sh:1\n' > build/plan/groom.txt
+expect "run_state: groom refuses a listed heading a quoted longer one extends past a comma" 1 "the queue item of b5 does not list the heading" state groom sprint-2-records
+printf 'listed b2 ## w quality advisory at tools/e.sh:2\n' > build/plan/groom.txt
+expect "run_state: groom reads the item at its merged commit only when the parent's queue lacks it" 1 "the queue item of b2 does not list the heading" state groom sprint-2-records
 printf 'duplicate ## r skeptic entry at tools/k.sh:1\n' > build/plan/groom.txt
 expect "run_state: groom keeps an entry quoting a skeptic's disputed security finding" 1 "a security entry leaves only by" state groom sprint-2-records
 printf 'duplicate ## q periodic note at tools/m.sh:2\n' > build/plan/groom.txt

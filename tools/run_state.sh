@@ -243,7 +243,7 @@
 #                               holds HEADING), "fixed COMMIT HEADING"
 #                               (COMMIT in the sprint's range, after its
 #                               base up to HEAD, changing a file the entry
-#                               names), or "duplicate HEADING" (never an
+#                               names), or "duplicate HEADING" (never a
 #                               security entry (SECURITY_MARK), such as
 #                               security Low), HEADING a whole heading line
 #                               of the backlog, and write nothing when one
@@ -2131,14 +2131,14 @@ exception_item() {
 
 # Prints the item naming NAME (numbered, or the line "The user-approved
 # exception: `NAME` (...)", its continuation lines joined by a space, to a
-# blank line, a heading, or the next item) on one line, first from the
-# queue at the parent of COMMIT, the queue it was delivered from, then from
-# the queue at COMMIT, whose package step may have applied the plan naming
-# it; nothing for a queue without it or a COMMIT that is no hash.
+# blank line, a heading, or the next item) on one line, from the queue at
+# the parent of COMMIT, the queue it was delivered from, or else from the
+# queue at COMMIT, whose package step may have applied the plan naming it;
+# nothing when neither holds it or COMMIT is no hash.
 queue_items() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do
-    queue_at "$at" | C="$1" awk '
+    held=$(queue_at "$at" | C="$1" awk '
       {
         item = $0
         start = sub(/^[0-9]+[.] /, "", item) || sub(/^The user-approved exception: /, "", item)
@@ -2147,7 +2147,8 @@ queue_items() {
       start { on = index(item, "`" ENVIRON["C"] "` (") == 1; out = item; next }
       !NF || /^#/ { if (on) exit; next }
       on { line = $0; sub(/^[ \t]+/, "", line); out = out " " line }
-      END { if (on) print out }'
+      END { if (on) print out }')
+    [ -z "$held" ] || { printf '%s\n' "$held"; return 0; }
   done
 }
 
@@ -2391,10 +2392,12 @@ sprint_row() {
 
 # True when the item naming NAME (queue_items) in the queue at the parent
 # of COMMIT, the queue it was delivered from, or else at COMMIT, holds the
-# whole heading line HEADING, bounded: no "#" before it, and after it the
-# end of the item, a comma, or the closing quote the planner writes
-# (Backlog: "### title"), so a shorter heading that prefixes a quoted
-# longer one is not listed. Groom's proof that a merged item listed it.
+# whole heading line HEADING, bounded: no "#" before it; quoted, as the
+# planner writes it (Backlog: "### title"), the same quote or backtick
+# after it; unquoted, the end of the item or a comma after it. So a
+# shorter heading that prefixes a quoted longer one, even before a comma
+# inside the quotes, is not listed. Groom's proof that a merged item
+# listed it.
 item_lists() {
   queue_items "$1" "$2" | H="$3" awk '
     {
@@ -2403,7 +2406,9 @@ item_lists() {
         p += o; o = p
         before = p > 1 ? substr($0, p - 1, 1) : ""
         after = substr($0, p + length(h), 1)
-        if (before != "#" && (after == "" || after ~ /["`,]/)) { found = 1; exit }
+        if (before == "\"" || before == "`") ok = after == before
+        else ok = before != "#" && (after == "" || after == ",")
+        if (ok) { found = 1; exit }
       }
     }
     END { exit !found }'
