@@ -25,6 +25,19 @@ module EditorLineCommandsTest
     [h.cursor, h.message, h.lines.join("|")]
   end
 
+  # Keys typed on text with one normal-mode binding of the user file, the
+  # one that may bind a key sequence:
+  # the message and the lines after them. Typed: a table value is untyped.
+  def self.run_bound(binding, text, keys)
+    config = Carat::Doubles::FixedConfig.with_user("option.number false\noption.relativenumber false\nkeymap.normal #{binding}\n")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", text.to_s)
+    h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 10, cols: 60, plugins: [])
+    h.open("a.txt")
+    h.type(keys.to_s)
+    [h.message, h.lines.join("|")]
+  end
+
   def self.main
     t = Carat::Testing.new("editor_line_commands")
 
@@ -94,6 +107,37 @@ module EditorLineCommandsTest
       ["a shift with blanks between the characters", ["a\n", [0, 0], ":> ><CR>"], [[0, 4], "", "    a"]],
       ["a shift count from the range's last line", ["a\nb\nc\nd\n", [0, 0], ":2> 2<CR>"], [[2, 2], "", "a|  b|  c|d"]],
       ["a shift of the visual lines", ["a\nb\nc\n", [0, 0], "Vj<Esc>:'<lt>,'>><CR>"], [[1, 2], "", "  a|  b|c"]],
+      # :normal (scenarios: Append on the cursor line, Run keys on a range,
+      # Run keys on each marked line, An unfinished insert ends, An
+      # unfinished command line is not run, The keys are one undo step).
+      ["Append on the cursor line", ["a\nb\n", [1, 0], ":normal Ax<CR>"], [[1, 1], "", "a|bx"]],
+      ["Run keys on a range", ["a\nb\nc\n", [0, 0], ":1,2normal Ax<CR>"], [[1, 1], "", "ax|bx|c"]],
+      ["Run keys on each marked line", ["x1\na\nx2\n", [0, 0], ":g/x/normal A!<CR>"], [[2, 2], "", "x1!|a|x2!"]],
+      ["An unfinished insert ends", ["a\n", [0, 0], ":normal ihi<CR>"], [[0, 1], "", "hia"]],
+      ["the keys after an unfinished insert are normal-mode keys", ["a\n", [0, 0], ":normal ihi<CR>x"], [[0, 1], "", "ha"]],
+      ["An unfinished command line is not run", ["a\nb\n", [0, 0], ":normal :d<CR>"], [[0, 0], "", "a|b"]],
+      ["The keys are one undo step", ["abc\n", [0, 0], ":normal xx<CR>u"], [[0, 0], "1 change; before #1  0 seconds ago", "abc"]],
+      ["an insert under a range is one undo step", ["a\nb\n", [0, 0], ":%normal A!<CR>u"], [[0, 0], "2 changes; before #1  0 seconds ago", "a|b"]],
+      ["each marked line's keys are one undo step", ["x1\nx2\n", [0, 0], ":g/x/normal A!<CR>u"], [[0, 0], "2 changes; before #1  0 seconds ago", "x1|x2"]],
+      ["an unfinished operator is dropped", ["ab\n", [0, 0], ":normal d<CR>x"], [[0, 0], "", "b"]],
+      ["the keys are read literally", ["a\n", [0, 0], ":normal A<lt>Esc><CR>"], [[0, 5], "", "a<Esc>"]],
+      ["a bang runs the same keys", ["ab\n", [0, 0], ":normal! x<CR>"], [[0, 0], "", "b"]],
+      ["the long name runs keys", ["ab\n", [0, 0], ":norm x<CR>"], [[0, 0], "", "b"]],
+      # :p (scenarios: Print the cursor line, Print a range, Print a count
+      # of lines, The printed lines are shown together).
+      ["Print the cursor line", ["a\nb\n", [1, 0], ":p<CR>"], [[1, 0], "b", "a|b"]],
+      ["Print a range", ["a\nb\nc\n", [0, 0], ":1,2p<CR>"], [[1, 0], "a\nb", "a|b|c"]],
+      ["Print a count of lines", ["a\nb\nc\n", [0, 0], ":p 2<CR>"], [[1, 0], "a\nb", "a|b|c"]],
+      ["The printed lines are shown together", ["x1\na\nx2\n", [0, 0], ":g/x/p<CR>"], [[2, 0], "x1\nx2", "x1|a|x2"]],
+      ["a print keeps the wanted column", ["abc\nabc\n", [0, 2], ":2p<CR>"], [[1, 2], "abc", "abc|abc"]],
+      ["a print records a jump", ["a\nb\nc\n", [0, 0], ":3p<CR><C-o>"], [[0, 0], "", "a|b|c"]],
+      ["the long name prints", ["a\n", [0, 0], ":print<CR>"], [[0, 0], "a", "a"]],
+      # Refusals of :normal and :p (scenarios: Normal without keys, Print an
+      # empty buffer).
+      ["Normal without keys", ["a\n", [0, 0], ":normal<CR>"], [[0, 0], "E471: Argument required", "a"]],
+      ["Print an empty buffer", ["", [0, 0], ":p<CR>"], [[0, 0], "E749: Empty buffer", ""]],
+      ["a bang on print", ["a\n", [0, 0], ":p!<CR>"], [[0, 0], "E477: No ! allowed", "a"]],
+      ["a flag after print is trailing text", ["a\n", [0, 0], ":p #<CR>"], [[0, 0], "E488: Trailing characters: #", "a"]],
       # Refusals (scenarios: A zero count for join, Text after the shift,
       # A bang on a shift).
       ["A zero count for join", ["a\nb\n", [0, 0], ":j 0<CR>"], [[0, 0], "E939: Positive count required", "a|b"]],
@@ -104,6 +148,15 @@ module EditorLineCommandsTest
       ["a bad range for join", ["a\nb\n", [0, 0], ":5j<CR>"], [[0, 0], "E16: Invalid range", "a|b"]]
     ]) do |input|
       run(input[0], input[1], input[2])
+    end
+
+    # A binding that runs :normal with its own key (scenario: Normal too
+    # deep). Rows are [label, [binding, text, keys], [message, lines]].
+    t.cases([
+      ["Normal too deep", ["Q :normal<Space>Q<CR>", "a\n", "Q"], ["E192: Recursive use of :normal too deep", "a"]],
+      ["a binding that runs :normal once", ["Q :normal<Space>x<CR>", "ab\n", "Q"], ["", "b"]]
+    ]) do |input|
+      run_bound(input[0], input[1], input[2])
     end
 
     t.finish

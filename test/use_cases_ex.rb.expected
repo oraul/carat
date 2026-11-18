@@ -185,4 +185,9 @@ ok   j is join
 ok   joi is join
 ok   > shifts right
 ok   < shifts left
-use_cases_ex: 187 passed, 0 failed
+ok   norm is normal
+ok   normal is normal
+ok   nor is not normal
+ok   p is print
+ok   prin is print
+use_cases_ex: 192 passed, 0 failed

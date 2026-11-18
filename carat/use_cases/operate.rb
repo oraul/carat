@@ -147,7 +147,7 @@ module Carat
       #: (Domain::EditorState, Domain::Command) -> Domain::Motion?
       def search_motion(state, command)
         hit = @find_match.call(state, command)
-        @notice = Outcome.new(ok: hit.found?, message: hit.message) if !hit.found? || hit.wrapped
+        @notice = Outcome.new(ok: hit.found?, message: hit.message, printed: false) if !hit.found? || hit.wrapped
         return nil unless hit.found?
         Domain::Motion.new(target: Domain::Position.new(row: hit.row, col: hit.col), linewise: false, inclusive: false, want: :set)
       end

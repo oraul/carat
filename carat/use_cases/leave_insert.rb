@@ -14,7 +14,9 @@ module Carat
     # after "I" and "A" the cursor then goes to the block's top-left.
     # Leaving insert mode ends the insert session: the transaction the
     # command that entered insert mode opened is closed here, after the
-    # block repeat, with the cursor where it comes to rest. The session
+    # block repeat, with the cursor where it comes to rest; under :normal
+    # (normal_depth above 0) it stays open, so the keys :normal feeds are
+    # one undo step with the command. The session
     # stops recording for the dot command, and its typed text becomes the
     # "." register.
     class LeaveInsert
@@ -30,7 +32,7 @@ module Carat
       #: (Domain::EditorState) -> Outcome
       def call(state)
         leave(state)
-        state.buffer.commit_transaction(state.cursor.position)
+        state.buffer.commit_transaction(state.cursor.position) if state.normal_depth == 0
         last = @last_change
         last.stop
         @registers.inserted = last.typed

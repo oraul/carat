@@ -12,12 +12,13 @@ module Carat
     # visual selection are reached, the mode, the options, the command
     # line, the message and the history of those shown, the quit flag, and the repetition a blockwise
     # insert owes when insert mode is left, and the size of the screen
-    # in rows and columns, 0 before the first render. The rest of the editor's state
+    # in rows and columns, 0 before the first render, and how many :normal
+    # commands are running keys (normal_depth), 0 outside them. The rest of the editor's state
     # lives in focused records the composition root hands to the use cases
     # that need them: the buffer list, the input state, the registers, the
     # last find, and the plugins' segments and prompt. A Struct record:
     # mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, keyword_init: true)
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, :normal_depth, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
@@ -29,6 +30,7 @@ module Carat
       # @rbs @block_insert: BlockInsert
       # @rbs @screen_rows: Integer
       # @rbs @screen_cols: Integer
+      # @rbs @normal_depth: Integer
 
       #: (tabs: TabList, options: Options) -> void
       def initialize(tabs:, options:)
@@ -44,6 +46,7 @@ module Carat
         self.block_insert = BlockInsert.new
         self.screen_rows = 0
         self.screen_cols = 0
+        self.normal_depth = 0
       end
 
       # Records the size of the screen.

@@ -231,7 +231,7 @@ Files:
 - `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `make_indent`.
 - `carat/domain/operator_kind.rb`: `OperatorKind`, the five operator action names.
 - `carat/domain/register_entry.rb`: `RegisterEntry` (charwise, linewise, or blockwise); `charwise`, `lines`, `block`, `linewise?`, `blockwise?`, `joined`.
-- `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`.
+- `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`, `unnamed?` (a name standing for no register in particular).
 - `carat/use_cases/operate.rb`: `Operate#call`; refuses a read-only register with `E354`; `zf` makes a fold of the range, and a linewise range reaches over the closed folds at its ends.
 - `carat/use_cases/replace_chars.rb`: `ReplaceChars#call` (`r`).
 - `carat/use_cases/toggle_case.rb`: `ToggleCase#call` (`~`).
@@ -257,7 +257,7 @@ Flow: a use case calls a `Buffer` primitive (`insert`, `delete`, `replace`, `set
 
 Files:
 
-- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`, `icon_of` and `icon` (the file's icon name), `name_start`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `set_diagnostics`, `clear_diagnostics`, `diagnostic_at` (a language server's diagnostics as the `lsp.diagnostics` sign layer and per-line marks that move with the lines); `styled?`, `style_at` (a documentation buffer's `SyntaxLine` per row, kept for the row's string); `scratch?`; the `readonly` member (a file buffer never written). `track_folds` and `untrack_folds` name the window folds every splice moves (`fold_lists`).
+- `carat/domain/buffer.rb`: `Buffer` record; the primitives `insert`, `delete`, `replace`, `set_lines`, `reload`; `begin_transaction`, `commit_transaction`, `transaction_open?`, `transaction_size`, `begin_history`, `start_at`, `transaction_mark`; `revert`, `reapply`, `revert_to`; `modified?`, `mark_saved`, `mark_unsaved`, `settle_saved`; `rename`, `detect_filetype`, `assign_filetype`, `icon_of` and `icon` (the file's icon name), `name_start`; `from_text`, `to_text`, `line`, `line_count`, `text_of`, `lines_of`, `first_nonblank`, `indent_of`; `place_sign`, `clear_signs`, `sign_at`; `set_diagnostics`, `clear_diagnostics`, `diagnostic_at` (a language server's diagnostics as the `lsp.diagnostics` sign layer and per-line marks that move with the lines); `styled?`, `style_at` (a documentation buffer's `SyntaxLine` per row, kept for the row's string); `scratch?`; the `readonly` member (a file buffer never written). `track_folds` and `untrack_folds` name the window folds every splice moves (`fold_lists`).
 - `carat/domain/text_lines.rb`: `TextLines.split`, text cut at its newlines by bytes, so bytes that are not UTF-8 stay in their lines; used by `from_text`, `joined`, `RegisterEntry#lines`, `:registers`, and messages of several lines.
 - `carat/domain/line_splice.rb`: `LineSplice.apply` (per-line `insert` and `delete_at` up to `SMALL` lines, one tail move above) and `shift_marks`.
 - `carat/domain/change_record.rb`: `ChangeRecord` (buffer id, row, removed and inserted lines sharing the buffer's strings); `delta`.
@@ -419,7 +419,7 @@ Files:
 - `carat/domain/substitution.rb`: `Substitution.line`, one line under the budget, Vim's empty-match rule, `OUTPUT_COST` per character of replacement.
 - `carat/domain/global_args.rb`: `GlobalArgs` value; `parse` (delimiter, pattern, command; `E146`, `E148`).
 - `carat/domain/global_marks.rb`: `GlobalMarks`, a running global's marked lines, moved by `Buffer#splice` through `LineSplice.shift_marks`; `mark`, `take`, `shift`, `clear`.
-- `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`).
+- `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`), `parse_count` (`[count]` of a line command that takes no register, as `:j` and `:p`).
 - `carat/domain/ex_name.rb`: `ExName` in Vim's `name[suffix]` notation; `parse`, `match?`, `to_s`; the one matcher for core and plugin commands.
 - `carat/use_cases/ex/command_runner.rb`: `CommandRunner`, the interface the command line and the plugin host depend on.
 - `carat/use_cases/ex/execute_ex.rb`: `ExecuteEx#call`.
@@ -453,8 +453,10 @@ Files:
 - `carat/use_cases/ex/copy_command_handler.rb`: `CopyCommandHandler.register` (`:co[py] {address}`, `:t`), a line command; copies the range below the target, one undo step.
 - `carat/use_cases/ex/join_command_handler.rb`: `JoinCommandHandler.register` (`:j[oin][!] [count]`), a line command; joins the range, or the cursor line and the next, as `J` does or as they are with `!`, one undo step.
 - `carat/use_cases/ex/shift_command_handler.rb`: `ShiftCommandHandler.register` (`:>`, `:<` with a count), a line command; shifts the range by shiftwidth once per character typed, "N lines >ed M times", one undo step.
+- `carat/use_cases/ex/normal_command_handler.rb`: `NormalCommandHandler.register` (`:norm[al][!] {commands}`), a line command; feeds the argument's characters to `HandleKey` at the cursor or on each line of the range, ends an unfinished command with Esc, one undo step through `EditorState#normal_depth`; `E471`, `E192`.
+- `carat/use_cases/ex/print_command_handler.rb`: `PrintCommandHandler.register` (`:p[rint] [count]`), a line command; shows the lines as `Outcome.printed`, which a global joins, the cursor to the last at the wanted column; `E749`.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`).
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`).
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 

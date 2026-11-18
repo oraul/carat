@@ -51,7 +51,8 @@ module Carat
       # session's undo state and starts a new one, as an arrow key or a
       # page key in Neovim's insert mode does. Outside insert mode an
       # open transaction is a session that ended without LeaveInsert, and
-      # is closed first.
+      # is closed first, but for keys :normal feeds (normal_depth above 0),
+      # which join the transaction :normal keeps open.
       #: (Domain::EditorState, Domain::Command) -> void
       def call(state, command)
         @feed.now = @clock.now
@@ -66,7 +67,7 @@ module Carat
         mode = state.mode
         if mode == Domain::Mode::INSERT
           return split(state, handler, command) if handler.kind == :motion || handler.breaks_insert?
-        elsif buffer.transaction_open?
+        elsif buffer.transaction_open? && state.normal_depth == 0
           buffer.commit_transaction(before)
         end
         opened = buffer.begin_transaction(before)

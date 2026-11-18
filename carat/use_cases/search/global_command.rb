@@ -156,7 +156,8 @@ module Carat
       end
 
       # The loop over the marked rows; the marks are dropped and the global
-      # is no longer busy however it ends.
+      # is no longer busy however it ends. It answers the last message a
+      # command gave, the lines of the :p commands in a row together.
       #: (Domain::EditorState, Domain::Buffer, Array[Integer], String) -> Outcome
       def visit(state, buffer, rows, command)
         marks = buffer.global_marks
@@ -169,7 +170,9 @@ module Carat
             state.cursor.move_to(row, 0)
             outcome = @runner.call(state, command)
             return outcome unless outcome.ok
-            said = outcome unless outcome.message.empty?
+            unless outcome.message.empty?
+              said = said.printed && outcome.printed ? Outcome.printed("#{said.message}\n#{outcome.message}") : outcome
+            end
             break unless state.buffer.equal?(buffer)
             row = marks.take
           end
