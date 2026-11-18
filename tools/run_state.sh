@@ -2124,7 +2124,7 @@ merged_of() {
 # first parenthesis: a change beyond the sprint, which a sprint does not
 # count (up to SPRINT_EXCEPTIONS).
 exception_item() {
-  queue_items "$1" "$2" | M="$EXCEPTION_MARK" awk '
+  queue_items "$1" "$2" both | M="$EXCEPTION_MARK" awk '
     index(substr($0, 1, index($0, ")")), ENVIRON["M"]) { found = 1; exit }
     END { exit !found }'
 }
@@ -2134,7 +2134,10 @@ exception_item() {
 # blank line, a heading, or the next item) on one line, from the queue at
 # the parent of COMMIT, the queue it was delivered from, or else from the
 # queue at COMMIT, whose package step may have applied the plan naming it;
-# nothing when neither holds it or COMMIT is no hash.
+# with a third argument "both", the item of each queue holding it, the
+# parent's first (exception_item: the plan may mark at COMMIT an item the
+# parent's queue held unmarked); nothing when neither holds it or COMMIT
+# is no hash.
 queue_items() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do
@@ -2148,7 +2151,7 @@ queue_items() {
       !NF || /^#/ { if (on) exit; next }
       on { line = $0; sub(/^[ \t]+/, "", line); out = out " " line }
       END { if (on) print out }')
-    [ -z "$held" ] || { printf '%s\n' "$held"; return 0; }
+    [ -z "$held" ] || { printf '%s\n' "$held"; [ "${3:-}" = both ] || return 0; }
   done
 }
 

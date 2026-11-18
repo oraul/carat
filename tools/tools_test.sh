@@ -1634,6 +1634,18 @@ commit "chore: y1 with the plan naming it"
 state init y1 chore/y1 > /dev/null
 state set y1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due leaves out a change the exception line of its merged commit's queue names" 1 "^not due: sprint-3 has 0 of 5 changes merged [(]y1[)]; not counted, beyond the sprint: y1\$" state review-due
+# The parent's queue holds y2 unmarked and its package step's plan marks it
+# beyond the sprint at the merged commit: exception_item reads both queues.
+state history > /dev/null
+printf 'sprint-3\ty1\n' >> docs/sprints.tsv
+printf '# Queue\n\n## Sprint 5\n\n1. `y2` (T1 pipeline, estimated small): second.\n' > docs/queue-feature.md
+commit "docs: y2 queued"
+printf '# Queue\n\n## Sprint 5\n\n1. `y2` (T1 pipeline, estimated small, beyond the sprint): second.\n' > docs/queue-feature.md
+echo y2 >> README.md
+commit "chore: y2 with the plan marking it"
+state init y2 chore/y2 > /dev/null
+state set y2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: review-due leaves out a change its merged commit's queue marks beyond the sprint though the parent's held it unmarked" 1 "^not due: sprint-4 has 0 of 5 changes merged [(]y2[)]; not counted, beyond the sprint: y2\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
 # 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).
@@ -1795,8 +1807,10 @@ commit "fix: u"
 fixer3=$(git rev-parse --short=12 HEAD)
 # b5's package step applied the plan that names its item, so the item
 # first stands in the queue at its merged commit; a merge of a side
-# branch that changed tools/c.sh lies in the range too.
-printf '3. `b5` (T5, estimated small): five. Backlog: "## s dotted near miss", "### t near miss", "## r skeptic entry at tools/k.sh:1, again".\n' >> docs/queue-backlog.md
+# branch that changed tools/c.sh lies in the range too. Its deeper
+# heading stands unquoted before a comma, so only the "#" guard keeps
+# "## t near miss" from counting as listed.
+printf '3. `b5` (T5, estimated small): five. Backlog: "## s dotted near miss", ### t near miss, "## r skeptic entry at tools/k.sh:1, again".\n' >> docs/queue-backlog.md
 commit "fix: b5"
 b5c=$(git rev-parse --short=12 HEAD)
 git_q checkout -q -b side
@@ -1847,7 +1861,7 @@ expect "run_state: groom refuses a merge commit as a fix, though a side it merge
 printf 'listed b1 ## y quality advisory\n' > build/plan/groom.txt
 expect "run_state: groom refuses a listed heading that only prefixes a longer quoted one" 1 "the queue item of b1 does not list the heading" state groom sprint-2-records
 printf 'listed b5 ## t near miss\n' > build/plan/groom.txt
-expect "run_state: groom refuses a listed heading standing only inside a quoted deeper one" 1 "the queue item of b5 does not list the heading" state groom sprint-2-records
+expect "run_state: groom refuses a listed heading standing only inside a deeper unquoted one before a comma" 1 "the queue item of b5 does not list the heading" state groom sprint-2-records
 printf 'listed b5 ## r skeptic entry at tools/k.sh:1\n' > build/plan/groom.txt
 expect "run_state: groom refuses a listed heading a quoted longer one extends past a comma" 1 "the queue item of b5 does not list the heading" state groom sprint-2-records
 printf 'listed b2 ## w quality advisory at tools/e.sh:2\n' > build/plan/groom.txt
