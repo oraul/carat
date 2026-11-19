@@ -33,3 +33,22 @@
 - Location: bench/ (finder scenarios), carat/plugins/finder/grep.rb search
 - Why: the finder bench measures paths only, so the grep search cost per key is unmeasured; the search is now bounded in memory but still scores every stored line.
 - Fix: add a grep scenario to the bench and the map's Bench line.
+
+### Findings file holds a fixed entry and a stale duplicate
+- Location: docs/findings/finder-grep.md, the entries Grep helper duplication with the plugin and No bench scenario for the grep search
+- Why: the duplication entry is fixed and the older bench entry (its Why still says it sorts every match) is superseded by the No grep scenario entry, so the file holds a fixed entry and a stale duplicate
+- Fix: drop the fixed duplication entry and the older bench entry, keeping the new one (a grooming step, as no agent removes entries during a delivery)
+
+### Code map Grep line omits public class methods
+- Location: docs/codebase-map.md:568, the Grep line
+- Why: it lists the public methods but not the class methods no_strings and no_ints (nor utf8_size), so the map is stale
+- Fix: add no_strings, no_ints, and utf8_size to the method list
+### Advisory fixes take two paths and an advisory-only round counts as rework (closing-loop retro 10)
+- Location: `.claude/workflows/deliver-change.js` (the in-place round, `inPlaceRound` 'alone', and the closing loop at package)
+- Why: closing-loop rework 2 of 3, round 2 advisory-only (note 8, 0 blocking), its rerun (tools-test 135 s, every review again) raised note 9; reviews 43,866 of 191,898 output tokens (22.9%), 57 of 233 calls; quality first pass 101 of 183.
+- Fix: keep one advisory path, so an advisory-only round is never a rework round and a run starts at most one contributor for advisories; accepted when a tools-test case shows a run with advisory-only reviews records rework unchanged and starts exactly one advisory start.
+
+### Pull request finding counts are hand-written and checked after the push (closing-loop retro 11)
+- Location: `tools/open_pr.sh` (the body gate before the first push)
+- Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
+- Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
