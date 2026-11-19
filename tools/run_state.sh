@@ -195,7 +195,6 @@
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
 #                               and metric.wall_min, then print the budget
-#   review-due                  print "due: sprint-N ..." with the sprint's
 #   ci-stages CHANGE COMMIT     record the seconds of each step of the spin
 #                               job of the newest ci run at COMMIT as
 #                               metric.ci.STEP, read with gh; exits 0 when
@@ -204,13 +203,18 @@
 #                               whose transcripts DIR holds, its total
 #                               tokens weighted by its tier (TIER_PRICES),
 #                               per start and per phase; a DIR counts once
-#                               changes, its combined diff BASE..origin/main,
-#                               and "sweep: yes" in an even sprint, and exit 0
-#                               when sprint_size changes merged since the last
-#                               sprint of docs/sprints.tsv (SPRINTS_FILE), up
-#                               to SPRINT_EXCEPTIONS marked beyond the sprint
-#                               not counted;
-#                               print "not due: ..." and exit 1 before that or
+#   review-due                  print "due: sprint-N has N changes merged",
+#                               the changes, its combined diff
+#                               BASE..origin/main, and "sweep: yes" in an
+#                               even sprint, and exit 0 when sprint_size
+#                               changes counted merged since the last sprint
+#                               of docs/sprints.tsv (SPRINTS_FILE): the
+#                               queue's sprint items and their split parts,
+#                               never a T0 item, one an exception line puts
+#                               outside the 3, one beyond the sprint, or a
+#                               pool item (queue_class);
+#                               print "not due: ...", the changes left out
+#                               named by reason, and exit 1 before that or
 #                               while the sprint's plan waits in build/plan/
 #                               after its security review, recorded pass or
 #                               blocked in the run state sprint-N
@@ -502,13 +506,14 @@ SPRINT_SIZE_BEFORE=5
 REVIEW_RUNS='^(review|sprint)-[0-9]'
 # The words that mark a queue item, inside its first parenthesis, as a
 # change the user approved beyond a sprint's size, which it does not count;
-# distinct from "the user-approved exception", which lifts only the
-# one-pipeline limit (docs_lint.sh) and leaves the item counted.
+# distinct from "the user-approved exception" inside an item's parenthesis,
+# which lifts only the one-pipeline limit (docs_lint.sh) and leaves the
+# item counted.
 EXCEPTION_MARK='beyond the sprint'
-# At most this many marked changes per sprint go uncounted, the first in
-# the sprint's order; a later one counts, so a sprint closes after at most
-# sprint_size + SPRINT_EXCEPTIONS merges whatever the queue text says.
-SPRINT_EXCEPTIONS=1
+# The words of a paragraph starting "The user-approved exception" that put
+# the changes it names before "run" or "runs" in the same clause outside a
+# sprint's count (queue_class).
+OUTSIDE_MARK='outside the 3'
 SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
@@ -2201,10 +2206,13 @@ append_history() {
 # sprint SPRINT_SIZE_FROM on, else SPRINT_SIZE_BEFORE); sprint_base, the
 # merged commit of that row's last change, where the combined diff starts;
 # sprint_names, the changes merged since (the history rows after that
-# change's row, then the merged changes without a row); sprint_exceptions,
-# the first SPRINT_EXCEPTIONS of them marked beyond the sprint
-# (exception_item), the queue read no further once they are found; and
-# sprint_count, the rest.
+# change's row, then the merged changes without a row); sprint_uncounted,
+# those of them a sprint does not count (queue_class: a T0 item, one an
+# exception line puts outside the 3, one beyond the sprint, or a pool item
+# that is no split part of a counted change, split_part), and
+# sprint_left_out, the same named by reason for review_due's line; and
+# sprint_count, the rest: the sprint items, their split parts, and the
+# changes no queue names, counted as before.
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
@@ -2219,16 +2227,42 @@ sprint_state() {
   [ -n "$sprint_base" ] || die "the last change of $prev, $prev_last, has no row in $metrics_files"
   sprint_names=$({ printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" 'seen && NF { print $1 } $1 == c { seen = 1 }'; pending_list; } |
     awk -v r="$REVIEW_RUNS" 'NF && $0 !~ r && !seen[$0]++')
-  sprint_exceptions=""
-  exempt=0
+  classes=""
+  counted=""
   for name in $sprint_names; do
-    [ "$exempt" -lt "$SPRINT_EXCEPTIONS" ] || break
-    if exception_item "$name" "$(merged_of "$name")"; then
-      sprint_exceptions="${sprint_exceptions:+$sprint_exceptions }$name"
-      exempt=$((exempt + 1))
-    fi
+    class=$(queue_class "$name" "$(merged_of "$name")")
+    classes="$classes${class:-none} $name
+"
+    case "$class" in t0|outside|beyond|pool) ;; *) counted="$counted $name" ;; esac
   done
-  sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_exceptions " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
+  # A pool item is a split part when its sibling counted; the first pass
+  # found every counted change, so merge order does not matter.
+  left=$(printf '%s' "$classes" | while read -r class name; do
+    [ "$class" != pool ] || ! split_part "$name" "$counted" || class=sprint
+    case "$class" in t0|outside|beyond|pool) echo "$class $name" ;; esac
+  done)
+  sprint_uncounted=$(printf '%s\n' "$left" | awk 'NF { printf "%s%s", (n++ ? " " : ""), $2 }')
+  sprint_left_out=$(printf '%s\n' "$left" | awk '
+    NF { names[$1] = names[$1] (names[$1] == "" ? "" : ", ") $2 }
+    END {
+      split("beyond outside t0 pool", order, " ")
+      label["beyond"] = "beyond the sprint"; label["outside"] = "outside the 3"
+      label["t0"] = "T0"; label["pool"] = "not a sprint item"
+      for (i = 1; i <= 4; i++) if (order[i] in names) printf "; not counted, %s: %s", label[order[i]], names[order[i]]
+    }')
+  sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_uncounted " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
+}
+
+# True when NAME, less one trailing "-x" letter, equals a name of the
+# space-separated COUNTED or that name less its own letter: a split part
+# (finder-grep-c beside finder-grep-b or finder-grep).
+split_part() {
+  stem=${1%-[a-z]}
+  [ "$stem" != "$1" ] || return 1
+  for c in $2; do
+    if [ "$c" = "$stem" ] || [ "${c%-[a-z]}" = "$stem" ]; then return 0; fi
+  done
+  return 1
 }
 
 # The merged commit of NAME: its history row's, else its run state's.
@@ -2238,41 +2272,73 @@ merged_of() {
   printf '%s\n' "$m"
 }
 
-# True when the item naming NAME (numbered, or the line "The
-# user-approved exception: `NAME` (...)") in the queue at the parent of
-# COMMIT, the queue it was delivered from, or else at COMMIT, whose package
-# step may have applied the plan naming it, carries EXCEPTION_MARK in its
-# first parenthesis: a change beyond the sprint, which a sprint does not
-# count (up to SPRINT_EXCEPTIONS).
-exception_item() {
-  queue_items "$1" "$2" both | M="$EXCEPTION_MARK" awk '
-    index(substr($0, 1, index($0, ")")), ENVIRON["M"]) { found = 1; exit }
-    END { exit !found }'
+# Prints each item of the queue on stdin as "item WHERE TEXT" and each
+# paragraph starting "The user-approved exception" (not its item form) as
+# "para WHERE TEXT", the one reader of the queue line form for queue_class
+# and queue_items. An item is numbered, or the line "The user-approved
+# exception: `NAME` (...)", its TEXT from the backticked name on; WHERE is
+# sprint under a "## Sprint N" heading, else pool, only a "# " or "## "
+# heading setting it, so a "###" sub-heading keeps its sprint's. An item's
+# or paragraph's continuation lines are joined by a space, to a blank line,
+# a heading, or the next item or paragraph.
+queue_records() {
+  awk '
+    function finish() { if (kind != "") print kind, (sprint ? "sprint" : "pool"), text; kind = "" }
+    {
+      line = $0
+      start = sub(/^[0-9]+[.] /, "", line) || sub(/^The user-approved exception: `/, "`", line)
+    }
+    start { finish(); kind = "item"; text = line; next }
+    /^The user-approved exception/ { finish(); kind = "para"; text = $0; next }
+    !NF || /^#/ { finish(); if (/^##? /) sprint = /^## Sprint [0-9]+/; next }
+    kind != "" { l = $0; sub(/^[ \t]+/, "", l); text = text " " l }
+    END { finish() }'
 }
 
-# Prints the item naming NAME (numbered, or the line "The user-approved
-# exception: `NAME` (...)", its continuation lines joined by a space, to a
-# blank line, a heading, or the next item) on one line, from the queue at
-# the parent of COMMIT, the queue it was delivered from, or else from the
-# queue at COMMIT, whose package step may have applied the plan naming it;
-# with a third argument "both", the item of each queue holding it, the
-# parent's first (exception_item: the plan may mark at COMMIT an item the
-# parent's queue held unmarked); nothing when neither holds it or COMMIT
-# is no hash.
+# Prints the class of NAME in the queue at the parent of COMMIT, the queue
+# it was delivered from, and in the queue at COMMIT, whose package step may
+# have applied the plan naming it (queue_records over each), the first
+# that either holds of: t0, its item's first parenthesis starts with T0;
+# outside, an exception paragraph names `NAME` in a clause between
+# semicolons holding OUTSIDE_MARK, before that clause's first " run " or
+# " runs " (so "`a` runs before `b`, outside the 3" puts out a, not b);
+# beyond, its item's first parenthesis carries EXCEPTION_MARK; sprint, its
+# item sits under a "## Sprint N" heading; pool, under any other. Nothing
+# when neither queue names it or COMMIT is no hash.
+queue_class() {
+  valid '[0-9a-f]{7,40}' "$2" || return 0
+  for at in "$2^" "$2"; do queue_at "$at" | queue_records; done |
+    C="$1" M="$EXCEPTION_MARK" O="$OUTSIDE_MARK" awk '
+    BEGIN { C = ENVIRON["C"] }
+    { text = $0; sub(/^[a-z]+ [a-z]+ /, "", text) }
+    $1 == "item" && index(text, "`" C "` (") == 1 {
+      if (substr(text, length(C) + 5) ~ /^T0([^0-9]|$)/) t0 = 1
+      if (index(substr(text, 1, index(text, ")")), ENVIRON["M"])) beyond = 1
+      if ($2 == "sprint") sprint = 1; else pool = 1
+    }
+    $1 == "para" {
+      n = split(text, part, ";")
+      for (i = 1; i <= n; i++) {
+        if (!index(part[i], ENVIRON["O"])) continue
+        cut = match(part[i], / runs? /) ? substr(part[i], 1, RSTART) : part[i]
+        if (index(cut, "`" C "`")) outside = 1
+      }
+    }
+    END { print t0 ? "t0" : outside ? "outside" : beyond ? "beyond" : sprint ? "sprint" : pool ? "pool" : "" }'
+}
+
+# Prints the item naming NAME (queue_records, its TEXT) on one line, from
+# the queue at the parent of COMMIT, the queue it was delivered from, or
+# else from the queue at COMMIT, whose package step may have applied the
+# plan naming it (item_lists); nothing when neither holds it or COMMIT is
+# no hash.
 queue_items() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do
-    held=$(queue_at "$at" | C="$1" awk '
-      {
-        item = $0
-        start = sub(/^[0-9]+[.] /, "", item) || sub(/^The user-approved exception: /, "", item)
-      }
-      start && on { exit }
-      start { on = index(item, "`" ENVIRON["C"] "` (") == 1; out = item; next }
-      !NF || /^#/ { if (on) exit; next }
-      on { line = $0; sub(/^[ \t]+/, "", line); out = out " " line }
-      END { if (on) print out }')
-    [ -z "$held" ] || { printf '%s\n' "$held"; [ "${3:-}" = both ] || return 0; }
+    held=$(queue_at "$at" | queue_records | C="$1" awk '
+      $1 == "item" { text = $0; sub(/^[a-z]+ [a-z]+ /, "", text) }
+      $1 == "item" && index(text, "`" ENVIRON["C"] "` (") == 1 { print text; exit }')
+    [ -z "$held" ] || { printf '%s\n' "$held"; return 0; }
   done
 }
 
@@ -2319,7 +2385,7 @@ review_due() {
     return 1
   fi
   if [ "$sprint_count" -lt "$sprint_size" ]; then
-    echo "not due: sprint-$sprint_n has $sprint_count of $sprint_size changes merged${list:+ ($list)}${sprint_exceptions:+; not counted, beyond the sprint: $sprint_exceptions}"
+    echo "not due: sprint-$sprint_n has $sprint_count of $sprint_size changes merged${list:+ ($list)}${sprint_left_out}"
     return 1
   fi
   sweep=no
@@ -2496,13 +2562,13 @@ backlog_pick() {
 }
 
 # The sprint's row from its history rows up to the sprint_size-th counted
-# one, where it ends, a later exception's row left to the next sprint, whose
-# combined diff starts there (a change beyond the sprint, sprint_exceptions,
-# not counted): the last change, the merges, the changes, the wall minutes
-# and their mean per change, the total tokens, the runs over their size's
+# one, where it ends, a later uncounted change's row (sprint_uncounted)
+# left to the next sprint, whose combined diff starts there: the last
+# change, the merges, the changes, the wall minutes and their mean per
+# change, the total tokens, the runs over their size's
 # budget (TOKEN_BUDGETS), and each gate's first passes.
 sprint_row() {
-  history_rows | awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$sprint_size" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " '
+  history_rows | awk -F'\t' -v c="$prev_last" -v budgets="$TOKEN_BUDGETS" -v s="sprint-$sprint_n" -v size="$sprint_size" -v r="$REVIEW_RUNS" -v x=" $sprint_uncounted " '
     BEGIN { n = split(budgets, b, " "); for (i = 1; i <= n; i++) { split(b[i], kv, "="); budget[kv[1]] = kv[2] } }
     seen && NF && !done && $1 !~ r {
       ex = index(x, " " $1 " ") > 0
@@ -2673,7 +2739,7 @@ groom() {
     echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
     return 0
   fi
-  rows=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_exceptions " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }')
+  rows=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_uncounted " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }')
   [ "$rows" -ge "$sprint_size" ] || die "groom: sprint-$sprint_n has $rows of $sprint_size history rows; run history first"
   removals=""
   repeats=""
