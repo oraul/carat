@@ -77,8 +77,9 @@ module EditorFinderGrepTest
   end
 
   # Lines for the term matching: a whole-word hit, a hit after a scattered
-  # one, scattered letters only, a longer word, a hit between underscores,
-  # a part-word hit, and a part-word line with more hits and a shorter path.
+  # one, scattered letters only, a prefix that diverges, a hit between
+  # underscores, a longer word, two whole-word hits (g.txt), and a part-word
+  # line with more hits and a shorter path.
   def self.terms
     files = Carat::Doubles::MemoryFiles.new
     files.move_to(ROOT)
@@ -91,6 +92,17 @@ module EditorFinderGrepTest
     files.put("ffffff.txt", "unexplorered\n")
     files.put("g.txt", "Explorer Explorer\n")
     files.put("h", "xexplorer explorerx explorerz\n")
+    files
+  end
+
+  # A line of 300 x's (no whole-word hit, more hits than HIT_ROOM) on a short
+  # path, and a single whole-word x on a longer one.
+  def self.dense
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    files.put("a", "x" * 300 + "\n")
+    files.put("long/path.txt", "x\n")
     files
   end
 
@@ -213,7 +225,7 @@ module EditorFinderGrepTest
     # one in each of the eight files.
     t.table([
       # Scenario: A whole-word hit ranks above a part-word hit
-      ["a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters, a longer word, and a prefix match nothing", "<Space>fgexplorer", ["Grep 6/9|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
+      ["a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing", "<Space>fgexplorer", ["Grep 6/9|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
       # Scenario: Case is ignored in the query
       ["case is ignored in the query", "<Space>fgEXPLORER", ["Grep 6/9|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
       # Scenario: Two terms match in any order
@@ -226,6 +238,11 @@ module EditorFinderGrepTest
     ]) do |keys|
       shown_in(terms, keys)
     end
+
+    # Scenario: A whole-word hit ranks above a part-word hit (the hit count is clamped, so 300 hits stay below one whole word)
+    h = editor_on(dense, "")
+    h.type("<Space>fgx")
+    t.assert_equal("Grep 2/3|> long/path.txt:1: x\n  a:1: " + "x" * 300, floats(h)[0].to_s, "a line of 300 part-word hits ranks below a whole-word line on a longer path")
 
     # Scenario: The picker stores only bounded lines of each file (the shown-safely rows of invalid bytes and C1 controls too)
     h = editor_on(bounded, "")

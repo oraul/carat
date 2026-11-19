@@ -29,13 +29,14 @@ ok   a hit after scattered letters opens at the hit, not at the scattered start
 ok   the first term of two sets the column
 ok   the terms swapped set the column of the other
 ok   case is ignored in the column
-ok   a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters, a longer word, and a prefix match nothing
+ok   a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing
 ok   case is ignored in the query
 ok   two terms match in either order
 ok   the terms swapped match the same line
 ok   extra spaces between and around the terms are ignored
 ok   a line holding one of two terms does not match
 ok   scattered letters match nothing
+ok   a line of 300 part-word hits ranks below a whole-word line on a longer path
 ok   a valid character beside an invalid byte stays whole
 ok   a 500-byte line is cut at 400 bytes
 ok   the cut falls back to a character boundary
@@ -49,4 +50,4 @@ ok   150,001 lines, past the old 100,000-line cap, are all stored with no cap ma
 ok   no preview float beside the grep list at 120 columns
 ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 51 passed, 0 failed
+editor_finder_grep: 52 passed, 0 failed

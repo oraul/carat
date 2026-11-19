@@ -15,7 +15,8 @@ module Carat
       # GAP. key packs a score, the path's length, and its listing index
       # into one integer, so sorting the keys orders the matches best
       # first, a shorter path first among equal scores, then by listing.
-      # find, word_start?, and word_end? serve the grep picker's substring search.
+      # find, word_start?, and word_end? serve the grep picker's substring search
+      # (word_byte? and camel? are theirs, and boundary?'s, to share).
       module Matcher
         MATCH = 16
         BOUNDARY = 24
@@ -120,8 +121,7 @@ module Carat
           return true if j == 0
           before = path.getbyte(j - 1).to_i
           return true if before == 0x2F || before == 0x5F || before == 0x2D || before == 0x2E || before == 0x20
-          here = path.getbyte(j).to_i
-          before >= 0x61 && before <= 0x7A && here >= 0x41 && here <= 0x5A
+          camel?(before, path.getbyte(j).to_i)
         end
 
         # The byte index of the first place at or after from where the
@@ -153,11 +153,8 @@ module Carat
         def self.word_start?(text, j)
           return true if j == 0
           before = text.getbyte(j - 1).to_i
-          return false if before >= 0x80
-          here = text.getbyte(j).to_i
-          return true if before >= 0x61 && before <= 0x7A && here >= 0x41 && here <= 0x5A
-          lowered = lower(before)
-          !((lowered >= 0x61 && lowered <= 0x7A) || (before >= 0x30 && before <= 0x39))
+          return true if camel?(before, text.getbyte(j).to_i)
+          !word_byte?(before)
         end
 
         # Whether a word ends at e, the index just past its last byte:
@@ -168,10 +165,23 @@ module Carat
         def self.word_end?(text, e)
           return true if e >= text.bytesize
           here = text.getbyte(e).to_i
-          return false if here >= 0x80
-          lowered = lower(here)
-          return true unless (lowered >= 0x61 && lowered <= 0x7A) || (here >= 0x30 && here <= 0x39)
-          before = text.getbyte(e - 1).to_i
+          return true unless word_byte?(here)
+          camel?(text.getbyte(e - 1).to_i, here)
+        end
+
+        # Whether b is part of a word: an ASCII letter or digit, or a byte of
+        # 0x80 or more (a multi-byte character).
+        #: (Integer) -> bool
+        def self.word_byte?(b)
+          return true if b >= 0x80
+          lowered = lower(b)
+          (lowered >= 0x61 && lowered <= 0x7A) || (b >= 0x30 && b <= 0x39)
+        end
+
+        # Whether an uppercase letter here follows a lowercase one: the
+        # camel-case change that starts a word.
+        #: (Integer, Integer) -> bool
+        def self.camel?(before, here)
           before >= 0x61 && before <= 0x7A && here >= 0x41 && here <= 0x5A
         end
 

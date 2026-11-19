@@ -13,7 +13,7 @@ The grep picker (`<leader>fg`) lists a line when the query's bytes appear in it 
 
 ## Impact
 
-- Memory: lines are stored as one string each plus three integers (file index, line number, hit slot), so 400,000 lines cost about 24 bytes of integers each, about 10 MB, plus each string at most 400 bytes and its object header: about 50 MB for typical source lines of 40 to 60 bytes, at worst near 190 MB when every line is cut at 400 bytes. The line index stays within `Matcher.key`'s 20 bits (1,048,575). The store lives only while the picker is open.
+- Memory: lines are stored as one string each plus two integers (file index and line number; the hit slots are kept only for the shown rows), so 400,000 lines cost about 16 bytes of integers each, about 6.4 MB, plus each string at most 400 bytes and its object header: about 50 MB for typical source lines of 40 to 60 bytes, at worst near 190 MB when every line is cut at 400 bytes. The line index stays within `Matcher.key`'s 20 bits (1,048,575). The store lives only while the picker is open.
 - Open time: measured on this repository's 2,242 tracked files (122,855 stored lines, about 11 MB) at the release optimization, the picker opens in about 350 ms from an in-memory copy of the tree, and each key takes about 45 ms; the read stays synchronous, and the per-key bound is the next change's.
 - Specs: file-finder (modified requirements: the bounds, typing lists the matching lines, picking a row).
 - Code: `carat/plugins/finder/grep.rb`, `carat/plugins/finder/matcher.rb`, the palette text in `carat/plugins/finder/plugin.rb`; tests in `test/editor_finder_grep.rb` and `test/plugins_finder_matcher.rb`.
