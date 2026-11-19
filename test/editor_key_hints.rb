@@ -22,6 +22,18 @@ module EditorKeyHintsTest
     h
   end
 
+  # A session on an empty e.txt with the default configuration, the keys
+  # typed, then one wait passes with no key.
+  def self.empty_session(keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("e.txt", "")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(""), rows: 24, cols: 80, plugins: [])
+    h.open("e.txt")
+    h.type(keys.to_s)
+    h.wait
+    h
+  end
+
   # A session on a.txt with the hello plugin and the project lines, the
   # keys typed, then one wait passes with no key.
   def self.plugin_session(project, keys)
@@ -194,12 +206,7 @@ module EditorKeyHintsTest
     listed = lists?(h, "w  windows")
     h.type("<Esc>")
     t.assert_equal([1, "<Space>", true, 0, [2, 0], ["one", "two", "three"]], [count, named, listed, h.state.tab.floats.count, h.cursor, h.lines], "the hints show from the last line and Esc leaves the cursor there")
-    files = Carat::Doubles::MemoryFiles.new
-    files.put("e.txt", "")
-    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(""), rows: 24, cols: 80, plugins: [])
-    h.open("e.txt")
-    h.type("<Space>")
-    h.wait
+    h = empty_session("<Space>")
     count = h.state.tab.floats.count
     h.type("<Esc>")
     t.assert_equal([1, 0, [""]], [count, h.state.tab.floats.count, h.lines], "the hints show over an empty buffer and Esc leaves it empty")
