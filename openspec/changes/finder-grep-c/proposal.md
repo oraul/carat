@@ -25,7 +25,8 @@ Each key typed into the grep picker (`<leader>fg`) checks every stored line, up 
 - Memory: the matches of the last key are kept as one integer each, at most 30,000, so the next key can narrow them.
 - Specs: file-finder (modified requirements: the picker's title, the row cap, rows shown safely, the ranking; an added requirement, the per-key bound).
 - README.md: changed, the grep picker's title, spread, and bound, and what `make bench-budget` prints.
-- docs/architecture.md: changed, section 10 names the grep scenario and what `make bench-budget` prints; no layer, port, or API change.
+- docs/architecture.md: changed, section 10 names the grep scenario among the benchmark's; no layer, port, or API change.
 - docs/codebase-map.md: changed, the grep index, the finder area's bench line, and the bench flow.
+- docs/plugins.md: changed, the finder's grep section describes the spread, the counts, and the bound.
 - docs/compatibility.md, docs/actions.md: unchanged, no Neovim command and no action is added or changed.
 - CLAUDE.md: unchanged, the Makefile's `bench-budget` keeps its name and its line in Commands, which does not list the scenarios it runs; no process change.
