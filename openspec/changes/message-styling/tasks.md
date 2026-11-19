@@ -12,3 +12,8 @@
 ## 3. Docs
 
 - [x] 3.1 Document the styling and the differences in `docs/compatibility.md`, `docs/architecture.md`, `docs/codebase-map.md`, and `README.md` (`make docs-lint`)
+
+## 4. Review fixes
+
+- [x] 4.1 Draw the error row's glyph, space, and code without building strings (`carat/adapters/frame_presenter.rb`)
+- [x] 4.2 Correct the last-UI-groups label and its snapshot, drop the repeated icons reset, and give the pending-keys scenario its four keys (`test/domain_theme.rb`, `test/adapters_frame_presenter.rb`)

@@ -391,7 +391,6 @@ module AdaptersFramePresenterTest
     t.assert_equal(["X E5: ñandú", D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::NORMAL], [f.row_text(5), f.cell(5, 0).hl, f.cell(5, 2).hl, f.cell(5, 6).hl], "NO_COLOR keeps the groups and draws the icon in ASCII")
     P.plain = false
     s.show("written", false)
-    s.options.icons = "unicode"
     f = draw(s, 6, 60)
     t.assert_equal(["written", D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.row_text(5), f.cell(5, 0).hl, f.cell(5, 6).hl], "an information message is dim from its first to its last cell")
     s.show("one\ntwo", false)
@@ -399,9 +398,9 @@ module AdaptersFramePresenterTest
     t.assert_equal([D::Highlight::QUESTION, D::Highlight::QUESTION], [f.cell(5, 0).hl, f.cell(5, 38).hl], "the hit-enter line is a question")
     s.clear_message
     s.mode = D::Mode::NORMAL
-    INPUT.pending_keys = [34, 97]
+    INPUT.pending_keys = [34, 97, 50, 100]
     f = draw(s, 6, 30)
-    t.assert_equal(["\"a", D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.row_text(5).strip, f.cell(5, 28).hl, f.cell(5, 29).hl], "the pending keys are dim at the right edge")
+    t.assert_equal(["\"a2d", D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.row_text(5).strip, f.cell(5, 26).hl, f.cell(5, 28).hl, f.cell(5, 29).hl], "the pending keys are dim at the right edge")
     INPUT.take_keys
     # The rows of the command line and the message row in both carat
     # themes: the colors and the bold of each group.

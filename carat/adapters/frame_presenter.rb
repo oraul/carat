@@ -1398,9 +1398,10 @@ module Carat
           return
         end
         set = @plain ? "ascii" : state.options.icons
-        col = frame.put(frame_row, 0, Domain::Icons.glyph("error", set) + " ", Domain::Highlight::DIAGNOSTIC_ERROR)
+        col = frame.put(frame_row, 0, Domain::Icons.glyph("error", set), Domain::Highlight::DIAGNOSTIC_ERROR)
+        col = frame.put(frame_row, col, " ", Domain::Highlight::DIAGNOSTIC_ERROR)
         code = error_code_length(text)
-        col = frame.put(frame_row, col, text[0, code].to_s, Domain::Highlight::MESSAGE_ERROR) if code > 0
+        col = frame.put_within(frame_row, col, text, Domain::Highlight::MESSAGE_ERROR, col + code) if code > 0
         frame.put_from(frame_row, col, text, code, Domain::Highlight::NORMAL, frame.cols)
       end
 
