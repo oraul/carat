@@ -183,6 +183,35 @@ function escalate(why) {
   note(`contributor escalated to the session's model: ${why}`)
   queue(`sh tools/run_state.sh note ${state.change} escalation "${why}"`, head)
 }
+// The self-check of the last implement or fix start, { mode, said }, kept
+// until the next check that finishes at the head reads it (compareSelfCheck);
+// null after a start of another mode or a settled round (settleRound). A
+// match that check contradicts by failing a stage is noted
+// self-check-mismatch and escalates; a mismatch escalated when returned. Of
+// the refusals only those of the contributor's own tree count, as the stage
+// refused (CONTRIBUTOR_REFUSAL): one of the environment, such as CHECK_JOBS,
+// contradicts nothing it said.
+let selfCheck = null
+const CONTRIBUTOR_REFUSAL = /^(tracked files differ from HEAD|untracked files under )/
+function compareSelfCheck(v) {
+  const said = selfCheck
+  selfCheck = null
+  if (!said || said.said !== 'match' || v.kind !== 'failed') return
+  if (v.stage === 'refused' && !CONTRIBUTOR_REFUSAL.test(v.log || '')) return
+  const what = `contributor ${said.mode} self-check said match, the check failed at stage ${safeText(v.stage)}`
+  note(what)
+  queue(`sh tools/run_state.sh note ${state.change} self-check-mismatch "${what}"`, head)
+  escalate('a self-check the check contradicted')
+}
+// A check that finished at the head: its first-pass verdict, its report
+// note, and the comparison with the last self-check; true when it passed.
+function finishCheck(v) {
+  const passed = v.kind === 'passed'
+  verdict('check', passed)
+  note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
+  compareSelfCheck(v)
+  return passed
+}
 // A restart carries on the profiles an earlier start recorded as
 // metric.calib.KIND, for the kinds this start has not used yet; a value
 // outside the table's form is dropped.
@@ -964,6 +993,7 @@ async function contributor(mode, detail) {
     state.pushed = keepPushed(mode, state.pushed, result)
     if (!result) escalate('a start returned no result')
     else if (result.self_check === 'mismatch') escalate('a self-check mismatch')
+    selfCheck = mode === 'implement' || mode === 'fix' ? { mode, said: (result && result.self_check) || '' } : null
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') {
       const lane = await laneHead()
@@ -1123,11 +1153,13 @@ const settleAfter = (from, before, after) => (from && after && before !== after 
 // The settled round at the head: the check, security, and bench passes
 // stay at FROM, where the gates settle them, and the run state notes the
 // skip naming both commits; the quality review alone runs, scoped by
-// priorQuality to the commits since its pass at FROM.
+// priorQuality to the commits since its pass at FROM. It clears the last
+// self-check, which stands on the pass at FROM.
 let settledRound = null
 let settleAt = ''
 function settleRound(from) {
   settledRound = { at: head, from }
+  selfCheck = null
   const text = `advisory-only round at ${head}: only records changed since ${from}, where the check, the security review, and the benchmark passed; none of them rerun, the quality review scoped to the commits since`
   note(text)
   queue(`sh tools/run_state.sh note ${state.change} settled-round "${text}"`, head)
@@ -1544,9 +1576,7 @@ async function rounds(fixes = true) {
       } else {
         reruns = 0
         rerunWhy = ''
-        const passed = v.kind === 'passed'
-        verdict('check', passed)
-        note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
+        const passed = finishCheck(v)
         if (passed) {
           phaseDone('check', head)
           budgetAtCheck(c.budget, head)
