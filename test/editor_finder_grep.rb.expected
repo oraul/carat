@@ -73,7 +73,7 @@ ok   a checks 30,000 lines
 ok   ab checks the 29,999 matches of a again and one line more, the budget they leave
 ok   abc checks the kept matches again and scans on to the last line
 ok   a backspace starts again from the first line, within the budget
-ok   no preview float beside the grep list at 120 columns
-ok   the grep list is wider than half of 120 columns
+ok   the preview float shows beside the grep list at 120 columns
+ok   the grep list is about half of 120 columns
 ok   Space f f still opens the file finder
 editor_finder_grep: 78 passed, 0 failed
