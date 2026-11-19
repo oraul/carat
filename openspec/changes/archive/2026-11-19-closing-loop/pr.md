@@ -14,14 +14,14 @@ Adds one closing contributor loop to the delivery workflow: after the last revie
 - Record advisories_closed and advisories_left in the run state, and write them as two columns after weighted_phases in the metrics history
 - Name the close-advisories mode in the contributor agent and its rules in docs/contributor-notes.md, and update README.md and the code map
 - Add tools-test cases for the closing start with its scoped re-review and figures, the skip, the absent second loop, the security review of a code-changing commit, and the history columns
-- Archive the closing-loop change, record its two non-blocking advisories in its findings file, and apply its plan and metrics history
+- Archive the closing-loop change, record the non-blocking advisories it raised in its findings file, and apply its plan and metrics history
 
 ---
 
 ## Testing
 
 - Security review of the committed diff passed with no High, Medium, or Low finding at the final head, recorded in the run state
-- Quality review passed with no blocking finding and one advisory, recorded in the findings file
+- Quality review passed with no blocking finding, its advisories recorded in the findings file
 - Benchmark review passed with no blocking finding
 - Run the checker stages on the final implementation commit, all passed, including tools-test, test-run, diagnose, and bench-budget
 - Run make gates, make docs-lint, and make spec-validate, all pass (54 items validated)
