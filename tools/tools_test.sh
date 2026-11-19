@@ -3967,30 +3967,40 @@ expect "caps: the merger counts the branch deletion" 0 "push origin --delete <br
 
 # ------------------------------------------------------------ calibration
 # CALIBRATION: every kind of start's TIER/EFFORT, every agent start taking
-# its options from it; the cheap tier is exactly the agent files with a
-# model: line, the kinds with no agent file run on the session's tier, and
-# the security reviewer keeps the session's tier and effort.
+# its options from it; the agent tier is exactly the agent files with a
+# model: line, whichever tier it names, the kinds with no agent file run on
+# the session's tier, and the security reviewer keeps the session's tier and
+# effort.
 calib=$(table CALIBRATION)
 profile_of() {
   printf '%s\n' "$calib" | sed -n "s/^$1://p"
 }
 missing=""
 for kind in resume planner areas scout contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
-  profile_of "$kind" | grep -q -E '^(cheap|session)/(low|session)$' || missing="$missing $kind"
+  profile_of "$kind" | grep -q -E '^(agent|session)/(low|session)$' || missing="$missing $kind"
 done
 expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missing:-none}"
 expect "calibration: every agent start takes its options from the table" 0 "^same$" \
   sh -c '[ "$(grep -c "agent(" "$1")" -eq "$(grep -c "calibrate(.[a-z]*., [{]" "$1")" ] && ! grep -q "effort: .low." "$1" && echo same' _ "$wf"
 wrong=""
 for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
-  if grep -q -E '^model: ' "$agents/${pair%%:*}.md"; then tier=cheap; else tier=session; fi
+  if grep -q -E '^model: ' "$agents/${pair%%:*}.md"; then tier=agent; else tier=session; fi
   case "$(profile_of "${pair#*:}")" in "$tier"/*) ;; *) wrong="$wrong ${pair#*:}" ;; esac
 done
 for kind in resume areas record; do
   case "$(profile_of "$kind")" in session/*) ;; *) wrong="$wrong $kind" ;; esac
 done
-expect "calibration: the cheap tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
+expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
 expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
+# The contributor tier trial (docs/goals.md, Calibration): the contributor
+# alone runs on its agent file's tier; the planner, quality, security, and
+# close starts keep the session's, by the user's decision.
+expect "calibration: the contributor runs on its agent file's tier at the session's effort" 0 "^agent/session$" profile_of contributor
+judged=""
+for kind in planner quality security close; do
+  judged="$judged $kind=$(profile_of "$kind" | cut -d/ -f1)"
+done
+expect "calibration: the planner, quality, security, and close starts keep the session's tier" 0 "^ planner=session quality=session security=session close=session$" echo "$judged"
 
 # ------------------------------------------------------------ workflow helpers
 # The workflows' pure helpers, run by node (which make doctor requires for
@@ -4013,12 +4023,12 @@ work_js() {
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION calibrated calibrate restoreCalibration usage firstPass metricLine" "$1"
 }
-expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"cheap/low","planner":"session/session"[}]\]$' \
+expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
-expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=cheap/low calib[.]security=session/session"$' \
-  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('security', {}); return metricLine() })()"
-expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"cheap/low"[}]$' \
-  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'cheap/low', 'metric.calib.planner': 'cheap/low', 'metric.calib.checker': 'cheap/high', 'metric.rework': '1' }, calibrated) })()"
+expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/session calib[.]security=session/session"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('contributor', {}); calibrate('security', {}); return metricLine() })()"
+expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"agent/low"[}]$' \
+  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'agent/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/high', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1' }, calibrated) })()"
 # A delivery's planner writes its own plan directory, and its package step
 # applies only its lane's plan and rows, never groom (parallel-lanes).
 plan_js() {

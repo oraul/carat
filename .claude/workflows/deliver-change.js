@@ -126,14 +126,15 @@ const waitsOf = (r) => { const w = Number(r && r.waited); return w > 0 ? (w <= 3
 const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // The model tier and reasoning effort of each kind of agent start, as
 // TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
-// The tier is cheap, the model: line of the agent's file, the only place a
-// tier is named (tools/tools_test.sh compares them), or session, the
-// session's model; the effort is low, or session, none passed. One kind
-// moves at a time, kept only when the first-pass rates and the rework do
-// not get worse over the next runs; the security reviewer never moves.
+// The tier is agent, the tier the model: line of the agent's file names, the
+// only place a tier is named (tools/tools_test.sh compares them), whichever
+// tier that is, or session, the session's model; the effort is low, or
+// session, none passed. One kind moves at a time, kept only when the
+// first-pass rates and the rework do not get worse over the next runs; the
+// security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'cheap/low', contributor: 'session/session', checker: 'cheap/low', quality: 'session/session', security: 'session/session', bench: 'cheap/low', record: 'session/low', merger: 'cheap/low', close: 'session/session' }
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/session', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 const calibrated = {}
 function calibrate(kind, opts) {
   calibrated[kind] = CALIBRATION[kind]
@@ -146,7 +147,7 @@ function calibrate(kind, opts) {
 function restoreCalibration(saved, used) {
   for (const key of Object.keys(saved)) {
     const m = /^metric\.calib\.([a-z]+)$/.exec(key)
-    if (m && !(m[1] in used) && /^(cheap|session)\/(low|session)$/.test(saved[key])) used[m[1]] = saved[key]
+    if (m && !(m[1] in used) && /^(agent|session)\/(low|session)$/.test(saved[key])) used[m[1]] = saved[key]
   }
   return used
 }
@@ -491,7 +492,7 @@ function metricLine() {
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
   if (planned !== null) pairs.push(`planned=${planned}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|(cheap|session)\/(low|session))$/.test(p))
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|(agent|session)\/(low|session))$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
