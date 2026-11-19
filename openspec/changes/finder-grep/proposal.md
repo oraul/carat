@@ -16,5 +16,6 @@
 - Specs: file-finder (added requirements).
 - Code: `carat/plugins/finder/plugin.rb`, new `carat/plugins/finder/grep.rb`; tests in new `test/editor_finder_grep.rb`.
 - README.md, docs/actions.md, docs/plugins.md, docs/codebase-map.md: the grep picker described.
-- docs/architecture.md and docs/compatibility.md: unchanged, no layer, port, or Neovim command changes.
+- docs/architecture.md: unchanged, no layer, port, or API change; the finder's picker uses existing requests.
+- docs/compatibility.md: unchanged, no Neovim command is implemented.
 - CLAUDE.md: unchanged, no process change.
