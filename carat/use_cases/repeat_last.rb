@@ -49,6 +49,7 @@ module Carat
         last.replaying = true
         outcome = handler.call(state, replay)
         if state.mode == Domain::Mode::INSERT
+          state.window.open_cursor_folds
           type(state, last)
           @leave_insert.call(state)
         end

@@ -127,7 +127,8 @@ module EditorFoldsTest
       ["zf3jzozfj nests a fold at the outer fold's first row", "zf3jzozfj", [[[0, 3, false], [0, 1, true]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["a fold crossing another grows to hold it", "jzfjzoggzfj", [[[0, 2, true], [1, 2, false]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["u restores the lines of a deleted fold, not the fold", "zfjddu", [[], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
-      ["zfjiX opens the fold and edits its first line, as Vim", "zfjiX<Esc>", [[[0, 1, false]], ["Xa", "b", "c", "d", "e"], [0, 0], :normal]]
+      ["zfjiX opens the fold and edits its first line, as Vim", "zfjiX<Esc>", [[[0, 1, false]], ["Xa", "b", "c", "d", "e"], [0, 0], :normal]],
+      ["a repeated insert opens the fold it closed again", "zfjiX<Esc>zc.", [[[0, 1, false]], ["XXa", "b", "c", "d", "e"], [0, 0], :normal]]
     ]) do |keys|
       h = editor("a\nb\nc\nd\ne\n", "")
       h.type(keys.to_s)
@@ -186,6 +187,13 @@ module EditorFoldsTest
     h = editor("a\nb\nc\n", "")
     h.type("zfj<C-w>s<C-w>c")
     t.assert_equal([[[0, 1, true]], 1], [folds_of(h), h.state.window.buffer.fold_lists.length], "Closing a split leaves one fold list: the buffer tracks one, the window keeps its fold")
+
+    h = editor("a\nb\nc\n", "")
+    h.type("zfj:tabedit a.txt<CR>zfj")
+    shared = h.state.window.buffer
+    t.assert_equal(2, shared.fold_lists.length, "a fold in a second tab page is tracked by the buffer")
+    h.type(":tabclose<CR>")
+    t.assert_equal(1, shared.fold_lists.length, "closing the tab page drops its window's fold list, the first tab page keeps its own")
 
     # A window with a closed fold shows more buffer rows than its height:
     # the rows below the fold are highlighted and a float anchored at the

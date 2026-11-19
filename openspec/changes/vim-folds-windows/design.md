@@ -4,8 +4,8 @@ ArrangeView skips the closed-fold cursor adjustment while typing so the insert c
 
 ## Decisions
 
-- Open folds in ArrangeView, which runs after every key, for the current window only while the mode is insert or replace: `open_at` is repeated while `closed_at` finds a closed fold, since nested closed folds open outermost first. Vim does this once at insert start; running per key is equivalent because only a closed fold can reappear by an explicit fold command, which cannot run in insert mode.
-- Drop folds in BufferList before the window leaves the layout, so a split's other window keeps its own list.
+- Open folds with `Window#open_cursor_folds`, repeated `open_at` while `closed_at` finds a closed fold, since nested closed folds open outermost first. Vim does this once in edit() at insert start, redo included. ArrangeView calls it for the current window while the mode is insert or replace, which covers every insert-entering key; RepeatLast calls it before typing a replayed insert, which enters and leaves insert with no arrange between (`zfjiX<Esc>zc.`).
+- Drop folds in BufferList before the window leaves the layout, so a split's other window keeps its own list; closing a tab page also drops the folds of its kept slots' hidden view windows.
 
 ## Risks
 

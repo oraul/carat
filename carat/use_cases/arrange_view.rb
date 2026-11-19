@@ -27,9 +27,10 @@ module Carat
     # fold's first line, where the fold is drawn, as Neovim's
     # foldAdjustCursor does after every command; in those modes the
     # current window's closed folds holding the cursor open instead, as
-    # 'foldopen' insert does. It
-    # does nothing before the size is known. Run after every key, after a
-    # file is opened, and before every render.
+    # foldOpenCursor does when an insert session starts (RepeatLast does
+    # the same for a replayed insert, which leaves no key between). It does
+    # nothing before the size is known. Run after every key, after a file
+    # is opened, and before every render.
     class ArrangeView
       attr_reader :cache #: Domain::LineCache
       attr_reader :buffers #: Domain::BufferList
@@ -60,7 +61,7 @@ module Carat
           if layout.node(id).leaf?
             window = layout.window_at(id)
             if typing
-              open_cursor_folds(window) if id == state.tab.current
+              window.open_cursor_folds if id == state.tab.current
             else
               to_fold_start(window, Domain::Mode.visual?(state.mode))
             end
@@ -134,16 +135,6 @@ module Carat
           scroll(float.window, options, tabstop)
           i += 1
         end
-      end
-
-      # Opens every closed fold holding the cursor of window, as Neovim's
-      # foldOpenCursor does when insert mode starts.
-      #: (Domain::Window) -> void
-      def open_cursor_folds(window)
-        folds = window.folds
-        return unless folds.folded?
-        row = window.cursor.row
-        folds.open_at(row) while folds.closed_at(row) >= 0
       end
 
       # Moves the cursor of window from inside a closed fold to the fold's

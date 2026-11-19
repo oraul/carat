@@ -366,6 +366,7 @@ module Carat
         layout.window_at(id).drop_folds
         shown = layout.window_at(id).buffer
         if layout.leaf_count <= 1
+          drop_slot_folds(tab)
           tabs.remove_tab(index)
         else
           taker = layout.close(id)
@@ -373,6 +374,18 @@ module Carat
           tab.previous = -1 if tab.previous == id
         end
         release(shown)
+      end
+
+      # Drops the folds of the hidden view window of every kept slot of
+      # page, so the buffer no longer tracks them.
+      #: (TabPage) -> void
+      def drop_slot_folds(page)
+        i = 0
+        while i < TabPage::SLOT_COUNT
+          slot = page.slot_at(i)
+          slot.view_window.drop_folds if slot.kept?
+          i += 1
+        end
       end
 
       # Removes the tab page at index and lets go of every buffer its
@@ -397,6 +410,7 @@ module Carat
           held << slot.view_window.buffer if slot.kept?
           i += 1
         end
+        drop_slot_folds(page)
         tabs.remove_tab(index)
         i = 0
         while i < held.length

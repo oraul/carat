@@ -1,6 +1,6 @@
 ## Why
 
-Two places disagree with Vim. Insert mode on a closed fold leaves the fold closed, while Vim's foldopen insert opens the folds holding the cursor when insert starts, so the edited line stays hidden. Closing a window leaves its fold list tracked by the buffer, so every later edit shifts a dead list and `zfj<C-w>s<C-w>c` leaves two fold lists.
+Two places disagree with Vim. Insert mode on a closed fold leaves the fold closed, while Vim's foldOpenCursor at insert start opens the folds holding the cursor when insert starts, so the edited line stays hidden. Closing a window leaves its fold list tracked by the buffer, so every later edit shifts a dead list and `zfj<C-w>s<C-w>c` leaves two fold lists.
 
 ## What Changes
 
