@@ -715,13 +715,18 @@ function reviewed(kind, passed, commit, counts) {
 // next line.
 // force writes the metric line though only closable lines wait (the closing
 // loop's figures, held after a start that committed nothing).
+// recordStart is the one start of the record profile, running one command
+// from the repository root and returning its RECORDED result (flush, laneHead).
+async function recordStart(command, label) {
+  return measured('record', () => agent(
+    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
+    calibrate('record', { schema: withCalls(RECORDED), label })), callCap('record'))
+}
 async function flush(force = false) {
   if (!force && !pending.some((l) => !CLOSABLE.test(l))) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   if (!command) return true
-  const r = await measured('record', () => agent(
-    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
-    calibrate('record', { schema: withCalls(RECORDED), label: 'record' })), callCap('record'))
+  const r = await recordStart(command, 'record')
   if (r && r.ok) return true
   if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
   return false
@@ -923,9 +928,9 @@ const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --sh
 // lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters,
 // so a placeholder, a typed short or full hash, or another commit is
 // refused. The workflow has no shell, so laneHead reads the lane's head in
-// a start of the record profile that runs that one command; '' when it
-// could not, and then a well-formed head is taken (the check compares its
-// own commit with it). safeText is all of a reported head that reaches a
+// a start of the record profile (recordStart) that runs that one command;
+// '' when it could not, and then a well-formed head is taken, noted
+// head-unread (the check compares its own commit with it). safeText is all of a reported head that reaches a
 // note or a queued record line: no quote or shell character.
 const HEAD12 = /^[0-9a-f]{12}$/
 function safeText(text) {
@@ -938,9 +943,7 @@ function headProblem(reported, lane) {
 }
 async function laneHead() {
   const command = `git -C ${laneDir(state.change)} rev-parse --short=12 HEAD`
-  const r = await measured('record', () => agent(
-    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
-    calibrate('record', { schema: withCalls(RECORDED), label: 'record: lane head' })), callCap('record'))
+  const r = await recordStart(command, 'record: lane head')
   const out = r && r.ok ? String(r.output || '').trim() : ''
   return HEAD12.test(out) ? out : ''
 }
@@ -965,7 +968,12 @@ async function contributor(mode, detail) {
       const lane = await laneHead()
       const problem = headProblem(result.head, lane)
       if (!problem) {
-        if (!lane) note(`contributor (${mode}): the lane's head could not be read; head ${result.head} taken as returned`)
+        // An unread lane head is also a run-state note in fixed words, so a
+        // reader that always fails, turning the wrong-head refusal off, shows.
+        if (!lane) {
+          note(`contributor (${mode}): the lane's head could not be read; head ${result.head} taken as returned`)
+          queue(`sh tools/run_state.sh note ${state.change} head-unread "contributor ${mode} start ${count + 1}: lane head not read"`, head)
+        }
         break
       }
       // A refused head escalates, is noted, and is restarted once; a second
