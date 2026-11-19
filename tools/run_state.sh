@@ -993,10 +993,13 @@ escape_mark() {
   escape_state=$(state_view)
 }
 
-# The run state's lines, commas removed, but the figures (metric.*), which
-# the checker's line writes again when it rejoins a running check.
+# The run state's lines, commas removed, but the figures the checker's
+# line writes again when it rejoins a running check: the names metricLine
+# of the delivery workflow writes. A measurement (allocs.*, rounds.*,
+# us.*), which only the metrics command imports, stays compared.
 state_view() {
-  sed 's/,$//' "$(state_file)" | grep -v '^  "metric[.]'
+  sed 's/,$//' "$(state_file)" |
+    grep -v -E '^  "metric[.]((phase|first|calib)[.][a-z0-9_.-]+|rework|extra|stop|ci_min|ci_wait_calls|advisories_closed|advisories_left|estimate|planned|critical|escalated|quality_blocked)"'
 }
 
 # escape_scan PATH: the paths under PATH, its link followed, changed since
@@ -1019,8 +1022,7 @@ config_view() {
 # the runner write; a linked worktree's whole git directory; the hooks; the
 # shared toolchain and Spinel's checkout; then the configuration file when
 # the repository configuration differs (config_view), and the run state
-# file when it differs from the one escape_mark noted with the stage
-# records the runner wrote since put in (stage_record).
+# file when it holds records the runner did not write (state_unexpected).
 escaped_paths() {
   find "$top" \( -path "$top/.git" -type d -o -path "$top/tmp" -o -path "$top/build/pipeline" -o \
       -path "$top/build/stages" -o -path "$top/build/plan" -o -path "$top/build/spinel-cache" \) -prune -o \
@@ -1031,6 +1033,12 @@ escaped_paths() {
   escape_scan "$top/tmp/.toolchain"
   escape_scan "$top/tmp/.spinel"
   [ "$(config_view)" = "$escape_config" ] || echo "$common_dir/config: the configuration changed"
+  state_unexpected
+}
+
+# The run state file when it differs from the one escape_mark noted with
+# the stage records the runner wrote since put in (stage_record).
+state_unexpected() {
   expected=$(printf '%s' "$runner_records" | SNAP="$escape_state" awk '
     NF { key = $1; rec[key] = substr($0, length(key) + 2) }
     END {

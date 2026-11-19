@@ -482,6 +482,10 @@ case "$REACH" in
     git config --file "$TOP/.git/config" branch.chore/isolated.remote origin &&
       git config --file "$TOP/.git/config" branch.chore/isolated.merge refs/heads/chore/isolated ;;
   worktree) echo forged > "$GIT_DIR_OUT/forged" ;;
+  measure) awk 'NR == 2 { print "  \"metric.allocs.forged\": \"0\"," } { print }' "$state" > "$state.new" && mv "$state.new" "$state" ;;
+  config-worktree) : > "$TOP/.git/config.worktree" ;;
+  slow) sleep "${SLOW:-0}" ;;
+  touch) touch "$TOP/build/plan/tracked" && sleep "${SLOW:-0}" ;;
 esac
 EOF
 chmod +x "$work/bin/reach-make"
@@ -504,6 +508,8 @@ git_q checkout -q README.md
 cp build/pipeline/isolated.json "$work/isolated.saved"
 expect "run_state: a stage that writes the delivery clone's run state by an absolute path fails the check" 1 "isolated[.]json: records the runner did not write$" reach state
 cp "$work/isolated.saved" build/pipeline/isolated.json
+expect "run_state: a stage that writes a measurement into the delivery clone's run state fails the check" 1 "isolated[.]json: records the runner did not write$" reach measure
+cp "$work/isolated.saved" build/pipeline/isolated.json
 # metrics starts once bench-budget passed (STAGE_AFTER) and forges its record.
 REACH_STAGES="bench-budget metrics"
 expect "run_state: a stage that rewrites a stage record by an absolute path fails the check" 1 "isolated[.]json: records the runner did not write$" reach record
@@ -511,6 +517,8 @@ REACH_STAGES=
 cp "$work/isolated.saved" build/pipeline/isolated.json
 expect "run_state: a stage that plants a hook in the delivery clone by an absolute path fails the check" 1 "^[|] $iso_top/[.]git/hooks" reach hook
 rm .git/hooks/post-checkout
+expect "run_state: a stage that writes the common directory's config.worktree by an absolute path fails the check" 1 "^[|] $iso_top/[.]git/config[.]worktree$" reach config-worktree
+rm .git/config.worktree
 expect "run_state: a stage that rewrites the delivery clone's configuration by an absolute path fails the check" 1 "[.]git/config: the configuration changed$" reach config
 git config remote.origin.url host:o/r.git
 expect "run_state: a branch upstream written during the check leaves it passing" 0 "every stage passed" reach upstream
@@ -520,6 +528,29 @@ state init isolated chore/isolated-lane > /dev/null
 expect "run_state: a stage that writes a linked worktree's git directory fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/forged$" \
   env STAGES=reach MAKE="$work/bin/reach-make" REACH=worktree GIT_DIR_OUT="$(git rev-parse --absolute-git-dir)" \
   TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+# A check in a linked worktree that a waiter rejoins: the waiter reads the
+# tree with no optional lock, so a tracked file whose stat changed (under
+# build/plan, which the scan leaves out) leaves the worktree's index; the
+# figures the checker's line writes meanwhile leave the run state passing.
+mkdir -p build/plan && echo tracked > build/plan/tracked
+git_q add -f build/plan/tracked
+git_q commit -q -m "chore: tracked" -m "$TRAILER"
+lane_check() {
+  env SLOW=4 CHECK_WAIT="$1" STAGES=reach MAKE="$work/bin/reach-make" REACH="$2" TOP="$work/isolated-lane" \
+    TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+lane_running() {
+  n=0
+  until state get isolated stage.reach 2>/dev/null | grep -q '^running ' || [ $n -ge 20 ]; do sleep 1; n=$((n + 1)); done
+  sleep 1
+}
+lane_check 1 touch > /dev/null 2>&1
+lane_running
+expect "run_state: a waiter rejoining a check in a linked worktree leaves its index though a tracked file's stat changed" 0 "every stage passed" lane_check 120 touch
+lane_check 1 slow > /dev/null 2>&1
+lane_running
+state metric isolated phase.checker=1/1 first.check=1 estimate=large > /dev/null
+expect "run_state: the figures a checker's line writes during a running check leave it passing" 0 "every stage passed" lane_check 120 slow
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"
