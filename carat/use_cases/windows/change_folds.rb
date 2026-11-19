@@ -9,7 +9,8 @@ module Carat
     # leaves visual mode (zf), :open opens the closed fold under the
     # cursor (zo), :close closes the innermost open one (zc), :toggle
     # does either (za), :delete deletes the fold under the cursor (zd),
-    # and :eliminate every fold (zE). With no fold under the cursor zo,
+    # :eliminate every fold (zE), :open_all opens every fold (zR), and
+    # :close_all closes every fold (zM). With no fold under the cursor zo,
     # zc, za, and zd give E490; the cursor goes to the first line of the
     # closed fold it is left in, as Neovim's cursor adjustment puts it.
     class ChangeFolds
@@ -27,6 +28,14 @@ module Carat
         end
         folds = window.folds
         row = state.cursor.row
+        if target == :open_all
+          folds.open_all
+          return Outcome.none
+        end
+        if target == :close_all
+          folds.close_all
+          return place(state, row)
+        end
         found = case target
                 when :open then folds.open_at(row)
                 when :close then folds.close_at(row)

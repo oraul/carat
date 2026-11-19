@@ -29,7 +29,7 @@ module EditorRegistersTest
       ["mixed kinds become linewise", ["ab\nc\n", [0, 0], "\"aylj\"Ayyk\"ap"], ["ab", "a", "c", "c"]],
       ["a named delete fills the register", ["one two\n", [0, 0], "\"bdw$\"bp"], ["twoone "]],
       ["a named change fills the register", ["one two\n", [0, 0], "\"ccw<Esc>$\"cp"], [" twoone"]],
-      ["registers survive a cancelled command", ["ab\n", [0, 0], "yl\"zdzp"], ["aab"]],
+      ["registers survive a cancelled command", ["ab\n", [0, 0], "yl\"zd<Esc>p"], ["aab"]],
       ["the unnamed register holds only the appended text", ["a\nb\n", [0, 0], "\"ayyj\"Ayyp"], ["a", "b", "b"]]
     ]) do |input|
       h = editor(input[0])

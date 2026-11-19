@@ -35,7 +35,8 @@ module Carat
         "motion.word_forward", "motion.big_word_forward", "motion.word_backward", "motion.big_word_backward",
         "motion.word_end", "motion.big_word_end", "motion.word_end_backward", "motion.big_word_end_backward",
         "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
-        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair"
+        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair",
+        "motion.fold_next", "motion.fold_previous", "motion.fold_start", "motion.fold_end"
       ]
 
       # The short descriptions of NAMES, in the same order, for the key
@@ -48,7 +49,8 @@ module Carat
         "Next word", "Next WORD", "Previous word", "Previous WORD",
         "End of word", "End of WORD", "End of previous word", "End of previous WORD",
         "Next sentence", "Previous sentence", "Next paragraph", "Previous paragraph",
-        "Top of window", "Middle of window", "Bottom of window", "Matching pair"
+        "Top of window", "Middle of window", "Bottom of window", "Matching pair",
+        "Next fold start", "Previous fold end", "Open fold start", "Open fold end"
       ]
 
       # The motions Neovim counts as jumps: moving by one records the
@@ -57,7 +59,8 @@ module Carat
       JUMP_NAMES = [
         "cursor.buffer_start", "cursor.buffer_end",
         "motion.sentence_forward", "motion.sentence_backward", "motion.paragraph_forward", "motion.paragraph_backward",
-        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair"
+        "motion.screen_top", "motion.screen_middle", "motion.screen_bottom", "motion.match_pair",
+        "motion.fold_next", "motion.fold_previous", "motion.fold_start", "motion.fold_end"
       ]
 
       # The bytes of the brackets % matches, openers first, each closer
@@ -131,6 +134,10 @@ module Carat
         when "motion.screen_middle" then screen(state, :middle, n, pending)
         when "motion.screen_bottom" then screen(state, :bottom, n, pending)
         when "motion.match_pair" then count > 0 ? percent_line(state, count) : match_pair(state)
+        when "motion.fold_next" then fold_move(state, n, true, true)
+        when "motion.fold_previous" then fold_move(state, n, true, false)
+        when "motion.fold_start" then fold_move(state, n, false, false)
+        when "motion.fold_end" then fold_move(state, n, false, true)
         else nil
         end
       end
@@ -582,6 +589,27 @@ module Carat
             row -= 1
           end
         end
+        Motion.new(target: Position.new(row: row, col: 0), linewise: false, inclusive: false, want: :set)
+      end
+
+      # ------------------------------------------------------------ folds
+
+      # zj and zk (sibling true) or ]z and [z over the window's folds,
+      # forward or backward, count times, stopping at a step that does not
+      # move: column 0, exclusive, as Neovim's foldMoveTo; nil when the
+      # cursor would not move.
+      #: (EditorState, Integer, bool, bool) -> Motion?
+      def self.fold_move(state, n, sibling, forward)
+        folds = state.window.folds
+        from = state.cursor.row
+        row = from
+        while n > 0
+          to = sibling ? folds.next_fold_row(row, forward) : folds.open_fold_row(row, forward)
+          break if to == row
+          row = to
+          n -= 1
+        end
+        return nil if row == from
         Motion.new(target: Position.new(row: row, col: 0), linewise: false, inclusive: false, want: :set)
       end
 

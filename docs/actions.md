@@ -44,6 +44,10 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `motion.screen_middle` | normal, operator_pending, visual | Middle of the visible lines; linewise |
 | `motion.screen_bottom` | normal, operator_pending, visual | Line count from the bottom of the window; linewise |
 | `motion.match_pair` | normal, operator_pending, visual | `%`: the bracket matching the first one at or after the cursor on its line; inclusive; with a count the line at count percent, linewise |
+| `motion.fold_next` | normal, operator_pending, visual | `zj`: the first line of the next fold, a closed fold counted as one, the deepest level that moves the cursor winning; column 0; exclusive; a jump |
+| `motion.fold_previous` | normal, operator_pending, visual | `zk`: the last line of the previous fold, as `zj` counts them; column 0; exclusive; a jump |
+| `motion.fold_start` | normal, operator_pending, visual | `[z`: the first line of the innermost open fold holding the cursor, or of the fold holding it when already there; column 0; exclusive; a jump |
+| `motion.fold_end` | normal, operator_pending, visual | `]z`: the last line of the innermost open fold holding the cursor, or of the fold holding it when already there; column 0; exclusive; a jump |
 | `search.forward` | normal, operator_pending, visual | `/`: read a pattern on the command line, then the count-th match after the cursor; exclusive |
 | `search.backward` | normal, operator_pending, visual | `?`: read a pattern, then the count-th match before the cursor; exclusive |
 | `search.next` | normal, operator_pending, visual | `n`: the last search again in its direction; exclusive |
@@ -166,6 +170,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `fold.toggle` | normal | Open the fold under the cursor when it is closed, else close it; E490 with no fold |
 | `fold.delete` | normal | Delete the fold under the cursor, a closed one first, keeping the folds nested in it; E490 with no fold |
 | `fold.delete_all` | normal | Delete every fold of the window |
+| `fold.open_all` | normal | Open every fold of the window |
+| `fold.close_all` | normal | Close every fold of the window, the cursor going to the first line of the closed fold it is in |
 | `substitute.repeat` | normal | `&`: repeat the last substitute on the cursor line without its flags, on count lines with a count |
 | `substitute.repeat_all` | normal | `g&`: repeat the last substitute on every line with its flags and the last search pattern |
 | `file.save` | normal, insert | Write the current buffer as `:w` does; in insert mode stay in insert mode |
