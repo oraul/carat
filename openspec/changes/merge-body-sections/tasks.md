@@ -12,4 +12,4 @@
 ## 3. Documents and self-check
 
 - [x] 3.1 CLAUDE.md Commands, `docs/codebase-map.md` area 1, the headers of `tools/open_pr.sh` and `tools/agent_guard.sh` describe `message` and the head parameter; the finding on the hooks is appended to `docs/findings/merge-body-sections.md`.
-- [ ] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+- [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
