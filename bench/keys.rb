@@ -296,6 +296,16 @@ def run(scenario, count, size)
     assembly.render(ROWS, COLS)
     i += 1
   end
+  if plugins == "grep"
+    # The picker must have stored every generated line and the lines of
+    # a.rb, or the keys would time an empty or a cut index.
+    stored = "of #{GREP_FILES * GREP_LINES + lines} lines"
+    title = assembly.state.tab.floats.count > 0 ? assembly.state.tab.floats.at(0).spec.title.to_s : ""
+    unless title.end_with?(stored)
+      STDERR.puts "grep: the picker's title (#{title}) does not end with #{stored}"
+      exit 1
+    end
+  end
   terminal.reset
 
   typed = encode(keys)
