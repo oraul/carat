@@ -183,6 +183,8 @@ ok   a partner below the window draws none
 ok   a partner above the window draws none
 ok   a pair on later rows is drawn
 ok   insert mode draws none
+ok   a window with a closed fold elsewhere draws none
+ok   a partner past the search budget draws none
 ok   visual mode keeps the Visual selection over the pair
 ok   The row repaints when the cursor moves onto a bracket
 ok   The row repaints when the cursor moves off a bracket
@@ -194,4 +196,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 196 passed, 0 failed
+adapters_frame_presenter: 198 passed, 0 failed

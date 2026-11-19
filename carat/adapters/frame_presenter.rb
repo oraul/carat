@@ -828,8 +828,11 @@ module Carat
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
         guided = @guides.on? && !buffer.scratch? && !folded
-        find_pair(buffer, window, tabstop) if current && @pairing && !folded
-        clear_pair unless current && @pairing && !folded
+        if current && @pairing && !folded
+          find_pair(buffer, window, tabstop)
+        else
+          clear_pair
+        end
         @guides.measure(buffer, top, height, cursor.row, current) if guided
         row = top
         i = 0
@@ -1175,6 +1178,9 @@ module Carat
       # does, but only across the rows the window shows, and while
       # PAIR_BUDGET code points last. Without a partner there both rows
       # stay -1.
+      # It stays apart from Motions.match_pair, which walks the bytes of
+      # the whole buffer unbounded, while this reads decoded code points
+      # of the shown rows and stops at a budget.
       #: (Domain::Buffer, Domain::Window, Integer) -> void
       def find_pair(buffer, window, tabstop)
         clear_pair

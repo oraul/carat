@@ -125,6 +125,11 @@ module AdaptersFramePresenterTest
     s.mode = mode
     s.window.top = top
     s.cursor.move_to(row, col)
+    drawn_pairs(s, rows)
+  end
+
+  # The MatchParen cells of the first rows of a state, as paired lists them.
+  def self.drawn_pairs(s, rows)
     f = draw(s, rows, 20)
     out = []
     r = 0
@@ -137,6 +142,21 @@ module AdaptersFramePresenterTest
       r += 1
     end
     out
+  end
+
+  # A pair whose window holds a closed fold on another row.
+  def self.folded_pair
+    s = state_for(["a (b) c", "x", "y", "z"], "a.txt")
+    s.window.folds.create(2, 3)
+    s.window.folds.close_at(2)
+    s.cursor.move_to(0, 2)
+    drawn_pairs(s, 6)
+  end
+
+  # Lines whose brackets lie more code points apart than PAIR_BUDGET.
+  def self.over_budget
+    wide = "x" * 100_001
+    ["(", wide, wide, ")"]
   end
 
   # The MatchParen cells of the named case, by paired.
@@ -156,7 +176,10 @@ module AdaptersFramePresenterTest
     when "a partner above the window draws none" then paired(far, 5, 0, 6, 2, nm)
     when "a pair on later rows is drawn" then paired(["x", "(", "a", ")"], 1, 0, 6, 0, nm)
     when "visual mode keeps the Visual selection over the pair" then paired(["a (b) c"], 0, 2, 6, 0, D::Mode::VISUAL)
-    else paired(["a (b) c"], 0, 2, 6, 0, D::Mode::INSERT)
+    when "insert mode draws none" then paired(["a (b) c"], 0, 2, 6, 0, D::Mode::INSERT)
+    when "a window with a closed fold elsewhere draws none" then folded_pair
+    when "a partner past the search budget draws none" then paired(over_budget, 0, 0, 6, 0, nm)
+    else ["unknown case " + name]
     end
   end
 
@@ -765,6 +788,7 @@ module AdaptersFramePresenterTest
     # each kind, across rows, nested).
     # Scenario: An unmatched or off-screen pair is not drawn.
     # Scenario: Only the grammar's modes draw it (insert mode draws none).
+    # Scenario: A window with a closed fold draws no pair (the fold row).
     # Scenario: The row repaints when the cursor moves (the two checks
     # after the table).
     t.table([
@@ -780,6 +804,8 @@ module AdaptersFramePresenterTest
       ["a partner above the window draws none", "a partner above the window draws none", []],
       ["a pair on later rows is drawn", "a pair on later rows is drawn", ["1:0", "3:0"]],
       ["insert mode draws none", "insert mode draws none", []],
+      ["a window with a closed fold elsewhere draws none", "a window with a closed fold elsewhere draws none", []],
+      ["a partner past the search budget draws none", "a partner past the search budget draws none", []],
       ["visual mode keeps the Visual selection over the pair", "visual mode keeps the Visual selection over the pair", ["0:4"]]
     ]) { |name| pair_case(name.to_s) }
     s = state_for(["a (b) c", "xyz"], "a.txt")
