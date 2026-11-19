@@ -372,11 +372,11 @@ module EditorFinderGrepTest
     h.type("<BS>")
     t.assert_equal("Grep 30 of 30+ files, 29999+ of 40002 lines", h.state.tab.floats.at(0).spec.title.to_s, "a backspace starts again from the first line, within the budget")
 
-    # Scenario: The grep list uses the whole width of a wide screen
+    # Scenario: The grep list is sized as the file finder's list (test/editor_finder_grep_preview.rb holds the preview rows)
     h = editor_on(disk, "", 120)
     h.type("<Space>fghello")
-    t.assert_equal(1, h.state.tab.floats.count, "no preview float beside the grep list at 120 columns")
-    t.assert_equal(true, h.state.tab.floats.at(0).spec.width.to_i > 100, "the grep list is wider than half of 120 columns")
+    t.assert_equal(2, h.state.tab.floats.count, "the preview float shows beside the grep list at 120 columns")
+    t.assert_equal(true, h.state.tab.floats.at(0).spec.width.to_i < 60, "the grep list is about half of 120 columns")
 
     # The file finder is unchanged beside it.
     h = editor_on(disk, "")

@@ -20,8 +20,9 @@ module Carat
       # as the command palette does.
       # The grep picker (plugin.finder.grep) is the same picker over the
       # lines of the files: Grep reads them once when it opens, each row
-      # is a line, Enter opens the file at its line and column, and no
-      # preview shows.
+      # is a line, Enter opens the file at its line and column, and a wide
+      # screen previews the highlighted row's file around its line, from the
+      # text Grep read when it opened.
       class Plugin < Carat::PluginApi::Plugin
         NAME = "finder"
         PROMPT_ID = "find"
@@ -317,7 +318,7 @@ module Carat
           cols = @cols
           height = @rows - 6
           height = 1 if height < 1
-          preview = !@grep && cols >= PREVIEW_COLUMNS
+          preview = cols >= PREVIEW_COLUMNS
           box = host.float_frame(true)
           margin = box.margin
           frame = box.box_width(0)
@@ -329,12 +330,21 @@ module Carat
           shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
           @list_float = shown.ok ? shown.window : 0
           return unless preview && !@matches.empty?
-          path = selected_path
-          read = host.read_file(PluginApi::Paths.join(@root, path), height)
+          preview_title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
+          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, preview_title), preview_lines(host, height))
+          @preview_float = previewed.ok ? previewed.window : 0
+        end
+
+        # The highlighted file's preview rows: for a grep row the stored
+        # lines around its line, its line marked as the list marks the
+        # highlight; for a file its first rows, read from the disk.
+        #: (Carat::PluginApi::Host, Integer) -> Array[String]
+        def preview_lines(host, height)
+          return @index.preview(@matches[@selected], height, MARK, SPACE) if @grep
+          read = host.read_file(PluginApi::Paths.join(@root, selected_path), height)
           lines = read.ok ? read.lines : [read.message]
           lines = [""] if lines.empty?
-          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, path), lines)
-          @preview_float = previewed.ok ? previewed.window : 0
+          lines
         end
 
         #: (Integer, Integer, Integer, String) -> PluginApi::FloatOptions
