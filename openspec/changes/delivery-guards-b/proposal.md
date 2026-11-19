@@ -18,7 +18,7 @@ Roadmap: outside `docs/architecture.md` section 12; a pipeline defect (T1) run b
 
 Assumptions: the lane's head is read by a start of the `record` profile (one command, from the repository root), counted under the `record` usage key, since the workflow has no shell of its own; the restart counts as a continued start in the loop.
 
-- README.md: unchanged, its pipeline paragraph names escalation without listing the triggers, which `docs/goals.md` holds.
+- README.md: its pipeline paragraph says the workflow refuses a contributor head other than the lane's.
 - CLAUDE.md: unchanged, its Agents section names no escalation trigger.
 - docs/architecture.md: unchanged, no spec, layer, or port changes.
 
@@ -34,4 +34,4 @@ None.
 
 ## Impact
 
-`.claude/workflows/deliver-change.js`, `tools/tools_test.sh`, `docs/goals.md`.
+`.claude/workflows/deliver-change.js`, `tools/tools_test.sh`, `docs/goals.md`, `README.md`.
