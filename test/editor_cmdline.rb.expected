@@ -10,7 +10,7 @@ ok   nothing shown after escape
 ok   empty command does nothing
 ok   unknown command reports E492
 ok   back in normal mode after an unknown command
-ok   E492 is shown as an error
+ok   E492 is shown as an error, its icon and its code in the error groups
 ok   write shows the written message
 ok   write stores the buffer text
 ok   write clears the modified flag

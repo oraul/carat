@@ -5,7 +5,7 @@ The message row SHALL show, in priority order: the command line after ":" in com
 
 #### Scenario: Message replaces the mode indicator
 - **WHEN** ":q" is run on a modified buffer
-- **THEN** the message row reads "✖ E37: No write since last change (add ! to override)", the icon in `DiagnosticError`, the code in `ErrorMsg`, and the rest in `Normal`
+- **THEN** the message row reads "✖ E37: No write since last change (add ! to override)", the icon and the space after it in `DiagnosticError`, the code in `ErrorMsg`, and the rest in `Normal`
 
 #### Scenario: An error without a code
 - **WHEN** an error message "no such name" is shown

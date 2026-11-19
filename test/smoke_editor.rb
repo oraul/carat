@@ -182,7 +182,7 @@ module SmokeEditorTest
     settle(reader, out, 0.5)
     writer.write(":q\r")
     settle(reader, out, 0.5)
-    t.assert_true(out.include?("E37: No write since last change (add ! to override)"), "quit is refused with E37")
+    t.assert_true(out.include?("E37:") && out.include?(" No write since last change (add ! to override)"), "quit is refused with E37")
     writer.write(":q!\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after :q!")

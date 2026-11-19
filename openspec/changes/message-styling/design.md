@@ -11,7 +11,7 @@ Goals: the Facet message styling for what the editor produces today, in both car
 ## Decisions
 
 - One new group, `MsgDim` (`MESSAGE_DIM`, the dim role on the terminal's background), for the prompt, the pending keys, and an information message. The other wanted styles reuse groups: the error glyph `DiagnosticError` (red, as the sign), the code `ErrorMsg` (bold red), the text `Normal`, the hit-enter prompt `Question`. Rejected: reusing `LineNrFifth` or an icon group, whose names say something else.
-- The new id follows `LineNrFifth`, so the plugin-token range stays the last ids and no UI group is a token; the ids from `SYNTAX_FIRST` on move up by one, which no snapshot records.
+- The new id follows `LineNrFifth`, so the plugin-token range stays the last ids and no UI group is a token; the ids from `SYNTAX_FIRST` on move up by one, which one snapshot records.
 - The error's code is the leading `E`, digits, and colon of the text. The split is made when drawing; `EditorState` keeps its text and bool.
 - The glyph is `Icons.glyph("error", options.icons)`, so `option.icons ascii` gives `X`.
 - Insert mode draws nothing in the message row; a message or the pending keys still show.

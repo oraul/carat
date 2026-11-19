@@ -131,8 +131,8 @@ module EditorTabsTest
 
     # Messages: rows are [label, keys, message].
     t.table([
-      [":tabclose on the last tab page reports E784", ":tabclose<CR>", E784],
-      [":tabc on the last tab page reports E784", ":tabc<CR>", E784],
+      [":tabclose on the last tab page reports E784", ":tabclose<CR>", "✖ " + E784],
+      [":tabc on the last tab page reports E784", ":tabc<CR>", "✖ " + E784],
       [":tabonly with one tab page says so", ":tabonly<CR>", "Already only one tab page"],
       [":tabo with one tab page says so", ":tabo<CR>", "Already only one tab page"],
       [":tabe file shows the opened message", ":tabe b.txt<CR>", "\"b.txt\" 1L, 3B"],

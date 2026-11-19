@@ -165,7 +165,7 @@ module EditorOperatorsTest
     # Messages and the modified flag.
     h = editor("ab\n")
     h.type("p")
-    t.assert_equal("E353: Nothing in register \"", h.message_row, "p from an empty register reports E353")
+    t.assert_equal("✖ E353: Nothing in register \"", h.message_row, "p from an empty register reports E353")
     t.assert_equal(["ab"], h.lines, "an empty put changes nothing")
     t.assert_true(!h.buffer.modified?, "an empty put does not modify the buffer")
     h.type("yy")
