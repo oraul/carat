@@ -423,6 +423,12 @@ function findingAt(text) {
 function reRaised(location, earlier) {
   return !!location && !/:0$/.test(location) && earlier.some((e) => findingAt(e) === location)
 }
+// Whether a blocking quality finding (TEXT) is marked a first-pass miss: the
+// reviewer of a fix round words it so when its lines are unchanged since the
+// last review. Only recorded, never unblocked, and not counted in firstPass.
+function firstPassMiss(text) {
+  return /(?:^|\s)first-pass miss\b/.test(String(text || ''))
+}
 // The security findings that block (FINDINGS, the reviewer's): a High or
 // Medium in the change at confidence 8 or above, whatever an earlier round
 // rated at its location, as the hard rule of CLAUDE.md requires.
@@ -1176,6 +1182,8 @@ async function reviews() {
     const raised = q.blocking.filter((f) => reRaised(findingAt(f), qualityAdvisory))
     if (raised.length) note(`quality re-raises kept as advisories: ${raised.join('; ')}`)
     q.blocking = q.blocking.filter((f) => !raised.includes(f))
+    const missed = q.blocking.filter(firstPassMiss)
+    if (missed.length) note(`quality first-pass misses: ${missed.join('; ')}`)
     q.advisory = q.advisory.concat(raised)
     qualityBlocking = q.blocking
     qualityAt = q.head
