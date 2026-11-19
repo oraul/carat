@@ -1,0 +1,9 @@
+# Brief
+
+contributor-checklist: docs/queue-backlog.md Sprint 20 item 1 at c559f48 (parts A and B of the widened brief: the rules card repeated in every contributor start, and the edge-case checklist with the self-review). Parts C (tier routing for critical places) and D (high effort for the mid tier) are queued as contributor-tier-routing, next in the backlog lane, and are not part of this change.
+
+The queue line: `contributor-checklist` (T1 pipeline, user request, estimated medium): quality fails first on 78 of 176 runs from findings a checklist catches; the self-check (`.claude/agents/contributor.md:38`) names no edge case. Fix outline: a checklist from real findings (empty range, CRLF, UTF-16 and multi-byte, trailing blanks, last line, empty buffer; a test per behavior change; an existing helper searched first; comments, docs, and spec text match the code), and a self-review of the diff with the quality reviewer's instructions, within contributor.md's budget.
+
+(A) A short rules card, at most about 15 lines, at the top of `.claude/agents/contributor.md`, repeated verbatim in every contributor start's prompt: 1 the real head from `git rev-parse --short=12 HEAD`; 2 claim no check not run, quote each last output line; 3 never read `docs/backlog.md` or `docs/findings/*.md`, append with `>>`; 4 never rewrite a findings entry; 5 `pr.md` states only what the diff does; 6 no model name or alias; 7 a fix's new test fails with the fix reverted; 8 in a fix round fix what blocks, advisories to the findings file; 9 a spec, compatibility, or architecture doc change also updates README.md and the code map; 10 re-read the diff with the quality reviewer's instructions.
+
+Accepted when a tools-test case shows every contributor start's prompt carries the card byte for byte, contributor.md's self-check names each checklist point and the self-review, and docs-lint budgets hold (contributor.md moves long prose out, drops no rule, the budget is not raised).
