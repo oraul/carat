@@ -72,6 +72,16 @@ module EditorFinderGrepTest
     files
   end
 
+  # One line for each bidirectional embedding, override, and isolate
+  # character, between its hexadecimal name and a q.
+  def self.bidi
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    files.put("bidi.txt", "p202a\u202Aq\np202b\u202Bq\np202c\u202Cq\np202d\u202Dq\np202e\u202Eq\np2066\u2066q\np2067\u2067q\np2068\u2068q\np2069\u2069q\n")
+    files
+  end
+
   # The bounds: a line of continuation bytes, a C1 control, a line with a
   # valid multi-byte character beside an invalid byte, a 500-byte line, a
   # line the 400-byte cut falls inside a character of, and 1200 lines of
@@ -238,6 +248,22 @@ module EditorFinderGrepTest
 
     # Scenario: Lines of equal rank keep their order in each file
     t.assert_equal(["Grep 2 of 2 files, 6 of 7 lines|> a.txt:1: k 1\n  b.txt:1: k 4\n  a.txt:2: k 2\n  b.txt:2: k 5\n  a.txt:3: k 3\n  b.txt:3: k 6"], shown_in(even, "<Space>fgk"), "each file's first line, then each second line, then each third, in line order within a file")
+
+    # Scenario: Bidirectional format characters show as spaces
+    # Rows are [label, keys, floats].
+    t.table([
+      ["U+202A shows as a space", "<Space>fgp202a", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:1: p202a q"]],
+      ["U+202B shows as a space", "<Space>fgp202b", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:2: p202b q"]],
+      ["U+202C shows as a space", "<Space>fgp202c", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:3: p202c q"]],
+      ["U+202D shows as a space", "<Space>fgp202d", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:4: p202d q"]],
+      ["U+202E shows as a space", "<Space>fgp202e", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:5: p202e q"]],
+      ["U+2066 shows as a space", "<Space>fgp2066", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:6: p2066 q"]],
+      ["U+2067 shows as a space", "<Space>fgp2067", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:7: p2067 q"]],
+      ["U+2068 shows as a space", "<Space>fgp2068", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:8: p2068 q"]],
+      ["U+2069 shows as a space", "<Space>fgp2069", ["Grep 1 of 1 files, 1 of 10 lines|> bidi.txt:9: p2069 q"]]
+    ]) do |keys|
+      shown_in(bidi, keys)
+    end
 
     # Rows are [label, keys, config, [file, row, column, windows, tabs, floats]].
     t.cases([

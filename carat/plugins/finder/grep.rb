@@ -138,7 +138,7 @@ module Carat
         #: (Integer) -> String
         def row_text(row)
           i = @hits[row]
-          Grep.safe("#{@files[@file_of[i]]}:#{@numbers[i]}: #{@texts[i]}")
+          safe("#{@files[@file_of[i]]}:#{@numbers[i]}: #{@texts[i]}")
         end
 
         #: (Integer) -> String
@@ -164,33 +164,6 @@ module Carat
           text.byteslice(0, j).to_s.length
         end
 
-        # The text with each control character shown as a space and each
-        # byte that forms no valid UTF-8 sequence as "?", so the terminal
-        # gets no escape sequence from a file and a valid character beside
-        # an invalid byte stays whole.
-        #: (String) -> String
-        def self.safe(text)
-          out = +""
-          n = text.bytesize
-          i = 0
-          while i < n
-            b = text.getbyte(i).to_i
-            size = utf8_size(b)
-            if size == 1
-              out << (b < 0x20 || b == 0x7F ? " " : b.chr)
-              i += 1
-            elsif size > 1 && i + size <= n && text.byteslice(i, size).to_s.valid_encoding?
-              ch = text.byteslice(i, size).to_s
-              out << (ch.ord < 0xA0 ? " " : ch)
-              i += size
-            else
-              out << "?"
-              i += 1
-            end
-          end
-          out
-        end
-
         # An empty list the compiler types as strings.
         #: () -> Array[String]
         def self.no_strings
@@ -207,18 +180,55 @@ module Carat
           out
         end
 
+        private
+
+        # The text with each control character and each bidirectional
+        # format character shown as a space and each byte that forms no
+        # valid UTF-8 sequence as "?", so the terminal gets no escape
+        # sequence from a file, a row cannot reorder its text to show
+        # another path or line, and a valid character beside an invalid
+        # byte stays whole.
+        #: (String) -> String
+        def safe(text)
+          out = +""
+          n = text.bytesize
+          i = 0
+          while i < n
+            b = text.getbyte(i).to_i
+            size = utf8_size(b)
+            if size == 1
+              out << (b < 0x20 || b == 0x7F ? " " : b.chr)
+              i += 1
+            elsif size > 1 && i + size <= n && text.byteslice(i, size).to_s.valid_encoding?
+              ch = text.byteslice(i, size).to_s
+              code = ch.ord
+              out << (code < 0xA0 || format_control?(code) ? " " : ch)
+              i += size
+            else
+              out << "?"
+              i += 1
+            end
+          end
+          out
+        end
+
+        # Whether the code point is a bidirectional embedding, override,
+        # or isolate character: U+202A to U+202E, U+2066 to U+2069.
+        #: (Integer) -> bool
+        def format_control?(code)
+          (code >= 0x202A && code <= 0x202E) || (code >= 0x2066 && code <= 0x2069)
+        end
+
         # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
         # that starts none.
         #: (Integer) -> Integer
-        def self.utf8_size(b)
+        def utf8_size(b)
           return 1 if b < 0x80
           return 2 if b >= 0xC2 && b <= 0xDF
           return 3 if b >= 0xE0 && b <= 0xEF
           return 4 if b >= 0xF0 && b <= 0xF4
           0
         end
-
-        private
 
         # The query's terms: its runs of bytes between spaces.
         #: (String) -> Array[String]
@@ -357,7 +367,7 @@ module Carat
             back += 1
           end
           stop = MAX_BYTES
-          stop = lead if lead < MAX_BYTES && lead + Grep.utf8_size(line.getbyte(lead).to_i) > MAX_BYTES
+          stop = lead if lead < MAX_BYTES && lead + utf8_size(line.getbyte(lead).to_i) > MAX_BYTES
           line.byteslice(0, stop).to_s
         end
 
