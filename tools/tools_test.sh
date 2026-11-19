@@ -1110,6 +1110,33 @@ expect "open_pr: write refuses a body failing the pr-body gate" 1 "fails the pr-
   sh "$here/open_pr.sh" write openpr "chore(tools): open on push"
 cp "$work/openpr-good.md" build/pipeline/openpr.body.md
 commit "chore: the pull request text"
+# The squash message the merger passes is pr.md's body at the pushed head,
+# its four sections' headings and three dividers kept, a blank line, and
+# the trailer last; an older change's pr.md beside it is not taken, nor
+# the worktree's copy.
+printf 'chore: another text\n\n## Summary\n\nNot committed.\n' > openspec/changes/archive/2026-11-11-openpr/pr.md
+expect "open_pr: message builds the squash message from a four-section pr.md, its headings and dividers kept" 0 "^same 4 3$" \
+  sh -c 'sh "$1/open_pr.sh" message openpr "$(git rev-parse HEAD)" > "$2" && { cat "$3"; printf "\n%s\n" "$4"; } | cmp -s - "$2" && echo "same $(grep -c "^## " "$2") $(grep -c -x -e --- "$2")"' _ "$here" "$work/openpr-message" "$work/openpr-good.md" "$TRAILER"
+git_q checkout -q -- openspec/changes/archive/2026-11-11-openpr/pr.md
+expect "open_pr: message refuses a short sha" 1 "not a full commit sha" \
+  sh "$here/open_pr.sh" message openpr "$(git rev-parse --short=12 HEAD)"
+expect "open_pr: message refuses a change with no archived pr.md at the sha" 1 "holds no one archived pr.md of absent" \
+  sh "$here/open_pr.sh" message absent "$(git rev-parse HEAD)"
+expect "open_pr: message refuses a name that is not a change name" 1 "not a change name" \
+  sh "$here/open_pr.sh" message ../openpr "$(git rev-parse HEAD)"
+mkdir -p openspec/changes/archive/2026-01-02-emptypr openspec/changes/archive/2026-01-02-trailpr openspec/changes/archive/2026-01-03-twopr openspec/changes/archive/2026-01-04-twopr
+printf 'chore: no body\n\n\n' > openspec/changes/archive/2026-01-02-emptypr/pr.md
+printf 'chore: trailing blanks\n\n## Summary\n\nA line.  \n\n\n' > openspec/changes/archive/2026-01-02-trailpr/pr.md
+printf 'chore: one\n\n## Summary\n\nOne.\n' > openspec/changes/archive/2026-01-03-twopr/pr.md
+printf 'chore: two\n\n## Summary\n\nTwo.\n' > openspec/changes/archive/2026-01-04-twopr/pr.md
+commit "chore: a pr.md without a body, one ending in blank lines, and a change archived twice"
+expect "open_pr: message refuses a change with two archived pr.md at the sha" 1 "holds no one archived pr.md of twopr" \
+  sh "$here/open_pr.sh" message twopr "$(git rev-parse HEAD)"
+expect "open_pr: message refuses a pr.md with no body" 1 "has no body" \
+  sh "$here/open_pr.sh" message emptypr "$(git rev-parse HEAD)"
+expect "open_pr: message drops the body's trailing blank lines, keeping a line's trailing spaces" 0 "^same$" \
+  sh -c 'sh "$1/open_pr.sh" message trailpr "$(git rev-parse HEAD)" > "$3" && printf "## Summary\n\nA line.  \n\n%s\n" "$2" | cmp -s - "$3" && echo same' _ "$here" "$TRAILER" "$work/openpr-trail"
+git_q reset -q --hard HEAD~1
 git_q push -q origin chore/openpr 2>/dev/null
 git_q checkout -q -b chore/bare main
 echo plain >> README.md
@@ -2625,7 +2652,12 @@ expect "guard: merger refuses another assignment before git" 2 "an assignment of
 expect "guard: merger records red CI" 0 "^$" guard merger 'sh tools/run_state.sh metric c rework=1 && sh tools/run_state.sh set c ci \"red abc1234\"'
 expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_wait.sh 180 && sh tools/ci_wait.sh 240 && sh tools/ci_wait.sh 300'
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
-expect "guard: merger lists and prints pr.md at the pushed head" 0 "^$" guard merger 'git ls-tree --name-only 0123456789abcdef0123456789abcdef01234567 openspec/changes/archive/ && git show 0123456789abcdef0123456789abcdef01234567:openspec/changes/archive/2026-01-01-c/pr.md | tail -n +3'
+expect "guard: merger prints the squash message at the pushed head" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger refuses open_pr message at a short sha" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message c 0123456789ab'
+expect "guard: merger refuses open_pr message after a cd into a worktree, the branch's copy" 2 "tools/open_pr.sh message after cd tmp/.lane-c" guard merger 'cd tmp/.lane-c && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger prints the squash message before a cd into a worktree" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567 && cd tmp/.lane-c'
+expect "guard: merger prints the squash message after a cd back to the project from a worktree" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger refuses open_pr message of a path" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message ../c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
@@ -2637,11 +2669,13 @@ expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/o
 expect "guard: contributor pushes and opens the pull request" 0 "^$" guard contributor 'sh tools/run_state.sh push c && sh tools/gates.sh pr-body build/pipeline/c.body.md && sh tools/run_state.sh set c pr 47 && sh tools/run_state.sh show c'
 expect "guard: the contributor runs open_pr write and wait" 0 "^$" guard contributor 'sh tools/open_pr.sh write c \"chore(tools): open on push\" && sh tools/open_pr.sh wait c && sh tools/open_pr.sh wait c 300'
 expect "guard: the contributor's git push of a tag is refused" 2 "git push" guard contributor 'git push origin refs/tags/pr/chore/c'
-expect "guard: the contributor refuses the workflow's open_pr open" 2 "tools/open_pr.sh other than write or wait" guard contributor 'sh tools/open_pr.sh open chore/c tmp/x'
-expect "guard: the contributor refuses the workflow's open_pr read" 2 "tools/open_pr.sh other than write or wait" guard contributor 'sh tools/open_pr.sh read chore/c tmp/x'
+expect "guard: the contributor refuses the workflow's open_pr open" 2 "tools/open_pr.sh other than write, wait, or message" guard contributor 'sh tools/open_pr.sh open chore/c tmp/x'
+expect "guard: the contributor refuses the workflow's open_pr read" 2 "tools/open_pr.sh other than write, wait, or message" guard contributor 'sh tools/open_pr.sh read chore/c tmp/x'
 expect "guard: the contributor refuses open_pr write of another change" 2 "tools/open_pr.sh write other than" guard contributor 'sh tools/open_pr.sh write ../c t'
 expect "guard: the contributor refuses open_pr wait past a number" 2 "tools/open_pr.sh wait other than" guard contributor 'sh tools/open_pr.sh wait c soon'
-expect "guard: the merger refuses open_pr" 2 "tools/open_pr.sh" guard merger 'sh tools/open_pr.sh wait c'
+expect "guard: the merger refuses open_pr wait, the contributor's" 2 "tools/open_pr.sh wait is not a command of this profile" guard merger 'sh tools/open_pr.sh wait c'
+expect "guard: the merger refuses open_pr write, the contributor's" 2 "tools/open_pr.sh write is not a command of this profile" guard merger 'sh tools/open_pr.sh write c t'
+expect "guard: the contributor refuses open_pr message, the merger's" 2 "tools/open_pr.sh message is not a command of this profile" guard contributor 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
 expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --review-fix'
 expect "guard: contributor pushes the merge of a moved main" 0 "^$" guard contributor 'sh tools/run_state.sh push c --main-moved'
@@ -2928,7 +2962,7 @@ TMPDIR="$work/hook-tmp" hook "$agents/checker.md" 'git log --oneline -1' > /dev/
 TMPDIR="$work/hook-tmp" hook "$agents/checker.md" 'git push origin x' > /dev/null 2>&1
 expect "guard: the hook leaves no temporary repository" 0 "^$" ls -A "$work/hook-tmp"
 expect "guard: the merge hook refuses when origin/main was moved locally" 2 "no run state records" \
-  sh -c 'line=$6; printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"sha\":\"%s\"}}" "$2" | env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$3.insteadOf" GIT_CONFIG_VALUE_0="$4" CLAUDE_PROJECT_DIR="$5" sh -c "$line"' \
+  sh -c 'line=$6; printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"expectedHeadSha\":\"%s\"}}" "$2" | env GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0="url.$3.insteadOf" GIT_CONFIG_VALUE_0="$4" CLAUDE_PROJECT_DIR="$5" sh -c "$line"' \
   _ "$agents/merger.md" "$(git rev-parse HEAD)" "$answer" "$hosted" "$hooks" "$(pinned "$agents/merger.md" 2)"
 # A local origin, a file: address, or a remote helper is refused before
 # any guard runs, since a repository branch code built would answer for
@@ -3006,12 +3040,12 @@ cd "$work" || exit 1
 # is origin's main; and every call is refused while the configuration sets
 # a risky key.
 merge_call() {
-  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","sha":"%s","commit_message":"%s"}}' "$3" "$2" "${4-$exact}" |
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"owner":"o","repo":"r","pullNumber":7,"merge_method":"%s","expectedHeadSha":"%s","commit_message":"%s"}}' "$3" "$2" "${4-$exact}" |
     CLAUDE_PROJECT_DIR=$PWD sh "$here/agent_guard.sh" "$1"
 }
 merge_hook() {
   line=$(pinned "$here/../.claude/agents/merger.md" 2)
-  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"merge_method":"squash","sha":"%s"}}' "$1" |
+  printf '{"tool_name":"mcp__github__merge_pull_request","tool_input":{"merge_method":"squash","expectedHeadSha":"%s"}}' "$1" |
     answered env CLAUDE_PROJECT_DIR="$PWD" sh -c "$line"
 }
 fresh mtool
@@ -3042,6 +3076,16 @@ expect "guard: the merge tool refuses a short expected head" 2 "without the push
 expect "guard: the merge tool refuses a head the merge gates did not pass" 2 "no run state records both the push and the merge gates' pass" merge_call merger "$sha" squash
 sh "$here/run_state.sh" gated mtool pass > /dev/null
 expect "guard: the merge tool allows the gated pushed head" 0 "^$" merge_call merger "$sha" squash
+# The tool's parameter is expectedHeadSha: a head under any other key gives
+# GitHub no expected head, so the call is refused.
+expect "guard: the merge tool refuses an expected head passed as sha" 2 "without the pushed head as its expected head [(]expectedHeadSha" \
+  sh -c 'printf "{\"tool_name\":\"mcp__github__merge_pull_request\",\"tool_input\":{\"merge_method\":\"squash\",\"sha\":\"%s\",\"commit_message\":\"%s\"}}" "$1" "$2" | CLAUDE_PROJECT_DIR=$PWD sh "$3/agent_guard.sh" merger' _ "$sha" "$exact" "$here"
+# The message open_pr.sh message builds from pr.md is the one the guard
+# admits, its tab escaped as a JSON writer does.
+sh "$here/open_pr.sh" message mtool "$sha" > "$work/mtool-message"
+built=$(sed "s/$(printf '\t')/\\\\t/g" "$work/mtool-message" | awk '{ printf "%s%s", (NR > 1 ? "\\n" : ""), $0 }')
+expect "guard: the merge tool allows the message open_pr message builds" 0 "^$" merge_call merger "$sha" squash "$built"
+expect "guard: the message open_pr message builds keeps both of pr.md's headings" 0 "^2$" grep -c "^## " "$work/mtool-message"
 # The squash message is pr.md's body, a blank line, and the trailer,
 # exactly: the history on main keeps the pull request's four sections.
 expect "guard: the merge tool allows the exact squash message" 0 "^$" merge_call merger "$sha" squash "$exact"
