@@ -71,7 +71,7 @@ module EditorMessagesTest
       ["a listing is not kept", ":registers<CR><CR>:messages<CR>", ""],
       ["no history shows nothing", ":messages<CR>", ""],
       ["clear empties the history", ":foo<CR>:messages clear<CR>:messages<CR>", ""],
-      ["another argument is refused", ":messages all<CR>", "E474: Invalid argument"],
+      ["another argument is refused", ":messages all<CR>", "✖ E474: Invalid argument"],
       ["the output of :messages is not kept", ":foo<CR>:messages<CR>:messages<CR>", "E492: Not an editor command: foo"]
     ]) do |keys|
       after(keys)
@@ -80,7 +80,7 @@ module EditorMessagesTest
     t.assert_equal(["E492: Not an editor command: foo", "E492: Not an editor command: bar", "Press ENTER or type command to continue"], listed(":foo<CR>:bar<CR>:mes<CR>"), "several entries are listed in order with the hit-enter prompt")
     h = editor(false)
     h.type(":messages all<CR>")
-    t.assert_equal(H::MESSAGE_ERROR, h.frame.hl_at(11, 0), "the refusal is an error")
+    t.assert_equal(H::DIAGNOSTIC_ERROR, h.frame.hl_at(11, 0), "the refusal is an error")
 
     # Scenario: A warning shows at the top right of a 60-column screen.
     h = editor(false)

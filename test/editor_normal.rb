@@ -79,7 +79,7 @@ module EditorNormalTest
     # A message stays until the next key.
     h = editor("ab\n")
     h.type(":foo<CR>")
-    t.assert_equal("E492: Not an editor command: foo", h.message_row, "an error shows in the message row")
+    t.assert_equal("✖ E492: Not an editor command: foo", h.message_row, "an error shows in the message row")
     t.assert_equal(["ab"], h.lines, "and changes nothing")
     h.type("l")
     t.assert_equal("", h.message_row, "the message clears on the next key")
@@ -151,7 +151,7 @@ module EditorNormalTest
     h = H.new(files: files, config: loop_config, rows: 10, cols: 80, plugins: [])
     h.open("a.txt")
     h.type("q")
-    t.assert_equal("E223: Recursive mapping", h.message_row, "a self-referencing remap stops")
+    t.assert_equal("✖ E223: Recursive mapping", h.message_row, "a self-referencing remap stops")
 
     t.finish
   end
