@@ -16,3 +16,11 @@
 ## 4. Checks
 
 - [x] 4.1 Run `make spec-validate`, `make gates`, `make docs-lint`, and `make tools-test`, all pass.
+
+## 5. Review fixes
+
+- [x] 5.1 `deliver-change.js`: one `capKind` for the closing start's phase figures, cap line, and cap (the line no longer reads NaN); tested by the closing cap case of `tools/tools_test.sh`.
+- [x] 5.2 `deliver-change.js`: the closing figures are held before the re-review and recorded by a forced flush after it, so a resume before the push finds them and starts no second closing start; tested by the restart and figures cases.
+- [x] 5.3 `deliver-change.js`: a closing start that commits nothing resets the offered findings (`awaiting`); tested by the nothing-committed case.
+- [x] 5.4 `tools/tools_test.sh`: the fresh-offer, rework, and package-order cases run `freshOffers`, `contributor`, and `readyToPackage` over stubs instead of grepping the source.
+- [x] 5.5 README.md, `docs/contributor-notes.md`, `docs/codebase-map.md`: the security rerun and the closing-loop helpers worded as the code behaves.

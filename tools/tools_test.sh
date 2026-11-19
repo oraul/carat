@@ -4407,11 +4407,12 @@ expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$
 # its commit, and no second loop. closing_js stubs the starts and records
 # what the loop called.
 closing_js() {
-  js "$wf" "COMMIT closingFigures openAdvisories closingTask closeAdvisories passedAt reviewedAtHead settledAtHead SETTLES settleFrom settleAfter sameCommit RERUN_WORDS SETTLED checkVerdict settled checkOutcome" "(async () => {
+  js "$wf" "COMMIT closingFigures openAdvisories closingTask readyToPackage freshOffers closeAdvisories SIZES seed passedAt reviewedAtHead settledAtHead SETTLES settleFrom settleAfter sameCommit RERUN_WORDS SETTLED checkVerdict settled checkOutcome" "(async () => {
     globalThis.calls = []; globalThis.verifies = 0; globalThis.settledRound = null; globalThis.settleAt = ''
     globalThis.state = { change: 'c' }; globalThis.head = 'aaaaaaa'; globalThis.fixedInPlace = new Set(); globalThis.closingLoop = false
     globalThis.ran = { 'phase.check': 'aaaaaaa', 'review.security': 'pass aaaaaaa', 'review.bench': 'pass aaaaaaa', 'review.quality': 'pass aaaaaaa' }
-    globalThis.note = () => {}; globalThis.phase = () => {}; globalThis.offer = () => {}
+    globalThis.note = () => {}; globalThis.phase = () => {}; globalThis.offer = () => {}; globalThis.flushes = []; globalThis.flush = async (force) => { flushes.push(JSON.stringify(closingFigures) + (force ? ' forced' : '')); return true }
+    globalThis.awaiting = { quality: ['quality advisory a.rb:1 wording'], security: [] }
     globalThis.contributor = async (mode, detail) => { calls.push(mode); globalThis.head = commits.shift() || head; return { head } }
     globalThis.verify = async () => { verifies++; fixedInPlace.add(open[0]); open.push('quality advisory raised by the closing review'); return true }
     $1
@@ -4425,16 +4426,33 @@ expect "closing loop: a closing start that commits nothing runs no re-review and
   closing_js "globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; await closeAdvisories(); return { calls, verifies, figures: closingFigures }"
 expect "closing loop: the advisories its review raises are left for the findings file, with no second loop" 0 '^\{"calls":\["close-advisories"\],"verifies":1,"left":\["quality advisory b.rb:2 name","quality advisory raised by the closing review"\]\}$' \
   closing_js "globalThis.commits = ['bbbbbbb']; globalThis.open = ['quality advisory a.rb:1 wording', 'quality advisory b.rb:2 name']; globalThis.findings = () => open; await closeAdvisories(); await closeAdvisories(); return { calls, verifies, left: openAdvisories() }"
-expect "closing loop: its rounds offer no in-place fix, so a review's advisories go to findings" 0 '^1$' \
-  grep -c -F 'const fresh = fixes && !closingLoop ? reviewFindings.filter' "$wf"
+expect "closing loop: its rounds offer no in-place fix, so a review's advisories go to findings" 0 '^\[1,0\]$' \
+  closing_js "globalThis.reviewFindings = ['quality advisory x.rb:1 t']; globalThis.offered = new Set(); const before = freshOffers(true).length; globalThis.closingLoop = true; return [before, freshOffers(true).length]"
 expect "closing loop: a closing commit that moved the head leaves the security review to run" 0 '^\[false,"check",true\]$' \
   closing_js "globalThis.commits = ['bbbbbbb']; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; await closeAdvisories(); return [reviewedAtHead('security'), checkOutcome('check: every stage passed at bbbbbbb', 'bbbbbbb', settleFrom(ran, open)), settleFrom(ran, ['security Low (9) x.rb:1 t; fix: f']) === '']"
 expect "closing loop: a records-only closing commit stands on the earlier check and security passes" 0 '^\["settled","aaaaaaa"\]$' \
   closing_js "return [checkOutcome('run_state: settled: only records changed from aaaaaaa to bbbbbbb: docs/x.md', 'bbbbbbb', 'aaaaaaa'), settleAfter(settleFrom(ran, ['quality advisory a.rb:1 wording']), 'aaaaaaa', 'bbbbbbb')]"
-expect "closing loop: the closing start is not a rework round" 0 '^0$' \
-  sh -c 'awk "/^async function closeAdvisories/ { on = 1 } on { print } on && /^}\$/ { exit }" "$1" | grep -c "rework" || true' _ "$wf"
-expect "closing loop: the package step runs it after the last review passes and before the package start" 0 '^ok$' \
-  sh -c 'v=$(grep -n "await verify() && await closeAdvisories()" "$1" | cut -d: -f1); p=$(grep -n "contributor(.package., " "$1" | cut -d: -f1); [ -n "$v" ] && [ -n "$p" ] && [ "$v" -lt "$p" ] && echo ok' _ "$wf"
+# The real contributor function over a stubbed agent: the closing start's
+# prompt carries its numeric cap and it counts no rework round.
+contributor_js() {
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine contributor" "(async () => {
+    globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaa'
+    globalThis.prompts = []; globalThis.caps = []; globalThis.WORK = 1
+    globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
+    globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
+    globalThis.agent = async (prompt) => { prompts.push(prompt); return { head: 'bbbbbbb', summary: 's' } }
+    globalThis.continuation = () => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.note = () => {}
+    $1
+  })()"
+}
+expect "closing loop: the closing start's prompt carries the numeric closing cap and it is no rework round" 0 '^\{"cap":"Tool calls: at most 40 in this start","caps":\["closing:40"\],"rework":0\}$' \
+  contributor_js "await contributor('close-advisories', 'd'); return { cap: /Tool calls: at most [0-9]+ in this start/.exec(prompts[0])[0], caps, rework }"
+expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
+  closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
+expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"quality":\[\],"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
+  closing_js "globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; await closeAdvisories(); return { awaiting, flushes }"
+expect "closing loop: a restart restores the recorded figures and closeAdvisories then starts nothing" 0 '^\{"calls":\[\],"figures":\{"closed":2,"left":3\}\}$' \
+  closing_js "globalThis.usage = {}; globalThis.firstPass = {}; globalThis.calibrated = {}; globalThis.restoreCalibration = () => {}; globalThis.heldFindings = () => []; globalThis.addBacklog = () => {}; globalThis.addAdvisories = () => {}; globalThis.handed = new Set(); globalThis.at = () => []; globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; globalThis.state = { change: 'c', 'metric.advisories_closed': '2', 'metric.advisories_left': '3' }; seed(); await closeAdvisories(); return { calls, figures: closingFigures }"
 expect "closing loop: the metric line carries the figures once the loop ran" 0 ' advisories_closed=1 advisories_left=2"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; closingFigures.closed = 1; closingFigures.left = 2; return metricLine() })()"
 expect "closing loop: the closing mode is in the contributor file and its notes" 0 '^1 1$' \
@@ -4451,7 +4469,7 @@ expect "workflow: only this start's verdicts enter its records" 0 '^only verdict
   sh -c '[ "$(grep -c -E "ran\[" "$1")" = "$(grep -c -E "^  ran\[.(phase|review)[.]. [+] (name|kind)\] = |String[(]ran\[" "$1")" ] && ! grep -q -E "Object[.]assign[(]ran|settledRecords|gates[.]sh passed" "$1" && echo only verdicts' _ "$wf"
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
-expect "workflow: no record start runs at the close" 0 '^1$' grep -c 'await flush(' "$wf"
+expect "workflow: no record start runs at the close, only verify's and the closing loop's" 0 '^2$' grep -c 'await flush(' "$wf"
 expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
   sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
