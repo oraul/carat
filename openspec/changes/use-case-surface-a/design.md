@@ -44,3 +44,13 @@ Part a changes none of them; parts b to d apply this mapping with their areas.
 - The ledger holds `untyped` objects: the guard can only compare identities, which is all it does.
 - Two ways to satisfy the guard live side by side until part d; the lint rule names which one a holder uses.
 - The measured figures (analysis time and rounds of both compile roots, the binary's size, and time per key) are compared with main's in the pull request.
+
+## Measurements
+
+Main at cc63324 against the branch, on one machine, `make build`, `dev-build`, `test-build`, `bench-budget`, and `metrics` on each side, main in a detached worktree:
+
+- Re-narrowing rounds: 2 and 2 for `bin/carat.rb` and for the test runner on both sides.
+- Analysis time: `bin/carat.rb` 52.4 s on main and 57.5 s on the branch in the `metrics` runs, then 53.5 s and 54.7 s on main against 54.3 s and 53.1 s on the branch in two interleaved `make analysis-budget ANALYSIS_ROOTS=bin/carat.rb` runs, so the gap of the first runs is within the machine's spread; the test runner 116.0 s on main and 128.1 s on the branch, which also compiles the six new checks of the guard and lint, not run again.
+- Release binary: 6,984,440 bytes on main, 7,000,200 on the branch (15,760 more, 0.2 percent: the ledger class and its 19 records).
+- Allocations per key: equal in all eight scenarios (lh 25, j 26, insert 25, ddp 57, undo 51, dot-ciw 65, lh-ruby 25, open-ruby 23).
+- Time per key, main then branch, in microseconds: lh 107.2 and 115.0, j 578.7 and 589.7, insert 125.6 and 110.7, ddp 994.8 and 1010.5, undo 114.5 and 119.5, dot-ciw 118.0 and 117.0, lh-ruby 127.7 and 127.0, open-ruby 156.8 and 226.2; no key path changed (the ledger is written once at start), and the spread runs both ways.
