@@ -15,7 +15,7 @@ Adds a content search picker to the finder, opened by plugin.finder.grep on the 
 - Add safe display of untrusted line text, with control characters shown as spaces and invalid UTF-8 bytes as question marks.
 - Add the file-finder spec requirements and the test test/editor_finder_grep.rb with its snapshot, wired into the runner.
 - Document the action in docs/actions.md, docs/plugins.md, README.md and the code map.
-- Record the plan, the metrics row and the non-blocking findings for this change.
+- Record the plan and the non-blocking findings for this change, and the metrics row of the previous feature-lane change, vim-folds-windows.
 
 ---
 
