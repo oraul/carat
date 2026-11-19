@@ -28,5 +28,6 @@ None.
 
 ## Impact
 
-- README.md: unchanged, the pipeline paragraph does not describe the review's bookkeeping.
+- README.md: the pipeline's quality review step names the first-pass miss.
+- CLAUDE.md: unchanged, it does not describe the quality reviewer's wording of findings.
 - docs/architecture.md: unchanged, no layer or port is touched.
