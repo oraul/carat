@@ -19,3 +19,4 @@
 - [x] 4.1 `tools/tools_test.sh`: the sprintcount fixture holds a pool item `u1-c` beside a counted sprint item `u1-b`, `u1` unmerged, so `split_part`'s sibling branch decides it. Tested by "review-due counts a pool item split from a counted sibling part".
 - [x] 4.2 `tools/run_state.sh`, `queue_records`: one reader of the queue line form for `queue_class` and `queue_items`; only a `#` or `##` heading sets the sprint, so an item under a `###` sub-heading of the sprint counts. Tested by "review-due counts an item under a sub-heading of its sprint".
 - [x] 4.3 `tools/run_state.sh`: the usage header lists `review-due` once; `tools/tools_test.sh`: the comment before the y2 case names `queue_class`.
+- [x] 4.4 `tools/tools_test.sh`: the split-part, sub-heading, and sibling-part cases each assert their own name is absent from every not-counted list (`counted`), the count and the pool list kept in one case, so no label repeats another's check.

@@ -1752,10 +1752,19 @@ done
 count_line=$(state review-due)
 expect "run_state: review-due leaves a T0 change out of the count" 0 "; not counted, T0: t1(;|\$)" echo "$count_line"
 expect "run_state: review-due leaves out a change the exception line puts outside the 3, not one it names after run" 0 "; not counted, outside the 3: o1, o2(;|\$)" echo "$count_line"
-expect "run_state: review-due counts a split part of a sprint item" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
-expect "run_state: review-due counts an item under a sub-heading of its sprint" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
-expect "run_state: review-due counts a pool item split from a counted sibling part" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
-expect "run_state: review-due leaves a pool item out of the count" 0 "; not counted, not a sprint item: p1\$" echo "$count_line"
+# counted NAME: whether review-due's line leaves NAME out of every
+# not-counted list, the part after its merged list, so each counted
+# scenario is proven by its own name.
+counted() {
+  case "$(printf '%s\n' "${count_line#*)}" | grep -E -- "[ ,]$1(,|;|\$)")" in
+    "") echo "counted $1" ;;
+    *) echo "left out $1" ;;
+  esac
+}
+expect "run_state: review-due counts a split part of a sprint item" 0 "^counted s1-b\$" counted s1-b
+expect "run_state: review-due counts an item under a sub-heading of its sprint" 0 "^counted u1-b\$" counted u1-b
+expect "run_state: review-due counts a pool item split from a counted sibling part" 0 "^counted u1-c\$" counted u1-c
+expect "run_state: review-due leaves a pool item out of the count" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
 expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-17 has 5 of 6 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10, u1-b, u1-c[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
