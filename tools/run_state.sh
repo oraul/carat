@@ -94,7 +94,9 @@
 #                               merged; REPORTED, the commit an agent
 #                               reported (merge only), when it is not that
 #                               commit, adds a merge-disagreement note naming
-#                               both
+#                               both; either form records merge with its
+#                               merged commit, writing merged when none is
+#                               recorded and refusing one naming another
 #   review CHANGE KIND RESULT SUMMARY [COMMIT]
 #                               record a review (KIND one of REVIEW_KINDS,
 #                               RESULT pass or blocked, and for the periodic
@@ -212,6 +214,8 @@
 #                               while the sprint's plan waits in build/plan/
 #                               after its security review, recorded pass or
 #                               blocked in the run state sprint-N
+#                               or while a run state records a merge phase
+#                               without its merged commit, naming each
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
 #   backlog-pick FILE...        print the next PICK_BATCHES batches of the
@@ -1782,6 +1786,25 @@ pending_list() {
   done
 }
 
+# The run states recording a merge phase but no merged commit
+# (merged_commit), each as "NAME at COMMIT", one per line, a review run
+# (REVIEW_RUNS, which no sprint counts) and a change with a history row
+# left out: merges pending_list cannot see, so sprint_state cannot count
+# them and review_due names them (a run state written before phase merge
+# recorded merged, or edited by hand).
+merge_unrecorded() {
+  for file in "$state_dir"/*.json; do
+    [ -f "$file" ] || continue
+    name=$(basename "$file" .json)
+    printf '%s\n' "$name" | grep -q -E "$REVIEW_RUNS" && continue
+    phase_at=$(change=$name; read_key phase.merge)
+    valid '[0-9a-f]{7,40}' "$phase_at" || continue
+    [ -z "$(change=$name; merged_commit)" ] || continue
+    has_row "$name" && continue
+    echo "$name at $phase_at"
+  done
+}
+
 # The files the package step may not edit: those changed since the commit
 # of the security review's pass record, which the push gate settles at
 # HEAD, in commits, the working tree, or untracked, outside the
@@ -2181,7 +2204,8 @@ append_history() {
 # change's row, then the merged changes without a row); sprint_exceptions,
 # the first SPRINT_EXCEPTIONS of them marked beyond the sprint
 # (exception_item), the queue read no further once they are found; and
-# sprint_count, the rest.
+# sprint_count, the rest; sprint_uncounted, the run states recording a
+# merge phase but no merged commit (merge_unrecorded), joined by ", ".
 sprint_state() {
   [ -f "$sprints_file" ] || die "no $sprints_file"
   last_row=$(awk -F'\t' 'NR > 1 && NF { row = $0 } END { print row }' "$sprints_file")
@@ -2206,6 +2230,7 @@ sprint_state() {
     fi
   done
   sprint_count=$(printf '%s\n' "$sprint_names" | X=" $sprint_exceptions " awk 'NF && !index(ENVIRON["X"], " " $0 " ")' | grep -c .)
+  sprint_uncounted=$(merge_unrecorded | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
 }
 
 # The merged commit of NAME: its history row's, else its run state's.
@@ -2288,6 +2313,10 @@ review_due() {
   list=$(printf '%s\n' "$sprint_names" | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
   if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed; then
     echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for its records change, sprint-$sprint_n-records"
+    return 1
+  fi
+  if [ -n "$sprint_uncounted" ]; then
+    echo "not due: sprint-$sprint_n cannot count a merge phase recorded without its merged commit: $sprint_uncounted; record each with sh tools/run_state.sh set NAME merged COMMIT"
     return 1
   fi
   if [ "$sprint_count" -lt "$sprint_size" ]; then
@@ -3305,6 +3334,18 @@ case "$command" in
       merge:*) at=$(merged_at "${2:-$(head_commit)}" phase) || exit 1 ;;
       *) at=$(commit_at "${2:-}") || exit 1 ;;
     esac
+    # The merge phase records its merged commit first, the commit just
+    # checked on main, so no run state holds a merge without the merged
+    # value pending_list and review_due count it by; a recorded merged
+    # naming another commit refuses both.
+    if [ "$1" = merge ]; then
+      recorded=$(read_key merged)
+      if [ -z "$recorded" ]; then
+        write_key merged "$at"
+      elif [ "$(git rev-parse --verify -q --short=12 --end-of-options "$recorded^{commit}" 2>/dev/null)" != "$at" ]; then
+        die "phase: refused: the recorded merged commit $recorded is not the merge's commit $at"
+      fi
+    fi
     write_key "phase.$1" "$at" ;;
   review)
     [ $# -eq 3 ] || [ $# -eq 4 ] || usage

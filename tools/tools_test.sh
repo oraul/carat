@@ -1647,6 +1647,21 @@ expect "run_state: phase merged refuses a change with no pull request or merged 
 env BASE=main sh "$here/run_state.sh" set nopush merged "$squash" > /dev/null
 state set nopush pr 17 > /dev/null
 expect "run_state: phase merged refuses a recorded merged that is not the squash commit" 1 "the recorded merged commit $squash is not the squash commit of pull request #17 on main, $later" env BASE=main sh "$here/run_state.sh" phase nopush merge merged
+# The merge phase records its merged commit with it, so no run state holds
+# phase.merge with merged empty, which review-due could not count
+# (merged-record): vim-folds-windows held one after its merger's set merged
+# did not run.
+state init closes chore/closes > /dev/null
+state set closes pr 7 > /dev/null
+env BASE=main sh "$here/run_state.sh" phase closes merge merged > /dev/null
+expect "run_state: phase merged records the merged commit with the merge phase" 0 "^$squash $squash\$" sh -c 'echo "$(sh "$1" get closes merged) $(sh "$1" get closes phase.merge)"' _ "$here/run_state.sh"
+state init closeat chore/closeat > /dev/null
+env BASE=main sh "$here/run_state.sh" phase closeat merge "$squash" > /dev/null
+expect "run_state: phase merge at a commit records it as the merged commit" 0 "^$squash $squash\$" sh -c 'echo "$(sh "$1" get closeat merged) $(sh "$1" get closeat phase.merge)"' _ "$here/run_state.sh"
+state init closeother chore/closeother > /dev/null
+env BASE=main sh "$here/run_state.sh" set closeother merged "$squash" > /dev/null
+expect "run_state: phase merge refuses a commit other than the recorded merged" 1 "phase: refused: the recorded merged commit $squash is not the merge's commit $later" env BASE=main sh "$here/run_state.sh" phase closeother merge "$later"
+expect "run_state: a refused merge phase writes neither value" 0 "^$squash \$" sh -c 'echo "$(sh "$1" get closeother merged) $(sh "$1" get closeother phase.merge)"' _ "$here/run_state.sh"
 
 # Sprints: review-due counts the history rows after the last sprint's last
 # change, then the merged changes without a row. mrow CHANGE MERGED
@@ -1748,7 +1763,24 @@ expect "run_state: review-due is not due before the fifth merge of the sprint, a
 state init a3 chore/a3 > /dev/null
 state set a3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due counts a merged change without a row" 1 "^not due: sprint-1 has 3 of 5" state review-due
+# A run state holding a merge phase without its merged commit (written
+# before phase merge recorded it, or edited by hand) is named, the sprint
+# held until it is set, never silently left out; a review run's, which no
+# sprint counts, and a change with a history row are not (merged-record).
+# merge_only CHANGE COMMIT: such a run state, as vim-folds-windows held.
+merge_only() {
+  state init "$1" "chore/$1" > /dev/null
+  awk -v s="$2" '{ print } NR == 1 { print "  \"phase.merge\": \"" s "\"," }' "build/pipeline/$1.json" > "build/pipeline/$1.tmp" && mv "build/pipeline/$1.tmp" "build/pipeline/$1.json"
+}
+unrecorded=$(git rev-parse --short=12 HEAD)
+merge_only a6 "$unrecorded"
+merge_only sprint-1-records "$unrecorded"
+expect "run_state: review-due names a merge phase recorded without its merged commit, a review run's left out" 1 "^not due: sprint-1 cannot count a merge phase recorded without its merged commit: a6 at $unrecorded; record each with sh tools/run_state.sh set NAME merged COMMIT\$" state review-due
+rm build/pipeline/a6.json build/pipeline/sprint-1-records.json
 { mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics-backlog.tsv
+merge_only a4 "$unrecorded"
+expect "run_state: review-due leaves out a merge phase without merged of a change with a history row" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]" state review-due
+rm build/pipeline/a4.json
 expect "run_state: review-due is due at the fifth merge with the combined diff" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]; combined diff bbb222[.][.]origin/main; sweep: no$" state review-due
 printf 'sprint-1\ta5\n' >> docs/sprints.tsv
 expect "run_state: a sprint row restarts the count" 1 "^not due: sprint-2 has 0 of 5" state review-due
@@ -2368,7 +2400,8 @@ expect "run_state: trusted names what it left out" 0 "^  \"untrusted\": \"phase.
 expect "run_state: trusted prints one flat object" 0 "^ok$" \
   awk '{ l[NR] = $0 } END { ok = l[1] == "{" && l[NR] == "}" && l[NR - 1] !~ /,$/; for (i = 2; i < NR - 1; i++) if (l[i] !~ /^  "[a-z0-9_.-]+": ".*",$/) ok = 0; print ok ? "ok" : "bad" }' trusted.out
 expect "run_state: trusted leaves the file as it was" 0 '"phase.package"' cat build/pipeline/trust.json
-expect "run_state: trusted without the base still trusts the ancestors of HEAD" 0 "\"untrusted\": \"phase.merge merged phase.package" \
+# The merge phase writes merged first (merged-record), so it leads the list.
+expect "run_state: trusted without the base still trusts the ancestors of HEAD" 0 "\"untrusted\": \"merged phase.merge phase.package" \
   env BASE=nothing sh "$here/run_state.sh" trusted trust
 
 # --------------------------------------------------------- agent_guard.sh
