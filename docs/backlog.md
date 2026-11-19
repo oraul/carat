@@ -8333,11 +8333,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why it matters: fixed-in-place matching depends on the two copies of the regular expression staying identical; the blank lines are left from a removal.
 - Fix outline: one helper used by both, one blank line. Fold into the next pipeline change editing the file.
 
-### Advisory-only rework rounds cost half of facet-palette's output
-- Location: `.claude/workflows/deliver-change.js` (the rework loop after the first check pass); backlog queue item `rework-review-repeat`
-- Why: facet-palette rework 2 with 0 blocking in all 3 quality and security reviews (5, 1, 0 advisories); output at the check passes 204,127, 332,067, 573,120 of 736,922, about 369,000 (50 percent) after the first pass; guide-colors advisory-only rework 1, +83,604 (facet-palette retro 10).
-- Fix: an advisory-only round counts no rework and reruns only what its fix touched; accepted when the next 5 runs whose reviews block nothing record rework 0 and spend under 15 percent of their output after the first check pass. Fold into `rework-review-repeat`.
-
 ### A re-review re-raised an advisory declined for the brief's reason
 - Location: `.claude/agents/quality-reviewer.md`, `.claude/workflows/deliver-change.js` (notes handed to a later round); facet-palette note 6 repeating note 1
 - Why: the PANEL_DIM advisory, declined in round 1 because the brief pins #a4aabd / #5c6173, came back word for word; round 2 grew output from 332,067 to 573,120 (+241,053, 33 percent of 736,922); quality first pass 93/166 (facet-palette retro 11).
@@ -8374,11 +8369,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: docs currency: the groom description says neither a merged entry's kept nor its merged heading is removed by another line, but groom refuses a merged line only when an earlier line already removes its heading, so a later listed or fixed line naming the same merged heading still passes (quality advisory at 65a5758220b7).
 - Fix: say the merged heading is refused when an earlier line removes it, or refuse any later removal of a merged heading in groom with a tools_test case.
 
-### Advisory-only fix rounds cost a full review round (guide-colors retro, merged)
-- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
-- Why: guide-colors reported 0 blocking findings (security 0, quality 0 blocking), yet 4 quality advisories cost rework 1: output 147,140 at the first check pass and 230,744 at the second (83,604 more), over the medium output budget of 200,000. The same finding as "### Advisory-only fix rounds cost a full review round (sprint-17-records retro)" and the `advisory-findings-auto` entry; merge into them at grooming.
-- Fix: a run whose reviews report 0 blocking findings ends with rework 0 and one check pass, its advisories fixed in the same round or in the findings file.
-
 ### The merge phase spends output out of proportion to its calls (guide-colors retro)
 - Location: `.claude/workflows/deliver-change.js`, the merge phase, and `.claude/agents/merger.md`
 - Why: guide-colors merge took 26,423 output tokens for 11 calls and 4 CI-wait calls (9.1 percent of 290,842) on a 7-minute green CI; the last 10 feature rows range 4,992 to 98,694 merge output at 10 to 21 calls.
@@ -8393,11 +8383,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:424 (SECURITY_MARK) and the duplicate check at tools/run_state.sh:2510; reached the branch through the merge of main (#209, 9674689), not this change's own commits.
 - Why: security Low (6). The guard now uses SECURITY_MARK instead of any line naming security, so a security entry recorded without the 'security Low' or 'Low (N)' form (for example the benchmark's reused temporary report path, recorded as a Low finding of the periodic security review at 66fd52b) can be removed by a planner-written groom.txt `duplicate` line, and an open security finding leaves without a merged item or a fixing commit.
 - Fix: Widen SECURITY_MARK so it also matches an entry naming a severity next to a security review (for example '(high|medium|low)( finding)? of the (periodic )?security review'), or keep the old case-insensitive 'security' test for duplicates while the narrow mark stays for ranking; add a tools_test.sh case where groom refuses to remove such an entry as a duplicate; separately, normalize stored entries to the 'security Low (N)' form.
-### Advisory-only fix rounds cost a full review round (guide-colors retro, merged)
-- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
-- Why: guide-colors reported 0 blocking findings (security 0, quality 0 blocking), yet 4 quality advisories cost rework 1: output 147,140 at the first check pass and 230,744 at the second (83,604 more), over the medium output budget of 200,000. The same finding as "### Advisory-only fix rounds cost a full review round (sprint-17-records retro)" and the `advisory-findings-auto` entry; merge into them at grooming.
-- Fix: a run whose reviews report 0 blocking findings ends with rework 0 and one check pass, its advisories fixed in the same round or in the findings file.
-
 ### The merge phase spends output out of proportion to its calls (guide-colors retro)
 - Location: `.claude/workflows/deliver-change.js`, the merge phase, and `.claude/agents/merger.md`
 - Why: guide-colors merge took 26,423 output tokens for 11 calls and 4 CI-wait calls (9.1 percent of 290,842) on a 7-minute green CI; the last 10 feature rows range 4,992 to 98,694 merge output at 10 to 21 calls.
@@ -8432,11 +8417,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:2127 (exception_item)
 - Why: Untested branch: exception_item now reads the item through queue_items, which joins continuation lines, so a `beyond the sprint` mark inside a first parenthesis wrapped onto the next line now counts as an exception in review-due and the sprint row, where main read the first line only; no review-due case pins the new behavior.
 - Fix: Add a review-due tools-test case whose item's parenthesis wraps before the mark.
-
-### Advisory-only fix rounds cost a full review round (sprint-17-records retro)
-- Location: `.claude/workflows/deliver-change.js`, the rework loop after the reviews
-- Why: every review of sprint-17-records reported 0 blocking, yet 2 of 3 rework rounds fixed advisories only (5, then 2), each rerunning check, security, and quality; reviews took 30,387 of 72,515 output tokens (41.9 percent) and 40 of 113 tool calls, against 11,232 of 64,769 (17.3 percent) at rework 0 in sprint-16-records. A near-duplicate of the `advisory-findings-auto` entry; merge into it at grooming.
-- Fix: a run whose reviews report no blocking finding uses at most one fix round; accepted when its reviews stay under 25 percent of output tokens.
 
 ### Groom leaves references to the findings files it removes (sprint-17-records retro)
 - Location: `tools/run_state.sh` groom and its fold of docs/findings/, `tools/docs_lint.sh` path check
@@ -8542,3 +8522,120 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `tools/metrics.sh:86`; `tools/gates.sh:266`; `tools/run_state.sh:2538`; `tools/spec_validate.sh:25`; `tools/ci_scope.sh:80`.
 - Why it matters: compare passes a base name CURRENT lacks; `has()` matches paths as a regex; backlog-oldest skips `####` entries backlog-pick takes; only the last spec preview survives; the push path calls one endpoint twice.
 - Fix outline: fail every unseen strict base name; `grep -q -x -F`; one heading test in ENTRY_AWK; a preview directory per change; one gh call.
+
+### The token weighting prices a mid-tier start at the cheap tier's price
+
+- Location: `tools/run_state.sh` line 2009 (`add_tokens`; the alias list read from the agent files' `model:` lines at about line 1976, `TIER_PRICES` at line 448; the `weighted_phases` history column it feeds).
+- Why: once `.claude/agents/contributor.md` has a `model:` line, the `tokens` command labels the contributor's starts cheap and prices them at 100/125/10/500 instead of a mid price, so `weighted_tokens` and `weighted_phases` are understated; the same starts are also recorded as `metric.start.N` `implement/cheap/...` and in `weighted_phases` under a `cheap` label the calibration profile no longer uses. The trial's revert rule uses total tokens, so its verdict is unaffected. Queued as Pool 30 `tier-price-mid`.
+- Fix: in `tier-price-mid`, price each alias by its own tier, label such a start by the agent tier (or by the alias's own price key) together with its price, extend the design's no-cheap-label goal to the token labels then, and add a tools-test case that prices and labels a mid-tier start apart from a cheap one.
+
+### The tier trial's keep rule does not say how its figures compare
+
+- Location: `docs/goals.md:38`
+- Why: the rule compares 6 deliveries with 10 rows without saying whether each figure is a per-row rate or a mean, which history (both lane files in merge order, or one lane), or how `total_tokens` of changes of mixed sizes compare, so the planner's verdict can be read either way.
+- Fix: state per-row rates and means over both lane histories in merge order, `total_tokens` taken against each row's estimate budget.
+
+### The calibration comment names the tier twice
+
+- Location: `.claude/workflows/deliver-change.js:129`
+- Why: the comment says the tier twice ("the tier the model: line of the agent's file names ... whichever tier that is"), wordier than the rule it states.
+- Fix: "The tier is agent, the agent file's model: line (the only place a tier is named; tools/tools_test.sh compares them), or session, the session's model".
+
+### The compatibility row misstates Neovim's sign column width
+
+- Location: docs/compatibility.md:541
+- Why: it says Neovim draws signcolumn=yes:1 one cell where its default auto takes two, but Neovim reserves two cells per sign column for both yes:1 and auto (auto:1), as the proposal itself says.
+- Fix: write that the column is one cell where Neovim's sign column (yes:1 or the default auto) takes two.
+
+### The group-only repaint check draws into a freshly allocated frame
+
+- Location: test/adapters_frame_presenter.rb:270
+- Why: the resize to 7 rows at :259 allocates both frames anew, so the repaint check draws into a fresh second frame that repaints every row whatever the record holds, and does not prove task 1.3's claim that a group-only change repaints.
+- Fix: draw once more at 7 rows before placing the warning-group sign, so the checked frame already holds the same glyph in the error group.
+### Groom's output fails the check's docs-lint stage on its own (sprint-18-records retro 11)
+- Location: `tools/run_state.sh` groom (the fold that deletes the findings files), docs-lint stage
+- Why: groom deleted the findings directory while a carried backlog entry still named it in backticks, so sprint-18-records failed its first check at 399adffe0be5 (docs-lint) and needed a contributor fix and a hand edit of groom output; check first passes 168/172 overall.
+- Fix: groom output passes `make docs-lint` as written; accepted by a tools-test case folding a findings file whose entry names the removed directory, and the next 3 records runs passing check first.
+
+### Records changes spend fix rounds on advisories only groom may fix (sprint-18-records retro 12)
+- Location: `.claude/workflows/deliver-change.js` review rounds on a records change
+- Why: 4 of 7 first-round advisories (backlog duplicates, stale security entries, fold format, map repeat) need backlog entries merged or removed, which CLAUDE.md leaves to groom, and 3 of the 4 second-round advisories repeat them with shifted lines; rework 2 with 0 blocking, reviews=25498/34 (29.5% of 86,421 output, 26% of 129 calls).
+- Fix: an advisory in groom's own output on a records change goes to the findings file with no fix round; accepted when the next 3 records runs show rework 0 when blocking is 0. Near `review-lite`.
+
+### The benchmark agent runs on records changes that touch no code (sprint-18-records retro 13)
+- Location: `.claude/workflows/deliver-change.js` bench phase
+- Why: on sprint-18-records it rebuilt dev-build, test-build, and bench-budget in the lane and a base worktree to find allocations and rounds equal: bench=4721/14 (10.9% of 129 calls); sprint-16-records bench=3547/6, sprint-17-records bench=4147/6.
+- Fix: a change with no file under `carat/`, `bench/`, or the Makefile records the bench phase as skipped with no agent; accepted when records runs show bench 0/0. Joins `bench-skip-no-code`.
+
+### Codebase map omits the bracket pair for a folded window
+- Location: docs/codebase-map.md:474
+- Why: the frame_presenter entry says a folded window records no scroll and draws no guides but not that it draws no MatchParen pair, which this change adds.
+- Fix: end the sentence with 'and no bracket pair'.
+### Advisory-only fix-in-place rounds count as rework (contributor-tier-trial retro 8)
+- Location: `.claude/workflows/deliver-change.js` (rework counting of fix-in-place rounds); joins the queued `advisory-findings-auto` (backlog Pool 27).
+- Why: contributor-tier-trial spent rework 2 of 3 with 0 blocking findings (7 advisories over 3 quality passes at 0979253d226d, a47624b033bf, 96085591e512); 8 of the last 20 rows with every first pass 1 spent 12 rework rounds, and rework-2 rows took 61.0 to 118.0 min against 44.8 for vim-folds-b at 0; reviews=36277/65, 31% of 207 calls.
+- Fix: accepted when, over the next 10 metrics rows, rows whose first passes are all 1 average at most 0.5 rework rounds without a lower quality first-pass rate.
+
+### A resumed implement start that commits nothing costs a full implementation (contributor-tier-trial retro 9)
+- Location: `.claude/workflows/deliver-change.js` (the resume's implement start).
+- Why: at head 96085591e512 every stage was 0 and every task done, yet implement took 78,908 of 165,645 output tokens (48%) and 73 of 207 calls (35%) to change nothing; check-stage-order's whole implement was 12941/27.
+- Fix: accepted when a resume whose head already passes every stage and has every task checked records implement at most 15,000 output tokens and 25 calls.
+
+### settled_round repeats the RECORDS_RE filtering of other records filters (review-lite quality advisory)
+
+- Location: tools/run_state.sh:1248 and tools/run_state.sh:1264 (settled_round), beside settled_at in tools/gates.sh:122 and run_state.sh's own records filters around lines 1786 and 3170
+- Why: the same filter of paths outside RECORDS_RE is written four times, so a change to what counts as a record must be repeated in each place or the settled round and the gates disagree; the two quality findings at lines 1248 and 1264 are merged here as one.
+- Fix: one shared helper listing the paths outside RECORDS_RE, used by settled_round, settled_at, and the records filters, when review-lite-docs edits tools/rules.sh
+
+### 'workflow: a blocking round never settles' repeats other settle cases (review-lite quality advisory)
+
+- Location: tools/tools_test.sh:4063
+- Why: the rewritten case repeats 'workflow: findings in place ride with the blocking ones' (line 4084, inPlaceRound(true, ...) is 'with') and the alone case of line 4086, and its settleFrom element repeats line 4049, so it adds no proof and costs upkeep.
+- Fix: drop it from settle_js (and inPlaceRound from settle_js's names) and cite the place_js cases in tasks.md 2.6
+
+### The guide-colors retro entries are folded twice into the backlog
+
+- Location: `docs/backlog.md:8396`, `:8401`, `:8406` repeating `:8377`, `:8382`, `:8387`; the `:8361`-area facet-palette and sprint-17-records entries (sprint-18-records quality review, raised twice)
+- Why: the three guide-colors retro entries came in twice from facet-palette's findings file, and with the facet-palette and sprint-17-records entries make four near-same notes on advisory-only rounds.
+- Fix: list the second copies as duplicate and merge the advisory-only notes into one in the next `groom.txt`.
+
+### Two security entries stay open though #214 fixed them
+
+- Location: `docs/backlog.md:8392` and `:8416` (SECURITY_MARK misses unmarked security entries); `tools/run_state.sh:454`
+- Why: both are carried open though b5b0aec (#214) widened SECURITY_MARK, so the backlog overstates open security work.
+- Fix: list both as fixed by b5b0aec in the next `groom.txt` after checking its tools-test cases.
+
+### Folded backlog entries lack the blank lines around their headings
+
+- Location: `docs/backlog.md:8372`, `:8396`, `:8460` (`:8461` in the second review pass) and most added entries (sprint-18-records quality review, raised twice)
+- Why: the entries lack the blank line after the heading and before the next heading, the same format defect groom's fold keeps producing.
+- Fix: fold into the existing "Groom's fold keeps producing format defects" entry, or have groom normalize blank lines when folding.
+
+### The backlog-lane sprint size entry repeats the drift entry
+
+- Location: `docs/backlog.md:8361` and `:8520` (`:8521` in the second review pass); `tools/docs_lint.sh:22`, `docs/codebase-map.md:55` (sprint-18-records quality review, raised twice)
+- Why: "The code map says the backlog lane's sprint holds 0 to 2 items" repeats part of "Doc comments and map entries drift".
+- Fix: merge the two at the next grooming.
+### A settled records-only round can remove security entries unseen (sprint-19 review security Low (5))
+
+- Location: `.claude/workflows/deliver-change.js:952` (review-lite's settled round), `tools/gates.sh` settled_at, `tools/run_state.sh` settled_round.
+- Why: in an advisory-only round that changes only records the security review does not run again, and the records include `docs/backlog.md` and `docs/findings/*.md`, so a contributor deleting or rewording a security entry there reaches the merge with no security reviewer seeing it; only the sprint-end combined-diff review would catch it.
+- Fix: refuse to settle when the diff since the settled commit removes or changes an existing line of `docs/backlog.md` or `docs/findings/*.md` (append only), else run the security review again; a tools-test case each way. Queued in `review-lite-docs`.
+
+### SECURITY_MARK matches security and a severity word anywhere in a long entry (sprint-19 review quality)
+
+- Location: `tools/run_state.sh:461`
+- Why: matched over the whole joined entry, the mark takes process entries as security ones: the repeated guide-colors retro entry at `docs/backlog.md:8377` and `:8396` (security 0 ... medium output budget) becomes a security entry that groom refuses as a duplicate; safe-side, but it grows with entry length.
+- Fix: require the severity within a short window of security (or finding or review wording), with a tools-test case that an entry naming security 0 and a medium output budget is not a security entry. Queued in `groom-fold-format`.
+
+### The bracket pair key multiplies by a bare number (sprint-19 review quality)
+
+- Location: `carat/adapters/frame_presenter.rb:1246`
+- Why: pair_key multiplies by 1_000_003 and the column bound it assumes is written only in the archived design.md, so a reader cannot see why it is safe.
+- Fix: a private constant (PAIR_KEY_STRIDE) with a comment that columns stay below it. Queued in `render-tidy`.
+
+### The bracket pair table has no multibyte or scrolled row (sprint-19 review quality)
+
+- Location: `test/adapters_frame_presenter.rb:167`
+- Why: pair_case has no row with multibyte text before the bracket or a window scrolled sideways (left > 0), where code-point indexing and fill_columns clipping could go wrong.
+- Fix: add a row with a non-ASCII character before ( and one scrolled left so only one bracket is visible. Queued in `render-tidy`.
