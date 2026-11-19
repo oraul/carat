@@ -21,3 +21,7 @@
 - [x] 4.5 Say in docs/plugins.md that both pickers refuse scattered letters, the file finder also matching initials
 - [x] 4.6 Describe substring or initials matching in the finder's rows of docs/compatibility.md and docs/actions.md
 - [x] 4.7 Add `substring_score` to the matcher.rb entry of docs/codebase-map.md
+
+## 5. Closing advisories
+
+- [x] 5.1 Describe the finder's open action by substring or initials matching in the manifest and the class comment of `carat/plugins/finder/plugin.rb`, as docs/actions.md does
