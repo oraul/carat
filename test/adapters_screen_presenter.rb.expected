@@ -14,7 +14,7 @@ ok   unchanged shape is not repeated
 ok   changed row is written with its highlight
 ok   unchanged row is not written
 ok   bar shape is emitted when it changes
-ok   the underline shape is emitted when it changes
+ok   Underline sent to the terminal: the underline shape is emitted when it changes
 ok   an unchanged underline is not repeated
 ok   a size change clears the screen
 ok   a size change repaints every row

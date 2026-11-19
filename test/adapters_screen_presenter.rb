@@ -115,7 +115,7 @@ module AdaptersScreenPresenterTest
     changed.cursor_shape = :underline
     changed.serial += 1
     screen.present(changed)
-    t.assert_true(terminal.last_write.include?("\e[4 q"), "the underline shape is emitted when it changes")
+    t.assert_true(terminal.last_write.include?("\e[4 q"), "Underline sent to the terminal: the underline shape is emitted when it changes")
     screen.present(changed)
     t.assert_equal(false, terminal.last_write.include?(" q"), "an unchanged underline is not repeated")
     changed.cursor_shape = :bar

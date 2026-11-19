@@ -27,5 +27,5 @@ Out of scope: the command line's own text colors, pending keys, the match count,
 - Code: `carat/adapters/frame_presenter.rb`, `carat/domain/highlight.rb`, `carat/domain/themes.rb`.
 - Tests: `test/adapters_frame_presenter.rb`, `test/adapters_screen_presenter.rb`, `test/domain_theme.rb`, `test/editor_syntax.rb`, and their snapshots.
 - Docs: `docs/compatibility.md`, `docs/architecture.md` section 8, `docs/codebase-map.md` area 13.
-- README.md: unchanged, it does not describe the cursor line or the cursor shapes.
+- README.md: changed, the cursor sentence names the command line bar and the gutter on the cursor line.
 - docs/architecture.md: changed, the group count and the Highlight paragraph name `LineNrFifth`.

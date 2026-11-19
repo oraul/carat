@@ -344,7 +344,7 @@ module AdaptersFramePresenterTest
     s.mode = D::Mode::INSERT
     f = draw(s, 6, 30)
     t.assert_equal("-- INSERT --", f.row_text(5), "insert indicator")
-    t.assert_equal(:bar, f.cursor_shape, "bar cursor in insert mode")
+    t.assert_equal(:bar, f.cursor_shape, "Shape in insert mode: bar cursor in insert mode")
     s.show("E37: No write since last change (add ! to override)", true)
     f = draw(s, 6, 60)
     t.assert_equal("E37: No write since last change (add ! to override)", f.row_text(5), "message replaces the indicator")
@@ -770,11 +770,11 @@ module AdaptersFramePresenterTest
     # end of the gutter to the window's edge, follows the cursor, the
     # focus, and the option.
     t.table([
-      ["the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
+      ["The cursor line of the current window: the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
       ["the blanks after the text are lit to the window's edge", "the blanks after the text", [0, 1, 0, 0]],
       ["the gutter is lifted from column 0, the cursor line filled from the window's left edge", "the gutter", [0, 1, 0, 0]],
       ["with the option off no row is lit", "off", [0, 0, 0, 0]],
-      ["the lit row follows j", "j", [0, 1, 0, 0]],
+      ["The highlight follows the cursor: the lit row follows j", "j", [0, 1, 0, 0]],
       ["turning the option off repaints the row", "turned off", [0, 0, 0, 0]],
       ["only the current window, at the bottom, is lit", "stacked", [0, 0, 0, 0, 1, 0, 0, 0]],
       ["focus moves the lit row to the top window", "stacked, top focused", [1, 0, 0, 0, 0, 0, 0, 0]],

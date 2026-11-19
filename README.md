@@ -47,7 +47,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 
 `carat FILE` opens a file, or starts a new one when nothing is there. `carat` with no argument, or with a directory, starts on an empty buffer and shows the start screen: a gem forms from a point in about 0.6 seconds, a sparkle lights its top, and `c a r a t` appears with the keys to insert text, open a file, and quit. Any key ends it and does what it always does. `option.startscreen false` turns it off, `option.reducedmotion true` shows the finished picture without the animation, a terminal too small for the gem shows only the wordmark, and with the `NO_COLOR` environment variable set the picture is drawn in plain ASCII without colors of its own.
 
-The cursor is a block in normal mode, a bar in insert mode, and an underline in replace mode, and the current window highlights the cursor's line (`option.cursorline false` or `:set nocul` turns it off). However carat ends, `:q`, a signal, or an error, the terminal gets its own cursor shape and its main screen back.
+The cursor is a block in normal mode, a bar in insert mode and on the command line, and an underline in replace mode, and the current window highlights the cursor's line, its gutter included (`option.cursorline false` or `:set nocul` turns it off). However carat ends, `:q`, a signal, or an error, the terminal gets its own cursor shape and its main screen back.
 
 ## Leader keys
 

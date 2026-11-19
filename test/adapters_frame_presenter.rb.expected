@@ -25,7 +25,7 @@ ok   a long message is cut at the screen's width
 ok   a pending message wins over the diagnostic
 ok   the insert indicator wins over the diagnostic
 ok   insert indicator
-ok   bar cursor in insert mode
+ok   Shape in insert mode: bar cursor in insert mode
 ok   message replaces the indicator
 ok   error message highlight
 ok   command line with colon
@@ -161,11 +161,11 @@ ok   nohlsearch draws nothing
 ok   an empty match is not drawn, a longer one is
 ok   the previewed match is in the IncSearch group
 ok   a backward search prompt shows a question mark
-ok   the cursor's row of the current window is lit
+ok   The cursor line of the current window: the cursor's row of the current window is lit
 ok   the blanks after the text are lit to the window's edge
 ok   the gutter is lifted from column 0, the cursor line filled from the window's left edge
 ok   with the option off no row is lit
-ok   the lit row follows j
+ok   The highlight follows the cursor: the lit row follows j
 ok   turning the option off repaints the row
 ok   only the current window, at the bottom, is lit
 ok   focus moves the lit row to the top window
