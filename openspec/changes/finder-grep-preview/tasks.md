@@ -12,3 +12,4 @@
 - [x] 3.1 Test that the preview is built from the stored text: a row opens the picker, changes a file on the disk, moves the highlight, and sees the stored lines (`test/editor_finder_grep_preview.rb`); the delta spec gains the scenario The preview is built from the stored text
 - [x] 3.2 Name the preview's title `preview_title` in `Finder::Plugin#refresh`, and write `Grep#shown_path` through `path_at`
 - [x] 3.3 Correct the proposal's Impact line: the requirement The grep list uses the whole width is removed and replaced by The grep list is sized as the file finder's list
+- [x] 3.4 Extract `second_float` in `test/editor_finder_grep_preview.rb` and call it from `preview_text` and the stored-text row, so the second-float pick is written once

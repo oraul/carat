@@ -78,12 +78,16 @@ module EditorFinderGrepPreviewTest
     out
   end
 
+  # The second float of the list, or "" when there is not exactly two.
+  def self.second_float(all)
+    all.length == 2 ? all[1].to_s : ""
+  end
+
   # The second float's text after the keys, or "" when there is none.
   def self.preview_text(files, keys, cols)
     h = editor_on(files, cols)
     h.type(keys.to_s)
-    all = floats(h)
-    all.length == 2 ? all[1].to_s : ""
+    second_float(floats(h))
   end
 
   def self.main
@@ -135,8 +139,7 @@ module EditorFinderGrepPreviewTest
     h.type("<Space>fgneedle")
     files.put("b.txt", "other top\nneedle other\nother bottom\n")
     h.type("<C-n>")
-    all = floats(h)
-    t.assert_equal("b.txt|  b top\n> needle two\n  b bottom", all.length == 2 ? all[1].to_s : "", "a file changed after the open still previews its stored lines")
+    t.assert_equal("b.txt|  b top\n> needle two\n  b bottom", second_float(floats(h)), "a file changed after the open still previews its stored lines")
 
     # Rows are [label, keys, the preview float].
     t.table([
