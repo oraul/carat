@@ -879,7 +879,8 @@ judge() {
     cd)
       [ $# -eq 2 ] && project_or_worktree "$2" || refuse "cd other than to the project or a worktree tmp/.NAME: ${2:-}"
       case "$2" in
-        "$project"|"$project_real"|.) ;;
+        "$project"|"$project_real") cd_worktree="" ;;
+        .) ;;
         *) cd_worktree=$2 ;;
       esac ;;
     git) git_form "$@" ;;
@@ -1110,7 +1111,8 @@ IFS='
 set -f
 pending=""
 # A cd into a worktree tmp/.NAME, which every later segment of the call
-# runs in (tools/open_pr.sh message refuses it).
+# runs in until a cd back to the project clears it (tools/open_pr.sh
+# message refuses it).
 cd_worktree=""
 set --
 for t in $tokens; do
