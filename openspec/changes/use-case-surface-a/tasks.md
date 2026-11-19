@@ -18,5 +18,5 @@
 
 ## 4. Docs and measurements
 
-- [ ] 4.1 `docs/architecture.md` (sections 5, 8, 10), `docs/codebase-map.md` (area 4), `docs/examples.md`, and `docs/spinel-notes.md` describe the ledger and the readerless directories (proved by `make docs-lint` and `make lint`)
+- [x] 4.1 `docs/architecture.md` (sections 5, 8, 10), `docs/codebase-map.md` (area 4), `docs/examples.md`, and `docs/spinel-notes.md` describe the ledger and the readerless directories (proved by `make docs-lint` and `make lint`)
 - [ ] 4.2 Measure analysis time and rounds of both compile roots, the binary's size, and time per key on main and on the branch for the pull request (`make metrics`)

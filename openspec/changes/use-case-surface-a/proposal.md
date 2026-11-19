@@ -15,7 +15,7 @@ This is part a of 4 of a user-requested tidy-up outside the roadmap of `docs/arc
 - `test/lint.rb`, the shared-holder rule: a shared keyword a holder stores without a reader is accepted when the assembly records it in the ledger with the object its construction passed, and the assembly test names that `held` pair; a use case under a directory of `READERLESS_DIRS` (now `carat/use_cases/discovery/`) has no public reader. Self-tests cover each new branch.
 - Edge-case tests first, in their own commit: the palette with a text of colons alone, a trailing blank in its text, and over an empty buffer (`test/editor_palette.rb`); a second Esc with no hints shown, the hints from the last line, and over an empty buffer (`test/editor_key_hints.rb`).
 - `design.md` maps the 22 `call`s that return no `Outcome` to what each will return, for parts b to d.
-- Docs: `docs/architecture.md` sections 8 and 10 and the use-case paragraph of section 5, `docs/codebase-map.md` (the new file, the assembly, the guard, area 5's use cases), `docs/examples.md` (the golden use case's readers), `docs/spinel-notes.md` and `CLAUDE.md` (the sentence on readers for the guard).
+- Docs: `docs/architecture.md` sections 8 and 10 and the use-case paragraph of section 5, `docs/codebase-map.md` (the new file, the assembly, the guard, area 5's use cases), `docs/examples.md` (the golden use case's readers), `docs/spinel-notes.md` (the sentence on how the guard reads each holder).
 
 ## Capabilities
 
@@ -35,7 +35,7 @@ None.
 
 ## Impact
 
-- CLAUDE.md: the Coding conventions sentence on shared objects says the guard reads the ledger for a readerless holder.
+- CLAUDE.md: unchanged, its sentence that every shared object is kept in a reader of `EditorAssembly` for the guard stays true; how the guard reads a readerless holder is `docs/architecture.md` section 10, and the file is 3 bytes under its docs-lint budget.
 - docs/architecture.md: section 8's composition root paragraph, section 5's use-case paragraph (readers only where the guard still needs them, none in a readerless directory), and section 10's guard bullet name the ledger.
 - README.md: unchanged, it describes neither the use cases' readers nor the shared-instance guard.
 - docs/codebase-map.md: area 4 gains `carat/adapters/wiring_ledger.rb` and the guard's ledger checks; area 5's discovery entries are unchanged since they name no reader.

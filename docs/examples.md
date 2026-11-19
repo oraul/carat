@@ -16,7 +16,7 @@ One small file per common kind, already in the tree, that follows every rule the
 
 ## Use case
 
-`JoinLines` has no collaborators: `call(state, command)` returns an `Outcome`. `SplitWindow` takes its collaborators as required keywords with readers (the shared-instance test reads them) and its own arguments in `call`. One public method, `call`; everything else private, constants in `private_constant`.
+`JoinLines` has no collaborators: `call(state, command)` returns an `Outcome`. `SplitWindow` takes its collaborators as required keywords with readers (the shared-instance test reads them) and its own arguments in `call`; a use case in a directory of `READERLESS_DIRS` (`test/lint.rb`) keeps them in typed instance variables instead, and its construction in `EditorAssembly` is followed by one `@wiring.record` per shared keyword, which the shared-instance test reads with `held`. One public method, `call`; everything else private, constants in `private_constant`.
 
 Wiring: the file with a signed `call` (generator); its `require_relative` in `carat.rb` (generator); its map bullet (generator); its construction in `EditorAssembly`, the only place that wires the core, and the handler that calls it (by hand); its test.
 
