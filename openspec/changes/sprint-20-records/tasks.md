@@ -9,3 +9,7 @@
 ## 2. Checks
 
 - [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
+
+## 3. Review fixes
+
+- [x] 3.1 `docs/queue-backlog.md` Calibration decision: say quality first pass 1 of 7 in sprint-20 (the `docs/sprints.tsv` figure) and 1 of 8 with finder-grep. Checked by the line in the diff.

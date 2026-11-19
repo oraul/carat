@@ -47,6 +47,6 @@ The user-approved exception (2026-11-19, finder-grep note 31): the three are the
 - Backlog goal (T2, note 31 item 4): Sprint 21 adds 74 entries, removes 9 plus 3 listed; Sprint 22's lane opens with Pool 4 to 6.
 - Security first (T0): none; review high 0 medium 0; sweep `partial` high=0 medium=0 low=4, not reviewed plugins, shell-tools.
 - Security (T3, item 6): 7 sprint Lows placed: `grep.rb:164`, `plugin.rb:186`, `run_state.sh:1330`, `open_pr.sh:196`, `ci.yml:36`, `open-pr.yml:46`, `rc_config_gateway.rb:61`.
-- Calibration (T1): quality first pass sprint-20 1 of 8 (sprint-19 2 of 6); no move before the trial's 6 rows.
+- Calibration (T1): quality first pass sprint-20 1 of 7, 1 of 8 with finder-grep, which merged beyond the sprint (sprint-19 2 of 6); no move before the trial's 6 rows.
 - Triage (T1): done (95bf2e0), not repeated.
 - Merge gate (T1): no Sprint 21 item edits `tools/rules.sh`.
