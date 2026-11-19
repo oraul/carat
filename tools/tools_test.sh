@@ -4613,6 +4613,28 @@ expect "head guard: an unread lane head takes a well-formed head with a note and
   contributor_js "lane = null; results = [{ status: 'done', head: 'dddddddddddd', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'x', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, head, notes.filter((n) => n.includes('could not be read')).length, queued.slice(), queued.every((l) => CLOSABLE.test(l))]; const second = await contributor('implement', 'd'); return a.concat([!!second])"
 expect "head guard: a hostile head reaches the queued note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true\]$' \
   contributor_js "results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's' }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-refused')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid is not')]"
+# The self-check compared with the next check (delivery-guards-c): a match
+# from an implement or fix start that the next finished check contradicts by
+# failing a stage is noted self-check-mismatch and escalates the later
+# contributor starts to the session's model; a mismatch, a pass, or no
+# recorded self-check notes nothing.
+selfcheck_js() {
+  js "$wf" "SIZES CALIBRATION calibrated criticalRule calibrate escalate safeText compareSelfCheck" "(() => {
+    globalThis.critical = ''; globalThis.escalated = false; globalThis.estimate = 'medium'; globalThis.head = 'aaaaaaaaaaaa'; globalThis.state = { change: 'c' }
+    globalThis.selfCheck = null; globalThis.queued = []; globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
+    $1
+  })()"
+}
+expect "self-check: a match the next check contradicts is noted self-check-mismatch and moves later contributor starts to the session's model" 0 '^\{"before":"agent/high","queued":\["sh tools/run_state.sh note c self-check-mismatch \\"contributor fix said match; the check failed at stage gates\\"","sh tools/run_state.sh note c escalation \\"a self-check the check contradicted\\""\],"closable":true,"escalated":true,"after":"session/session","model":"inherit","kept":null\}$' \
+  selfcheck_js "calibrate('contributor', {}); const before = calibrated.contributor; selfCheck = { mode: 'fix', said: 'match' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); const closable = $(sed -n 's/^const CLOSABLE = //p' "$wf").test(queued[0]); const o = calibrate('contributor', {}); return { before, queued, closable, escalated, after: calibrated.contributor, model: o.model, kept: selfCheck }"
+expect "self-check: a mismatch, a passed check, or no recorded self-check writes no note and escalates nothing" 0 '^\[0,0,0,false,null\]$' \
+  selfcheck_js "const n = []; selfCheck = { mode: 'implement', said: 'mismatch' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); selfCheck = { mode: 'implement', said: 'match' }; compareSelfCheck({ kind: 'passed', at: head, stage: '', log: '' }); n.push(queued.length); compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); return n.concat([escalated, selfCheck])"
+expect "self-check: a refused check counts as the stage refused, and a hostile stage reaches the note only as safe text" 0 '^\[true,true\]$' \
+  selfcheck_js "selfCheck = { mode: 'implement', said: 'match' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'refused', log: 'dirty' }); const a = queued[0].endsWith('failed at stage refused\"'); queued = []; selfCheck = { mode: 'implement', said: 'match' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'x\"; id', log: 'l' }); return [a, queued[0].endsWith('failed at stage xid\"')]"
+expect "self-check: contributor keeps an implement or fix start's self-check and clears it after another mode's start" 0 '^\[\{"mode":"implement","said":"match"\},\{"mode":"fix","said":""\},null\]$' \
+  contributor_js "const out = []; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', self_check: 'match' }]; await contributor('implement', 'd'); out.push(selfCheck); await contributor('fix', 'd'); out.push(selfCheck); await contributor('package', 'd'); out.push(selfCheck); return out"
+expect "self-check: rounds compares the self-check with a check that finished at the head and clears it on a settled round" 0 '^\[true,true\]$' \
+  js "$wf" "rounds" "[/verdict\('check', passed\)\n.*\n\s*compareSelfCheck\(v\)\n/.test(rounds.toString()), /selfCheck = null\n\s*settleRound\(from\)/.test(rounds.toString())]"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
 expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"quality":\[\],"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \

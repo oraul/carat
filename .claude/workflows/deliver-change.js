@@ -183,6 +183,21 @@ function escalate(why) {
   note(`contributor escalated to the session's model: ${why}`)
   queue(`sh tools/run_state.sh note ${state.change} escalation "${why}"`, head)
 }
+// The self-check of the last implement or fix start, { mode, said }, kept
+// until the next check that finishes at the head reads it (compareSelfCheck);
+// null after a start of another mode or a settled round. A match that check
+// contradicts by failing a stage (a refusal is the stage refused) is noted
+// self-check-mismatch and escalates; a mismatch escalated when returned.
+let selfCheck = null
+function compareSelfCheck(v) {
+  const said = selfCheck
+  selfCheck = null
+  if (!said || said.said !== 'match' || v.kind !== 'failed') return
+  const stage = safeText(v.stage)
+  note(`contributor (${said.mode}) self-check said match; the check failed at stage ${stage}`)
+  queue(`sh tools/run_state.sh note ${state.change} self-check-mismatch "contributor ${said.mode} said match; the check failed at stage ${stage}"`, head)
+  escalate('a self-check the check contradicted')
+}
 // A restart carries on the profiles an earlier start recorded as
 // metric.calib.KIND, for the kinds this start has not used yet; a value
 // outside the table's form is dropped.
@@ -964,6 +979,7 @@ async function contributor(mode, detail) {
     state.pushed = keepPushed(mode, state.pushed, result)
     if (!result) escalate('a start returned no result')
     else if (result.self_check === 'mismatch') escalate('a self-check mismatch')
+    selfCheck = mode === 'implement' || mode === 'fix' ? { mode, said: result ? result.self_check || '' : '' } : null
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') {
       const lane = await laneHead()
@@ -1533,6 +1549,7 @@ async function rounds(fixes = true) {
       if (outcome === 'settled') {
         reruns = 0
         rerunWhy = ''
+        selfCheck = null
         settleRound(from)
       } else if (outcome === 'rerun') {
         const where = v.stage ? ` at stage ${v.stage}, log ${v.log}` : ''
@@ -1547,6 +1564,7 @@ async function rounds(fixes = true) {
         const passed = v.kind === 'passed'
         verdict('check', passed)
         note(`check at ${v.at}: ${passed ? 'passed' : `failed at stage ${v.stage}; ${v.log}`}`)
+        compareSelfCheck(v)
         if (passed) {
           phaseDone('check', head)
           budgetAtCheck(c.budget, head)
