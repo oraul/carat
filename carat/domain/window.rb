@@ -111,6 +111,15 @@ module Carat
         true
       end
 
+      # Opens every closed fold holding the cursor, as Neovim's
+      # foldOpenCursor does when an insert session starts.
+      #: () -> void
+      def open_cursor_folds
+        return unless folds.folded?
+        row = cursor.row
+        folds.open_at(row) while folds.closed_at(row) >= 0
+      end
+
       # Deletes every fold of the window (zE).
       #: () -> void
       def drop_folds
