@@ -708,6 +708,13 @@ function reviewed(kind, passed, commit, counts) {
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
+// recordStart is the one start of the record profile, running one command
+// from the repository root and returning its RECORDED result (flush, laneHead).
+async function recordStart(command, label) {
+  return measured('record', () => agent(
+    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
+    calibrate('record', { schema: withCalls(RECORDED), label })), callCap('record'))
+}
 // Runs the queued records with the metric line through one agent, only
 // when a check or review record is queued, which the pre-push and merge
 // gates read and only an unguarded start may write; every other line and
@@ -719,9 +726,7 @@ async function flush(force = false) {
   if (!force && !pending.some((l) => !CLOSABLE.test(l))) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   if (!command) return true
-  const r = await measured('record', () => agent(
-    `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
-    calibrate('record', { schema: withCalls(RECORDED), label: 'record' })), callCap('record'))
+  const r = await recordStart(command, 'record')
   if (r && r.ok) return true
   if (!stopped) stopped = `the run state records failed: ${r ? r.output : 'no result'}`
   return false
@@ -919,6 +924,31 @@ const SELF_CHECK = '\nBefore returning, check yourself: every behavior the chang
 // file, and each start is fresh, so every start carries it.
 const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Before returning, re-read your diff with the instructions of `.claude/agents/quality-reviewer.md`."
 
+// Card rule 1 made mechanical: a done contributor result's head is the
+// lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters,
+// so a placeholder, a typed short or full hash, or another commit is
+// refused. The workflow has no shell, so laneHead reads the lane's head in
+// a start of the record profile (recordStart) that runs that one command;
+// '' when it could not, and then a well-formed head is taken, noted
+// head-unread (the check compares its own commit with it). safeText is all
+// of a reported head that reaches a note or a queued record line: no quote
+// or shell character.
+const HEAD12 = /^[0-9a-f]{12}$/
+function safeText(text) {
+  return String(text || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'empty'
+}
+function headProblem(reported, lane) {
+  if (!HEAD12.test(reported || '')) return `head ${safeText(reported)} is not the 12-character form of git rev-parse --short=12 HEAD`
+  if (lane && reported !== lane) return `head ${reported} is not the lane's HEAD ${lane}`
+  return ''
+}
+async function laneHead() {
+  const command = `git -C ${laneDir(state.change)} rev-parse --short=12 HEAD`
+  const r = await recordStart(command, 'record: lane head')
+  const out = r && r.ok ? String(r.output || '').trim() : ''
+  return HEAD12.test(out) ? out : ''
+}
+
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
   // One kind names the start's phase figures, its cap line, and its cap.
@@ -926,6 +956,7 @@ async function contributor(mode, detail) {
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : capKind === 'closing' ? 'closing' : 'package'
   let result = null
   let more = ''
+  let refused = false
   for (let count = 0; ; count++) {
     result = await measured(key, () => agent(
       `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(capKind)}`,
@@ -934,7 +965,31 @@ async function contributor(mode, detail) {
     if (!result) escalate('a start returned no result')
     else if (result.self_check === 'mismatch') escalate('a self-check mismatch')
     const step = continuation(result, result ? workLeft(result) : null, count)
-    if (step.next === 'done') break
+    if (step.next === 'done') {
+      const lane = await laneHead()
+      const problem = headProblem(result.head, lane)
+      if (!problem) {
+        // An unread lane head is also a run-state note in fixed words, so a
+        // reader that always fails, turning the wrong-head refusal off, shows.
+        if (!lane) {
+          note(`contributor (${mode}): the lane's head could not be read; head ${result.head} taken as returned`)
+          queue(`sh tools/run_state.sh note ${state.change} head-unread "contributor ${mode} start ${count + 1}: lane head not read"`, head)
+        }
+        break
+      }
+      // A refused head escalates, is noted, and is restarted once; a second
+      // refusal in this call stops the run.
+      escalate('a refused head')
+      note(`contributor (${mode}) result refused: ${problem}${refused ? '; refused twice, stopped' : '; restarted'}`)
+      queue(`sh tools/run_state.sh note ${state.change} head-refused "contributor ${mode} start ${count + 1}: ${problem}"`, head)
+      if (refused) {
+        stopped = `contributor (${mode}) returned a refused head twice: ${problem}`
+        return false
+      }
+      refused = true
+      more = `\nThis restarts a start whose result was refused: its ${problem}. Return as head the output of \`git rev-parse --short=12 HEAD\` run in the worktree, copied, never typed or a placeholder; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
+      continue
+    }
     if (step.next === 'stop') {
       stopped = `contributor (${mode}) stopped${count ? ` after ${count + 1} starts` : ''}: ${result ? result.question || result.summary : 'no result'}`
       return false
