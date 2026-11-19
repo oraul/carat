@@ -502,7 +502,7 @@ gate_records() {
 }
 
 # Findings are append-only: each `### ` heading under docs/findings/ at
-# BASE, and each one a non-merge commit of BASE..HEAD added, is still
+# the fork point of BASE and HEAD, and each one a non-merge commit of BASE..HEAD added, is still
 # present at HEAD, in the same file (a merge of a moved main brings in the
 # groomed entries it removed, so the merged tree is not compared). Only the
 # records change of a sprint (sprint-N-records, whose groom folds and
@@ -514,10 +514,11 @@ gate_findings() {
     ok "a records change may remove entries"
     return
   fi
+  fork=$(git merge-base "$base" HEAD 2>/dev/null) || fork=$base
   findings_now=$(git grep -I --no-color -e '^### ' HEAD -- docs/findings 2>/dev/null | sed 's/^[^:]*://' | sort -u)
   findings_gone=$( {
-    git grep -I --no-color -e '^### ' "$base" -- docs/findings 2>/dev/null | sed 's/^[^:]*://'
-    git log --no-merges --format= -p "$base..HEAD" -- docs/findings 2>/dev/null |
+    git grep -I --no-color -e '^### ' "$fork" -- docs/findings 2>/dev/null | sed 's/^[^:]*://'
+    git log --no-merges --no-color --no-renames --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --format= -p "$fork..HEAD" -- docs/findings 2>/dev/null |
       awk '/^\+\+\+ /{ f = substr($0, 7) } /^\+### /{ print f ":" substr($0, 2) }'
   } | sort -u | grep -v -x -F -e "$findings_now" )
   [ -z "$findings_gone" ] || bad "an entry of docs/findings/ present at the base or added by a commit of the branch is missing at HEAD (findings are append-only):

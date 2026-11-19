@@ -22,3 +22,5 @@
 - [x] 4.3 Replace the findings temporary file with a shell variable, match the records exemption exactly (`sprint-[0-9]+-records`), rewrap the merge usage line
 - [x] 4.4 Measure the text review under `prtext`, move its round decision into `prTextStep` with a js case, add `prtext` to the quality reviewer's maxTurns pair
 - [x] 4.5 Align the design and proposal text, add the README sentence on the text review
+- [x] 4.6 Read the findings gate's base as the fork point of the base and HEAD (a moved main the branch has not merged no longer fails it), run `git log` hardened (`--no-color`, `--no-renames`, `--no-ext-diff`, `--no-textconv`, fixed prefixes); add a tools-test case
+- [x] 4.7 Compute the text review's blocking message once (`prTextStep` takes it), name `--pr-text` in the contributor's body mode, CLAUDE.md's push allowance, the README text-review sentence, and the proposal

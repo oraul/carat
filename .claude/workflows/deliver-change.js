@@ -1173,11 +1173,10 @@ function prTextBlocks(r) {
   const found = Array.isArray(r.blocking) ? r.blocking : []
   return found.length ? `the pull request text claims what the diff does not contain:\n- ${found.join('\n- ')}` : ''
 }
-// The decision of one text review round: 'unchecked' when the review
+// The decision of one text review round from prTextBlocks's message: 'unchecked' when the review
 // returned no result, 'pass' when nothing blocks, 'stop' when the second
 // round still blocks, else 'rewrite'.
-function prTextStep(round, r) {
-  const why = prTextBlocks(r)
+function prTextStep(round, why) {
   if (why === null) return 'unchecked'
   if (!why) return 'pass'
   return round >= 1 ? 'stop' : 'rewrite'
@@ -1187,13 +1186,13 @@ async function prTextReview() {
     phase('Package')
     const r = await measured('prtext', () => agent(`${intro()} ${prTextTask(state.change)}${capLine('prtext')}`,
       calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Package', label: 'quality-reviewer: pull request text' })), callCap('prtext'))
-    const step = prTextStep(round, r)
+    const why = prTextBlocks(r)
+    const step = prTextStep(round, why)
     if (step === 'unchecked') {
       note('the pull request text review returned no result; the text was not checked against the diff')
       return
     }
     if (step === 'pass') return
-    const why = prTextBlocks(r)
     note(`pull request text blocked (round ${round + 1}): ${why}`)
     queue(`sh tools/run_state.sh note ${state.change} pr-text-blocked "round ${round + 1}: ${r.blocking.length} claim(s) not in the diff"`, head)
     if (step === 'stop') {

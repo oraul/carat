@@ -64,7 +64,7 @@ Run `merge-main` by the push mode's conflict rules; no other commit, no push.
 
 ### body
 
-CI is red only on the `scan` of the pull request's title or body: fix the body file, gate it and rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix`, returning `pushed`.
+CI is red only on the `scan` of the title or body: fix the body, gate it, rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix` (`--pr-text`: text), returning `pushed`.
 
 ## Report
 

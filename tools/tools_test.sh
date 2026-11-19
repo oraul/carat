@@ -3351,6 +3351,14 @@ commit "docs: main grooms an entry"
 git_q checkout -q "chore/findings4"
 git_q merge -q --no-edit main
 expect "gates: findings passes a merged main that groomed an entry" 0 "ok   findings: no findings entry removed" gates findings
+findings_repo findings5
+printf '### Branch entry\n' > docs/findings/mine.md
+commit "docs: a branch entry"
+git_q checkout -q main
+printf '### Other lane entry\n' > docs/findings/lane.md
+commit "docs: another lane merged an entry"
+git_q checkout -q "chore/findings5"
+expect "gates: findings passes a moved main the branch has not merged" 0 "ok   findings: no findings entry removed" gates findings
 findings_repo sprint-3-records
 printf '### Other\n' > docs/findings/other.md
 commit "docs: groom"
@@ -4158,7 +4166,7 @@ expect "workflow: the quality first pass is asked for every blocking finding" 0 
 # diff lacks, or the proposal's Out of scope moved out, blocks and goes back
 # to the body rewrite; a clean one, and a missing result, do not.
 expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '^\[true,"",null,"unchecked","pass","rewrite","stop",true,true\]$' \
-  js "$wf" "prTextTask prTextBlocks prTextStep" "[prTextBlocks({ blocking: ['Changes bullet 4 claims command-line styling; the diff has none'], advisory: [] }).includes('claims what the diff does not contain'), prTextBlocks({ blocking: [], advisory: [] }), prTextBlocks(null), prTextStep(0, null), prTextStep(0, { blocking: [] }), prTextStep(0, { blocking: ['x'] }), prTextStep(1, { blocking: ['x'] }), prTextTask('c').includes('Out of scope'), prTextTask('c').includes('git diff origin/main...HEAD')]"
+  js "$wf" "prTextTask prTextBlocks prTextStep" "[prTextBlocks({ blocking: ['Changes bullet 4 claims command-line styling; the diff has none'], advisory: [] }).includes('claims what the diff does not contain'), prTextBlocks({ blocking: [], advisory: [] }), prTextBlocks(null), prTextStep(0, null), prTextStep(0, ''), prTextStep(0, 'x'), prTextStep(1, 'x'), prTextTask('c').includes('Out of scope'), prTextTask('c').includes('git diff origin/main...HEAD')]"
 # Fix in place (pipeline-diet-b cut 4b): the findings of the change's files
 # ride with the blocking ones, or get a round of their own with a round to
 # spare, are re-reviewed at the new head, and leave the hand-over only when
