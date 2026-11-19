@@ -4242,7 +4242,7 @@ cd "$back" || exit 1
 expect "workflow: every agent start runs its commands in the change's worktree" 0 '^true$' \
   lane_js "intro().includes('cd tmp/.lane-a && ')"
 expect "workflow: an implement or fix start first merges a moved main, a package start does not" 0 '^\[true,true,false\]$' \
-  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => contributorTask(m, 'b', 'd').includes('run_state.sh merge-main'))"
+  js "$wf" "MERGE_MAIN SELF_CHECK CONTRIBUTOR_CARD contributorTask" "['implement', 'fix', 'package'].map((m) => contributorTask(m, 'b', 'd').includes('run_state.sh merge-main'))"
 expect "workflow: the resume start opens the change's worktree from the main checkout" 0 '^1 2$' \
   sh -c 'echo "$(grep -cF "Run \\\`sh tools/run_state.sh lane-open <change> <branch>\\\` in the main checkout" "$1") $(grep -o "cd tmp/[.]lane-<change> && sh tools/run_state.sh [a-z-]*" "$1" | wc -l | tr -d " ")"' _ "$wf"
 expect "workflow: the script parses as a module body" 0 '^ok$' \
@@ -4472,7 +4472,7 @@ expect "workflow: the resume brief names only the queue plan-needed read" 0 '^\[
 # Every contributor start is built by contributor() from contributorTask
 # with the brief, so a hold for the user reaches the package start too.
 expect "workflow: the brief, a hold for the user included, reaches every contributor start" 0 '^true$' \
-  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
+  js "$wf" "MERGE_MAIN SELF_CHECK CONTRIBUTOR_CARD contributorTask" '["implement", "fix", "package", "wait", "push", "body"].every((m) => contributorTask(m, "the item; hold for the user before the push", "d").startsWith(`Mode: ${m}. Brief: the item; hold for the user before the push. d`))'
 expect "workflow: every contributor start goes through contributorTask with the brief" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "agentType: .contributor." "$1") $(grep -c "contributorTask(mode, brief, detail)" "$1")"' _ "$wf"
 expect "workflow: a contributor with a question stops" 0 '^[{]"next":"stop"' \
@@ -4558,9 +4558,19 @@ expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \
 expect "workflow: the review fix round reviews security over the whole diff" 0 "^1$" grep -c -F "const since = reviewFixRounds ? '' : narrowedFrom(ran, 'security', head)" "$wf"
 expect "workflow: the resume start stops on a refused init" 0 "^1$" grep -c -F "when it refuses (a merged change name), stop with its message as reason" "$wf"
 expect "workflow: the implement and fix prompts carry the self-check" 0 '^\[true,true,false\]$' \
-  js "$wf" "MERGE_MAIN SELF_CHECK contributorTask" "['implement', 'fix', 'package'].map((m) => /every behavior the change adds or alters has a test.*docs[/]actions[.]md[)] is updated.*compared against the brief/.test(contributorTask(m, 'b', 'd')))"
+  js "$wf" "MERGE_MAIN SELF_CHECK CONTRIBUTOR_CARD contributorTask" "['implement', 'fix', 'package'].map((m) => /every behavior the change adds or alters has a test.*docs[/]actions[.]md[)] is updated.*compared against the brief/.test(contributorTask(m, 'b', 'd')))"
 expect "contributor: the self-check is in the implement steps" 0 "^1 1 1$" \
   sh -c 'echo "$(grep -c -E "^5[.] Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it [(]README[.]md, CLAUDE[.]md, and the architecture, codebase map, compatibility, and actions docs[)] is current.*the diff matches the brief, anything extra named" "$1") $(grep -c "self-check and commit as in implement" "$1") $(grep -c -F -- "--review-fix\`, once a run" "$1")"' _ "$agents/contributor.md"
+# The rules card (contributor-checklist): the agent file's top block and the
+# constant every contributor start carries are the same bytes, in every mode.
+expect "contributor: every start's prompt carries the rules card byte for byte" 0 '^\[true,true,true,true,true,true,true\]$' \
+  js "$wf" "MERGE_MAIN SELF_CHECK CONTRIBUTOR_CARD contributorTask" "(() => { const l = require('fs').readFileSync('$agents/contributor.md', 'utf8').split('\\n'); const i = l.indexOf('Rules card:'); const card = l.slice(i, i + 11).join('\\n'); return ['implement', 'fix', 'package', 'wait', 'push', 'moved', 'body'].map((m) => contributorTask(m, 'b', 'd').endsWith('\\n' + card)) })()"
+expect "contributor: the rules card is ten rules in at most 15 lines" 0 '^10 11$' \
+  sh -c 'c=$(sed -n "/^Rules card:\$/,/^10[.] /p" "$1"); echo "$(printf "%s\n" "$c" | grep -c -E "^[0-9]+[.] ") $(printf "%s\n" "$c" | wc -l | tr -d " ")"' _ "$agents/contributor.md"
+expect "contributor: the card opens the file's body, before the mandate" 0 '^1$' \
+  sh -c 'awk "/^Rules card:\$/ { c = NR } /^## Mandate\$/ { m = NR } END { print (c > 0 && c < m) ? 1 : 0 }" "$1"' _ "$agents/contributor.md"
+expect "contributor: the self-check names each checklist point and the self-review" 0 '^10$' \
+  sh -c 's=$(grep "^5[.] Self-check before returning" "$1"); n=0; for p in "empty range" "CRLF" "UTF-16 and multi-byte" "trailing blanks" "last line" "empty buffer" "a test per behavior change" "helper searched first" "spec text matching the code" "self-review"; do printf "%s\n" "$s" | grep -q -F "$p" && n=$((n + 1)); done; echo $n' _ "$agents/contributor.md"
 expect "planner: a change editing the merge gate's rules lands that edit first" 0 "^1$" \
   grep -c -F "A change editing the merge gate's own rules (\`tools/rules.sh\` RECORDS_RE and the other patterns main's \`tools/gates.sh merge\` reads) lands that edit first as its own small change" "$agents/planner.md"
 expect "planner: the size check splits a brief of three or more parts or areas, sizes up after two overruns, and splits what a round-limit stop left" 0 "^1 1 1$" \

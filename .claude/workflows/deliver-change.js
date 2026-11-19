@@ -853,7 +853,7 @@ const MERGER_CLOSE = ' Run step 7 (the merged record, lane-close, the branch del
 // the brief, so what it asks, a hold for the user's reading included,
 // reaches each of them.
 function contributorTask(mode, briefText, detail) {
-  return `Mode: ${mode}. Brief: ${briefText}. ${detail}${mode === 'implement' || mode === 'fix' ? `\n${MERGE_MAIN}${SELF_CHECK}` : ''}`
+  return `Mode: ${mode}. Brief: ${briefText}. ${detail}${mode === 'implement' || mode === 'fix' ? `\n${MERGE_MAIN}${SELF_CHECK}` : ''}\n${CONTRIBUTOR_CARD}`
 }
 // An implement or fix start first takes in a main that moved while the
 // delivery ran (parallel-lanes-b), so the checks and reviews cover the merge.
@@ -862,6 +862,11 @@ const MERGE_MAIN = 'First run `sh tools/run_state.sh merge-main <change>` in the
 // (its agent file's implement step 5): the mechanical findings a review
 // would otherwise block on.
 const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary.'
+
+// The rules card at the top of the contributor's agent file, word for word
+// (tools/tools_test.sh compares them): the mid tier forgets a rule of a long
+// file, and each start is fresh, so every start carries it.
+const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Before returning, re-read your diff with the instructions of `.claude/agents/quality-reviewer.md`."
 
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
