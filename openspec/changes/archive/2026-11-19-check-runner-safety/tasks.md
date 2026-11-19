@@ -1,0 +1,24 @@
+# Tasks
+
+## 1. Give the check clone its own toolchain
+
+- [x] 1.1 `tools/run_state.sh`, `clone_make`, `toolchain_copy`: copy the shared toolchain into the clone, its links into the shared one pointed at the copy, and leave Spinel's checkout out. Tested in `tools/tools_test.sh` by "check copies the toolchain into its clone, its links pointed at the copy", "the clone's toolchain link names the copy", "a stage writing its clone's toolchain leaves the shared one", and "check leaves Spinel's checkout out of its clone".
+
+## 2. Fail a check whose stage wrote outside its clone
+
+- [x] 2.1 `tools/run_state.sh`, `escape_mark`, `escaped_paths`, `stage_record`, `check_run`, `check_stages`: the mark before the stage list, the scan and the comparisons after the stages passed. Tested by "a stage that changes the shared toolchain by an absolute path fails the check", "a stage that writes Spinel's checkout by an absolute path fails the check", "a stage that writes a tracked file of the delivery clone by an absolute path fails the check", "a stage that writes the delivery clone's run state by an absolute path fails the check", "a stage that rewrites a stage record by an absolute path fails the check", "a stage that plants a hook in the delivery clone by an absolute path fails the check", "a stage that rewrites the delivery clone's configuration by an absolute path fails the check", "a stage that writes a linked worktree's git directory fails the check", "a branch upstream written during the check leaves it passing", "a check failed by a write outside its clone ends in a verdict line", and "every check outside its clone removes the clone"; `check_wait` reads the tree with no optional lock, so a rejoining waiter leaves the index.
+- [x] 2.2 Review fix: a rejoining waiter's `git status` with no optional lock is tested in a linked worktree, a tracked file's stat changed during the stage, by "a waiter rejoining a check in a linked worktree leaves its index though a tracked file's stat changed".
+- [x] 2.3 Review fix: `state_view` leaves out only the figures the checker's line writes (the names of the workflow's `metricLine`), so a measurement (`metric.allocs.*`, `metric.rounds.*`, `metric.us.*`) a stage writes fails the check. Tested by "the figures a checker's line writes during a running check leave it passing" and "a stage that writes a measurement into the delivery clone's run state fails the check".
+- [x] 2.4 Review fix: the scan of the common directory's `config.worktree` is tested by "a stage that writes the common directory's config.worktree by an absolute path fails the check".
+- [x] 2.5 Review fix: the run-state comparison moves out of `escaped_paths` into `state_unexpected`, beside `state_view`.
+- [x] 2.6 Review fix: `state_view` compares, of the figures (`metric.*`), only the measurements (`metric.allocs.*`, `metric.rounds.*`, `metric.us.*`, `metric.analysis_ms.*`), which only the metrics command imports, so the figures /deliver's `usage` and `tokens` write while a check runs leave a rejoined check passing and no copy of the workflow's `metricLine` names remains. Tested by "the figures usage and tokens write during a running check leave it passing", which fails with the earlier list.
+- [x] 2.7 Review fix: the rejoin cases expect the waiter's "check: rejoining the check running at" line beside every stage passed (`lane_rejoin` in `tools/tools_test.sh`), so a fresh check no longer passes them.
+- [x] 2.8 Review fix: `state_view` also leaves out the notes (`note.*`) and the phases a workflow's close records (`phase.plan`, `implement`, `package`, `ci`, `merge`, `retro`, `report`, the workflow's `CLOSABLE` family), so the close of a workflow that stops while its check runs leaves the rejoined check passing. Tested by "the phase and note a stopped workflow's close writes during a running check leave it passing", which fails with the earlier `state_view`.
+- [x] 2.9 Review fix: the usage and tokens rejoin case expects tokens to count the start ("tokens counts a start during a running check"), so it proves `metric.start.*` and `metric.weighted.*` are left out.
+- [x] 2.10 Closing: the stopped close's rejoin case checks its phase and note calls (exit 0, no output) and reads the report phase back, so a refused phase or note fails it, by "a stopped workflow's close records the report phase during a running check", "the report phase recorded during a running check reads back", and "a stopped workflow's close records a note during a running check".
+- [x] 2.11 Closing: `state_view` reads the closing phases from `CLOSE_PHASES`, named once beside `PHASES`, and "CLOSE_PHASES names the phases of the workflow's CLOSABLE lines" fails when the two lists drift.
+
+## 3. Documents and self-check
+
+- [x] 3.1 README.md and `docs/codebase-map.md` describe the clone's toolchain copy and the failed check.
+- [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
