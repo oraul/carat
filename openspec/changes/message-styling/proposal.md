@@ -30,6 +30,6 @@ Assumptions: an information message is any message not of the error level; a plu
 
 - Code: `carat/adapters/frame_presenter.rb`, `carat/domain/highlight.rb`, `carat/domain/themes.rb`.
 - Tests: `test/adapters_frame_presenter.rb` (and its snapshot), `test/domain_theme.rb`, `test/editor_insert.rb`, `test/editor_screen.rb`, and the tests that read an error message from the message row.
-- Docs: `docs/compatibility.md`, `docs/architecture.md` sections 8 and the `Highlight` paragraph, `docs/codebase-map.md` areas 12 and 13.
+- Docs: `docs/compatibility.md`, `docs/architecture.md` (the `Highlight` paragraph), `docs/codebase-map.md` areas 12 and 13.
 - README.md: changed, a sentence names the message row's styling.
-- docs/architecture.md: changed, the group counts and the FramePresenter paragraph.
+- docs/architecture.md: changed, the UI group count in the `Highlight` paragraph; the FramePresenter paragraph stays, since the file is at its docs-lint budget and `docs/compatibility.md` states the message row's styling.
