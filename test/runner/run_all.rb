@@ -67,6 +67,7 @@ require_relative "../editor_cmdline"
 require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_finder"
+require_relative "../editor_finder_grep"
 require_relative "../editor_floats"
 require_relative "../editor_folds"
 require_relative "../editor_git_signs"
@@ -182,6 +183,7 @@ when "editor_cmdline" then EditorCmdlineTest.main
 when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_finder" then EditorFinderTest.main
+when "editor_finder_grep" then EditorFinderGrepTest.main
 when "editor_floats" then EditorFloatsTest.main
 when "editor_folds" then EditorFoldsTest.main
 when "editor_git_signs" then EditorGitSignsTest.main

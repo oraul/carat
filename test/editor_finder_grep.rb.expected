@@ -1,0 +1,27 @@
+ok   Space f g opens the picker: an empty query lists nothing
+ok   a match and its rank order: a line starting with the query first, the shorter path first among equals
+ok   case is ignored
+ok   a query matches by bytes in order, not as a substring
+ok   no match
+ok   a backspace widens the match again
+ok   CRLF lines show without the carriage return
+ok   a multi-byte line is shown whole
+ok   the last line of a file with no final newline is searched
+ok   control bytes show as spaces
+ok   invalid UTF-8 shows as question marks
+ok   a binary file, a file over the read limit, an empty file, and an ignored directory add no line
+ok   Ctrl-N moves the highlight
+ok   the row cap: the title counts 200+ of 250
+ok   the row cap: 200 rows kept, listing order among equals
+ok   the cap holds after a key
+ok   Enter opens the file at the line
+ok   Enter opens at the first matched byte, counted in characters
+ok   Enter opens a line past the first
+ok   Enter on no match keeps the prompt
+ok   Esc opens nothing
+ok   Ctrl-X opens a split at the line
+ok   Ctrl-V opens a vertical split at the line
+ok   Ctrl-T opens a tab page at the line
+ok   Ctrl-T opens a buffer tab at the line
+ok   Space f f still opens the file finder
+editor_finder_grep: 26 passed, 0 failed
