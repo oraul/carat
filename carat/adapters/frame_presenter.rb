@@ -55,13 +55,12 @@ module Carat
     # is lifted onto the cursor-line layer of groups from the window's left
     # edge, the gutter included, to its right edge, its number in
     # CursorLineNr, the layer being an input of the row like its cursor
-    # column. With
-    # indentguides a file window's rows (not a plugin's buffer, a float,
-    # or the start screen) show IndentGuides after their tokens, the key
-    # of a row's guides an input of the row and the guides' settings part
-    # of the frame's geometry key. The cursor is placed in the current
-    # window, a bar in insert mode and on the command line, an underline in
-    # replace mode, and a block otherwise.
+    # column. With indentguides a file window's rows (not a plugin's
+    # buffer, a float, or the start screen) show IndentGuides after
+    # their tokens, the key of a row's guides an input of the row and the
+    # guides' settings part of the frame's geometry key. The cursor is
+    # placed in the current window, a bar in insert mode and on the command
+    # line, an underline in replace mode, and a block otherwise.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
     # stays intact while the other is drawn; they are reallocated only when

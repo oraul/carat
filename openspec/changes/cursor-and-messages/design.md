@@ -17,5 +17,5 @@ Goals: parts 1 to 3 of the queue line, in every palette, with no new allocation 
 
 ## Risks / Trade-offs
 
-A row repaints only when its record differs; the group of a number follows the number, the layer, and the cursor row, so toggling `relativenumber` repaints through the existing options invalidation.
+A row repaints only when its record differs; the group of a number follows the number, the layer, and the cursor row, and `relativenumber` is part of the frame's geometry key, so toggling it invalidates both frames' rows.
 - `LineNrFifth` uses the theme's DIM as the plan says; in Light+ DIM is the teal accent, so every fifth number is an accent there, a deliberate choice.
