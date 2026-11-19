@@ -363,6 +363,7 @@ module Carat
         tab = tabs.tab_at(index)
         layout = tab.layout
         remember(layout.window_at(id))
+        layout.window_at(id).drop_folds
         shown = layout.window_at(id).buffer
         if layout.leaf_count <= 1
           tabs.remove_tab(index)
@@ -386,6 +387,7 @@ module Carat
         i = 0
         while i < ids.length
           remember(layout.window_at(ids[i]))
+          layout.window_at(ids[i]).drop_folds
           held << layout.window_at(ids[i]).buffer
           i += 1
         end
