@@ -118,6 +118,9 @@ module Carat
       NOTICE_MIN_WIDTH = 20
       # The narrowest screen that draws notification boxes.
       NOTICE_NARROWEST = 8
+      # The code points a frame may read to find the bracket matching the
+      # cursor's.
+      PAIR_BUDGET = 200_000
 
       attr_reader :input #: Domain::InputState
       attr_reader :plugin_ui #: Domain::PluginUi
@@ -149,6 +152,13 @@ module Carat
       # @rbs @drawn: Integer
       # @rbs @row_of: Integer
       # @rbs @cursor_col: Integer
+      # @rbs @pairing: bool
+      # @rbs @pair_budget: Domain::SearchBudget
+      # @rbs @pair_a_row: Integer
+      # @rbs @pair_a_col: Integer
+      # @rbs @pair_b_row: Integer
+      # @rbs @pair_b_col: Integer
+      # @rbs @pair_here: Integer
       # @rbs @current: bool
       # @rbs @number_hl: Integer
       # @rbs @float_key: Array[Integer]
@@ -180,6 +190,13 @@ module Carat
         @drawn = 0
         @row_of = -1
         @cursor_col = -1
+        @pairing = false
+        @pair_budget = Domain::SearchBudget.new(left: PAIR_BUDGET)
+        @pair_a_row = -1
+        @pair_a_col = -1
+        @pair_b_row = -1
+        @pair_b_col = -1
+        @pair_here = 0
         @current = false
         @number_hl = Domain::Highlight::LINE_NUMBER
         @float_key = []
@@ -251,6 +268,7 @@ module Carat
           @repainted[0] = 1 if @floating
         end
         visual = Domain::Mode.visual?(state.mode)
+        @pairing = Domain::Mode.grammar?(state.mode)
         selection = visual ? state.selection : @none
         @drawn = @last_search.drawn(options)
         if @drawn > 0
@@ -810,6 +828,11 @@ module Carat
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
         guided = @guides.on? && !buffer.scratch? && !folded
+        if current && @pairing && !folded
+          find_pair(buffer, window, tabstop)
+        else
+          clear_pair
+        end
         @guides.measure(buffer, top, height, cursor.row, current) if guided
         row = top
         i = 0
@@ -829,6 +852,8 @@ module Carat
           @sel_from = -1
           @sel_to = -2
           @sel_end = -1
+          pair = row < count ? pair_key(row) : 0
+          @pair_here = pair
           fold = folded && row < count ? folds.closed_at(row) : -1
           if fold >= 0
             shown_last = folds.last_of(fold)
@@ -857,14 +882,14 @@ module Carat
               sign_group = sign_layer.group_at(row)
             end
           end
-          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+          unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
             @row_of = row
             @cursor_col = fold >= 0 ? -1 : cur
             @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
             frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
-            @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+            @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -874,7 +899,7 @@ module Carat
               source = j >= 0 && j < height ? wrow + j : -1
               frame.sources[frame_row] = source
             end
-            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide)
+            frame.dirty[frame_row] = 1 if source < 0 || !@front_rows.same?(@front_rows.index(source, slot), line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
           end
           row = shown_last + 1
           i += 1
@@ -1025,6 +1050,7 @@ module Carat
         paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
         @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
+        paint_pair(frame, frame_row, x + gutter, decoded, text_width, left) if @pair_here > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
 
@@ -1145,6 +1171,93 @@ module Carat
         search = @last_search
         return unless @current && search.preview_row == @row_of && search.preview_end > search.preview_col
         fill_columns(frame, frame_row, col, decoded, left, limit, search.preview_col, search.preview_end, Domain::Highlight::INC_SEARCH)
+      end
+
+      # Finds the bracket under the window's cursor and its partner, the
+      # pair MatchParen shows: nested brackets of the kind counted as `%`
+      # does, but only across the rows the window shows, and while
+      # PAIR_BUDGET code points last. Without a partner there both rows
+      # stay -1.
+      # It stays apart from Motions.match_pair, which walks the bytes of
+      # the whole buffer unbounded, while this reads decoded code points
+      # of the shown rows and stops at a budget.
+      #: (Domain::Buffer, Domain::Window, Integer) -> void
+      def find_pair(buffer, window, tabstop)
+        clear_pair
+        cursor = window.cursor
+        row = cursor.row
+        first = window.top
+        last = first + window.height
+        last = buffer.line_count if last > buffer.line_count
+        last -= 1
+        return if row < first || row > last
+        decoded = @cache.fetch(buffer.line(row), tabstop)
+        return if cursor.col >= decoded.size
+        code = decoded.code(cursor.col)
+        kind = Domain::Motions.pair_kind(code)
+        return if kind < 0
+        forward = kind < 3
+        other = Domain::Motions::PAIR_BYTES[forward ? kind + 3 : kind - 3].to_i
+        step = forward ? 1 : -1
+        budget = @pair_budget
+        budget.reset(PAIR_BUDGET)
+        budget.charge(decoded.size)
+        depth = 1
+        at = cursor.col + step
+        while !budget.stopped
+          size = decoded.size
+          while at >= 0 && at < size
+            found = decoded.code(at)
+            if found == code
+              depth += 1
+            elsif found == other
+              depth -= 1
+              if depth == 0
+                @pair_a_row = cursor.row
+                @pair_a_col = cursor.col
+                @pair_b_row = row
+                @pair_b_col = at
+                return
+              end
+            end
+            at += step
+          end
+          row += step
+          return if row < first || row > last
+          decoded = @cache.fetch(buffer.line(row), tabstop)
+          budget.charge(decoded.size)
+          at = forward ? 0 : decoded.size - 1
+        end
+      end
+
+      # Forgets the pair.
+      #: () -> void
+      def clear_pair
+        @pair_a_row = -1
+        @pair_b_row = -1
+      end
+
+      # The key of what a buffer row shows of the pair, 0 for none: the
+      # column of each of its brackets, part of the row's record.
+      #: (Integer) -> Integer
+      def pair_key(row)
+        key = 0
+        key += @pair_a_col + 1 if row == @pair_a_row
+        key += (@pair_b_col + 1) * 1_000_003 if row == @pair_b_row
+        key
+      end
+
+      # Gives the brackets of the pair on the row being painted the
+      # MatchParen group.
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer) -> void
+      def paint_pair(frame, frame_row, col, decoded, width, left)
+        limit = left + width
+        if @row_of == @pair_a_row
+          fill_columns(frame, frame_row, col, decoded, left, limit, @pair_a_col, @pair_a_col + 1, Domain::Highlight::MATCH_PAREN)
+        end
+        if @row_of == @pair_b_row
+          fill_columns(frame, frame_row, col, decoded, left, limit, @pair_b_col, @pair_b_col + 1, Domain::Highlight::MATCH_PAREN)
+        end
       end
 
       # Gives the code points from first up to last of a decoded line the

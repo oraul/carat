@@ -116,6 +116,73 @@ module AdaptersFramePresenterTest
     out
   end
 
+  # The text cells of the first rows drawn in MatchParen, as "row:column"
+  # with the column counted from the start of the text, for a state whose
+  # cursor is at (row, col), in a window of height rows with the text
+  # scrolled to top.
+  def self.paired(lines, row, col, rows, top, mode)
+    s = state_for(lines, "a.txt")
+    s.mode = mode
+    s.window.top = top
+    s.cursor.move_to(row, col)
+    drawn_pairs(s, rows)
+  end
+
+  # The MatchParen cells of the first rows of a state, as paired lists them.
+  def self.drawn_pairs(s, rows)
+    f = draw(s, rows, 20)
+    out = []
+    r = 0
+    while r < rows - 2
+      c = 4
+      while c < 20
+        out << (r.to_s + ":" + (c - 4).to_s) if f.cell(r, c).hl == D::Highlight::MATCH_PAREN
+        c += 1
+      end
+      r += 1
+    end
+    out
+  end
+
+  # A pair whose window holds a closed fold on another row.
+  def self.folded_pair
+    s = state_for(["a (b) c", "x", "y", "z"], "a.txt")
+    s.window.folds.create(2, 3)
+    s.window.folds.close_at(2)
+    s.cursor.move_to(0, 2)
+    drawn_pairs(s, 6)
+  end
+
+  # Lines whose brackets lie more code points apart than PAIR_BUDGET.
+  def self.over_budget
+    wide = "x" * 100_001
+    ["(", wide, wide, ")"]
+  end
+
+  # The MatchParen cells of the named case, by paired.
+  def self.pair_case(name)
+    nm = D::Mode::NORMAL
+    far = ["(", "a", "b", "c", "d", ")"]
+    case name
+    when "the cursor on the opening parenthesis" then paired(["a (b) c", "xyz"], 0, 2, 6, 0, nm)
+    when "the cursor on the closing parenthesis" then paired(["a (b) c", "xyz"], 0, 4, 6, 0, nm)
+    when "square brackets" then paired(["[a]", "xyz"], 0, 0, 6, 0, nm)
+    when "braces across rows, cursor on the closer" then paired(["{", "  a", "}"], 2, 0, 6, 0, nm)
+    when "braces across rows, cursor on the opener" then paired(["{", "  a", "}"], 0, 0, 6, 0, nm)
+    when "nested pairs of its kind are counted" then paired(["((a))"], 0, 1, 6, 0, nm)
+    when "the cursor on text draws no pair" then paired(["a (b) c"], 0, 0, 6, 0, nm)
+    when "an unmatched bracket draws none" then paired(["a (b c"], 0, 2, 6, 0, nm)
+    when "a partner below the window draws none" then paired(far, 0, 0, 6, 0, nm)
+    when "a partner above the window draws none" then paired(far, 5, 0, 6, 2, nm)
+    when "a pair on later rows is drawn" then paired(["x", "(", "a", ")"], 1, 0, 6, 0, nm)
+    when "visual mode keeps the Visual selection over the pair" then paired(["a (b) c"], 0, 2, 6, 0, D::Mode::VISUAL)
+    when "insert mode draws none" then paired(["a (b) c"], 0, 2, 6, 0, D::Mode::INSERT)
+    when "a window with a closed fold elsewhere draws none" then folded_pair
+    when "a partner past the search budget draws none" then paired(over_budget, 0, 0, 6, 0, nm)
+    else ["unknown case " + name]
+    end
+  end
+
   # The cursor-line layer of highlight ids.
   LIT = D::Highlight::CURSOR_LINE_LAYER
 
@@ -716,6 +783,40 @@ module AdaptersFramePresenterTest
     s.cursor.move_to(0, 2)
     f = draw(s, 6, 20)
     t.assert_equal([VIS + LIT, VIS + LIT, NOR + LIT, NOR + LIT], highlights(f, 0, 4), "a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own")
+
+    # Scenario: Both brackets of a pair are drawn (the cursor on either,
+    # each kind, across rows, nested).
+    # Scenario: An unmatched or off-screen pair is not drawn.
+    # Scenario: Only the grammar's modes draw it (insert mode draws none).
+    # Scenario: A window with a closed fold draws no pair (the fold row).
+    # Scenario: The row repaints when the cursor moves (the two checks
+    # after the table).
+    t.table([
+      ["the cursor on the opening parenthesis", "the cursor on the opening parenthesis", ["0:2", "0:4"]],
+      ["the cursor on the closing parenthesis", "the cursor on the closing parenthesis", ["0:2", "0:4"]],
+      ["square brackets", "square brackets", ["0:0", "0:2"]],
+      ["braces across rows, cursor on the closer", "braces across rows, cursor on the closer", ["0:0", "2:0"]],
+      ["braces across rows, cursor on the opener", "braces across rows, cursor on the opener", ["0:0", "2:0"]],
+      ["nested pairs of its kind are counted", "nested pairs of its kind are counted", ["0:1", "0:3"]],
+      ["the cursor on text draws no pair", "the cursor on text draws no pair", []],
+      ["an unmatched bracket draws none", "an unmatched bracket draws none", []],
+      ["a partner below the window draws none", "a partner below the window draws none", []],
+      ["a partner above the window draws none", "a partner above the window draws none", []],
+      ["a pair on later rows is drawn", "a pair on later rows is drawn", ["1:0", "3:0"]],
+      ["insert mode draws none", "insert mode draws none", []],
+      ["a window with a closed fold elsewhere draws none", "a window with a closed fold elsewhere draws none", []],
+      ["a partner past the search budget draws none", "a partner past the search budget draws none", []],
+      ["visual mode keeps the Visual selection over the pair", "visual mode keeps the Visual selection over the pair", ["0:4"]]
+    ]) { |name| pair_case(name.to_s) }
+    s = state_for(["a (b) c", "xyz"], "a.txt")
+    s.cursor.move_to(0, 0)
+    draw(s, 6, 20)
+    s.cursor.move_to(0, 2)
+    f = draw(s, 6, 20)
+    t.assert_equal(true, f.dirty[0] == 1 && f.cell(0, 6).hl == D::Highlight::MATCH_PAREN, "The row repaints when the cursor moves onto a bracket")
+    s.cursor.move_to(0, 0)
+    f = draw(s, 6, 20)
+    t.assert_equal(true, f.dirty[0] == 1 && f.cell(0, 6).hl == NOR, "The row repaints when the cursor moves off a bracket")
 
     # The cursor shape per mode.
     t.table([
