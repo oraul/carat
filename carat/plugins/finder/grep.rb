@@ -284,6 +284,7 @@ module Carat
           true
         end
 
+        # Whether the term lies inside one of terms, ASCII case ignored.
         #: (String, Array[String]) -> bool
         def inside?(term, terms)
           u = 0
