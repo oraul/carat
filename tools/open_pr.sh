@@ -173,15 +173,11 @@ case "$cmd" in
       done)
     [ -n "$found" ] && [ "$(printf '%s\n' "$found" | wc -l)" -eq 1 ] || refuse "$sha holds no one archived pr.md of $change"
     text=$(git show "$sha:$found") || refuse "cannot read $found at $sha"
-    [ -n "$(printf '%s\n' "$text" | sed '1,2d' | tr -d ' \t\r\n')" ] || refuse "$found has no body"
-    printf '%s\n' "$text" | sed '1,2d' | LC_ALL=C T="$SQUASH_TRAILER" awk '
-      { line[++n] = $0 }
-      END {
-        while (n > 0 && line[n] == "") n--
-        for (i = 1; i <= n; i++) print line[i]
-        print ""
-        print ENVIRON["T"]
-      }' ;;
+    # Each command substitution drops every trailing newline, so the
+    # body's trailing blank lines are gone; every other byte is kept.
+    body=$(printf '%s\n' "$text" | LC_ALL=C sed '1,2d')
+    [ -n "$(printf '%s' "$body" | tr -d ' \t\r\n')" ] || refuse "$found has no body"
+    printf '%s\n\n%s\n' "$body" "$SQUASH_TRAILER" ;;
   read)
     [ $# -eq 2 ] || usage
     branch=$1
