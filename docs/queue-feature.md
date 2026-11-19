@@ -6,8 +6,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 The user-approved exception (2026-11-19, the finder-match-strict brief): `finder-grep-c` and `finder-match-strict` (Pool 1 at f2c6f46, the user's order) run outside the 3.
 
-1. `vim-folds-c` (T2 user request, estimated medium, pushed back 5, reason: the user's order, `finder-grep-preview` first): `zR`, `zM`, `zj`, `zk`, `[z`, `]z` are missing (`carat/use_cases/actions/fold_handler.rb:43`); and the single-window branch of `close_window` (`carat/domain/buffer_list.rb:369`) drops a kept slot's folds untested (sprint-20 review quality). Accepted when each key has a `docs/compatibility.md` row, a `config/default.caratrc` binding in every mode its motion needs, and a table-driven row matching Vim, and a test runs `:q` on a second tab page's only window beside a hidden slot window with a fold and sees its fold list shrink. Backlog: none.
-2. `message-styling` (T2 user request, estimated medium, Facet wave 2, parts 4 and 5 of `cursor-and-messages`): the command line and message row miss the Facet styling. Command line: prompt DIM, text FG, pending keys and the match count DIM at the right (`carat/adapters/frame_presenter.rb:1324`, `:1341`). Messages: an error paints its whole line MESSAGE_ERROR (`:1388`, `:1358`); wanted error RED glyph, bold RED code, FG text; warning YELLOW glyph, FG text; info DIM; `-- More --` bold BLUE; `-- INSERT --` dropped from the message row (`:1390`, the pill shows the mode); Question and MoreMsg painted (`carat/domain/highlight.rb:42`). This makes the squash body of #223 true. Accepted when frame rows show each in carat-dark and carat-light and NO_COLOR keeps the attributes. Out: the multi-line band, diagnostic text, `ui-groups`. Backlog: "### The squash body of #223 claims styling its diff lacks".
+1. `message-styling` (T2 user request, estimated medium, Facet wave 2, parts 4 and 5 of `cursor-and-messages`): the command line and message row miss the Facet styling. Command line: prompt DIM, text FG, pending keys and the match count DIM at the right (`carat/adapters/frame_presenter.rb:1324`, `:1341`). Messages: an error paints its whole line MESSAGE_ERROR (`:1388`, `:1358`); wanted error RED glyph, bold RED code, FG text; warning YELLOW glyph, FG text; info DIM; `-- More --` bold BLUE; `-- INSERT --` dropped from the message row (`:1390`, the pill shows the mode); Question and MoreMsg painted (`carat/domain/highlight.rb:42`). This makes the squash body of #223 true. Accepted when frame rows show each in carat-dark and carat-light and NO_COLOR keeps the attributes. Out: the multi-line band, diagnostic text, `ui-groups`. Backlog: "### The squash body of #223 claims styling its diff lacks".
 
 ## Pool
 
@@ -40,14 +39,13 @@ The user-approved exception (2026-11-19, the finder-match-strict brief): `finder
 
 ## Decisions
 
-- Delivering (T2 user request, the brief of 2026-11-19): `finder-grep-preview`, Pool 1 at a2a0f80, removed; the user's order: after `finder-match-strict`, before `vim-folds-c`.
-- Estimate medium (T2): 8 of the last 10 feature rows medium; finder-grep-b, the nearest (one area, `carat/plugins/finder/`), 997,989 in 82 min.
-- No size up (T2): of the last two only finder-match-strict went over (1,971,222 of 1,200,000, 103 min); finder-grep-c 1,862,327 of large's 2,500,000.
-- Size check (T2): one map area, one behavior (layout, centred window, mark, safe text): no split; on a stop, the centred safe preview first, the follow and clamp rows next.
-- Critical (T2): none of rules a to e; `carat/plugins/finder/` is outside rule d and no host request is added.
-- Security first (T0): none; no pending run state holds a periodic finding; open Mediums at confidence 6 and 4, below 8.
-- Delivered (T2, the exception): `finder-match-strict` merged a85da7940c56, rework 2, 1,971,222 total, over medium (notes 9, 10, 12).
-- Notes (T1): finder-match-strict retros 13 to 15 are backlog-lane, sent to the findings file, 14 merged into `advisory-findings-auto`, 15 into `check-pass-budget-flag`; quality 1 to 12 handled.
-- Pending (T1): merge-body-sections, merged a2a0f80dbcfa, notes 5 to 8 are the backlog lane's.
-- Aging (T2): `vim-folds-c` pushed back 5, next after this delivery.
+- Delivering (T2 user request, pushed back 5): `vim-folds-c`, Sprint 21 item 1 at 3830d72, removed; the main session's brief.
+- Estimate large (T2): base medium from the fold rows vim-folds-a 1,678,269, vim-folds-b 904,033, vim-folds-windows 1,095,387; one up, the last two lane runs over 1,200,000 (finder-grep-preview 2,075,638 in 110 min, finder-match-strict 1,971,222 in 103 min).
+- Size check (T2): two behaviors of one fold family (`zR` `zM` levels, `zj` `zk` `[z` `]z` motions) and one test of existing code (`buffer_list.rb:369`), inside the user's roadmap: no split; on a stop, the motions go to the pool as `vim-folds-motions`.
+- Critical (T2, rule e): estimated large, `carat/use_cases/actions/fold_handler.rb`; no rule d path (`buffer_list.rb` is not `buffer.rb`).
+- Security first (T0): none; neither pending run state (delivery-guards-c, finder-grep-preview) holds a periodic finding.
+- Delivered (T2): `finder-grep-preview` merged 3830d72fbe80, rework 2, 2,075,638 total in 110 min, over medium (overruns 7, 8, 9, 12: 409,157 output of 200,000).
+- Notes (T1): finder-grep-preview retros 13 to 15 are pipeline, the backlog lane's, sent to the findings file, 14 merged into `check-pass-budget-flag`; quality 1 to 6, 10, 11 handled; 16 is merge-body-sections', the backlog lane's.
+- Pending (T1): delivery-guards-c, merged e4fb38076e90, notes 1 to 7 are the backlog lane's (`check-runner-safety` plans them); its note 5 (size-up by unrelated rows) applies to this large.
+- Sprint (T2): Sprint 21 keeps `message-styling` and the exception's two outside the 3; no item moved, 0 push-backs added.
 - Merge gate (T1): 0 `tools/rules.sh` edits.
