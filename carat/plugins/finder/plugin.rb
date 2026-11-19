@@ -67,7 +67,7 @@ module Carat
           @index = Grep.new
           @open = false
           @root = ""
-          @paths = no_paths
+          @paths = Grep.no_strings
           @matches = []
           @selected = 0
           @list_float = 0
@@ -164,11 +164,6 @@ module Carat
 
         private
 
-        #: () -> Array[String]
-        def no_paths
-          Grep.no_strings
-        end
-
         # Lists the files and opens the prompt; a grep also reads their text.
         #: (Carat::PluginApi::Host, bool) -> void
         def open(host, grep)
@@ -197,7 +192,7 @@ module Carat
         #: (Carat::PluginApi::Host) -> Array[String]
         def ignored(host)
           text = host.option("ignore").text
-          text.empty? ? no_paths : text.split("\n")
+          text.empty? ? Grep.no_strings : text.split("\n")
         end
 
         # Matches the query against every path, best first; every path in
@@ -298,7 +293,7 @@ module Carat
           @open = false
           @grep = false
           @index = Grep.new
-          @paths = no_paths
+          @paths = Grep.no_strings
           @matches = []
           @selected = 0
         end
@@ -352,7 +347,7 @@ module Carat
         # one marked.
         #: (Integer) -> Array[String]
         def list_lines(height)
-          lines = no_paths
+          lines = Grep.no_strings
           matches = @matches
           if matches.empty?
             lines << (@grep && @index.idle? ? HINT : EMPTY)

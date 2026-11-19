@@ -33,10 +33,10 @@ module Carat
         #: () -> void
         def initialize
           @files = Grep.no_strings
-          @file_of = ints
-          @numbers = ints
+          @file_of = Grep.no_ints
+          @numbers = Grep.no_ints
           @texts = Grep.no_strings
-          @hits = ints
+          @hits = Grep.no_ints
           @query = ""
           @capped = false
           @more = false
@@ -59,11 +59,11 @@ module Carat
         #: (String) -> void
         def search(query)
           @query = query
-          hits = ints
+          hits = Grep.no_ints
           @hits = hits
           @more = false
           return if query.empty?
-          keys = ints
+          keys = Grep.no_ints
           matched = 0
           floor = -1
           i = 0
@@ -171,8 +171,6 @@ module Carat
           out
         end
 
-        # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
-        # that starts none.
         # An empty list the compiler types as strings.
         #: () -> Array[String]
         def self.no_strings
@@ -181,6 +179,16 @@ module Carat
           out
         end
 
+        # An empty list the compiler types as integers.
+        #: () -> Array[Integer]
+        def self.no_ints
+          out = [0]
+          out.clear
+          out
+        end
+
+        # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
+        # that starts none.
         #: (Integer) -> Integer
         def self.utf8_size(b)
           return 1 if b < 0x80
@@ -196,7 +204,7 @@ module Carat
         #: (Array[Integer]) -> Array[Integer]
         def best(keys)
           keys.sort!
-          kept = ints
+          kept = Grep.no_ints
           k = keys.length - MAX_ROWS
           while k < keys.length
             kept << keys[k]
@@ -250,13 +258,6 @@ module Carat
             i += 1
           end
           false
-        end
-
-        #: () -> Array[Integer]
-        def ints
-          out = [0]
-          out.clear
-          out
         end
       end
     end

@@ -10,17 +10,20 @@ In normal mode `<leader>fg` SHALL open the finder's content picker: the prompt `
 ### Requirement: The picker reads the finder's files once and within bounds
 The picker's files SHALL be the finder's listing, each read once when the picker opens. A file that cannot be read, holds a NUL byte, or is over the host's read limit SHALL add no line; only its first 1000 lines SHALL be stored, a line SHALL be cut at the last character boundary at or under 400 bytes, and at most 100,000 lines SHALL be stored.
 
-#### Scenario: The grep list uses the whole width of a wide screen
-- **WHEN** the screen is 120 columns wide and the user types a query
-- **THEN** one float shows, wider than half the screen, with no preview beside it
-
-#### Scenario: The picker reads the finder's files once and within bounds
+#### Scenario: The picker stores only bounded lines of each file
 - **WHEN** a file holds 1200 lines, a line holds 500 bytes, a line holds a multi-byte character the cut would split, or more than 100,000 lines are stored
 - **THEN** only the first 1000 lines of the file are stored, the line is cut at a character boundary at or under 400 bytes, and the title marks the store cap with `+`
 
 #### Scenario: Files that cannot be searched are left out
 - **WHEN** the project holds a binary file, a file over the read limit, an empty file, and an ignored directory
 - **THEN** none of them adds a line to the count or a row
+
+### Requirement: The grep list uses the whole width
+The grep list SHALL show no preview beside it and SHALL use the width the file finder's list uses without one.
+
+#### Scenario: The grep list uses the whole width of a wide screen
+- **WHEN** the screen is 120 columns wide and the user types a query
+- **THEN** one float shows, wider than half the screen, with no preview beside it
 
 ### Requirement: Typing lists the matching lines best first
 Every change of the typed text SHALL list again the lines in which every typed byte appears in order, ignoring ASCII case, each row as the file's path, the line number, and the line's text. Rows SHALL rank by the finder's path rules applied to the line: a better score first, then a shorter path, then listing order. With no match the float SHALL read `No match`.

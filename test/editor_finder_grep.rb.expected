@@ -26,11 +26,13 @@ ok   Ctrl-T opens a buffer tab at the line
 ok   a valid character beside an invalid byte stays whole
 ok   a 500-byte line is cut at 400 bytes
 ok   the cut falls back to a character boundary
-ok   a line of continuation bytes is cut to 400 question marks, not emptied
+ok   a line of continuation bytes is cut at 400 bytes, not emptied
 ok   a C1 control (the CSI U+009B) shows as a space
 ok   only the first 1000 lines of a file are stored
+ok   the first shown row is the first line of the file
+ok   the last shown row is the 200th line, the cap
 ok   the 100,000-line store cap is marked when it cuts a file
 ok   no preview float beside the grep list at 120 columns
 ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 35 passed, 0 failed
+editor_finder_grep: 37 passed, 0 failed

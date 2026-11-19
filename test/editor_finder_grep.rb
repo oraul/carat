@@ -40,9 +40,10 @@ module EditorFinderGrepTest
     files
   end
 
-  # The bounds: a line of continuation bytes, a C1 control, a line with a valid multi-byte character beside an
-  # invalid byte, a 500-byte line, a line the 400-byte cut falls inside a
-  # character of, and 1200 lines of which the first 1000 are read.
+  # The bounds: a line of continuation bytes, a C1 control, a line with a
+  # valid multi-byte character beside an invalid byte, a 500-byte line, a
+  # line the 400-byte cut falls inside a character of, and 1200 lines of
+  # which the first 1000 are read.
   def self.bounded
     files = Carat::Doubles::MemoryFiles.new
     files.move_to(ROOT)
@@ -166,7 +167,7 @@ module EditorFinderGrepTest
       opened(input[0], input[1])
     end
 
-    # Scenario: The picker reads the finder's files once and within bounds (the shown-safely rows of invalid bytes and C1 controls too)
+    # Scenario: The picker stores only bounded lines of each file (the shown-safely rows of invalid bytes and C1 controls too)
     h = editor_on(bounded, "")
     h.type("<Space>fgcaf")
     t.assert_equal("Grep 1/1006|> u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
@@ -178,13 +179,18 @@ module EditorFinderGrepTest
     t.assert_equal("Grep 1/1006|> wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
     h = editor_on(bounded, "")
     h.type("<Space>fgz")
-    t.assert_equal("Grep 1/1006|> bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut to 400 question marks, not emptied")
+    t.assert_equal("Grep 1/1006|> bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut at 400 bytes, not emptied")
     h = editor_on(bounded, "")
     h.type("<Space>fgcd")
     t.assert_equal("Grep 1/1006|> c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space")
     h = editor_on(bounded, "")
     h.type("<Space>fghit")
     t.assert_equal("Grep 200+/1006", h.state.tab.floats.at(0).spec.title.to_s, "only the first 1000 lines of a file are stored")
+    shown = floats(h)[0].to_s
+    t.assert_equal(true, shown.start_with?("Grep 200+/1006|> rows.txt:1: hit"), "the first shown row is the first line of the file")
+    h.type("<C-n>" * 250)
+    shown = floats(h)[0].to_s
+    t.assert_equal(true, shown.end_with?("rows.txt:200: hit"), "the last shown row is the 200th line, the cap")
     h = editor_on(huge, "")
     h.type("<Space>fgx")
     t.assert_equal("Grep 200+/100000+", h.state.tab.floats.at(0).spec.title.to_s, "the 100,000-line store cap is marked when it cuts a file")

@@ -18,3 +18,9 @@
 - [x] 3.6 Keep one typed-empty strings helper (Grep.no_strings, used by Plugin#no_paths) and keep a bounded top-MAX_ROWS selection in the search
 - [x] 3.7 Bound the cut's walk back to three continuation bytes; tests for a line of continuation bytes and a C1 control row
 - [x] 3.8 Delta spec: the character-boundary cut, the wide-screen and bounds scenarios; proposal and map name Matcher.span_score
+
+## 4. Advisory closing
+
+- [x] 4.1 Drop Plugin#no_paths for Grep.no_strings and add Grep.no_ints beside it; move the utf8_size comment back above it
+- [x] 4.2 Assert the first and last shown rows of the 1000-line search; label the continuation-byte row, rewrap the comment
+- [x] 4.3 Delta spec: the wide-screen scenario under its own requirement, the bounds scenario renamed (test comment too)
