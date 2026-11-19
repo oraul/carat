@@ -35,11 +35,38 @@ ok   a fold crossing another grows to hold it
 ok   u restores the lines of a deleted fold, not the fold
 ok   zfjiX opens the fold and edits its first line, as Vim
 ok   a repeated insert opens the fold it closed again
+ok   zR opens every fold
+ok   zM closes every fold, the cursor going to the first line of the closed fold
 ok   zo with no fold gives E490
 ok   zc with no fold gives E490
 ok   za with no fold gives E490
 ok   zd with no fold gives E490
 ok   zd below a fold gives E490
+ok   zR with no fold gives no message
+ok   zM with no fold gives no message
+ok   zj moves to the start of the next fold
+ok   2zj goes on to the start of the fold after it
+ok   3zj goes into the nested fold of an open fold
+ok   a count past the last fold stops at the last fold start
+ok   zj with no fold below leaves the cursor
+ok   zk moves to the end of the previous fold
+ok   2zk takes the deepest fold end that moves the cursor
+ok   zk with no fold above leaves the cursor
+ok   [z moves to the start of the open fold
+ok   2[z goes on to the start of the fold holding it
+ok   ]z moves to the end of the open fold
+ok   2]z goes on to the end of the fold holding it
+ok   A fold motion with no fold beyond the cursor leaves it
+ok   ]z on the last line of the outer fold leaves the cursor
+ok   zj counts a closed fold as one fold
+ok   zk onto a closed fold lands on its first line
+ok   [z in a closed fold leaves the cursor
+ok   dzj deletes up to the next fold
+ok   dzj from the start of a line deletes the line, as an exclusive motion to column 0 does
+ok   d]z deletes up to the end of the open fold
+ok   zj in visual mode moves the cursor end of the selection
+ok   zk in linewise visual mode moves the cursor end of the selection
+ok   zj is a jump
 ok   the cursor on the tenth row after a closed fold of ten lines
 ok   one line more scrolls the fold out
 ok   gg back onto the fold scrolls it in
@@ -53,6 +80,7 @@ ok   a fold in a second tab page is tracked by the buffer
 ok   closing the tab page drops its window's fold list, the first tab page keeps its own
 ok   a fold in a hidden slot window is tracked by the buffer
 ok   closing the tab page drops the folds of its hidden slot window
+ok   Quitting a second tab page's only window drops its hidden slot window's folds
 ok   a syntax-highlighted line below a closed fold, past top plus the height
 ok   a float opens below a cursor under a closed fold where the rows below have room
-editor_folds: 57 passed, 0 failed
+editor_folds: 85 passed, 0 failed

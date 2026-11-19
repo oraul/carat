@@ -189,6 +189,12 @@ keymap.normal zc fold.close
 keymap.normal za fold.toggle
 keymap.normal zd fold.delete
 keymap.normal zE fold.delete_all
+keymap.normal zR fold.open_all
+keymap.normal zM fold.close_all
+keymap.normal zj motion.fold_next
+keymap.normal zk motion.fold_previous
+keymap.normal [z motion.fold_start
+keymap.normal ]z motion.fold_end
 keymap.normal gt tabline.next
 keymap.normal gT tabline.previous
 keymap.normal <C-PageDown> tab.next
@@ -397,6 +403,10 @@ keymap.visual zt scroll.cursor_top
 keymap.visual zz scroll.cursor_middle
 keymap.visual zb scroll.cursor_bottom
 keymap.visual zf fold.create
+keymap.visual zj motion.fold_next
+keymap.visual zk motion.fold_previous
+keymap.visual [z motion.fold_start
+keymap.visual ]z motion.fold_end
 
 # Linewise visual mode.
 keymap.visual_line <Esc> mode.normal
@@ -525,6 +535,10 @@ keymap.visual_line zt scroll.cursor_top
 keymap.visual_line zz scroll.cursor_middle
 keymap.visual_line zb scroll.cursor_bottom
 keymap.visual_line zf fold.create
+keymap.visual_line zj motion.fold_next
+keymap.visual_line zk motion.fold_previous
+keymap.visual_line [z motion.fold_start
+keymap.visual_line ]z motion.fold_end
 
 # Blockwise visual mode.
 keymap.visual_block <Esc> mode.normal
@@ -653,6 +667,10 @@ keymap.visual_block zt scroll.cursor_top
 keymap.visual_block zz scroll.cursor_middle
 keymap.visual_block zb scroll.cursor_bottom
 keymap.visual_block zf fold.create
+keymap.visual_block zj motion.fold_next
+keymap.visual_block zk motion.fold_previous
+keymap.visual_block [z motion.fold_start
+keymap.visual_block ]z motion.fold_end
 
 # Operator-pending mode.
 keymap.operator_pending <Esc> mode.normal
@@ -702,6 +720,10 @@ keymap.operator_pending H motion.screen_top
 keymap.operator_pending M motion.screen_middle
 keymap.operator_pending L motion.screen_bottom
 keymap.operator_pending % motion.match_pair
+keymap.operator_pending zj motion.fold_next
+keymap.operator_pending zk motion.fold_previous
+keymap.operator_pending [z motion.fold_start
+keymap.operator_pending ]z motion.fold_end
 keymap.operator_pending d operator.delete
 keymap.operator_pending c operator.change
 keymap.operator_pending y operator.yank

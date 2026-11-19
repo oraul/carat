@@ -56,6 +56,17 @@ module EditorFoldsTest
     head + "·" * (36 - head.length)
   end
 
+  # Opens a second tab page on a.txt beside a hidden left-slot window
+  # holding a fold of rows 0 and 1, and returns the buffer they share.
+  def self.slot_window_tab(h)
+    h.type(":tabedit a.txt<CR>")
+    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
+    side.add_fold(0, 1)
+    h.state.tab.left_slot.attach(side, "side", 20)
+    h.state.tab.left_slot.hide(20)
+    side.buffer
+  end
+
   # The window's folds as [first, last, closed] triples.
   def self.folds_of(h)
     folds = h.state.window.folds
@@ -128,7 +139,9 @@ module EditorFoldsTest
       ["a fold crossing another grows to hold it", "jzfjzoggzfj", [[[0, 2, true], [1, 2, false]], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["u restores the lines of a deleted fold, not the fold", "zfjddu", [[], ["a", "b", "c", "d", "e"], [0, 0], :normal]],
       ["zfjiX opens the fold and edits its first line, as Vim", "zfjiX<Esc>", [[[0, 1, false]], ["Xa", "b", "c", "d", "e"], [0, 0], :normal]],
-      ["a repeated insert opens the fold it closed again", "zfjiX<Esc>zc.", [[[0, 1, false]], ["XXa", "b", "c", "d", "e"], [0, 0], :normal]]
+      ["a repeated insert opens the fold it closed again", "zfjiX<Esc>zc.", [[[0, 1, false]], ["XXa", "b", "c", "d", "e"], [0, 0], :normal]],
+      ["zR opens every fold", "zf3jzojzfjzR", [[[0, 3, false], [1, 2, false]], ["a", "b", "c", "d", "e"], [1, 0], :normal]],
+      ["zM closes every fold, the cursor going to the first line of the closed fold", "zf3jzojzfjzRzM", [[[0, 3, true], [1, 2, true]], ["a", "b", "c", "d", "e"], [0, 0], :normal]]
     ]) do |keys|
       h = editor("a\nb\nc\nd\ne\n", "")
       h.type(keys.to_s)
@@ -141,11 +154,48 @@ module EditorFoldsTest
       ["zc with no fold gives E490", "zc", "E490: No fold found"],
       ["za with no fold gives E490", "za", "E490: No fold found"],
       ["zd with no fold gives E490", "zd", "E490: No fold found"],
-      ["zd below a fold gives E490", "zfjjzd", "E490: No fold found"]
+      ["zd below a fold gives E490", "zfjjzd", "E490: No fold found"],
+      ["zR with no fold gives no message", "zR", ""],
+      ["zM with no fold gives no message", "zM", ""]
     ]) do |keys|
       h = editor("a\nb\nc\n", "")
       h.type(keys.to_s)
       h.message
+    end
+
+    # The fold motions: rows are [label, keys, [cursor, mode, first line,
+    # line count]] over the lines "l0" to "l9" after the prefix made an
+    # open fold over rows 1 and 2 and one over rows 5 to 8 holding an
+    # open fold over rows 6 and 7, the cursor back on row 0.
+    made = "jzfjzo4jzf3jzojzfjzogg"
+    t.table([
+      ["zj moves to the start of the next fold", "zj", [[1, 0], :normal, "l0", 10]],
+      ["2zj goes on to the start of the fold after it", "2zj", [[5, 0], :normal, "l0", 10]],
+      ["3zj goes into the nested fold of an open fold", "3zj", [[6, 0], :normal, "l0", 10]],
+      ["a count past the last fold stops at the last fold start", "9zj", [[6, 0], :normal, "l0", 10]],
+      ["zj with no fold below leaves the cursor", "Gzj", [[9, 0], :normal, "l0", 10]],
+      ["zk moves to the end of the previous fold", "Gzk", [[8, 0], :normal, "l0", 10]],
+      ["2zk takes the deepest fold end that moves the cursor", "G2zk", [[7, 0], :normal, "l0", 10]],
+      ["zk with no fold above leaves the cursor", "zk", [[0, 0], :normal, "l0", 10]],
+      ["[z moves to the start of the open fold", "8G[z", [[6, 0], :normal, "l0", 10]],
+      ["2[z goes on to the start of the fold holding it", "8G2[z", [[5, 0], :normal, "l0", 10]],
+      ["]z moves to the end of the open fold", "7G]z", [[7, 0], :normal, "l0", 10]],
+      ["2]z goes on to the end of the fold holding it", "7G2]z", [[8, 0], :normal, "l0", 10]],
+      ["A fold motion with no fold beyond the cursor leaves it", "[z", [[0, 0], :normal, "l0", 10]],
+      ["]z on the last line of the outer fold leaves the cursor", "9G]z", [[8, 0], :normal, "l0", 10]],
+      ["zj counts a closed fold as one fold", "zM3zj", [[5, 0], :normal, "l0", 10]],
+      ["zk onto a closed fold lands on its first line", "zMGzk", [[5, 0], :normal, "l0", 10]],
+      ["[z in a closed fold leaves the cursor", "zM6G[z", [[5, 0], :normal, "l0", 10]],
+      ["dzj deletes up to the next fold", "ldzj", [[0, 0], :normal, "l", 10]],
+      ["dzj from the start of a line deletes the line, as an exclusive motion to column 0 does", "dzj", [[0, 0], :normal, "l1", 9]],
+      ["d]z deletes up to the end of the open fold", "7Gd]z", [[6, 0], :normal, "l0", 9]],
+      ["zj in visual mode moves the cursor end of the selection", "vzj", [[1, 0], :visual, "l0", 10]],
+      ["zk in linewise visual mode moves the cursor end of the selection", "GVzk", [[8, 0], :visual_line, "l0", 10]],
+      ["zj is a jump", "zj<C-o>", [[0, 0], :normal, "l0", 10]]
+    ]) do |keys|
+      h = editor("l0\nl1\nl2\nl3\nl4\nl5\nl6\nl7\nl8\nl9\n", "")
+      h.type(made + keys.to_s)
+      [h.cursor, h.mode, h.lines[0], h.lines.length]
     end
 
     # Scrolling counts a closed fold as one row: rows are [label, keys,
@@ -197,15 +247,17 @@ module EditorFoldsTest
 
     # A kept slot's hidden window drops its folds with its tab page.
     h = editor("a\nb\nc\n", "")
-    h.type(":tabedit a.txt<CR>")
-    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
-    side.add_fold(0, 1)
-    shared = side.buffer
-    h.state.tab.left_slot.attach(side, "side", 20)
-    h.state.tab.left_slot.hide(20)
+    shared = slot_window_tab(h)
     t.assert_equal(1, shared.fold_lists.length, "a fold in a hidden slot window is tracked by the buffer")
     h.type(":tabclose<CR>")
     t.assert_equal(0, shared.fold_lists.length, "closing the tab page drops the folds of its hidden slot window")
+
+    # :q on a tab page's only window closes the tab page through the
+    # single-window branch of BufferList#close_window.
+    h = editor("a\nb\nc\n", "")
+    shared = slot_window_tab(h)
+    h.type(":q<CR>")
+    t.assert_equal(0, shared.fold_lists.length, "Quitting a second tab page's only window drops its hidden slot window's folds")
 
     # A window with a closed fold shows more buffer rows than its height:
     # the rows below the fold are highlighted and a float anchored at the

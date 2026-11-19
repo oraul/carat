@@ -222,6 +222,56 @@ module Carat
         true
       end
 
+      # Opens every fold (zR), as Neovim's highest foldlevel does.
+      #: () -> void
+      def open_all
+        fill_closed(false)
+      end
+
+      # Closes every fold (zM), as Neovim's foldlevel 0 does.
+      #: () -> void
+      def close_all
+        fill_closed(true)
+      end
+
+      # The row zj (forward) or zk moves to from row: the first row of the
+      # next fold or the last row of the previous one, as Neovim's
+      # foldMoveTo walks the nested folds from the top: at each level the
+      # fold beside row gives the row, a deeper one replacing it, and the
+      # walk goes into the fold holding row unless it is closed, so a
+      # closed fold counts as one. row when there is none.
+      #: (Integer, bool) -> Integer
+      def next_fold_row(row, forward)
+        found = row
+        parent = -1
+        while true
+          j = child_beside(parent, row, forward)
+          if j >= 0
+            found = forward ? starts[j] : ends[j]
+          end
+          at = child_holding(parent, row)
+          break if at < 0 || closed[at]
+          parent = at
+        end
+        found
+      end
+
+      # The row ]z (forward) or [z moves to from row: the last or first row
+      # of the innermost open fold holding row that moves the cursor, the
+      # walk stopping at a closed fold, as Neovim's foldMoveTo does; row
+      # when there is none.
+      #: (Integer, bool) -> Integer
+      def open_fold_row(row, forward)
+        found = row
+        at = child_holding(-1, row)
+        while at >= 0 && !closed[at]
+          edge = forward ? ends[at] : starts[at]
+          found = edge if forward ? edge > row : edge < row
+          at = child_holding(at, row)
+        end
+        found
+      end
+
       # Deletes every fold (zE).
       #: () -> void
       def clear
@@ -289,6 +339,59 @@ module Carat
           j += 1
         end
         depth
+      end
+
+      #: (bool) -> void
+      def fill_closed(value)
+        i = 0
+        while i < closed.length
+          closed[i] = value
+          i += 1
+        end
+      end
+
+      # The innermost fold holding fold i, -1 for none: the sort puts
+      # every fold holding it before it, the innermost last.
+      #: (Integer) -> Integer
+      def parent_of(i)
+        j = i - 1
+        while j >= 0
+          return j if starts[j] <= starts[i] && ends[j] >= ends[i]
+          j -= 1
+        end
+        -1
+      end
+
+      # The fold nested directly in fold parent (-1 for the top level)
+      # that holds row, -1 for none, parent holding row: the sort puts
+      # every fold holding a fold before it, so the first fold past parent
+      # that holds row is a direct child of parent.
+      #: (Integer, Integer) -> Integer
+      def child_holding(parent, row)
+        i = parent + 1
+        while i < starts.length
+          return i if starts[i] <= row && ends[i] >= row
+          i += 1
+        end
+        -1
+      end
+
+      # The fold nested directly in fold parent nearest row past it: the
+      # first starting below row (forward) or the last ending above it,
+      # -1 for none. Beside the fold holding row it is that fold's next or
+      # previous sibling.
+      #: (Integer, Integer, bool) -> Integer
+      def child_beside(parent, row, forward)
+        found = -1
+        i = parent + 1
+        while i < starts.length
+          if parent_of(i) == parent
+            return i if forward && starts[i] > row
+            found = i if !forward && ends[i] < row
+          end
+          i += 1
+        end
+        found
       end
 
       #: (Integer) -> bool

@@ -1,0 +1,5 @@
+# Brief
+
+vim-folds-c: docs/queue-feature.md Sprint 21 item 1 at 3830d72, in the feature lane, beside the backlog-lane delivery check-runner-safety; touch no file of the backlog lane (docs/queue-backlog.md, docs/metrics-backlog.tsv). Critical by rule e (carat/use_cases/, carat/domain/), so the contributor runs on the session's model if the tier rules say so. No model name or alias anywhere in names or prose. If the change edits tools/rules.sh, stop and name it.
+
+The queue line: `vim-folds-c` (T2 user request, estimated medium, pushed back 5, reason: the user's order, `finder-grep-preview` first): `zR`, `zM`, `zj`, `zk`, `[z`, `]z` are missing (`carat/use_cases/actions/fold_handler.rb:43`); and the single-window branch of `close_window` (`carat/domain/buffer_list.rb:369`) drops a kept slot's folds untested (sprint-20 review quality). Accepted when each key has a `docs/compatibility.md` row, a `config/default.caratrc` binding in every mode its motion needs, and a table-driven row matching Vim, and a test runs `:q` on a second tab page's only window beside a hidden slot window with a fold and sees its fold list shrink. Backlog: none.

@@ -10,7 +10,7 @@ require_relative "action_table"
 
 module Carat
   module UseCases
-    # The six fold.* actions. fold.create (zf) is a pending operator in
+    # The eight fold.* actions. fold.create (zf) is a pending operator in
     # normal mode, which Operate carries out with its motion or text
     # object, and folds the selection at once in a visual mode; the
     # others complete at once, each a ChangeFolds target. None repeats
@@ -40,9 +40,9 @@ module Carat
 
       #: (ActionTable, operate: Operate, change_folds: ChangeFolds) -> void
       def self.register(table, operate:, change_folds:)
-        names = [Domain::OperatorKind::FOLD, "fold.open", "fold.close", "fold.toggle", "fold.delete", "fold.delete_all"]
-        targets = [:create, :open, :close, :toggle, :delete, :eliminate]
-        descriptions = ["Create a fold", "Open a fold", "Close a fold", "Toggle a fold", "Delete a fold", "Delete every fold"]
+        names = [Domain::OperatorKind::FOLD, "fold.open", "fold.close", "fold.toggle", "fold.delete", "fold.delete_all", "fold.open_all", "fold.close_all"]
+        targets = [:create, :open, :close, :toggle, :delete, :eliminate, :open_all, :close_all]
+        descriptions = ["Create a fold", "Open a fold", "Close a fold", "Toggle a fold", "Delete a fold", "Delete every fold", "Open every fold", "Close every fold"]
         i = 0
         while i < names.length
           table.register(names[i], FoldHandler.new(operate: operate, change_folds: change_folds, target: targets[i]), descriptions[i])
