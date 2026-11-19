@@ -2,6 +2,12 @@ ok   Space f f opens the finder
 ok   Ctrl-P opens the finder
 ok   Typing filters the files
 ok   case is ignored
+ok   two terms match in any order
+ok   two terms match in the other order
+ok   a term that matches nothing leaves no match
+ok   initials match
+ok   a run that starts mid-word does not match
+ok   a query of spaces lists every file in listing order
 ok   a backspace widens the match again
 ok   No file matches
 ok   Ctrl-N and Ctrl-P move the highlight
@@ -34,10 +40,12 @@ ok   the configuration's ignore list replaces the default
 ok   A link leaving the project is skipped
 ok   A linked directory is not entered
 ok   The file name match ranks first
+ok   A scattered path is not listed: a file name match, a directory match, then initials
+ok   A multi-byte path matches by its bytes
 ok   Ten thousand files are listed
 ok   Ten thousand files are listed and filtered
 ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
 ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
 ok   The finder boxes share an edge without a border: the host's frame closes the gap
-editor_finder: 42 passed, 0 failed
+editor_finder: 50 passed, 0 failed

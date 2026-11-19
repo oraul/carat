@@ -3,39 +3,62 @@ require_relative "../../plugin_api"
 module Carat
   module Plugins
     module Finder
-      # Fuzzy matching of a typed query against a relative path, by bytes,
-      # ASCII letters ignoring case, allocating nothing. Every byte of the
-      # query must appear in the path in order. The query is tried inside
-      # the file name first (after the last "/"), which adds NAME_BONUS,
-      # then across the whole path. Within the part tried, the leftmost
-      # match is found and then tightened from its end backwards, so the
-      # span is short; each matched byte scores MATCH, BOUNDARY more at the
-      # start of a segment or word, and RUN more right after the matched
-      # byte before it, and each byte of the span between matches costs
-      # GAP. key packs a score, the path's length, and its listing index
-      # into one integer, so sorting the keys orders the matches best
-      # first, a shorter path first among equal scores, then by listing.
-      # find, word_start?, and word_end? serve the grep picker's substring search
-      # (word_byte? and camel? are theirs, and boundary?'s, to share).
+      # Matching of a typed query against a relative path, by bytes, ASCII
+      # letters ignoring case, allocating nothing. A query is terms between
+      # spaces, and the path must match every one, in any order; a term
+      # matches in one of two tiers, and nothing else matches. Tier 1: the
+      # term is a contiguous substring of the path, ranked by where it
+      # lies: inside the file name (after the last "/") starting at a
+      # segment or word (boundary?), else elsewhere in the name, else in
+      # a directory starting at a segment or word, else elsewhere. Tier 2:
+      # the term is a few contiguous runs, in order, each after the first
+      # starting at a segment or word (initials and camel humps), at most
+      # MAX_RUNS, fewer runs ranking higher. A path's score is its worst
+      # term's score, then the sum of the terms'; every tier 1 score is
+      # above every tier 2 one. key packs a score, the path's length, and
+      # its listing index into one integer, so sorting the keys orders the
+      # matches best first, a shorter path first among equal scores, then
+      # by listing. find, word_start?, and word_end? serve the grep
+      # picker's substring search (word_byte? and camel? are theirs, and
+      # boundary?'s, to share).
       module Matcher
-        MATCH = 16
-        BOUNDARY = 24
-        RUN = 16
-        GAP = 2
-        NAME_BONUS = 256
+        # A run match scores MAX_RUNS + 1 - runs: MAX_RUNS - 1 at two runs, 1 at
+        # MAX_RUNS. Every substring score, from ELSEWHERE up, is above it
+        # however large MAX_RUNS is.
+        MAX_RUNS = 4
+        ELSEWHERE = MAX_RUNS
+        AT_BOUNDARY = MAX_RUNS + 1
+        IN_NAME = MAX_RUNS + 2
+        NAME_BOUNDARY = MAX_RUNS + 3
+        SUM_ROOM = 256
         LENGTH_ROOM = 1023
         INDEX_BITS = 20
         INDEX_ROOM = 0xFFFFF
 
         # The score of the path for the query: -1 when it does not match,
-        # 0 for an empty query, never below 0 for a match.
+        # 0 for a query with no term, never below 1 for a match otherwise.
         #: (String, String) -> Integer
         def self.score(query, path)
-          return 0 if query.bytesize == 0
-          size = path.bytesize
-          inside_name = span_score(query, path, name_start(path), size)
-          return inside_name + NAME_BONUS if inside_name >= 0
-          span_score(query, path, 0, size)
+          size = query.bytesize
+          worst = -1
+          sum = 0
+          i = 0
+          while i < size
+            if query.getbyte(i).to_i == 0x20
+              i += 1
+            else
+              stop = i
+              stop += 1 while stop < size && query.getbyte(stop).to_i != 0x20
+              one = term_score(query, i, stop, path)
+              return -1 if one < 0
+              worst = one if worst < 0 || one < worst
+              sum += one
+              i = stop
+            end
+          end
+          return 0 if worst < 0
+          sum = SUM_ROOM - 1 if sum >= SUM_ROOM
+          (worst * SUM_ROOM) + sum
         end
 
         # The sort key of a match: higher for a better score, then for a
@@ -52,6 +75,17 @@ module Carat
           INDEX_ROOM - (key & INDEX_ROOM)
         end
 
+        # Whether the text holds no byte but spaces: no term to match.
+        #: (String) -> bool
+        def self.blank?(text)
+          i = 0
+          while i < text.bytesize
+            return false if text.getbyte(i).to_i != 0x20
+            i += 1
+          end
+          true
+        end
+
         # The byte after the path's last "/", 0 when it has none.
         #: (String) -> Integer
         def self.name_start(path)
@@ -60,57 +94,69 @@ module Carat
           i
         end
 
-        # The score of the tightest leftmost match of the query in the
-        # path's bytes from from to size, -1 when there is none; a match
-        # whose gaps cost more than its points scores 0, still a match.
-        #: (String, String, Integer, Integer) -> Integer
-        def self.span_score(query, path, from, size)
-          qlen = query.bytesize
-          q = 0
-          j = from
-          while j < size && q < qlen
-            q += 1 if lower(path.getbyte(j).to_i) == lower(query.getbyte(q).to_i)
-            j += 1
+        # The score of the query's bytes from from to stop as one term, -1
+        # when the path has no match of either tier.
+        #: (String, Integer, Integer, String) -> Integer
+        def self.term_score(query, from, stop, path)
+          one = substring_score(query, from, stop, path, name_start(path), NAME_BOUNDARY, IN_NAME)
+          return one if one >= 0
+          one = substring_score(query, from, stop, path, 0, AT_BOUNDARY, ELSEWHERE)
+          return one if one >= 0
+          runs = 2
+          while runs <= MAX_RUNS
+            return MAX_RUNS + 1 - runs if runs_match?(query, from, stop, path, 0, runs, true)
+            runs += 1
           end
-          return -1 if q < qlen
-          stop = j - 1
-          start = tighten(query, path, stop)
-          points = rate(query, path, start, stop) - GAP * (stop - start + 1 - qlen)
-          points < 0 ? 0 : points
+          -1
         end
 
-        # Walks back from stop, the last byte of a match, matching the
-        # query from its end; answers where its first byte matched.
-        #: (String, String, Integer) -> Integer
-        def self.tighten(query, path, stop)
-          q = query.bytesize - 1
-          k = stop
-          while q >= 0
-            q -= 1 if lower(path.getbyte(k).to_i) == lower(query.getbyte(q).to_i)
-            k -= 1 if q >= 0
+        # The score of the term, bytes from from to stop of the query, as a
+        # substring of the path found from start on: at_word when one hit
+        # starts a segment or word, else inside, -1 when there is no hit.
+        #: (String, Integer, Integer, String, Integer, Integer, Integer) -> Integer
+        def self.substring_score(query, from, stop, path, start, at_word, inside)
+          j = find_in(query, from, stop, path, start)
+          return -1 if j < 0
+          while j >= 0
+            return at_word if boundary?(path, j)
+            j = find_in(query, from, stop, path, j + 1)
           end
-          k
+          inside
         end
 
-        # The points of the query matched greedily from start to stop.
-        #: (String, String, Integer, Integer) -> Integer
-        def self.rate(query, path, start, stop)
-          qlen = query.bytesize
-          points = 0
-          q = 0
-          last = -2
-          j = start
-          while j <= stop && q < qlen
-            if lower(path.getbyte(j).to_i) == lower(query.getbyte(q).to_i)
-              points += MATCH
-              points += BOUNDARY if boundary?(path, j)
-              points += RUN if j == last + 1
-              last = j
-              q += 1
+        # Whether the query's bytes from q to stop match as at most left
+        # contiguous runs, in order, in the path from p on, each run
+        # starting at a segment or word, the first one anywhere when
+        # anywhere. Of the starts that match for one run length only the
+        # earliest is tried, since it leaves the most path for the rest.
+        #: (String, Integer, Integer, String, Integer, Integer, bool) -> bool
+        def self.runs_match?(query, q, stop, path, p, left, anywhere)
+          return true if q >= stop
+          return false if left == 0
+          size = path.bytesize
+          want = stop - q
+          covered = 0
+          s = p
+          while s < size && covered < want
+            if (anywhere || boundary?(path, s)) && lower(path.getbyte(s).to_i) == lower(query.getbyte(q).to_i)
+              reach = run_length(query, q, stop, path, s)
+              while covered < reach
+                covered += 1
+                return true if runs_match?(query, q + covered, stop, path, s + covered, left - 1, false)
+              end
             end
-            j += 1
+            s += 1
           end
-          points
+          false
+        end
+
+        # How many bytes of the query from q to stop equal the path's from s.
+        #: (String, Integer, Integer, String, Integer) -> Integer
+        def self.run_length(query, q, stop, path, s)
+          size = path.bytesize
+          n = 0
+          n += 1 while q + n < stop && s + n < size && lower(path.getbyte(s + n).to_i) == lower(query.getbyte(q + n).to_i)
+          n
         end
 
         # Whether the byte at j starts a segment or a word: the path's
@@ -129,15 +175,21 @@ module Carat
         # -1 when they do not (or the term is empty). Allocates nothing.
         #: (String, String, Integer) -> Integer
         def self.find(term, text, from)
-          n = term.bytesize
-          return -1 if n == 0
-          first = lower(term.getbyte(0).to_i)
+          find_in(term, 0, term.bytesize, text, from)
+        end
+
+        # find for the bytes of the query from from to stop.
+        #: (String, Integer, Integer, String, Integer) -> Integer
+        def self.find_in(query, from, stop, text, start)
+          n = stop - from
+          return -1 if n <= 0
+          first = lower(query.getbyte(from).to_i)
           last = text.bytesize - n
-          j = from
+          j = start
           while j <= last
             if lower(text.getbyte(j).to_i) == first
               k = 1
-              k += 1 while k < n && lower(text.getbyte(j + k).to_i) == lower(term.getbyte(k).to_i)
+              k += 1 while k < n && lower(text.getbyte(j + k).to_i) == lower(query.getbyte(from + k).to_i)
               return j if k >= n
             end
             j += 1

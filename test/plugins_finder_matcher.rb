@@ -24,32 +24,75 @@ module PluginsFinderMatcherTest
   def self.main
     t = Carat::Testing.new("plugins_finder_matcher")
 
-    # Rows are [label, [query, path], whether it matches].
+    # Rows are [label, [query, path], whether it matches]: a contiguous
+    # substring (tier 1) or a few runs, each after the first at a segment
+    # or word start (tier 2), and nothing else.
     t.cases([
       ["an empty query matches with 0", ["", "a.rb"], true],
-      ["the bytes in order match", ["bet", "lib/beta.rb"], true],
+      ["a substring matches", ["bet", "lib/beta.rb"], true],
+      ["a substring across a directory boundary matches", ["lib/b", "lib/beta.rb"], true],
       ["case is ignored", ["BETA", "lib/beta.rb"], true],
-      ["bytes across directories match", ["lbr", "lib/beta.rb"], true],
+      ["case is ignored in the path", ["beta", "lib/BETA.rb"], true],
+      ["initials match as runs at word starts", ["lbr", "lib/beta.rb"], true],
+      ["ep matches explorer_plugin", ["ep", "lib/explorer_plugin.rb"], true],
+      ["ep matches a file below a directory", ["ep", "carat/plugins/explorer/plugin.rb"], true],
+      ["fgr matches finder/grep.rb", ["fgr", "carat/plugins/finder/grep.rb"], true],
+      ["camel humps match as runs", ["fb", "lib/FooBar.rb"], true],
+      ["case is ignored in initials", ["EP", "lib/explorer_plugin.rb"], true],
+      ["four runs match", ["abcd", "a/b/c/d.rb"], true],
+      ["five runs do not match", ["abcde", "a/b/c/d/e.rb"], false],
       ["bytes out of order do not match", ["teb", "lib/beta.rb"], false],
       ["a byte the path lacks does not match", ["z", "lib/beta.rb"], false],
       ["a query longer than the path does not match", ["abcdef", "abc"], false],
-      ["a long gap still matches", ["ab", "xaccccccccccccccccccccccccccccccb"], true],
-      ["a long gap across directories still matches", ["ab", "xaccccccccccccccccccccccccccccccc/b.rb"], true]
+      ["a run that starts mid-word does not match", ["fgr", "lib/fingr.rb"], false],
+      ["a scattered match does not match", ["fb", "lib/fobar.rb"], false],
+      ["a long gap inside a word does not match", ["ab", "xaccccccccccccccccccccccccccccccb"], false],
+      ["a long gap across directories matches by its word start", ["ab", "xaccccccccccccccccccccccccccccccc/b.rb"], true],
+      ["a scattered path does not match explorer", ["explorer", "ezzzxpzzzlzzzozzzrzzezrrr"], false],
+      ["a scattered file name does not match explorer", ["explorer", "lib/ezzzxpzzzlzzzozzzrzzezrrr.rb"], false],
+      ["a scattered directory does not match explorer", ["explorer", "ezzzxpzzzlzzzozzzrzzezrrr/a.rb"], false],
+      ["two terms match in the order typed", ["lib beta", "lib/beta.rb"], true],
+      ["two terms match in the other order", ["beta lib", "lib/beta.rb"], true],
+      ["two terms need both", ["beta zzz", "lib/beta.rb"], false],
+      ["two terms match by initials and by substring", ["ep lib", "lib/explorer_plugin.rb"], true],
+      ["extra spaces make no term", ["  beta  lib ", "lib/beta.rb"], true],
+      ["a query of spaces matches like an empty one", ["   ", "lib/beta.rb"], true],
+      ["a multi-byte substring matches", ["caf\u00e9", "src/caf\u00e9.rb"], true],
+      ["a multi-byte run at a word start matches", ["\u00e9a", "src/\u00e9/a.rb"], true],
+      ["a multi-byte character of another case is not folded", ["CAF\u00c9", "src/caf\u00e9.rb"], false],
+      ["a multi-byte path does not match scattered bytes", ["cf", "src/caf\u00e9.rb"], false]
     ]) do |row|
       score_of(row[0], row[1]) >= 0
     end
 
-    # Rows are [label, [query, better, worse], true].
+    # Rows are [label, [query, better, worse], true]; both paths match.
     t.cases([
       ["the file name match ranks first", ["plugin", "lib/plugin.rb", "plugins/finder/x.rb"], true],
-      ["a run ranks above scattered bytes", ["map", "lib/map.rb", "lib/mxaxp.rb"], true],
-      ["a word start ranks above a middle byte", ["fs", "lib/file_set.rb", "lib/fuss.rb"], true],
-      ["a camel case start counts as a word start", ["fb", "lib/FooBar.rb", "lib/fobar.rb"], true],
-      ["a tighter span ranks above a looser one", ["ab", "x/ab.rb", "x/a_long_b.rb"], true],
+      ["a word start after an underscore ranks above a middle byte", ["pl", "x/a_pl.rb", "x/apple.rb"], true],
+      ["a word start in the file name ranks above a middle byte of it", ["a", "lib/alpha.rb", "lib/beta.rb"], true],
+      ["a segment start ranks above a middle in a directory", ["pl", "a/plug/x.rb", "a/apple/x.rb"], true],
+      ["a substring ranks above initials", ["ab", "x/zzabz/y.rb", "a/b.rb"], true],
+      ["a substring in a directory ranks above initials in the name", ["ab", "zzabz/y.rb", "a/b_c_d.rb"], true],
+      ["fewer runs rank above more", ["abc", "a/bc/x.rb", "a/b/c/x.rb"], true],
+      ["a tighter match ranks above a looser one", ["ab", "x/ab.rb", "x/a_long_b.rb"], true],
+      ["explorer in a file name ranks above the directory", ["explorer", "test/editor_explorer.rb", "carat/plugins/explorer/plugin.rb"], true],
+      ["explorer in a directory ranks above initials", ["explorer", "carat/plugins/explorer/plugin.rb", "tools/explain_pl_or_err.sh"], true],
+      ["explorer in a file name ranks above initials", ["explorer", "test/editor_explorer.rb", "tools/explain_pl_or_err.sh"], true],
+      ["the worst term decides the rank first", ["beta lib", "lib/beta.rb", "lib/b_e_t_a.rb"], true],
+      ["the sum of the terms breaks a tie of the worst term, before a shorter path", ["lib beta", "lib/beta_x.rb", "lib/xbeta.rb"], true],
       ["a shorter path breaks a tie", ["a", "a.rb", "a.txt"], true],
       ["the listing order breaks a tie of equal paths", ["a", "a.rb", "a.rb"], false]
     ]) do |row|
       above?(row[0], row[1], row[2])
+    end
+
+    # Rows are [label, [text], whether it is blank].
+    t.cases([
+      ["an empty text is blank", [""], true],
+      ["spaces are blank", ["  "], true],
+      ["a letter is not blank", [" a "], false]
+    ]) do |row|
+      M.blank?(row[0].to_s)
     end
 
     # Rows are [label, [term, text, from], the byte index or -1].
@@ -97,7 +140,8 @@ module PluginsFinderMatcherTest
       M.word_end?(row[0].to_s, row[1].to_i)
     end
 
-    t.assert_equal([256, 0], [score_of("ab", "xaccccccccccccccccccccccccccccccb"), score_of("ab", "xaccccccccccccccccccccccccccccccc/b.rb")], "a match whose gaps outweigh its points scores 0, plus the name bonus in the name")
+    t.assert_equal(true, score_of("abcd", "a/b/c/d.rb") < score_of("ab", "x/zzabz/y.rb"), "every substring match scores above every initials match")
+    t.assert_equal(0, score_of("", "lib/beta.rb"), "an empty query scores 0")
     t.assert_equal([7, 0, 99_999], [M.index_of(M.key(5, 3, 7)), M.index_of(M.key(0, 2000, 0)), M.index_of(M.key(1, 1, 99_999))], "a key keeps its index")
     t.assert_equal([0, 4, 4], [M.name_start("a.rb"), M.name_start("lib/a.rb"), M.name_start("lib/")], "the file name starts after the last slash")
 

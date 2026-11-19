@@ -525,7 +525,7 @@ The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow
 | Keys | Where | Action name | Behavior |
 | --- | --- | --- | --- |
 | `<leader>ff`, `<C-p>` | normal mode | `plugin.finder.open` | List the files below the working directory, without the names of `plugin.finder.ignore` (`.git build tmp`), links leading out of it, or the inside of linked directories, in a float titled `Files N/M` with the `> ` prompt on the command line |
-| typed text | finder | none | Filter by a fuzzy match of the path ignoring case, best first: the file name, word starts, and runs score higher, a shorter path breaks a tie; `No match` when nothing matches |
+| typed text | finder | none | Filter by a match of the path ignoring case, best first: the text (or each space-separated term, in any order) as a substring of the path, or as initials (a few runs each after the first at a word start), never scattered letters; a substring ranks above initials, the file name above a directory, a shorter path breaks a tie; `No match` when nothing matches |
 | `<C-n>`, `<Down>`, `<C-p>`, `<Up>` | finder | `plugin.finder.next`, `previous` | Move the highlight, stopping at the ends |
 | `<CR>` | finder | none | Open the highlighted file in the editing window and close the finder; with no match the finder stays open on the typed text, so it can be corrected |
 | `<C-x>`, `<C-s>`, `<C-v>`, `<C-t>` | finder | `plugin.finder.open_split`, `open_vsplit`, `open_tab` | Open the highlighted file in a horizontal split, a vertical split, or a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |

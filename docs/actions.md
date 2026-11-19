@@ -214,7 +214,7 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `plugin.explorer.set_root` | `explorer` | `C` in the tree | Make the directory under the cursor the root |
 | `plugin.explorer.close` | `explorer` | `q` in the tree | Close the file tree |
 | `plugin.explorer.help` | `explorer` | `?` in the tree | Show the tree's keys in the message row |
-| `plugin.finder.open` | `finder` | `<leader>ff`, `<C-p>` | Find a file of the project by a fuzzy match of its path |
+| `plugin.finder.open` | `finder` | `<leader>ff`, `<C-p>` | Find a file of the project by a substring or initials match of its path (terms in any order; a substring above initials, a file name above a directory) |
 | `plugin.finder.grep` | `finder` | `<leader>fg` | Find a line in the files of the project by the words of its text, and open the file there |
 | `plugin.finder.next` | `finder` | `<C-n>`, `<Down>` in the finder | Highlight the next file in the finder |
 | `plugin.finder.previous` | `finder` | `<C-p>`, `<Up>` in the finder | Highlight the previous file in the finder |

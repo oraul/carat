@@ -5,7 +5,7 @@ require_relative "grep"
 module Carat
   module Plugins
     module Finder
-      # The fuzzy file finder: opened by its action, it lists the files
+      # The file finder: opened by its action, it lists the files
       # below the working directory once (the ignore option's names left
       # out, links that leave the project skipped), opens a live prompt on
       # the command line, and after every change of the typed text filters
@@ -84,7 +84,7 @@ module Carat
             version: "0.1.0",
             api_version: Carat::PluginApi::VERSION,
             actions: {
-              "plugin.finder.open" => "Find a file of the project by a fuzzy match of its path",
+              "plugin.finder.open" => "Find a file of the project by a substring or initials match of its path",
               "plugin.finder.grep" => "Find a line in the files of the project by the words of its text, and open the file there",
               "plugin.finder.next" => "Highlight the next file in the finder",
               "plugin.finder.previous" => "Highlight the previous file in the finder",
@@ -196,14 +196,14 @@ module Carat
         end
 
         # Matches the query against every path, best first; every path in
-        # listing order for an empty query.
+        # listing order for an empty query or one of spaces only.
         #: (String) -> void
         def filter(query)
           return filter_lines(query) if @grep
           paths = @paths
           matches = []
           @selected = 0
-          if query.empty?
+          if Matcher.blank?(query)
             i = 0
             while i < paths.length
               matches << i
