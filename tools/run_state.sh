@@ -417,6 +417,10 @@ metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 # The stage records the check runner wrote (stage_record).
 runner_records=''
 PHASES="plan implement check quality security bench package ci merge retro report"
+# The phases a workflow's close records, the phases of its CLOSABLE lines
+# (.claude/workflows/deliver-change.js), which a rejoined check leaves out
+# of its run-state comparison (state_view).
+CLOSE_PHASES="plan implement package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
 # commit runs again: test-build and test-run compile and run the tests,
 # diagnose runs spinel-doctor on the test runner, metrics reads the runner's
@@ -998,12 +1002,12 @@ escape_mark() {
 # (metric.*) other than the measurements (allocs.*, rounds.*, us.*,
 # analysis_ms.*), which only the metrics command imports, since the
 # checker's line and /deliver's usage and tokens write figures; and the
-# notes (note.*) and the phases a workflow's close records (plan,
-# implement, package, ci, merge, retro, report: the workflow's CLOSABLE
-# lines), since a workflow that stops while its check runs closes.
+# notes (note.*) and the phases a workflow's close records (CLOSE_PHASES),
+# since a workflow that stops while its check runs closes.
 state_view() {
+  close_alternation=$(printf '%s' "$CLOSE_PHASES" | tr ' ' '|')
   sed 's/,$//' "$(state_file)" |
-    awk '(!/^  "(metric|note)[.]/ && !/^  "phase[.](plan|implement|package|ci|merge|retro|report)"/) ||
+    awk -v closing="^  \"phase[.]($close_alternation)\"" '(!/^  "(metric|note)[.]/ && $0 !~ closing) ||
       /^  "metric[.](allocs|rounds|us|analysis_ms)[.]/'
 }
 
