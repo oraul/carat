@@ -993,14 +993,18 @@ escape_mark() {
   escape_state=$(state_view)
 }
 
-# The run state's lines, commas removed, of every record but the figures
+# The run state's lines, commas removed, of every record but those the
+# runner's caller writes again while a rejoined check runs: the figures
 # (metric.*) other than the measurements (allocs.*, rounds.*, us.*,
-# analysis_ms.*), which only the metrics command imports: the checker's
-# line and /deliver's usage and tokens write figures again while a
-# rejoined check runs.
+# analysis_ms.*), which only the metrics command imports, since the
+# checker's line and /deliver's usage and tokens write figures; and the
+# notes (note.*) and the phases a workflow's close records (plan,
+# implement, package, ci, merge, retro, report: the workflow's CLOSABLE
+# lines), since a workflow that stops while its check runs closes.
 state_view() {
   sed 's/,$//' "$(state_file)" |
-    awk '!/^  "metric[.]/ || /^  "metric[.](allocs|rounds|us|analysis_ms)[.]/'
+    awk '(!/^  "(metric|note)[.]/ && !/^  "phase[.](plan|implement|package|ci|merge|retro|report)"/) ||
+      /^  "metric[.](allocs|rounds|us|analysis_ms)[.]/'
 }
 
 # escape_scan PATH: the paths under PATH, its link followed, changed since

@@ -569,8 +569,16 @@ echo '{"description":"checker","workflowPhase":"Check"}' > "$work/wf_lane/agent-
 LANE_SLOW=8 lane_check 1 slow > /dev/null 2>&1
 lane_running
 state usage isolated 5000 3.5 > /dev/null
-state tokens isolated "$work/wf_lane" > /dev/null
+expect "run_state: tokens counts a start during a running check" 0 "^tokens: counted 1 starts of " state tokens isolated "$work/wf_lane"
 expect "run_state: the figures usage and tokens write during a running check leave it passing" 0 "^rejoined: every stage passed$" lane_rejoin slow
+# The close of a workflow that stops while its check runs (the check rerun
+# limit) records the report phase at the head and its queued notes; the
+# resumed workflow rejoins the check.
+LANE_SLOW=8 lane_check 1 slow > /dev/null 2>&1
+lane_running
+state phase isolated report "$(git rev-parse --short=12 HEAD)" > /dev/null
+state note isolated overrun "the check rerun limit stopped the run" > /dev/null
+expect "run_state: the phase and note a stopped workflow's close writes during a running check leave it passing" 0 "^rejoined: every stage passed$" lane_rejoin slow
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"

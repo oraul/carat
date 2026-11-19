@@ -13,6 +13,8 @@
 - [x] 2.5 Review fix: the run-state comparison moves out of `escaped_paths` into `state_unexpected`, beside `state_view`.
 - [x] 2.6 Review fix: `state_view` compares, of the figures (`metric.*`), only the measurements (`metric.allocs.*`, `metric.rounds.*`, `metric.us.*`, `metric.analysis_ms.*`), which only the metrics command imports, so the figures /deliver's `usage` and `tokens` write while a check runs leave a rejoined check passing and no copy of the workflow's `metricLine` names remains. Tested by "the figures usage and tokens write during a running check leave it passing", which fails with the earlier list.
 - [x] 2.7 Review fix: the rejoin cases expect the waiter's "check: rejoining the check running at" line beside every stage passed (`lane_rejoin` in `tools/tools_test.sh`), so a fresh check no longer passes them.
+- [x] 2.8 Review fix: `state_view` also leaves out the notes (`note.*`) and the phases a workflow's close records (`phase.plan`, `implement`, `package`, `ci`, `merge`, `retro`, `report`, the workflow's `CLOSABLE` family), so the close of a workflow that stops while its check runs leaves the rejoined check passing. Tested by "the phase and note a stopped workflow's close writes during a running check leave it passing", which fails with the earlier `state_view`.
+- [x] 2.9 Review fix: the usage and tokens rejoin case expects tokens to count the start ("tokens counts a start during a running check"), so it proves `metric.start.*` and `metric.weighted.*` are left out.
 
 ## 3. Documents and self-check
 
