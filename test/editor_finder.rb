@@ -118,6 +118,12 @@ module EditorFinderTest
       # Typing filters the files
       ["Typing filters the files", ["<Space>ffbet", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
       ["case is ignored", ["<Space>ffBET", 80], [:cmdline, "> BET", ["Files 1/3|> lib/beta.rb"]]],
+      ["two terms match in any order", ["<Space>ffbeta lib", 80], [:cmdline, "> beta lib", ["Files 1/3|> lib/beta.rb"]]],
+      ["two terms match in the other order", ["<Space>fflib beta", 80], [:cmdline, "> lib beta", ["Files 1/3|> lib/beta.rb"]]],
+      ["a term that matches nothing leaves no match", ["<Space>fflib zzz", 80], [:cmdline, "> lib zzz", ["Files 0/3|No match"]]],
+      ["initials match", ["<Space>ffla", 80], [:cmdline, "> la", ["Files 1/3|> lib/alpha.rb"]]],
+      ["a run that starts mid-word does not match", ["<Space>ffibh", 80], [:cmdline, "> ibh", ["Files 0/3|No match"]]],
+      ["a query of spaces lists every file in listing order", ["<Space>ff  ", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       ["a backspace widens the match again", ["<Space>ffbet<BS><BS><BS>", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # No file matches
       ["No file matches", ["<Space>ffzzz", 80], [:cmdline, "> zzz", ["Files 0/3|No match"]]],
@@ -211,6 +217,26 @@ module EditorFinderTest
     h.type("<Space>ffplugin")
     t.assert_equal(["Files 2/2|> lib/plugin.rb\n  plugins/finder/x.rb"], floats(h), "The file name match ranks first")
 
+    # A scattered path is not listed, and explorer ranks a file name, then a directory, then initials
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("ezzzxpzzzlzzzozzzrzzezrrr", "z\n")
+    files.put("tools/explain_pl_or_err.sh", "x\n")
+    files.put("carat/plugins/explorer/plugin.rb", "p\n")
+    files.put("test/editor_explorer.rb", "e\n")
+    h = editor_on(files, 80)
+    h.type("<Space>ffexplorer")
+    t.assert_equal(["Files 3/4|> test/editor_explorer.rb\n  carat/plugins/explorer/plugin.rb\n  tools/explain_pl_or_err.sh"], floats(h), "A scattered path is not listed: a file name match, a directory match, then initials")
+
+    # A multi-byte path matches by its bytes
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("src/caf\u00e9.rb", "c\n")
+    files.put("src/cafe.rb", "c\n")
+    h = editor_on(files, 80)
+    h.type("<Space>ffcaf\u00e9")
+    t.assert_equal(["Files 1/2|> src/caf\u00e9.rb"], floats(h), "A multi-byte path matches by its bytes")
+
     # Ten thousand files are listed and filtered
     files = Carat::Doubles::MemoryFiles.new
     files.move_to(ROOT)
@@ -219,8 +245,7 @@ module EditorFinderTest
     while i < 10_000
       path = "d#{i / 100}/f#{i}.rb"
       files.put(path, "")
-      at = path.index("9")
-      nines += 1 if !at.nil? && !path.index("9", at + 1).nil?
+      nines += 1 if path.include?("99")
       i += 1
     end
     h = editor_on(files, 80)

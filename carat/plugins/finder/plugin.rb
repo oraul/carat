@@ -196,14 +196,14 @@ module Carat
         end
 
         # Matches the query against every path, best first; every path in
-        # listing order for an empty query.
+        # listing order for an empty query or one of spaces only.
         #: (String) -> void
         def filter(query)
           return filter_lines(query) if @grep
           paths = @paths
           matches = []
           @selected = 0
-          if query.empty?
+          if Matcher.blank?(query)
             i = 0
             while i < paths.length
               matches << i

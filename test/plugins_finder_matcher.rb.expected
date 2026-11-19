@@ -1,19 +1,53 @@
 ok   an empty query matches with 0
-ok   the bytes in order match
+ok   a substring matches
+ok   a substring across a directory boundary matches
 ok   case is ignored
-ok   bytes across directories match
+ok   case is ignored in the path
+ok   initials match as runs at word starts
+ok   ep matches explorer_plugin
+ok   ep matches a file below a directory
+ok   fgr matches finder/grep.rb
+ok   camel humps match as runs
+ok   case is ignored in initials
+ok   four runs match
+ok   five runs do not match
 ok   bytes out of order do not match
 ok   a byte the path lacks does not match
 ok   a query longer than the path does not match
-ok   a long gap still matches
-ok   a long gap across directories still matches
+ok   a run that starts mid-word does not match
+ok   a scattered match does not match
+ok   a long gap inside a word does not match
+ok   a long gap across directories matches by its word start
+ok   a scattered path does not match explorer
+ok   a scattered file name does not match explorer
+ok   a scattered directory does not match explorer
+ok   two terms match in the order typed
+ok   two terms match in the other order
+ok   two terms need both
+ok   two terms match by initials and by substring
+ok   extra spaces make no term
+ok   a query of spaces matches like an empty one
+ok   a multi-byte substring matches
+ok   a multi-byte run at a word start matches
+ok   a multi-byte character of another case is not folded
+ok   a multi-byte path does not match scattered bytes
 ok   the file name match ranks first
-ok   a run ranks above scattered bytes
-ok   a word start ranks above a middle byte
-ok   a camel case start counts as a word start
-ok   a tighter span ranks above a looser one
+ok   a word start in the file name ranks above a middle byte of it
+ok   a word start in the file name ranks above a later hit in the name
+ok   a segment start ranks above a middle in a directory
+ok   a substring ranks above initials
+ok   a substring in a directory ranks above initials in the name
+ok   fewer runs rank above more
+ok   a tighter match ranks above a looser one
+ok   explorer in a file name ranks above the directory
+ok   explorer in a directory ranks above initials
+ok   explorer in a file name ranks above initials
+ok   every term counts toward the rank
 ok   a shorter path breaks a tie
 ok   the listing order breaks a tie of equal paths
+ok   an empty text is blank
+ok   spaces are blank
+ok   a letter is not blank
 ok   a term at the start is found at 0
 ok   a term in the middle is found there
 ok   case is ignored on both sides
@@ -41,7 +75,8 @@ ok   a dot after ends a word
 ok   an uppercase letter after a lowercase one ends a word
 ok   an uppercase letter after an uppercase one does not
 ok   a multi-byte character after does not end a word
-ok   a match whose gaps outweigh its points scores 0, plus the name bonus in the name
+ok   every substring match scores above every initials match
+ok   an empty query scores 0
 ok   a key keeps its index
 ok   the file name starts after the last slash
-plugins_finder_matcher: 46 passed, 0 failed
+plugins_finder_matcher: 81 passed, 0 failed

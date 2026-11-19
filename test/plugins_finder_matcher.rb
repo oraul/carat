@@ -68,6 +68,8 @@ module PluginsFinderMatcherTest
     # Rows are [label, [query, better, worse], true]; both paths match.
     t.cases([
       ["the file name match ranks first", ["plugin", "lib/plugin.rb", "plugins/finder/x.rb"], true],
+      ["a word start in the file name ranks above a middle byte of it", ["pl", "x/a_pl.rb", "x/apple.rb"], true],
+      ["a word start in the file name ranks above a later hit in the name", ["a", "lib/alpha.rb", "lib/beta.rb"], true],
       ["a segment start ranks above a middle in a directory", ["pl", "a/plug/x.rb", "a/apple/x.rb"], true],
       ["a substring ranks above initials", ["ab", "x/zzabz/y.rb", "a/b.rb"], true],
       ["a substring in a directory ranks above initials in the name", ["ab", "zzabz/y.rb", "a/b_c_d.rb"], true],
@@ -83,13 +85,13 @@ module PluginsFinderMatcherTest
       above?(row[0], row[1], row[2])
     end
 
-    # Rows are [label, text, whether it is blank].
+    # Rows are [label, [text], whether it is blank].
     t.cases([
-      ["an empty text is blank", "", true],
-      ["spaces are blank", "  ", true],
-      ["a letter is not blank", " a ", false]
+      ["an empty text is blank", [""], true],
+      ["spaces are blank", ["  "], true],
+      ["a letter is not blank", [" a "], false]
     ]) do |row|
-      M.blank?(row[1].to_s)
+      M.blank?(row[0].to_s)
     end
 
     # Rows are [label, [term, text, from], the byte index or -1].
