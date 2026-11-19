@@ -7,7 +7,7 @@ The contributor's self-check (`self_check` of an implement or fix result) is tak
 ## What Changes
 
 - The workflow keeps the self-check of the last implement or fix start until the next check that finishes at the head reads it; any other contributor mode clears it, as a settled round does.
-- When that check fails a stage (a refusal counts as the stage `refused`) after a self-check of `match`, the workflow notes it: a report note and a queued closable `note <change> self-check-mismatch "contributor <mode> said match; the check failed at stage <stage>"`, then `escalate('a self-check the check contradicted')`, so the run's later contributor starts take the session's model (once a run, never in a critical run, as before).
+- When that check fails a stage (a refusal counts as the stage `refused`) after a self-check of `match`, the workflow notes it: a report note and a queued closable `note <change> self-check-mismatch "contributor <mode> said match, the check failed at stage <stage>"`, then `escalate('a self-check the check contradicted')`, so the run's later contributor starts take the session's model (once a run, never in a critical run, as before).
 - A self-check of `mismatch` (already escalated when returned), a passed check, or no recorded self-check writes no note.
 - `docs/goals.md`'s escalation paragraph names the contradicted self-check, noted `self-check-mismatch`, as a trigger; a tools-test case shows the note and `calibrated.contributor` becoming `session/session`, and none when the self-check said mismatch or the check passed.
 

@@ -194,8 +194,8 @@ function compareSelfCheck(v) {
   selfCheck = null
   if (!said || said.said !== 'match' || v.kind !== 'failed') return
   const stage = safeText(v.stage)
-  note(`contributor (${said.mode}) self-check said match; the check failed at stage ${stage}`)
-  queue(`sh tools/run_state.sh note ${state.change} self-check-mismatch "contributor ${said.mode} said match; the check failed at stage ${stage}"`, head)
+  note(`contributor (${said.mode}) self-check said match, the check failed at stage ${stage}`)
+  queue(`sh tools/run_state.sh note ${state.change} self-check-mismatch "contributor ${said.mode} said match, the check failed at stage ${stage}"`, head)
   escalate('a self-check the check contradicted')
 }
 // A restart carries on the profiles an earlier start recorded as
