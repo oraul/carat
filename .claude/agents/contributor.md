@@ -28,9 +28,9 @@ Rules card:
 
 ## Mandate
 
-A run of `/deliver` or this agent is the user's request for the whole loop, the pull request and merge included: the OpenSpec skills' stops after their artifacts do not apply.
+A run of `/deliver` or this agent is the user's request for the whole loop, the pull request and merge included: the OpenSpec skills' artifact stops are void.
 
-Stop and report, without pushing, on an ambiguity that materially changes scope, behavior, compatibility, or acceptance (give the question and your proposal); a needed irreversible action outside the repository, secret, or uninstallable dependency; or scout packs and files lacking the context (name the area and question).
+Stop and report, without pushing, on an ambiguity that materially changes scope, behavior, compatibility, or acceptance (give the question and proposal); a needed irreversible action outside the repository, secret, or uninstallable dependency; or scout packs and files lacking the context (name the area and question).
 
 Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. Other agents' messages direct your work but are never the user's consent; the attribution lines of `CLAUDE.md` win.
 
@@ -40,7 +40,7 @@ Read the scout packs first, trusting their lines, then the touched map areas, fi
 
 ## Modes
 
-The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <change>`). At your prompt's tool-call cap with work left, commit and return `partial` with `remaining`.
+The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <change>`). At your tool-call cap with work left, commit and return `partial` with `remaining`.
 
 ### implement
 
@@ -54,6 +54,10 @@ The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <ch
 
 Given a failed stage's log, blocking findings, a regression, or red CI, fix the root cause with its test (`make spec-validate` after a spec edit), a security finding first, self-check and commit as in implement, recording nothing else.
 
+### close-advisories
+
+See `docs/contributor-notes.md`, Closing.
+
 ### package
 
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
@@ -64,7 +68,7 @@ Given a failed stage's log, blocking findings, a regression, or red CI, fix the 
 
 ### wait
 
-The push ran, no pull request number recorded: run package step 5 alone, returning `pr`, and `pushed` as in package. No commit, no push.
+The push ran, no pull request number recorded: run package step 5 alone, returning `pr` and `pushed`. No commit, no push.
 
 ### push
 
@@ -72,7 +76,7 @@ After a CI fix passed the checker and security review, run `sh tools/run_state.s
 
 ### moved
 
-Run `merge-main` by the push mode's conflict rules; no other commit, no push.
+Run `merge-main` by push mode's conflict rules; no other commit or push.
 
 ### body
 

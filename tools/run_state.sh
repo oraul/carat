@@ -477,8 +477,10 @@ ENTRY_AWK='
     }'
 TAB=$(printf '\t')
 # Columns 16 and 17 came after estimate, and 19 to 22 after calibration,
-# so rates ($5, $6) read the same columns in every row.
-HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration${TAB}ci_stages${TAB}ci_wait_calls${TAB}weighted_tokens${TAB}weighted_phases"
+# so rates ($5, $6) read the same columns in every row; 23 and 24, the closing
+# loop's advisories closed and left, follow weighted_phases, a row before them
+# holding none.
+HEADER="change${TAB}date${TAB}merged${TAB}pr${TAB}rework${TAB}first_pass${TAB}ci_min${TAB}rounds${TAB}allocs${TAB}us_per_key${TAB}out_tokens${TAB}tool_calls${TAB}phases${TAB}review${TAB}estimate${TAB}total_tokens${TAB}wall_min${TAB}calibration${TAB}ci_stages${TAB}ci_wait_calls${TAB}weighted_tokens${TAB}weighted_phases${TAB}advisories_closed${TAB}advisories_left"
 # A sprint is sprint_size merged changes (sprint_state): SPRINT_SIZE, three
 # features and three backlog changes, from sprint SPRINT_SIZE_FROM on, the
 # user's decision of 2026-11-17, for now; SPRINT_SIZE_BEFORE, three and
@@ -2097,7 +2099,8 @@ history_row() {
     "$tokens" "$calls" "$phases" "$review" "$(estimate_of)" "$(value metric.total_tokens)"
   printf '%s\t' "$(value metric.wall_min)"
   printf '%s\t' "$(group calib)" "$(group ci)" "$(value metric.ci_wait_calls)" "$(value metric.weighted_tokens)"
-  printf '%s\n' "$(group weighted)"
+  printf '%s\t' "$(group weighted)"
+  printf '%s\t%s\n' "$(value metric.advisories_closed)" "$(value metric.advisories_left)"
 }
 
 # The findings a run's workflow recorded after its package step, as
