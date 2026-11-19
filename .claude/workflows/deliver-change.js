@@ -431,18 +431,26 @@ function firstPassMiss(text) {
   const location = findingAt(text)
   if (!location) return false
   const rest = String(text).slice(String(text).indexOf(location) + location.length)
-  return /^[\s:,;-]*first-pass miss\b/i.test(rest)
+  return /^(?:-[0-9]+)?[\s:,;\-`'"()]*first-pass miss\b/i.test(rest)
 }
 // Splits a quality review's BLOCKING findings: the re-raises of an earlier
 // ADVISORY, and the first-pass misses, a marked finding that is new, not at
 // a location of PRIOR, the findings the last review left blocking (one a
-// failed fix left unfixed is no miss). Re-raises are removed first.
-function qualitySplit(blocking, advisory, prior) {
+// failed fix left unfixed is no miss). Re-raises are removed first. KNOWN is
+// whether PRIOR is the last review's list; when not, no finding is a miss.
+function qualitySplit(blocking, advisory, prior, known) {
   const raised = blocking.filter((f) => reRaised(findingAt(f), advisory))
   const left = blocking.filter((f) => !raised.includes(f))
-  const known = prior.map(findingAt)
-  const missed = left.filter((f) => firstPassMiss(f) && !known.includes(findingAt(f)))
+  const old = prior.map(findingAt)
+  const missed = !known ? [] : left.filter((f) => firstPassMiss(f) && !old.includes(findingAt(f)))
   return { raised, left, missed }
+}
+// The notes for a split: the re-raises kept as advisories, the first-pass misses.
+function qualityNotes(split) {
+  const lines = []
+  if (split.raised.length) lines.push(`quality re-raises kept as advisories: ${split.raised.join('; ')}`)
+  if (split.missed.length) lines.push(`quality first-pass misses: ${split.missed.join('; ')}`)
+  return lines
 }
 // The security findings that block (FINDINGS, the reviewer's): a High or
 // Medium in the change at confidence 8 or above, whatever an earlier round
@@ -906,7 +914,7 @@ function priorQuality() {
   const listed = !blocked ? [] : qualityAt === commit && qualityBlocking.length ? qualityBlocking : null
   const files = blockedAt === commit ? blockedFiles : null
   const prior = listed && listed.length ? ` Its blocking findings:\n- ${listed.join('\n- ')}\n` : ' '
-  if (commit === head || !listed || !files) return `${last}${prior === ' ' ? ' ' : prior}Review the whole branch diff.`
+  if (commit === head || !listed || !files) return `${last}${prior}Review the whole branch diff.`
   return `${last}${prior}Run \`sh tools/run_state.sh scope ${state.change} ${commit}${files.map((f) => ` ${f}`).join('')}\`: when it prints fix, review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 
@@ -1094,7 +1102,8 @@ function mayFix() {
 
 
 // The quality review's request: a first pass (no earlier review scopes it)
-// is asked for every blocking finding at once, so one fix round answers
+// is asked for every blocking finding at once (each changed hunk read with
+// its enclosing function, as the agent file words it), so one fix round answers
 // them (vim-folds-a found six one round at a time, in three rounds).
 // tools/tools_test.sh runs this helper.
 function qualityTask(scope, more) {
@@ -1193,12 +1202,13 @@ async function reviews() {
     if (!q) { stopped = 'the quality reviewer returned no result'; return null }
     if (reviewLeft(q).length) { stopped = `the quality review did not cover ${reviewLeft(q).join(', ')}`; return null }
     // A blocking finding at the location of an earlier advisory is a
-    // re-raise, kept as an advisory.
-    const split = qualitySplit(q.blocking, qualityAdvisory, qualityBlocking)
+    // re-raise, kept as an advisory; a marked new one stays blocking and is
+    // noted as a first-pass miss, when the prior list is the last review's.
+    const lastAt = String(ran['review.quality'] || '').split(' ')[1]
+    const split = qualitySplit(q.blocking, qualityAdvisory, qualityBlocking, !!lastAt && qualityAt === lastAt)
     const raised = split.raised
-    if (raised.length) note(`quality re-raises kept as advisories: ${raised.join('; ')}`)
+    qualityNotes(split).forEach((line) => note(line))
     q.blocking = split.left
-    if (split.missed.length) note(`quality first-pass misses: ${split.missed.join('; ')}`)
     q.advisory = q.advisory.concat(raised)
     qualityBlocking = q.blocking
     qualityAt = q.head
