@@ -37,6 +37,10 @@ When the screen is at least 100 columns wide the grep picker SHALL show a second
 - **WHEN** the screen is 99 columns wide and the user types a query that matches a line
 - **THEN** only the list float shows
 
+#### Scenario: The preview is built from the stored text
+- **WHEN** a matched file changes on the disk after the picker opened and the highlight moves to its row
+- **THEN** the preview shows the text the picker read when it opened
+
 ### Requirement: The grep preview is centred and clamped at the file's ends
 The preview window SHALL start at the row's line number less half the float's height, moved to start at line 1 when that is lower, and to end at the file's last stored line when it would end later; a file with fewer lines SHALL show whole. A line the picker did not store because it is empty SHALL show as an empty line, and the window SHALL cover no line past the first 1000 of a file.
 

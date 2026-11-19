@@ -6,3 +6,9 @@
 ## 2. Docs
 
 - [x] 2.1 Update README.md, docs/plugins.md, and docs/codebase-map.md (the finder area and its tests line); make docs-lint
+
+## 3. Review round
+
+- [x] 3.1 Test that the preview is built from the stored text: a row opens the picker, changes a file on the disk, moves the highlight, and sees the stored lines (`test/editor_finder_grep_preview.rb`); the delta spec gains the scenario The preview is built from the stored text
+- [x] 3.2 Name the preview's title `preview_title` in `Finder::Plugin#refresh`, and write `Grep#shown_path` through `path_at`
+- [x] 3.3 Correct the proposal's Impact line: the requirement The grep list uses the whole width is removed and replaced by The grep list is sized as the file finder's list

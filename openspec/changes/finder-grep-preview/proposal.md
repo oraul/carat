@@ -24,7 +24,7 @@ The grep picker (`<leader>fg`) lists lines but never shows the file around the h
 
 - Code: `carat/plugins/finder/plugin.rb` (the gate, the preview rows), `carat/plugins/finder/grep.rb` (`preview`, `shown_path`, the file starts, `plain?`); tests in the new `test/editor_finder_grep_preview.rb` and its snapshot, and two updated rows of `test/editor_finder_grep.rb`.
 - Memory: one integer per stored file (where its lines start in the stored text).
-- Specs: file-finder (a modified requirement, A wide screen previews the highlighted file; the requirement The grep list uses the whole width renamed and modified; added requirements for the grep preview).
+- Specs: file-finder (a modified requirement, A wide screen previews the highlighted file; the requirement The grep list uses the whole width removed and replaced by the added requirement The grep list is sized as the file finder's list; added requirements for the grep preview).
 - README.md: changed, the grep picker's preview.
 - docs/plugins.md: changed, the finder's grep section describes the preview.
 - docs/codebase-map.md: changed, the finder area's plugin and grep bullets and its tests line.

@@ -18,6 +18,7 @@ ok   the preview follows a backspace
 ok   a query with no match closes the preview
 ok   an empty query shows no preview
 ok   a query cleared again shows no preview
+ok   a file changed after the open still previews its stored lines
 ok   empty lines the store skipped show as empty lines
 ok   control bytes, invalid UTF-8, and a bidirectional override show safely
 ok   a line over 400 bytes shows cut
@@ -26,4 +27,4 @@ ok   the grep list is as wide as the file finder's list
 ok   the grep preview is as wide as the file finder's preview
 ok   the grep preview starts where the file finder's does
 ok   Esc closes the list and the preview
-editor_finder_grep_preview: 28 passed, 0 failed
+editor_finder_grep_preview: 29 passed, 0 failed

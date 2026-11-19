@@ -152,7 +152,7 @@ module Carat
         # The row's path as shown, safe for the terminal.
         #: (Integer) -> String
         def shown_path(row)
-          safe(@files[@file_of[@hits[row]]])
+          safe(path_at(row))
         end
 
         # The preview of the row's file from the stored text: height

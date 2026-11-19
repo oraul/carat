@@ -330,8 +330,8 @@ module Carat
           shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
           @list_float = shown.ok ? shown.window : 0
           return unless preview && !@matches.empty?
-          title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
-          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, title), preview_lines(host, height))
+          preview_title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
+          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, preview_title), preview_lines(host, height))
           @preview_float = previewed.ok ? previewed.window : 0
         end
 

@@ -127,6 +127,17 @@ module EditorFinderGrepPreviewTest
       preview_text(two_files, keys, 120)
     end
 
+    # Scenario: The preview is built from the stored text
+    # The disk changes after the picker opened: the move still previews the
+    # stored lines, so no file is read per move.
+    files = two_files
+    h = editor_on(files, 120)
+    h.type("<Space>fgneedle")
+    files.put("b.txt", "other top\nneedle other\nother bottom\n")
+    h.type("<C-n>")
+    all = floats(h)
+    t.assert_equal("b.txt|  b top\n> needle two\n  b bottom", all.length == 2 ? all[1].to_s : "", "a file changed after the open still previews its stored lines")
+
     # Rows are [label, keys, the preview float].
     t.table([
       # Scenario: The preview shows its text safely
