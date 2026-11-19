@@ -29,3 +29,7 @@
 - Location: bench/ scenarios, carat/plugins/finder/grep.rb search
 - Why: each key scores up to 100,000 lines and sorts every match to keep 200; the finder bench measures paths only.
 - Fix: add a grep scenario and its map Bench line, or keep a bounded top-200 selection instead of a full sort.
+### No grep scenario in the bench
+- Location: bench/ (finder scenarios), carat/plugins/finder/grep.rb search
+- Why: the finder bench measures paths only, so the grep search cost per key is unmeasured; the search is now bounded in memory but still scores every stored line.
+- Fix: add a grep scenario to the bench and the map's Bench line.
