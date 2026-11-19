@@ -18,3 +18,6 @@
 - [x] 4.2 Replace the two tier 1 loops of `Matcher.term_score` with one `substring_score` helper
 - [x] 4.3 Define the tier 1 constants from `MAX_RUNS`, so raising it keeps every substring above every run match
 - [x] 4.4 Give the spec scenario's label to the `alpha`/`beta` row of the matcher test and relabel the `a_pl` row, in the test and its snapshot
+- [x] 4.5 Say in docs/plugins.md that both pickers refuse scattered letters, the file finder also matching initials
+- [x] 4.6 Describe substring or initials matching in the finder's rows of docs/compatibility.md and docs/actions.md
+- [x] 4.7 Add `substring_score` to the matcher.rb entry of docs/codebase-map.md
