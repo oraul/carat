@@ -15,3 +15,4 @@
 - [x] 3.2 Qualify the synced requirements The picker reads the finder's files once and within bounds and Typing lists the matching lines best first by the per-key bound in the delta spec, and the test comment of the 30,000-line check
 - [x] 3.3 Make the bench `grep` scenario exit unless the picker stored every generated line (`bench/keys.rb`)
 - [x] 3.4 Run the `grep` scenario of `make bench-budget` through `bench/run.sh`, its allocation runs at 20 and 120 keys
+- [x] 3.5 Name the bidirectional marks, zero-width characters, and line separators `Grep#safe` shows as spaces in README.md and docs/codebase-map.md (quality advisory README.md:58)
