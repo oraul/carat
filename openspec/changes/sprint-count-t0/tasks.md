@@ -12,4 +12,4 @@
 ## 3. Documents and self-check
 
 - [x] 3.1 README.md, `docs/codebase-map.md`, and the header and constants of `tools/run_state.sh` describe the count.
-- [ ] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+- [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
