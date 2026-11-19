@@ -363,12 +363,14 @@ module Carat
       end
 
       # The fold nested directly in fold parent (-1 for the top level)
-      # that holds row, -1 for none.
+      # that holds row, -1 for none, parent holding row: the sort puts
+      # every fold holding a fold before it, so the first fold past parent
+      # that holds row is a direct child of parent.
       #: (Integer, Integer) -> Integer
       def child_holding(parent, row)
         i = parent + 1
         while i < starts.length
-          return i if starts[i] <= row && ends[i] >= row && parent_of(i) == parent
+          return i if starts[i] <= row && ends[i] >= row
           i += 1
         end
         -1

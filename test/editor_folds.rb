@@ -56,6 +56,17 @@ module EditorFoldsTest
     head + "·" * (36 - head.length)
   end
 
+  # Opens a second tab page on a.txt beside a hidden left-slot window
+  # holding a fold of rows 0 and 1, and returns the buffer they share.
+  def self.slot_window_tab(h)
+    h.type(":tabedit a.txt<CR>")
+    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
+    side.add_fold(0, 1)
+    h.state.tab.left_slot.attach(side, "side", 20)
+    h.state.tab.left_slot.hide(20)
+    side.buffer
+  end
+
   # The window's folds as [first, last, closed] triples.
   def self.folds_of(h)
     folds = h.state.window.folds
@@ -236,12 +247,7 @@ module EditorFoldsTest
 
     # A kept slot's hidden window drops its folds with its tab page.
     h = editor("a\nb\nc\n", "")
-    h.type(":tabedit a.txt<CR>")
-    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
-    side.add_fold(0, 1)
-    shared = side.buffer
-    h.state.tab.left_slot.attach(side, "side", 20)
-    h.state.tab.left_slot.hide(20)
+    shared = slot_window_tab(h)
     t.assert_equal(1, shared.fold_lists.length, "a fold in a hidden slot window is tracked by the buffer")
     h.type(":tabclose<CR>")
     t.assert_equal(0, shared.fold_lists.length, "closing the tab page drops the folds of its hidden slot window")
@@ -249,15 +255,9 @@ module EditorFoldsTest
     # :q on a tab page's only window closes the tab page through the
     # single-window branch of BufferList#close_window.
     h = editor("a\nb\nc\n", "")
-    h.type(":tabedit a.txt<CR>")
-    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
-    side.add_fold(0, 1)
-    shared = side.buffer
-    h.state.tab.left_slot.attach(side, "side", 20)
-    h.state.tab.left_slot.hide(20)
-    before = shared.fold_lists.length
+    shared = slot_window_tab(h)
     h.type(":q<CR>")
-    t.assert_equal([1, 0], [before, shared.fold_lists.length], "Quitting a second tab page's only window drops its hidden slot window's folds")
+    t.assert_equal(0, shared.fold_lists.length, "Quitting a second tab page's only window drops its hidden slot window's folds")
 
     # A window with a closed fold shows more buffer rows than its height:
     # the rows below the fold are highlighted and a float anchored at the

@@ -13,3 +13,8 @@
 - [x] 3.1 Table rows for every key and the `:q` slot-window assertion (test/editor_folds.rb)
 - [x] 3.2 Rows in docs/compatibility.md and docs/actions.md, the jump motion list, and the README fold sentence
 - [x] 3.3 Keep the cancelled-command row of test/editor_registers.rb cancelling: `"zdz` now reads `z` as the prefix of `zj` and `zk`, so the row cancels with `<Esc>` instead
+
+## 4. Review fixes
+
+- [x] 4.1 Drop the redundant `parent_of` test of `Folds#child_holding`: the first fold past parent holding row is its direct child by the sort (carat/domain/folds.rb), proved by the fold motion table of test/editor_folds.rb
+- [x] 4.2 Build the second tab page with a hidden slot window holding a fold in one helper used by the `:tabclose` and `:q` blocks, the `:q` block asserting only the count after it (test/editor_folds.rb)
