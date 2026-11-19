@@ -195,6 +195,18 @@ module EditorFoldsTest
     h.type(":tabclose<CR>")
     t.assert_equal(1, shared.fold_lists.length, "closing the tab page drops its window's fold list, the first tab page keeps its own")
 
+    # A kept slot's hidden window drops its folds with its tab page.
+    h = editor("a\nb\nc\n", "")
+    h.type(":tabedit a.txt<CR>")
+    side = Carat::Domain::Window.new(buffer: h.state.window.buffer)
+    side.add_fold(0, 1)
+    shared = side.buffer
+    h.state.tab.left_slot.attach(side, "side", 20)
+    h.state.tab.left_slot.hide(20)
+    t.assert_equal(1, shared.fold_lists.length, "a fold in a hidden slot window is tracked by the buffer")
+    h.type(":tabclose<CR>")
+    t.assert_equal(0, shared.fold_lists.length, "closing the tab page drops the folds of its hidden slot window")
+
     # A window with a closed fold shows more buffer rows than its height:
     # the rows below the fold are highlighted and a float anchored at the
     # cursor counts the fold as one row.

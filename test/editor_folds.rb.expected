@@ -51,6 +51,8 @@ ok   showing another buffer drops the window's folds, untracked, and draws the n
 ok   Closing a split leaves one fold list: the buffer tracks one, the window keeps its fold
 ok   a fold in a second tab page is tracked by the buffer
 ok   closing the tab page drops its window's fold list, the first tab page keeps its own
+ok   a fold in a hidden slot window is tracked by the buffer
+ok   closing the tab page drops the folds of its hidden slot window
 ok   a syntax-highlighted line below a closed fold, past top plus the height
 ok   a float opens below a cursor under a closed fold where the rows below have room
-editor_folds: 55 passed, 0 failed
+editor_folds: 57 passed, 0 failed
