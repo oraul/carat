@@ -78,62 +78,63 @@ module Carat
       ADDED = 60
       CHANGED = 61
       REMOVED = 62
+      LINE_NUMBER_FIFTH = 63
 
-      SYNTAX_FIRST = 63
-      COMMENT = 63
-      CONSTANT = 64
-      STRING = 65
-      CHARACTER = 66
-      NUMBER = 67
-      BOOLEAN = 68
-      FLOAT = 69
-      IDENTIFIER = 70
-      FUNCTION = 71
-      STATEMENT = 72
-      CONDITIONAL = 73
-      REPEAT = 74
-      LABEL = 75
-      OPERATOR = 76
-      KEYWORD = 77
-      EXCEPTION = 78
-      PRE_PROC = 79
-      INCLUDE = 80
-      DEFINE = 81
-      MACRO = 82
-      TYPE = 83
-      STORAGE_CLASS = 84
-      STRUCTURE = 85
-      TYPEDEF = 86
-      SPECIAL = 87
-      SPECIAL_CHAR = 88
-      DELIMITER = 89
-      SPECIAL_COMMENT = 90
-      TODO = 91
-      ERROR = 92
+      SYNTAX_FIRST = 64
+      COMMENT = 64
+      CONSTANT = 65
+      STRING = 66
+      CHARACTER = 67
+      NUMBER = 68
+      BOOLEAN = 69
+      FLOAT = 70
+      IDENTIFIER = 71
+      FUNCTION = 72
+      STATEMENT = 73
+      CONDITIONAL = 74
+      REPEAT = 75
+      LABEL = 76
+      OPERATOR = 77
+      KEYWORD = 78
+      EXCEPTION = 79
+      PRE_PROC = 80
+      INCLUDE = 81
+      DEFINE = 82
+      MACRO = 83
+      TYPE = 84
+      STORAGE_CLASS = 85
+      STRUCTURE = 86
+      TYPEDEF = 87
+      SPECIAL = 88
+      SPECIAL_CHAR = 89
+      DELIMITER = 90
+      SPECIAL_COMMENT = 91
+      TODO = 92
+      ERROR = 93
 
-      ICON_FIRST = 93
-      ICON_DEFAULT = 93
-      ICON_FOLDER = 94
-      ICON_SYMLINK = 95
-      ICON_RUBY = 96
-      ICON_JSON = 97
-      ICON_MARKDOWN = 98
-      ICON_TOML = 99
-      ICON_MAKEFILE = 100
-      ICON_SHELL = 101
-      ICON_C = 102
-      ICON_YAML = 103
-      ICON_GIT = 104
-      ICON_LOCK = 105
+      ICON_FIRST = 94
+      ICON_DEFAULT = 94
+      ICON_FOLDER = 95
+      ICON_SYMLINK = 96
+      ICON_RUBY = 97
+      ICON_JSON = 98
+      ICON_MARKDOWN = 99
+      ICON_TOML = 100
+      ICON_MAKEFILE = 101
+      ICON_SHELL = 102
+      ICON_C = 103
+      ICON_YAML = 104
+      ICON_GIT = 105
+      ICON_LOCK = 106
 
-      MARKUP_FIRST = 106
-      MARKUP_HEADING = 106
-      MARKUP_STRONG = 107
-      MARKUP_ITALIC = 108
-      MARKUP_RAW = 109
-      MARKUP_LINK = 110
-      MARKUP_RAW_BLOCK = 111
-      COUNT = 112
+      MARKUP_FIRST = 107
+      MARKUP_HEADING = 107
+      MARKUP_STRONG = 108
+      MARKUP_ITALIC = 109
+      MARKUP_RAW = 110
+      MARKUP_LINK = 111
+      MARKUP_RAW_BLOCK = 112
+      COUNT = 113
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -155,7 +156,7 @@ module Carat
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
         "StatusLineDiagnosticError", "StatusLineDiagnosticWarn", "StatusLineDiagnosticInfo", "StatusLineDiagnosticHint",
-        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed",
+        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",

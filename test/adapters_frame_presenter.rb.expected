@@ -15,6 +15,8 @@ ok   gutter widens to the digits of the line count
 ok   position is Top at the start of a long buffer
 ok   relative numbers around the cursor with the absolute number on its row
 ok   cursor row shows 0 when number is off
+ok   Every fifth relative number is LineNrFifth
+ok   absolute numbers stay LineNr, even a fifth
 ok   a modified buffer shows the modified icon
 ok   the bar shows row:col and All
 ok   unnamed buffer
@@ -23,7 +25,7 @@ ok   a long message is cut at the screen's width
 ok   a pending message wins over the diagnostic
 ok   the insert indicator wins over the diagnostic
 ok   insert indicator
-ok   bar cursor in insert mode
+ok   Shape in insert mode: bar cursor in insert mode
 ok   message replaces the indicator
 ok   error message highlight
 ok   command line with colon
@@ -159,17 +161,22 @@ ok   nohlsearch draws nothing
 ok   an empty match is not drawn, a longer one is
 ok   the previewed match is in the IncSearch group
 ok   a backward search prompt shows a question mark
-ok   the cursor's row of the current window is lit
+ok   The cursor line of the current window: the cursor's row of the current window is lit
 ok   the blanks after the text are lit to the window's edge
-ok   the gutter is not lifted
+ok   the gutter is lifted from column 0, the cursor line filled from the window's left edge
 ok   with the option off no row is lit
-ok   the lit row follows j
+ok   The highlight follows the cursor: the lit row follows j
 ok   turning the option off repaints the row
 ok   only the current window, at the bottom, is lit
 ok   focus moves the lit row to the top window
 ok   side by side, only the right window's row is lit, to its edge
-ok   the cursor line's number is in CursorLineNr
+ok   The number on the cursor line: the cursor line's number is in CursorLineNr on the layer
+ok   The gutter on the cursor line: the cursor line covers the gap and the number from column 0
 ok   the text takes its group on the layer, the status bar keeps its own
+ok   the sign column on the cursor line is lifted: a sign cell is its group on the layer
+ok   relativenumber: row 4 shows 5 in LineNrFifth
+ok   relativenumber: the second frame shows 5 in LineNrFifth
+ok   turning relativenumber off repaints a frame that held LineNrFifth in LineNr
 ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
 ok   the cursor on the opening parenthesis
 ok   the cursor on the closing parenthesis
@@ -195,5 +202,5 @@ ok   a block in visual mode
 ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
-ok   a block on the command line
-adapters_frame_presenter: 198 passed, 0 failed
+ok   Shape per mode: a bar on the command line, which every query prompt shares
+adapters_frame_presenter: 205 passed, 0 failed

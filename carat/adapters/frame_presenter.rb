@@ -52,15 +52,16 @@ module Carat
     # rows when it is spent, and a row records the last search's stamp, 0
     # when nothing is highlighted, so a frame without search does no
     # other work. With cursorline the cursor's row of the current window
-    # is lifted onto the cursor-line layer of groups from the end of its
-    # gutter to its right edge, its number in CursorLineNr, the layer
-    # being an input of the row like its cursor column. With
+    # is lifted onto the cursor-line layer of groups from the window's left
+    # edge, the gutter included, to its right edge, its number in
+    # CursorLineNr, the layer being an input of the row like its cursor
+    # column. With
     # indentguides a file window's rows (not a plugin's buffer, a float,
     # or the start screen) show IndentGuides after their tokens, the key
     # of a row's guides an input of the row and the guides' settings part
     # of the frame's geometry key. The cursor is placed in the current
-    # window, a bar in insert mode, an underline in replace mode, and a
-    # block otherwise.
+    # window, a bar in insert mode and on the command line, an underline in
+    # replace mode, and a block otherwise.
     #
     # Two frames are kept and painted in turn, so the one the screen shows
     # stays intact while the other is drawn; they are reallocated only when
@@ -239,7 +240,7 @@ module Carat
         layout = tab.layout
         ids = layout.leaves
         ensure_slots(rows, ids.length)
-        build_key(rows, cols, tabline, tabstop, @guides.configure(options), layout, ids)
+        build_key(rows, cols, tabline, tabstop, @guides.configure(options), options.relativenumber ? 1 : 0, layout, ids)
         unless same_ints?(@key, back.layout)
           @back_rows.invalidate
           copy_ints(@key, back.layout)
@@ -394,9 +395,10 @@ module Carat
       end
 
       # The geometry a frame is painted with: the size, the tab line, the
-      # tabstop, the indent guides' settings, and every window's rectangle.
-      #: (Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
-      def build_key(rows, cols, tabline, tabstop, guides, layout, ids)
+      # tabstop, the indent guides' settings, whether numbers are relative,
+      # and every window's rectangle.
+      #: (Integer, Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
+      def build_key(rows, cols, tabline, tabstop, guides, relative, layout, ids)
         key = @key
         key.clear
         key << rows
@@ -404,6 +406,7 @@ module Carat
         key << tabline
         key << tabstop
         key << guides
+        key << relative
         i = 0
         while i < ids.length
           window = layout.window_at(ids[i])
@@ -765,11 +768,12 @@ module Carat
         frame.cursor_shape = shape_of(state.mode)
       end
 
-      # The cursor shape of a mode: a bar in insert mode, an underline in
+      # The cursor shape of a mode: a bar in insert mode and on the
+      # command line, which every query prompt shares, an underline in
       # replace mode, a block in every other.
       #: (Symbol) -> Symbol
       def shape_of(mode)
-        return :bar if mode == Domain::Mode::INSERT
+        return :bar if mode == Domain::Mode::INSERT || mode == Domain::Mode::CMDLINE
         return :underline if mode == Domain::Mode::REPLACE
         :block
       end
@@ -885,10 +889,10 @@ module Carat
           unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
             @row_of = row
             @cursor_col = fold >= 0 ? -1 : cur
-            @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
+            @number_hl = number_group(layer, cur, number, options)
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
-            frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
+            frame.lift(frame_row, x, x + width, layer) if layer > 0
             @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
           end
           @back_rows.place(seg, window.id, top)
@@ -977,6 +981,15 @@ module Carat
         end
         @repainted[row] = 1 if @floating
         @chrome << row
+      end
+
+      # The group of a row's line number: CursorLineNr on the cursor line,
+      # LineNrFifth on every fifth relative number, LineNr otherwise.
+      #: (Integer, Integer, Integer, Domain::Options) -> Integer
+      def number_group(layer, cur, number, options)
+        return Domain::Highlight::CURSOR_LINE_NUMBER if layer > 0
+        fifth = options.relativenumber && cur < 0 && number > 0 && number % 5 == 0
+        fifth ? Domain::Highlight::LINE_NUMBER_FIFTH : Domain::Highlight::LINE_NUMBER
       end
 
       # The line number a row shows, -1 when the window has no number

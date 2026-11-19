@@ -103,7 +103,7 @@ module EditorSyntaxTest
     t.assert_equal("Define:def Function:go String:\"hi\" Comment:# note", spans(h, 0), "a.rb is highlighted by the ruby plugin")
     t.assert_equal("Number:1", spans(h, 1), "every visible row is")
     t.assert_equal([H::LINE_NUMBER, H::NUMBER], [h.frame.hl_at(1, 2), h.frame.hl_at(1, 8)], "the gutter keeps its group, the text takes the token's")
-    t.assert_equal([H::CURSOR_LINE_NUMBER, H::DEFINE + H::CURSOR_LINE_LAYER], [h.frame.hl_at(0, 2), h.frame.hl_at(0, 4)], "on the cursor line the number is CursorLineNr and the token is on the layer")
+    t.assert_equal([H::CURSOR_LINE_NUMBER + H::CURSOR_LINE_LAYER, H::DEFINE + H::CURSOR_LINE_LAYER], [h.frame.hl_at(0, 2), h.frame.hl_at(0, 4)], "on the cursor line the number is CursorLineNr and the token is on the layer")
 
     # A selection is drawn over the tokens, which come back after it.
     h.type("wve")

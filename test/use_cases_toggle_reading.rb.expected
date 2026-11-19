@@ -1,7 +1,7 @@
 ok   the reading view of notes.md reads Notes||Read the guide.||• one|• two||│ quoted|│ │ twice||────────────────────||┌───────┐|│ x = 1 │|└───────┘
 ok   the view is a scratch buffer titled [reading] notes.md
 ok   the heading row is drawn in @markup.heading
-ok   the framed code row's spans [2, 5, 111] lie on x = 1, columns 2 to 7, none on the frame
+ok   the framed code row's spans [2, 5, 112] lie on x = 1, columns 2 to 7, none on the frame
 ok   the window draws the view's first row with no line number
 ok   a 120-column window reads at a measure of at most 80 columns
 ok   the toggle again shows notes.md with its cursor where it was

@@ -83,7 +83,7 @@ module AdaptersScreenPresenterTest
     t.assert_true(first.include?("\e[2J"), "first frame clears the screen")
     t.assert_true(first.include?("\e[1;1H\e[0mhello"), "first frame writes row 1 with the normal highlight")
     t.assert_true(first.include?("\e[2;1H#{sgr256(H::LINE_NUMBER)}two"), "line number highlight is emitted before the text")
-    t.assert_equal("\e[0;38;5;247m", sgr256(H::LINE_NUMBER), "the line numbers are one_dark's gray at 256 colors")
+    t.assert_equal("\e[0;38;5;244m", sgr256(H::LINE_NUMBER), "the line numbers are one_dark's faint gray at 256 colors")
     t.assert_equal(false, first.include?("\e[3;1H"), "first frame skips a blank row, which the clear already drew")
     t.assert_true(first.end_with?("\e[2;3H\e[2 q\e[?25h"), "cursor position, block shape, and cursor shown last")
     t.assert_true(first.start_with?("\e[?25l"), "cursor hidden while drawing")
@@ -115,7 +115,7 @@ module AdaptersScreenPresenterTest
     changed.cursor_shape = :underline
     changed.serial += 1
     screen.present(changed)
-    t.assert_true(terminal.last_write.include?("\e[4 q"), "the underline shape is emitted when it changes")
+    t.assert_true(terminal.last_write.include?("\e[4 q"), "Underline sent to the terminal: the underline shape is emitted when it changes")
     screen.present(changed)
     t.assert_equal(false, terminal.last_write.include?(" q"), "an unchanged underline is not repeated")
     changed.cursor_shape = :bar

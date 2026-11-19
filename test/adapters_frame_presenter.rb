@@ -298,6 +298,16 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 12)
     t.assert_equal("  0 b", f.row_text(1), "cursor row shows 0 when number is off")
 
+    # Every fifth relative number is LineNrFifth, the others LineNr.
+    s = state_for(["a", "b", "c", "d", "e", "f", "g"], "a.txt")
+    s.options.relativenumber = true
+    s.cursor.move_to(0, 0)
+    f = draw(s, 9, 12)
+    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER_FIFTH, D::Highlight::LINE_NUMBER], [f.cell(1, 2).hl, f.cell(2, 2).hl, f.cell(3, 2).hl, f.cell(4, 2).hl, f.cell(5, 2).hl, f.cell(6, 2).hl], "Every fifth relative number is LineNrFifth")
+    s.options.relativenumber = false
+    f = draw(s, 9, 12)
+    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "absolute numbers stay LineNr, even a fifth")
+
     # Status bar content.
     s = state_for(["ab", "cdef"], "a.txt")
     s.options.icons = "unicode"
@@ -334,7 +344,7 @@ module AdaptersFramePresenterTest
     s.mode = D::Mode::INSERT
     f = draw(s, 6, 30)
     t.assert_equal("-- INSERT --", f.row_text(5), "insert indicator")
-    t.assert_equal(:bar, f.cursor_shape, "bar cursor in insert mode")
+    t.assert_equal(:bar, f.cursor_shape, "Shape in insert mode: bar cursor in insert mode")
     s.show("E37: No write since last change (add ! to override)", true)
     f = draw(s, 6, 60)
     t.assert_equal("E37: No write since last change (add ! to override)", f.row_text(5), "message replaces the indicator")
@@ -757,14 +767,14 @@ module AdaptersFramePresenterTest
     PROMPT.close
 
     # The cursor line: the cursor's row of the current window, from the
-    # end of the gutter to the window's edge, follows the cursor, the
+    # window's left edge to its right edge, follows the cursor, the
     # focus, and the option.
     t.table([
-      ["the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
+      ["The cursor line of the current window: the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
       ["the blanks after the text are lit to the window's edge", "the blanks after the text", [0, 1, 0, 0]],
-      ["the gutter is not lifted", "the gutter", [0, 0, 0, 0]],
+      ["the gutter is lifted from column 0, the cursor line filled from the window's left edge", "the gutter", [0, 1, 0, 0]],
       ["with the option off no row is lit", "off", [0, 0, 0, 0]],
-      ["the lit row follows j", "j", [0, 1, 0, 0]],
+      ["The highlight follows the cursor: the lit row follows j", "j", [0, 1, 0, 0]],
       ["turning the option off repaints the row", "turned off", [0, 0, 0, 0]],
       ["only the current window, at the bottom, is lit", "stacked", [0, 0, 0, 0, 1, 0, 0, 0]],
       ["focus moves the lit row to the top window", "stacked, top focused", [1, 0, 0, 0, 0, 0, 0, 0]],
@@ -774,8 +784,30 @@ module AdaptersFramePresenterTest
     s.options.cursorline = true
     s.cursor.move_to(1, 0)
     f = draw(s, 6, 14)
-    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "the cursor line's number is in CursorLineNr")
+    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "The number on the cursor line: the cursor line's number is in CursorLineNr on the layer")
+    t.assert_equal([D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(1, 3).hl, f.cell(0, 0).hl], "The gutter on the cursor line: the cursor line covers the gap and the number from column 0")
     t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS_MODE_NORMAL], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status bar keeps its own")
+    s.buffer.place_sign("test", 0, 1, "X", D::Highlight::DIAGNOSTIC_ERROR)
+    f = draw(s, 6, 14)
+    t.assert_equal(D::Highlight::DIAGNOSTIC_ERROR + LIT, f.cell(1, 0).hl, "the sign column on the cursor line is lifted: a sign cell is its group on the layer")
+    # Toggling relativenumber on one presenter repaints the one row whose
+    # absolute and relative numbers are equal (cursor on row 9, row 4).
+    lines = []
+    n = 0
+    while n < 12
+      lines << "x"
+      n += 1
+    end
+    s = state_for(lines, "a.txt")
+    s.cursor.move_to(9, 0)
+    s.options.relativenumber = true
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "relativenumber: row 4 shows 5 in LineNrFifth")
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "relativenumber: the second frame shows 5 in LineNrFifth")
+    s.options.relativenumber = false
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "turning relativenumber off repaints a frame that held LineNrFifth in LineNr")
     s = state_for(["abc", "def"], "a.txt")
     s.options.cursorline = true
     s.mode = D::Mode::VISUAL
@@ -827,7 +859,7 @@ module AdaptersFramePresenterTest
       ["a block in visual line mode", "visual_line", :block],
       ["a block in visual block mode", "visual_block", :block],
       ["a block while an operator waits", "operator_pending", :block],
-      ["a block on the command line", "cmdline", :block]
+      ["Shape per mode: a bar on the command line, which every query prompt shares", "cmdline", :bar]
     ]) { |mode| shape_in(mode.to_s) }
 
     t.finish
