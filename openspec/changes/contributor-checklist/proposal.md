@@ -15,7 +15,7 @@ Out of scope: tier routing for critical places and the high effort for the mid t
 
 Assumptions: the card lives in both files and a test keeps them equal, since the workflow reads no file.
 
-- README.md: unchanged, an agent and workflow prompt change with no user-visible behavior
+- README.md: updated, the contributor step names the rules card, the checklist, and the tier routing
 - docs/architecture.md: unchanged, no layer, port, or roadmap change
 - CLAUDE.md: unchanged, its Agents section already describes the contributor's self-check; the card repeats its hard rules
 
