@@ -27,3 +27,4 @@
 - [x] 5.2 `test/lint.rb`: a ledger record of a slot the holder does not store as `@slot = slot` fails, so a readerless holder cannot keep another keyword's object under a recorded name (proved by the same self-test)
 - [x] 5.3 `test/lint.rb`: the assembly's text is read once for the holder rule, and `ledger_problems_of` says only the self-test uses it (proved by `make lint`)
 - [x] 5.4 `test/editor_key_hints.rb` and `test/editor_palette.rb`: the empty-buffer edge cases use one `empty_session` helper per file (proved by the tests' labels)
+- [x] 5.5 `test/lint.rb`: a holder under a directory of `READERLESS_DIRS` stores each keyword its `initialize` signature types shared as `@keyword = keyword`, with a matching ledger record, so dropping both the record and the `held` line of a keyword stored under another name fails (proved by the self-test "a readerless holder stores each keyword its signature types shared under its own name, with a ledger record")
