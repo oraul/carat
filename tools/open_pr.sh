@@ -22,6 +22,12 @@
 #       CHANGE pr N): the one such pull request, or the one recorded at an
 #       earlier push among several; refuses several otherwise, since a
 #       fork's pull request can share the commit
+#   sh tools/open_pr.sh message CHANGE SHA   the merger, before its squash
+#       merge: prints the squash message, the body of the change's one
+#       archived pr.md at SHA (40 digits; the archive's own entries, as the
+#       merge tool's guard picks them), its trailing blank lines dropped,
+#       one blank line, and the co-author trailer, every other byte kept,
+#       the four sections' headings and dividers included
 #   sh tools/open_pr.sh read BRANCH DIR      the workflow: refuses a branch
 #       of no allowed type; fetches the branch's tip and reads the one
 #       pr.md of an archived change that HEAD's tree (main's) lacks into
@@ -48,6 +54,9 @@ BRANCH_RE='^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$'
 CHANGE_RE='^[a-z0-9][a-z0-9-]*$'
 PR_MD_RE='^openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-[a-z0-9][a-z0-9-]*/pr[.]md$'
 MAX_WAIT=540
+# The one trailer CLAUDE.md allows, the squash message's last line, as the
+# merge tool's guard requires it (SQUASH_TRAILER in tools/agent_guard.sh).
+SQUASH_TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
 
 usage() {
   sed -n '/^# Usage:/,/^# Exit status:/p' "$0" | sed 's/^# \{0,1\}//' >&2
@@ -151,6 +160,28 @@ case "$cmd" in
       waited=$((waited + step))
     done
     refuse "after $seconds seconds no pull request's head is $pushed: read the open-pr workflow's log, never open the pull request another way" ;;
+  message)
+    [ $# -eq 2 ] || usage
+    change=$1
+    sha=$2
+    matches "$change" "$CHANGE_RE" || refuse "not a change name: $change"
+    matches "$sha" '[0-9a-f]{40}' || refuse "not a full commit sha (40 digits): $sha"
+    # The archive's own entries at the pushed head, not the worktree's.
+    found=$(git ls-tree --name-only "$sha" -- openspec/changes/archive/ 2>/dev/null |
+      grep -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change" | while IFS= read -r dir; do
+        [ "$(git cat-file -t "$sha:$dir/pr.md" 2>/dev/null)" != blob ] || printf '%s\n' "$dir/pr.md"
+      done)
+    [ -n "$found" ] && [ "$(printf '%s\n' "$found" | wc -l)" -eq 1 ] || refuse "$sha holds no one archived pr.md of $change"
+    text=$(git show "$sha:$found") || refuse "cannot read $found at $sha"
+    [ -n "$(printf '%s\n' "$text" | sed '1,2d' | tr -d ' \t\r\n')" ] || refuse "$found has no body"
+    printf '%s\n' "$text" | sed '1,2d' | LC_ALL=C T="$SQUASH_TRAILER" awk '
+      { line[++n] = $0 }
+      END {
+        while (n > 0 && line[n] == "") n--
+        for (i = 1; i <= n; i++) print line[i]
+        print ""
+        print ENVIRON["T"]
+      }' ;;
   read)
     [ $# -eq 2 ] || usage
     branch=$1

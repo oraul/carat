@@ -73,7 +73,8 @@
 #                set CHANGE ci "red|green HEX", set CHANGE merged HEX;
 #                CHANGE=NAME RECORDS=... sh tmp/.merge-gates/tools/gates.sh
 #                merge BODY, never the branch's tools/gates.sh merge; sh
-#                tools/ci_wait.sh N; git push origin --delete BRANCH, git
+#                tools/ci_wait.sh N; sh tools/open_pr.sh message CHANGE
+#                SHA, SHA 40 digits; git push origin --delete BRANCH, git
 #                checkout -q main, git merge -q --ff-only origin/main, git
 #                branch -D BRANCH, BRANCH a Conventional Branch; git
 #                hash-object --stdin, with no other option; git fsck
@@ -732,15 +733,22 @@ script_form() {
       esac ;;
     tools/open_pr.sh)
       # The pull request opened on the branch push: the contributor writes
-      # pr.md before its push and waits for the pull request after it;
-      # read, gate, and open are the open-pr workflow's alone.
-      only_profiles contributor "tools/open_pr.sh"
+      # pr.md before its push and waits for the pull request after it; the
+      # merger prints the squash message from it at the pushed head; read,
+      # gate, and open are the open-pr workflow's alone.
       case "${1:-}" in
-        write) [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/open_pr.sh write other than CHANGE TITLE" ;;
+        write)
+          only_profiles contributor "tools/open_pr.sh write"
+          [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/open_pr.sh write other than CHANGE TITLE" ;;
         wait)
+          only_profiles contributor "tools/open_pr.sh wait"
           { [ $# -eq 2 ] || { [ $# -eq 3 ] && matches "$3" '^[0-9]{1,3}$'; }; } && matches "$2" "$CHANGE_NAME" ||
             refuse "tools/open_pr.sh wait other than CHANGE [SECONDS]" ;;
-        *) refuse "tools/open_pr.sh other than write or wait" ;;
+        message)
+          only_profiles merger "tools/open_pr.sh message"
+          [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{40}$' ||
+            refuse "tools/open_pr.sh message other than CHANGE SHA (40 digits)" ;;
+        *) refuse "tools/open_pr.sh other than write, wait, or message" ;;
       esac ;;
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"
@@ -931,7 +939,8 @@ hooks=${git_common:+$git_common/hooks}
 planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
 [ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
 
-# The merge tool, for the merger only: a squash whose expected head (sha,
+# The merge tool, for the merger only: a squash whose expected head
+# (expectedHeadSha, the parameter GitHub refuses any other head by,
 # all 40 digits) exactly one run state under build/pipeline/ names, holding
 # it both as pushed and as gated, which only main's merge gates write when
 # every gate passed and every push clears, while origin/main is the main
@@ -941,8 +950,8 @@ planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[
 merge_tool() {
   only_profiles merger "the merge tool"
   [ "$(printf '%s' "$input" | field merge_method)" = squash ] || refuse "a merge other than a squash"
-  sha=$(printf '%s' "$input" | field sha)
-  matches "$sha" '^[0-9a-f]{40}$' || refuse "a merge without the pushed head as its expected head (sha, 40 digits)"
+  sha=$(printf '%s' "$input" | field expectedHeadSha)
+  matches "$sha" '^[0-9a-f]{40}$' || refuse "a merge without the pushed head as its expected head (expectedHeadSha, 40 digits)"
   naming=$(grep -s -l -F "$sha" "$project_dir"/build/pipeline/*.json | wc -l | tr -d ' ')
   [ "$naming" -le 1 ] || refuse "a merge of $sha, which $naming run states name: remove the one the change did not write"
   found=""
