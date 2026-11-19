@@ -33,6 +33,8 @@ ok   zE deletes every fold
 ok   zf3jzozfj nests a fold at the outer fold's first row
 ok   a fold crossing another grows to hold it
 ok   u restores the lines of a deleted fold, not the fold
+ok   zfjiX opens the fold and edits its first line, as Vim
+ok   a repeated insert opens the fold it closed again
 ok   zo with no fold gives E490
 ok   zc with no fold gives E490
 ok   za with no fold gives E490
@@ -46,6 +48,11 @@ ok   a split window has its parent's folds
 ok   zE in one window leaves the other's folds
 ok   dd on the other window's closed fold deletes its lines
 ok   showing another buffer drops the window's folds, untracked, and draws the new buffer's lines
+ok   Closing a split leaves one fold list: the buffer tracks one, the window keeps its fold
+ok   a fold in a second tab page is tracked by the buffer
+ok   closing the tab page drops its window's fold list, the first tab page keeps its own
+ok   a fold in a hidden slot window is tracked by the buffer
+ok   closing the tab page drops the folds of its hidden slot window
 ok   a syntax-highlighted line below a closed fold, past top plus the height
 ok   a float opens below a cursor under a closed fold where the rows below have room
-editor_folds: 50 passed, 0 failed
+editor_folds: 57 passed, 0 failed
