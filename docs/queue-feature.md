@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 19
 
-1. `match-paren` (T2 user request, estimated medium, Facet wave 2): MatchParen has a theme row (`carat/domain/themes.rb:126`) no frame paints: the bracket matching the cursor's, shown by Neovim, is never shown. Fix outline: paint the pair in view, under a search budget. Accepted when frame rows show both brackets of `(`, `[`, `{` in MatchParen with the cursor on either, none for an unmatched or off-screen pair, and the `lh` bench held. Backlog: none.
-2. `cursor-and-messages` (T2 user request, estimated small, Facet wave 2): the Facet plan's cursor and message-line styling; no source names its files, its first step draws them. Accepted when frame rows show the plan's cursor and message styling in both themes. Backlog: none.
+1. `cursor-and-messages` (T2 user request, estimated small, Facet wave 2): the Facet plan's cursor and message-line styling; no source names its files, its first step draws them. Accepted when frame rows show the plan's cursor and message styling in both themes. Backlog: none.
 
 ## Pool
 
@@ -37,9 +36,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- `gutter-signcolumn` delivered first (T2, the user's request, Facet decision 5): Sprint 19 item 1, removed; 2 features left.
-- Security first (T0): sprint-18 periodic security Medium (9) `tools/run_state.sh:449` and Low (3) `:2648` fixed by b5b0aec (#214); none open.
-- Estimate medium (T2): guide-colors 922,993, background-default 1,095,842 under; facet-palette 1,273,459 over; last two not both over, no size up.
-- No split (T2, size rule): one behavior, one cell, 2 locations per layer.
-- sprint-18-records retros 11 to 13 (T1): backlog lane, recorded in this plan's backlog.md; 13 joins `bench-skip-no-code`.
+- `match-paren` delivered as written (T2, the user's request, Facet wave 2): Sprint 19 item 1 at b7c438f, removed; 1 feature left.
+- Security first (T0): no periodic finding in pending contributor-tier-trial or gutter-signcolumn; sprint-18 Medium (9) fixed by b5b0aec (#214); none open.
+- Estimate medium (T2): guide-colors 922,993, background-default 1,095,842 under; gutter-signcolumn 1,207,861 over by 7,861; last two not both over, no size up.
+- No split (T2, size rule): one behavior at one theme row (`themes.rb:126`), under 3 parts.
+- Trial (T1): delivery 1 of 6 in the contributor-tier-trial window, quality first pass 98/175 before it.
+- `contributor-tier-trial` closed (T1): 636,664 total, 33.0 min, rework 2; retro 8 and 9 to this plan's backlog.md, the backlog lane idle by the brief.
 - Pool unchanged (T2, the user's request): Facet waves, then vim items in Sprint 20.
