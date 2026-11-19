@@ -26,3 +26,8 @@
 - Location: docs/findings/check-runner-safety.md, the entry listing tools/run_state.sh among the paths a stage can write without failing the check (quality advisory)
 - Why: escaped_paths scans the delivery clone's tools/ (only tmp/, .git, and four build/ directories are pruned), so such an edit is listed; the narrower risk is an edit that changes the runner's behavior before the running shell reaches escaped_paths, since sh reads the script as it runs.
 - Fix: read that entry with this narrower risk; have the runner run from a copy of the script made before the stages start, so an edit of the delivery clone's copy cannot change the running check.
+
+### The run-state comparison now leaves out every figure but the measurements (security Low (5), residual widened)
+- Location: tools/run_state.sh `state_view`, the filter of the run-state comparison after a check.
+- Why: so the figures /deliver's usage and tokens write while a detached check runs leave a rejoined check passing, the comparison now leaves out every `metric.*` line but the measurements (`allocs.*`, `rounds.*`, `us.*`, `analysis_ms.*`); a stage can therefore forge, by an absolute path, not only the checker line's figures (first-pass rates, the estimate, rework) but `metric.total_tokens`, `metric.wall_min`, `metric.start.*`, `metric.weighted.*`, and `metric.counted`, which feed the token budget and the history rows, and the check passes.
+- Fix: as for the residual already recorded: at `escape_mark` snapshot the `metric.*` lines and accept a changed one only when a command the runner's caller ran (metric, usage, tokens) logged writing it, the log kept outside every path a stage can write.
