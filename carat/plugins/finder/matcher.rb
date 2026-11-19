@@ -22,11 +22,14 @@ module Carat
       # picker's substring search (word_byte? and camel? are theirs, and
       # boundary?'s, to share).
       module Matcher
-        NAME_BOUNDARY = 7
-        IN_NAME = 6
-        AT_BOUNDARY = 5
-        ELSEWHERE = 4
+        # A run match scores MAX_RUNS + 1 - runs: MAX_RUNS - 1 at two runs, 1 at
+        # MAX_RUNS. Every substring score, from ELSEWHERE up, is above it
+        # however large MAX_RUNS is.
         MAX_RUNS = 4
+        ELSEWHERE = MAX_RUNS
+        AT_BOUNDARY = MAX_RUNS + 1
+        IN_NAME = MAX_RUNS + 2
+        NAME_BOUNDARY = MAX_RUNS + 3
         SUM_ROOM = 256
         LENGTH_ROOM = 1023
         INDEX_BITS = 20
@@ -95,28 +98,30 @@ module Carat
         # when the path has no match of either tier.
         #: (String, Integer, Integer, String) -> Integer
         def self.term_score(query, from, stop, path)
-          j = find_in(query, from, stop, path, name_start(path))
-          if j >= 0
-            while j >= 0
-              return NAME_BOUNDARY if boundary?(path, j)
-              j = find_in(query, from, stop, path, j + 1)
-            end
-            return IN_NAME
-          end
-          j = find_in(query, from, stop, path, 0)
-          if j >= 0
-            while j >= 0
-              return AT_BOUNDARY if boundary?(path, j)
-              j = find_in(query, from, stop, path, j + 1)
-            end
-            return ELSEWHERE
-          end
+          one = substring_score(query, from, stop, path, name_start(path), NAME_BOUNDARY, IN_NAME)
+          return one if one >= 0
+          one = substring_score(query, from, stop, path, 0, AT_BOUNDARY, ELSEWHERE)
+          return one if one >= 0
           runs = 2
           while runs <= MAX_RUNS
             return MAX_RUNS + 1 - runs if runs_match?(query, from, stop, path, 0, runs, true)
             runs += 1
           end
           -1
+        end
+
+        # The score of the term, bytes from from to stop of the query, as a
+        # substring of the path found from start on: at_word when one hit
+        # starts a segment or word, else inside, -1 when there is no hit.
+        #: (String, Integer, Integer, String, Integer, Integer, Integer) -> Integer
+        def self.substring_score(query, from, stop, path, start, at_word, inside)
+          j = find_in(query, from, stop, path, start)
+          return -1 if j < 0
+          while j >= 0
+            return at_word if boundary?(path, j)
+            j = find_in(query, from, stop, path, j + 1)
+          end
+          inside
         end
 
         # Whether the query's bytes from q to stop match as at most left
