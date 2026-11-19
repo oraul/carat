@@ -16,7 +16,7 @@ Out of scope: any code under `carat/`, and `tools/rules.sh`.
 
 Assumptions: the rule letters follow the brief's (a) to (e); a large estimate is rule e, applied by the workflow itself. The routing is not live until this change merges, so its own run used the earlier settings.
 
-- README.md: unchanged, workflow and process tooling only; the code map names no new file.
+- CLAUDE.md: unchanged, its Agents section holds no tier or effort figure; the routing is in docs/goals.md and the README.
 
 ## Capabilities
 
