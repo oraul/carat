@@ -1,0 +1,3 @@
+# Brief
+
+match-paren: docs/queue-feature.md Sprint 19 item 1 at b7c438f, delivered as written; the backlog lane is idle until the sprint closes, so touch no file of it (docs/queue-backlog.md, docs/metrics-backlog.tsv). The queue line: `match-paren` (T2 user request, estimated medium, Facet wave 2): MatchParen has a theme row (`carat/domain/themes.rb:126`) no frame paints: the bracket matching the cursor's, shown by Neovim, is never shown. Fix outline: paint the pair in view, under a search budget. Accepted when frame rows show both brackets of `(`, `[`, `{` in MatchParen with the cursor on either, none for an unmatched or off-screen pair, and the `lh` bench held. Backlog: none.

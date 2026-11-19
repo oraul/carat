@@ -171,6 +171,21 @@ ok   side by side, only the right window's row is lit, to its edge
 ok   the cursor line's number is in CursorLineNr
 ok   the text takes its group on the layer, the status bar keeps its own
 ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
+ok   the cursor on the opening parenthesis
+ok   the cursor on the closing parenthesis
+ok   square brackets
+ok   braces across rows, cursor on the closer
+ok   braces across rows, cursor on the opener
+ok   nested pairs of its kind are counted
+ok   the cursor on text draws no pair
+ok   an unmatched bracket draws none
+ok   a partner below the window draws none
+ok   a partner above the window draws none
+ok   a pair on later rows is drawn
+ok   insert mode draws none
+ok   visual mode keeps the Visual selection over the pair
+ok   The row repaints when the cursor moves onto a bracket
+ok   The row repaints when the cursor moves off a bracket
 ok   a block in normal mode
 ok   a bar in insert mode
 ok   an underline in replace mode
@@ -179,4 +194,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   a block on the command line
-adapters_frame_presenter: 181 passed, 0 failed
+adapters_frame_presenter: 196 passed, 0 failed
