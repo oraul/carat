@@ -767,7 +767,7 @@ module AdaptersFramePresenterTest
     PROMPT.close
 
     # The cursor line: the cursor's row of the current window, from the
-    # end of the gutter to the window's edge, follows the cursor, the
+    # window's left edge to its right edge, follows the cursor, the
     # focus, and the option.
     t.table([
       ["The cursor line of the current window: the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
@@ -785,8 +785,30 @@ module AdaptersFramePresenterTest
     s.cursor.move_to(1, 0)
     f = draw(s, 6, 14)
     t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "The number on the cursor line: the cursor line's number is in CursorLineNr on the layer")
-    t.assert_equal([D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::CURSOR_LINE_NUMBER + LIT, 0], [f.cell(1, 0).hl, f.cell(1, 3).hl, f.cell(0, 0).hl - D::Highlight::LINE_NUMBER], "The gutter on the cursor line: the cursor line covers the gap and the number from column 0")
+    t.assert_equal([D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::LINE_NUMBER], [f.cell(1, 0).hl, f.cell(1, 3).hl, f.cell(0, 0).hl], "The gutter on the cursor line: the cursor line covers the gap and the number from column 0")
     t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS_MODE_NORMAL], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status bar keeps its own")
+    s.buffer.place_sign("test", 0, 1, "X", D::Highlight::DIAGNOSTIC_ERROR)
+    f = draw(s, 6, 14)
+    t.assert_equal(D::Highlight::DIAGNOSTIC_ERROR + LIT, f.cell(1, 0).hl, "the sign column on the cursor line is lifted: a sign cell is its group on the layer")
+    # Toggling relativenumber on one presenter repaints the one row whose
+    # absolute and relative numbers are equal (cursor on row 9, row 4).
+    lines = []
+    n = 0
+    while n < 12
+      lines << "x"
+      n += 1
+    end
+    s = state_for(lines, "a.txt")
+    s.cursor.move_to(9, 0)
+    s.options.relativenumber = true
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "relativenumber: row 4 shows 5 in LineNrFifth")
+    s.options.relativenumber = false
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "turning relativenumber off repaints row 4 in LineNr")
+    s.options.relativenumber = true
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "turning relativenumber on repaints row 4 in LineNrFifth")
     s = state_for(["abc", "def"], "a.txt")
     s.options.cursorline = true
     s.mode = D::Mode::VISUAL

@@ -173,6 +173,10 @@ ok   side by side, only the right window's row is lit, to its edge
 ok   The number on the cursor line: the cursor line's number is in CursorLineNr on the layer
 ok   The gutter on the cursor line: the cursor line covers the gap and the number from column 0
 ok   the text takes its group on the layer, the status bar keeps its own
+ok   the sign column on the cursor line is lifted: a sign cell is its group on the layer
+ok   relativenumber: row 4 shows 5 in LineNrFifth
+ok   turning relativenumber off repaints row 4 in LineNr
+ok   turning relativenumber on repaints row 4 in LineNrFifth
 ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
 ok   the cursor on the opening parenthesis
 ok   the cursor on the closing parenthesis
@@ -199,4 +203,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 201 passed, 0 failed
+adapters_frame_presenter: 205 passed, 0 failed
