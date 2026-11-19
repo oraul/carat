@@ -94,3 +94,10 @@ A plugin edit request that fails after its edits began SHALL leave every window'
 #### Scenario: A reverted plugin edit leaves the folds as before
 - **WHEN** a window has a closed fold over rows 1 to 2 and an open fold over rows 3 to 4, and a plugin edit request deletes rows 1 to 2 and inserts a line above row 3, then fails
 - **THEN** the lines are as before and the window's folds are again a closed fold over rows 1 to 2 and an open fold over rows 3 to 4
+
+### Requirement: Insert mode opens the closed folds under the cursor
+Entering insert or replace mode SHALL open every closed fold holding the cursor, as Neovim's foldOpenCursor does when an insert session starts, so the edited line is shown.
+
+#### Scenario: zfjiX opens the fold and edits its first line
+- **WHEN** "zfjiX<Esc>" is typed on the lines "a", "b", "c", "d", "e"
+- **THEN** the first line is "Xa" and the fold covers rows 0 and 1, open
