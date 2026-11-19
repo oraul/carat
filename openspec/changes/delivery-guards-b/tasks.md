@@ -5,4 +5,4 @@
 ## 2. Tests and docs
 
 - [x] 2.1 Tools-test cases running the real `contributor()`: a placeholder and a wrong head refused, restarted once, noted, escalated; a second refusal stops; an unread lane head; a hostile head kept out of the queued line (`tools/tools_test.sh`)
-- [ ] 2.2 Name the refused head as an escalation trigger in `docs/goals.md` (checked by `make docs-lint`)
+- [x] 2.2 Name the refused head as an escalation trigger in `docs/goals.md` (checked by `make docs-lint`)
