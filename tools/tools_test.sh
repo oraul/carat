@@ -447,6 +447,83 @@ expect "run_state: a check stage leaves origin's fetch refspec" 0 "^[+]refs/head
 expect "run_state: a run state a check stage writes is not the delivery clone's" 0 "^$" state get isolated review.security
 expect "run_state: check removes its clone" 0 "^$" ls -A "$work/checks"
 rm "$work/plant.out"
+# The clone holds its own copy of the toolchain, its absolute links pointed
+# at the copy, and no Spinel checkout; a stage that writes the delivery
+# clone, its git directory, its run state, or the shared toolchain by an
+# absolute path fails the check (escaped_paths).
+iso_top=$(pwd -P)
+mkdir -p tmp/.toolchain/bin tmp/.toolchain/lib tmp/.spinel
+echo spin > tmp/.toolchain/lib/spin
+echo spinel > tmp/.toolchain/bin/spinel
+ln -s "$iso_top/tmp/.toolchain/lib/spin" tmp/.toolchain/bin/spin
+echo spinel > tmp/.spinel/README
+cat > "$work/bin/reach-make" <<'EOF'
+#!/bin/sh
+# A stage writing what REACH names, the delivery clone at TOP; S= names it.
+stage=
+for arg in "$@"; do case "$arg" in S=*) stage=${arg#S=} ;; esac; done
+state=$TOP/build/pipeline/isolated.json
+case "$REACH" in
+  inside)
+    readlink tmp/.toolchain/bin/spin > "$REACH_OUT"
+    echo forged > tmp/.toolchain/bin/spin && echo forged > tmp/.toolchain/bin/spinel
+    [ -d tmp/.toolchain ] && [ ! -L tmp/.toolchain ] ;;
+  no-spinel) [ ! -e tmp/.spinel ] && [ ! -L tmp/.spinel ] ;;
+  toolchain) echo forged > "$TOP/tmp/.toolchain/lib/spin" ;;
+  spinel) : > "$TOP/tmp/.spinel/planted" ;;
+  tracked) echo forged >> "$TOP/README.md" ;;
+  state) awk 'NR == 2 { print "  \"review.security\": \"pass 0\"," } { print }' "$state" > "$state.new" && mv "$state.new" "$state" ;;
+  record)
+    [ "$stage" = metrics ] || exit 0
+    awk '/^  "stage[.]bench-budget"/ { sub(/": ".*"/, "\": \"0 0s forged\"") } { print }' "$state" > "$state.new" && mv "$state.new" "$state" ;;
+  hook) printf '#!/bin/sh\nexit 0\n' > "$TOP/.git/hooks/post-checkout" && chmod +x "$TOP/.git/hooks/post-checkout" ;;
+  config) git config --file "$TOP/.git/config" remote.origin.url "$TOP/fake.git" ;;
+  upstream)
+    git config --file "$TOP/.git/config" branch.chore/isolated.remote origin &&
+      git config --file "$TOP/.git/config" branch.chore/isolated.merge refs/heads/chore/isolated ;;
+  worktree) echo forged > "$GIT_DIR_OUT/forged" ;;
+esac
+EOF
+chmod +x "$work/bin/reach-make"
+reach() {
+  env STAGES="${REACH_STAGES:-reach}" MAKE="$work/bin/reach-make" TOP="$iso_top" REACH="$1" REACH_OUT="$work/reach.out" \
+    TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+expect "run_state: check copies the toolchain into its clone, its links pointed at the copy" 0 "every stage passed" reach inside
+expect "run_state: the clone's toolchain link names the copy" 0 "^$work/checks/carat-check[.][^/]+/repo/tmp/[.]toolchain/lib/spin$" cat "$work/reach.out"
+expect "run_state: a stage writing its clone's toolchain leaves the shared one" 0 "^spin spinel $" \
+  sh -c 'cat tmp/.toolchain/lib/spin tmp/.toolchain/bin/spinel | tr "\n" " "'
+expect "run_state: check leaves Spinel's checkout out of its clone" 0 "every stage passed" reach no-spinel
+expect "run_state: a stage that changes the shared toolchain by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]toolchain/lib/spin$" reach toolchain
+expect "run_state: a check failed by a write outside its clone ends in a verdict line" 0 "^check: stage none failed at " tail -1 build/stages/isolated/check.log
+echo spin > tmp/.toolchain/lib/spin
+expect "run_state: a stage that writes Spinel's checkout by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]spinel/planted$" reach spinel
+rm tmp/.spinel/planted
+expect "run_state: a stage that writes a tracked file of the delivery clone by an absolute path fails the check" 1 "^[|] $iso_top/README[.]md$" reach tracked
+git_q checkout -q README.md
+cp build/pipeline/isolated.json "$work/isolated.saved"
+expect "run_state: a stage that writes the delivery clone's run state by an absolute path fails the check" 1 "isolated[.]json: records the runner did not write$" reach state
+cp "$work/isolated.saved" build/pipeline/isolated.json
+# metrics starts once bench-budget passed (STAGE_AFTER) and forges its record.
+REACH_STAGES="bench-budget metrics"
+expect "run_state: a stage that rewrites a stage record by an absolute path fails the check" 1 "isolated[.]json: records the runner did not write$" reach record
+REACH_STAGES=
+cp "$work/isolated.saved" build/pipeline/isolated.json
+expect "run_state: a stage that plants a hook in the delivery clone by an absolute path fails the check" 1 "^[|] $iso_top/[.]git/hooks" reach hook
+rm .git/hooks/post-checkout
+expect "run_state: a stage that rewrites the delivery clone's configuration by an absolute path fails the check" 1 "[.]git/config: the configuration changed$" reach config
+git config remote.origin.url host:o/r.git
+expect "run_state: a branch upstream written during the check leaves it passing" 0 "every stage passed" reach upstream
+git_q worktree add -q -b chore/isolated-lane "$work/isolated-lane"
+cd "$work/isolated-lane" || exit 1
+state init isolated chore/isolated-lane > /dev/null
+expect "run_state: a stage that writes a linked worktree's git directory fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/forged$" \
+  env STAGES=reach MAKE="$work/bin/reach-make" REACH=worktree GIT_DIR_OUT="$(git rev-parse --absolute-git-dir)" \
+  TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+cd "$iso_top" || exit 1
+git_q worktree remove --force "$work/isolated-lane"
+expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"
+rm -r tmp "$work/reach.out" "$work/isolated.saved"
 # The clone has no release build (make stages leaves out build), so every
 # stage gets dev-build's binary as CARAT_BIN, which the smoke test runs.
 cat > "$work/bin/bin-make" <<'EOF'

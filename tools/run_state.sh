@@ -49,7 +49,9 @@
 # The check clone: a repository the runner makes outside the delivery
 # clone for each check (TMPDIR) and removes on exit; every stage runs in
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
-# pipeline, stages, and plan) and METRICS_OUT gets its metrics.
+# pipeline, stages, and plan) and METRICS_OUT gets its metrics. The clone
+# holds its own copy of the toolchain; a stage that wrote outside the clone
+# (escaped_paths) fails the check.
 #
 # History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
 # per merged change in its lane's file (lane), appended by history
@@ -412,6 +414,8 @@ PICK_MAX=10
 # (backlog-oldest), closing those fixed or gone (groom's closed and gone).
 PRUNE_COUNT=50
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
+# The stage records the check runner wrote (stage_record).
+runner_records=''
 PHASES="plan implement check quality security bench package ci merge retro report"
 # The stages that read what a test-only commit may change, which such a
 # commit runs again: test-build and test-run compile and run the tests,
@@ -667,7 +671,7 @@ stage_end() {
   else
     echo "EXIT $4" >> "$log"
   fi
-  write_key "stage.$1" "$stage_word ${secs}s $2 $(utc_now)"
+  stage_record "stage.$1" "$stage_word ${secs}s $2 $(utc_now)"
   if [ "$stage_word" = "$4" ]; then
     echo "stage $1: exit $4 in ${secs}s, log $log"
   else
@@ -702,6 +706,15 @@ jobs_refusal() {
   esac
 }
 
+# stage_record KEY VALUE: writes a stage record of the runner and keeps
+# it in runner_records, "KEY VALUE" lines, so the runner knows the run
+# state it expects (escaped_paths).
+stage_record() {
+  write_key "$1" "$2"
+  runner_records="$runner_records$1 $2
+"
+}
+
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
 # record reading running, its log NAME.log, and "PID SECONDS COMMIT" in
 # job_dir/NAME.start; the job writes CMD's exit status to
@@ -713,7 +726,7 @@ stage_launch() {
   launch_log=$stage_dir/$change/$launch_name.log
   launch_at=$(head_commit)
   launch_start=$(date +%s)
-  write_key "stage.$launch_name" "running 0s $launch_at $(utc_now)"
+  stage_record "stage.$launch_name" "running 0s $launch_at $(utc_now)"
   rm -f "$job_dir/$launch_name.status"
   (
     job_child=''
@@ -802,7 +815,7 @@ stages_stop() {
     n=0
     while [ ! -f "$job_dir/$s.status" ] && [ $n -lt 50 ]; do pause; n=$((n + 1)); done
     echo "$1" >> "$stage_dir/$change/$s.log"
-    write_key "stage.$s" "$stop_word $(( $(date +%s) - job_start ))s $job_at $(utc_now)"
+    stage_record "stage.$s" "$stop_word $(( $(date +%s) - job_start ))s $job_at $(utc_now)"
     stopped="$stopped $s"
     echo "stage $s: $stop_word in $(( $(date +%s) - job_start ))s, log $stage_dir/$change/$s.log"
   done
@@ -871,18 +884,18 @@ check_stages() {
         fi
         if [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
             ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
-          write_key "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
+          stage_record "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
           echo "stage $s: passed at $backed, carried to $head (only tests changed since)"
           continue
         fi ;;
     esac
     if out_of_scope "$s" "$paths"; then
-      write_key "stage.$s" "0 0s $head $(utc_now) scoped"
+      stage_record "stage.$s" "0 0s $head $(utc_now) scoped"
       echo "stage $s: no path changed since the merge base is one it checks, skipped"
       continue
     fi
     if one_of "$s" "$COMPILE_STAGES" && compiled_same "$s" "$key"; then
-      write_key "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
+      stage_record "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
       echo "stage $s: passed on the same code (key $(echo "$key" | cut -c1-12)) with its outputs unchanged, skipped"
       continue
     fi
@@ -910,6 +923,13 @@ check_stages() {
       exit 1
     fi
   done
+  escaped=$(escaped_paths)
+  if [ -n "$escaped" ]; then
+    echo "check: a stage wrote outside its clone, so no pass counts (make toolchain reinstalls a changed toolchain):"
+    printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
+    echo "check: stage none failed at $head; read $(check_log)"
+    exit 1
+  fi
   # The workflow records phase.check from the checker's result, so a check
   # run outside it backs nothing.
   echo "check: every stage passed at $head; the workflow records the check"
@@ -954,7 +974,78 @@ check_run() {
   trap 'check_signalled TERM' TERM
   trap 'clone_drop; own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
   clone_make
+  escape_mark
   check_stages "$1"
+}
+
+# What a stage could write outside its clone by an absolute path, noted
+# before the branch's Makefile first runs (make stages): the time, kept in
+# the runner's memory and compared with each file's status-change time,
+# which touch cannot set back, taken once a new second began so nothing
+# written before it counts; the repository configuration; the run state.
+escape_mark() {
+  escape_since=$(date '+%Y-%m-%d %H:%M:%S')
+  while [ "$(date '+%Y-%m-%d %H:%M:%S')" = "$escape_since" ]; do pause; done
+  escape_since=$(date '+%Y-%m-%d %H:%M:%S')
+  git_dir=$(cd "$(git rev-parse --git-dir)" && pwd -P)
+  common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
+  escape_config=$(config_view)
+  escape_state=$(state_view)
+}
+
+# The run state's lines, commas removed, but the figures (metric.*), which
+# the checker's line writes again when it rejoins a running check.
+state_view() {
+  sed 's/,$//' "$(state_file)" | grep -v '^  "metric[.]'
+}
+
+# escape_scan PATH: the paths under PATH, its link followed, changed since
+# escape_mark.
+escape_scan() {
+  [ ! -e "$1" ] || find -H "$1" -newerct "$escape_since" -print 2> /dev/null
+}
+
+# The common repository configuration, less the upstream a concurrent
+# lane's push -u sets.
+config_view() {
+  git config --file "$common_dir/config" --list 2> /dev/null |
+    grep -v -E '^branch[.].*[.](remote|merge)='
+}
+
+# The paths changed since escape_mark outside the clone, one per line:
+# files of the delivery clone, without following links, but its git
+# directory, tmp/ (the lanes, scouts, and toolchain links), and the run
+# states, stage logs, plans, and compile cache, which concurrent lanes and
+# the runner write; a linked worktree's whole git directory; the hooks; the
+# shared toolchain and Spinel's checkout; then "configuration" when the
+# repository configuration differs and the run state when it holds more
+# than the stage records the runner wrote (stage_record).
+escaped_paths() {
+  find "$top" \( -path "$top/.git" -type d -o -path "$top/tmp" -o -path "$top/build/pipeline" -o \
+      -path "$top/build/stages" -o -path "$top/build/plan" -o -path "$top/build/spinel-cache" \) -prune -o \
+    -newerct "$escape_since" -print 2> /dev/null
+  [ "$git_dir" = "$common_dir" ] || escape_scan "$git_dir"
+  escape_scan "$common_dir/hooks"
+  escape_scan "$common_dir/config.worktree"
+  escape_scan "$top/tmp/.toolchain"
+  escape_scan "$top/tmp/.spinel"
+  [ "$(config_view)" = "$escape_config" ] || echo "$common_dir/config: the configuration changed"
+  expected=$(printf '%s' "$runner_records" | SNAP="$escape_state" awk '
+    NF { key = $1; rec[key] = substr($0, length(key) + 2) }
+    END {
+      n = split(ENVIRON["SNAP"], lines, "\n")
+      for (i = 1; i <= n; i++) {
+        line = lines[i]
+        if (line ~ /^  "/) {
+          key = line; sub(/^  "/, "", key); sub(/".*/, "", key)
+          if (key in rec) continue
+        }
+        print line
+      }
+      for (key in rec) print "  \"" key "\": \"" rec[key] "\""
+    }' | LC_ALL=C sort)
+  [ "$(state_view | LC_ALL=C sort)" = "$expected" ] ||
+    echo "$(state_file): records the runner did not write"
 }
 
 # The gates' git: no global or system configuration and no hook.
@@ -965,7 +1056,8 @@ pinned_git() {
 # The check clone: a new repository under TMPDIR, outside the delivery
 # clone, holding HEAD on the branch's name and origin/main by one fetch
 # (objects copied into a pack: no hard link, no alternates, no remote, the
-# sample hooks only), the toolchain linked, and build/ from the carry.
+# sample hooks only), its own copy of the toolchain, and build/ from the
+# carry.
 # What a stage writes in its directory (hooks, configuration, refs,
 # build/pipeline) stays in it and is removed with it.
 clone_make() {
@@ -985,11 +1077,29 @@ clone_make() {
     clone_refused "HEAD moved from $head"
   pinned_git -C "$check_root" checkout -q "$branch" 2>&1 || clone_refused "the checkout failed"
   mkdir -p "$check_root/tmp" "$check_root/build"
-  for t in .toolchain .spinel; do
-    [ ! -e "$top/tmp/$t" ] || ln -s "$top/tmp/$t" "$check_root/tmp/$t"
-  done
+  toolchain_copy
   carry=$stage_dir/$change/carry
   [ ! -d "$carry" ] || cp -RP "$carry/." "$check_root/build/"
+}
+
+# The clone's own copy of the shared toolchain, each absolute link into
+# the shared one (Spinel installs bin/spinel as one) pointed at the same
+# place in the copy, so a stage writing tmp/.toolchain changes only its
+# copy. Spinel's checkout, tmp/.spinel, which no stage reads, stays out.
+toolchain_copy() {
+  [ -d "$top/tmp/.toolchain" ] || return 0
+  shared=$(cd -P "$top/tmp/.toolchain" && pwd -P) || clone_refused "the toolchain could not be read"
+  copy=$check_root/tmp/.toolchain
+  { mkdir "$copy" && cp -RP "$shared/." "$copy/"; } 2>&1 || clone_refused "the toolchain copy failed"
+  find "$copy" -type l | while IFS= read -r link; do
+    target=$(readlink "$link")
+    case "$target" in
+      "$shared"/*) rel=${target#"$shared"} ;;
+      "$top/tmp/.toolchain"/*) rel=${target#"$top/tmp/.toolchain"} ;;
+      *) continue ;;
+    esac
+    rm -f "$link" && ln -s "$copy$rel" "$link"
+  done
 }
 
 clone_refused() {
@@ -1092,7 +1202,9 @@ LOST
 # seconds: prints the runner's output and exits 0 when every stage
 # passed, 1 otherwise, and 3 while it still runs.
 check_wait() {
-  dirty=$(git status --porcelain --untracked-files=no)
+  # No optional lock: a waiter rejoining a running check leaves the index,
+  # which escaped_paths reads in a linked worktree's git directory.
+  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
   [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
   loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
   [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
