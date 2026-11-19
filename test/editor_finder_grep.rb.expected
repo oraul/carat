@@ -13,9 +13,13 @@ ok   control bytes show as spaces
 ok   invalid UTF-8 shows as question marks
 ok   a binary file, a file over the read limit, an empty file, and an ignored directory add no line
 ok   Ctrl-N moves the highlight
-ok   the row cap: the title counts 200+ of 250
+ok   the row cap: the title counts the 250 matching lines of one file
 ok   the row cap: 200 rows kept, listing order among equals
 ok   the cap holds after a key
+ok   a file with one hit is the second row, ahead of the 250-hit file's second line
+ok   the title counts 2 of 2 files and 251 of 251 lines
+ok   the 200th row is the crowded file's 199th line, the one-hit file kept
+ok   each file's first line, then each second line, then each third, in line order within a file
 ok   Enter opens the file at the line
 ok   Enter opens at the first matched byte, counted in characters
 ok   Enter opens a line past the first
@@ -46,8 +50,12 @@ ok   only the first 1000 lines of a file are stored
 ok   the first shown row is the first line of the file
 ok   the last shown row is the 200th line, the cap
 ok   the 400,000-line store cap is marked when it cuts a file
-ok   150,001 lines, past the old 100,000-line cap, are all stored with no cap mark
+ok   150,001 lines are all stored with no cap mark, and a key checks 30,000 of them, its counts marked
+ok   a checks 30,000 lines
+ok   ab checks the 29,999 matches of a again and one line more, the budget they leave
+ok   abc checks the kept matches again and scans on to the last line
+ok   a backspace starts again from the first line, within the budget
 ok   no preview float beside the grep list at 120 columns
 ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 52 passed, 0 failed
+editor_finder_grep: 60 passed, 0 failed
