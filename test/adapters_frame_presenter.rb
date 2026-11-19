@@ -298,6 +298,16 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 12)
     t.assert_equal("  0 b", f.row_text(1), "cursor row shows 0 when number is off")
 
+    # Every fifth relative number is LineNrFifth, the others LineNr.
+    s = state_for(["a", "b", "c", "d", "e", "f", "g"], "a.txt")
+    s.options.relativenumber = true
+    s.cursor.move_to(0, 0)
+    f = draw(s, 9, 12)
+    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER, D::Highlight::LINE_NUMBER_FIFTH, D::Highlight::LINE_NUMBER], [f.cell(1, 2).hl, f.cell(2, 2).hl, f.cell(3, 2).hl, f.cell(4, 2).hl, f.cell(5, 2).hl, f.cell(6, 2).hl], "Every fifth relative number is LineNrFifth")
+    s.options.relativenumber = false
+    f = draw(s, 9, 12)
+    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "absolute numbers stay LineNr, even a fifth")
+
     # Status bar content.
     s = state_for(["ab", "cdef"], "a.txt")
     s.options.icons = "unicode"
@@ -762,7 +772,7 @@ module AdaptersFramePresenterTest
     t.table([
       ["the cursor's row of the current window is lit", "on", [0, 1, 0, 0]],
       ["the blanks after the text are lit to the window's edge", "the blanks after the text", [0, 1, 0, 0]],
-      ["the gutter is not lifted", "the gutter", [0, 0, 0, 0]],
+      ["the gutter is lifted from column 0, the cursor line filled from the window's left edge", "the gutter", [0, 1, 0, 0]],
       ["with the option off no row is lit", "off", [0, 0, 0, 0]],
       ["the lit row follows j", "j", [0, 1, 0, 0]],
       ["turning the option off repaints the row", "turned off", [0, 0, 0, 0]],
@@ -774,7 +784,8 @@ module AdaptersFramePresenterTest
     s.options.cursorline = true
     s.cursor.move_to(1, 0)
     f = draw(s, 6, 14)
-    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "the cursor line's number is in CursorLineNr")
+    t.assert_equal([D::Highlight::LINE_NUMBER, D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::LINE_NUMBER], [f.cell(0, 2).hl, f.cell(1, 2).hl, f.cell(2, 2).hl], "The number on the cursor line: the cursor line's number is in CursorLineNr on the layer")
+    t.assert_equal([D::Highlight::CURSOR_LINE_NUMBER + LIT, D::Highlight::CURSOR_LINE_NUMBER + LIT, 0], [f.cell(1, 0).hl, f.cell(1, 3).hl, f.cell(0, 0).hl - D::Highlight::LINE_NUMBER], "The gutter on the cursor line: the cursor line covers the gap and the number from column 0")
     t.assert_equal([NOR + LIT, NOR + LIT, D::Highlight::STATUS_MODE_NORMAL], [f.cell(1, 4).hl, f.cell(1, 13).hl, f.cell(4, 4).hl], "the text takes its group on the layer, the status bar keeps its own")
     s = state_for(["abc", "def"], "a.txt")
     s.options.cursorline = true
@@ -827,7 +838,7 @@ module AdaptersFramePresenterTest
       ["a block in visual line mode", "visual_line", :block],
       ["a block in visual block mode", "visual_block", :block],
       ["a block while an operator waits", "operator_pending", :block],
-      ["a block on the command line", "cmdline", :block]
+      ["Shape per mode: a bar on the command line, which every query prompt shares", "cmdline", :bar]
     ]) { |mode| shape_in(mode.to_s) }
 
     t.finish

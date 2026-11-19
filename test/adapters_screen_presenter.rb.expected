@@ -3,7 +3,7 @@ ok   enter switches to the alternate screen and clears it
 ok   first frame clears the screen
 ok   first frame writes row 1 with the normal highlight
 ok   line number highlight is emitted before the text
-ok   the line numbers are one_dark's gray at 256 colors
+ok   the line numbers are one_dark's faint gray at 256 colors
 ok   first frame skips a blank row, which the clear already drew
 ok   cursor position, block shape, and cursor shown last
 ok   cursor hidden while drawing

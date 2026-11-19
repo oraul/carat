@@ -765,11 +765,12 @@ module Carat
         frame.cursor_shape = shape_of(state.mode)
       end
 
-      # The cursor shape of a mode: a bar in insert mode, an underline in
+      # The cursor shape of a mode: a bar in insert mode and on the
+      # command line, which every query prompt shares, an underline in
       # replace mode, a block in every other.
       #: (Symbol) -> Symbol
       def shape_of(mode)
-        return :bar if mode == Domain::Mode::INSERT
+        return :bar if mode == Domain::Mode::INSERT || mode == Domain::Mode::CMDLINE
         return :underline if mode == Domain::Mode::REPLACE
         :block
       end
@@ -885,10 +886,10 @@ module Carat
           unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
             @row_of = row
             @cursor_col = fold >= 0 ? -1 : cur
-            @number_hl = layer > 0 ? Domain::Highlight::CURSOR_LINE_NUMBER : Domain::Highlight::LINE_NUMBER
+            @number_hl = number_group(layer, row, cursor.row, number, options)
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
             @repainted[frame_row] = 1 if @floating
-            frame.lift(frame_row, x + gutter, x + width, layer) if layer > 0
+            frame.lift(frame_row, x, x + width, layer) if layer > 0
             @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
           end
           @back_rows.place(seg, window.id, top)
@@ -977,6 +978,15 @@ module Carat
         end
         @repainted[row] = 1 if @floating
         @chrome << row
+      end
+
+      # The group of a row's line number: CursorLineNr on the cursor line,
+      # LineNrFifth on every fifth relative number, LineNr otherwise.
+      #: (Integer, Integer, Integer, Integer, Domain::Options) -> Integer
+      def number_group(layer, row, cursor_row, number, options)
+        return Domain::Highlight::CURSOR_LINE_NUMBER if layer > 0
+        fifth = options.relativenumber && row != cursor_row && number > 0 && number % 5 == 0
+        fifth ? Domain::Highlight::LINE_NUMBER_FIFTH : Domain::Highlight::LINE_NUMBER
       end
 
       # The line number a row shows, -1 when the window has no number

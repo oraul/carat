@@ -99,7 +99,7 @@ module Carat
       # background), its attributes, and its attributes at 16 colors.
       GROUPS = [
         Highlight::NORMAL, FG, BG, 0, 0,
-        Highlight::LINE_NUMBER, DIM, NONE, 0, 0,
+        Highlight::LINE_NUMBER, FAINT, NONE, 0, 0,
         Highlight::STATUS, PANEL_FG, PANEL, BOLD, BOLD,
         Highlight::MESSAGE_ERROR, RED, NONE, BOLD, BOLD,
         Highlight::NON_TEXT, FAINT, NONE, 0, 0,
@@ -161,6 +161,7 @@ module Carat
         Highlight::ADDED, GREEN, NONE, 0, 0,
         Highlight::CHANGED, CYAN, NONE, 0, 0,
         Highlight::REMOVED, RED, NONE, 0, 0,
+        Highlight::LINE_NUMBER_FIFTH, DIM, NONE, 0, 0,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
         Highlight::STRING, STRING, NONE, 0, 0,
