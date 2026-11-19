@@ -39,6 +39,10 @@ Part a changes none of them; parts b to d apply this mapping with their areas.
 - `OpenDefinitionFloat` (`Integer`, the float id): returns an `Outcome`; it writes the id into the `Domain::Definition` record it is given, whose `pick_id` and `float_id` its two callers set from the return value today.
 - `FormatDocs` (`Domain::DocsText`), `FindMatch` (`Domain::SearchHit`), `ProbePath` (`Domain::PathInfo`), and `ListTree` (`Array[String]`): queries that other use cases call and no key or ex command runs, whose callers need the value. Each keeps its value-returning `call`, listed in a `lint` list of queries documented in `docs/architecture.md` section 5. Alternative: each writes its answer into a domain record its caller passes, as `OpenDefinitionFloat` will; rejected for these four since the callers branch on the value at once (`hit = @find_match.call(...)`, `info.refusal`) and a shared record would add a slot to read and reset.
 
+## Edge cases
+
+The discovery use cases change no line of behavior, so the checklist points reach them only through the tests added first: an empty text (colons alone), a trailing blank, the last line, and an empty buffer. Multi-byte text in the palette and the hints is covered by the existing wide-character tests; CRLF and language server positions do not reach these use cases, which read no buffer text.
+
 ## Risks / Trade-offs
 
 - The ledger holds `untyped` objects: the guard can only compare identities, which is all it does.
