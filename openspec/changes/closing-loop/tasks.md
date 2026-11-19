@@ -24,3 +24,4 @@
 - [x] 5.3 `deliver-change.js`: a closing start that commits nothing resets the offered findings (`awaiting`); tested by the nothing-committed case.
 - [x] 5.4 `tools/tools_test.sh`: the fresh-offer, rework, and package-order cases run `freshOffers`, `contributor`, and `readyToPackage` over stubs instead of grepping the source.
 - [x] 5.5 README.md, `docs/contributor-notes.md`, `docs/codebase-map.md`: the security rerun and the closing-loop helpers worded as the code behaves.
+- [x] 5.6 `deliver-change.js`: the held closing figures are flushed (forced) before the re-review, and `seed` restores `closingLoop` with the figures; tested by the flush-before-verify and restored-flag cases of `tools/tools_test.sh`.

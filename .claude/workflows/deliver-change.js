@@ -563,7 +563,7 @@ function seed() {
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (/^[0-9]+$/.test(state['metric.ci_wait_calls'] || '')) ciWaitCalls = Number(state['metric.ci_wait_calls'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
-  if (/^[0-9]+$/.test(state['metric.advisories_closed'] || '') && /^[0-9]+$/.test(state['metric.advisories_left'] || '')) { closingFigures.closed = Number(state['metric.advisories_closed']); closingFigures.left = Number(state['metric.advisories_left']) }
+  if (/^[0-9]+$/.test(state['metric.advisories_closed'] || '') && /^[0-9]+$/.test(state['metric.advisories_left'] || '')) { closingFigures.closed = Number(state['metric.advisories_closed']); closingFigures.left = Number(state['metric.advisories_left']); closingLoop = closingFigures.closed + closingFigures.left > 0 }
   // The notes in the order they were recorded. The advisories of every
   // quality review of the run, which its reviewers recorded as
   // quality-advisory notes at each commit; once pushed, the package step
@@ -1397,10 +1397,12 @@ async function closeAdvisories() {
   // Nothing committed: the offered findings were not touched, so no later
   // review is asked to confirm them.
   if (head === before) awaiting = { quality: [], security: [] }
-  // Held at once, so the flush of the re-review (and a resume before the
-  // push) records the loop as run; the final figures follow it.
+  // Held and flushed at once, so a run stopped during the re-review (and a
+  // resume before the push) has the loop recorded as run; the final figures
+  // follow it.
   closingFigures.closed = 0
   closingFigures.left = open.length
+  if (head !== before && !(await flush(true))) return false
   const passed = head === before ? true : await verify()
   closingFigures.closed = open.filter((f) => fixedInPlace.has(f)).length
   closingFigures.left = open.length - closingFigures.closed
