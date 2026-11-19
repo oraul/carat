@@ -424,10 +424,25 @@ function reRaised(location, earlier) {
   return !!location && !/:0$/.test(location) && earlier.some((e) => findingAt(e) === location)
 }
 // Whether a blocking quality finding (TEXT) is marked a first-pass miss: the
-// reviewer of a fix round words it so when its lines are unchanged since the
-// last review. Only recorded, never unblocked, and not counted in firstPass.
+// reviewer of a fix round words it so right after its location when its
+// lines are unchanged since the last review. Only recorded, never unblocked,
+// and not counted in firstPass.
 function firstPassMiss(text) {
-  return /(?:^|\s)first-pass miss\b/.test(String(text || ''))
+  const location = findingAt(text)
+  if (!location) return false
+  const rest = String(text).slice(String(text).indexOf(location) + location.length)
+  return /^[\s:,;-]*first-pass miss\b/i.test(rest)
+}
+// Splits a quality review's BLOCKING findings: the re-raises of an earlier
+// ADVISORY, and the first-pass misses, a marked finding that is new, not at
+// a location of PRIOR, the findings the last review left blocking (one a
+// failed fix left unfixed is no miss). Re-raises are removed first.
+function qualitySplit(blocking, advisory, prior) {
+  const raised = blocking.filter((f) => reRaised(findingAt(f), advisory))
+  const left = blocking.filter((f) => !raised.includes(f))
+  const known = prior.map(findingAt)
+  const missed = left.filter((f) => firstPassMiss(f) && !known.includes(findingAt(f)))
+  return { raised, left, missed }
 }
 // The security findings that block (FINDINGS, the reviewer's): a High or
 // Medium in the change at confidence 8 or above, whatever an earlier round
@@ -1179,11 +1194,11 @@ async function reviews() {
     if (reviewLeft(q).length) { stopped = `the quality review did not cover ${reviewLeft(q).join(', ')}`; return null }
     // A blocking finding at the location of an earlier advisory is a
     // re-raise, kept as an advisory.
-    const raised = q.blocking.filter((f) => reRaised(findingAt(f), qualityAdvisory))
+    const split = qualitySplit(q.blocking, qualityAdvisory, qualityBlocking)
+    const raised = split.raised
     if (raised.length) note(`quality re-raises kept as advisories: ${raised.join('; ')}`)
-    q.blocking = q.blocking.filter((f) => !raised.includes(f))
-    const missed = q.blocking.filter(firstPassMiss)
-    if (missed.length) note(`quality first-pass misses: ${missed.join('; ')}`)
+    q.blocking = split.left
+    if (split.missed.length) note(`quality first-pass misses: ${split.missed.join('; ')}`)
     q.advisory = q.advisory.concat(raised)
     qualityBlocking = q.blocking
     qualityAt = q.head
