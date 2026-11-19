@@ -1,0 +1,29 @@
+ok   120 columns show the preview, the needle centred among 18 lines, marked
+ok   the needle is the tenth of the 18 lines
+ok   near the top the window starts at line 1
+ok   on the first line the window starts at line 1
+ok   near the bottom the window ends at the last line
+ok   on the last line the window ends at it
+ok   a file shorter than the window shows whole
+ok   a file of one line shows it
+ok   a file past the 1000 stored lines ends at the last stored line
+ok   99 columns show no preview
+ok   100 columns show the preview
+ok   the preview shows the first row's file
+ok   the preview follows a move
+ok   a move past the last row keeps the last preview
+ok   the preview returns with a move back
+ok   the preview follows a query that changes the first row
+ok   the preview follows a backspace
+ok   a query with no match closes the preview
+ok   an empty query shows no preview
+ok   a query cleared again shows no preview
+ok   empty lines the store skipped show as empty lines
+ok   control bytes, invalid UTF-8, and a bidirectional override show safely
+ok   a line over 400 bytes shows cut
+ok   a path with a control byte shows it as a space in the title
+ok   the grep list is as wide as the file finder's list
+ok   the grep preview is as wide as the file finder's preview
+ok   the grep preview starts where the file finder's does
+ok   Esc closes the list and the preview
+editor_finder_grep_preview: 28 passed, 0 failed

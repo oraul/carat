@@ -21,7 +21,8 @@ module Carat
       # then each file's second line, and so on, up to MAX_ROWS. A search
       # checks at most LINE_BUDGET lines from where it starts, and the
       # counts mark the lines it left unchecked. Line text is untrusted,
-      # so a row shown goes through safe.
+      # so a row or a preview line shown goes through safe. The preview of
+      # a row is built from the stored text, with no new file read.
       class Grep
         MAX_ROWS = 200
         MAX_LINES = 400_000
@@ -32,6 +33,7 @@ module Carat
 
         # @rbs @files: Array[String]
         # @rbs @file_of: Array[Integer]
+        # @rbs @starts: Array[Integer]
         # @rbs @numbers: Array[Integer]
         # @rbs @texts: Array[String]
         # @rbs @found: Array[Integer]
@@ -45,6 +47,7 @@ module Carat
         def initialize
           @files = Grep.no_strings
           @file_of = Grep.no_ints
+          @starts = Grep.no_ints
           @numbers = Grep.no_ints
           @texts = Grep.no_strings
           @found = Grep.no_ints
@@ -146,6 +149,49 @@ module Carat
           @files[@file_of[@hits[row]]]
         end
 
+        # The row's path as shown, safe for the terminal.
+        #: (Integer) -> String
+        def shown_path(row)
+          safe(@files[@file_of[@hits[row]]])
+        end
+
+        # The preview of the row's file from the stored text: height
+        # lines, the row's line in the middle (line number minus height / 2
+        # first), the window moved to start at line 1 near the top and to
+        # end at the file's last stored line near the end, and shorter
+        # when the file is. A line the store skipped for being empty shows
+        # as an empty line; the row's line starts with mark and every other
+        # line with other. Each line is safe and shows at most MAX_BYTES
+        # bytes, as stored; no file is read.
+        #: (Integer, Integer, String, String) -> Array[String]
+        def preview(row, height, mark, other)
+          at = @hits[row]
+          file = @file_of[at]
+          first = @starts[file]
+          stop = file + 1 < @starts.length ? @starts[file + 1] : @texts.length
+          wanted = @numbers[at]
+          last = @numbers[stop - 1]
+          top = wanted - height / 2
+          top = last - height + 1 if top > last - height + 1
+          top = 1 if top < 1
+          j = at
+          while j > first && @numbers[j - 1] >= top
+            j -= 1
+          end
+          out = Grep.no_strings
+          n = top
+          while n < top + height && n <= last
+            if j < stop && @numbers[j] == n
+              out << (n == wanted ? mark : other) + safe(@texts[j])
+              j += 1
+            else
+              out << ""
+            end
+            n += 1
+          end
+          out
+        end
+
         # The 1-based line number of the row in its file.
         #: (Integer) -> Integer
         def number_at(row)
@@ -190,6 +236,7 @@ module Carat
         # byte stays whole.
         #: (String) -> String
         def safe(text)
+          return text if plain?(text)
           out = +""
           n = text.bytesize
           i = 0
@@ -221,6 +268,19 @@ module Carat
         def format_control?(code)
           code == 0x061C || code == 0xFEFF || (code >= 0x200B && code <= 0x200F) ||
             (code >= 0x2028 && code <= 0x202E) || (code >= 0x2066 && code <= 0x2069)
+        end
+
+        # Whether the text holds only printable ASCII, which safe keeps as it
+        # is, so a plain line costs no copy.
+        #: (String) -> bool
+        def plain?(text)
+          i = 0
+          while i < text.bytesize
+            b = text.getbyte(i).to_i
+            return false if b < 0x20 || b > 0x7E
+            i += 1
+          end
+          true
         end
 
         # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
@@ -381,6 +441,7 @@ module Carat
           return if binary?(lines)
           index = @files.length
           @files << path
+          @starts << @texts.length
           i = 0
           while i < lines.length
             line = lines[i]
