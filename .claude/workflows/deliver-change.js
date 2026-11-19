@@ -1651,6 +1651,7 @@ if (!stopped && planSkipped(state, planLine)) {
   if (size) estimate = size[1]
   const queued = criticalOf(planLine)
   if (queued) { critical = queued.rule; note(`critical by rule ${queued.rule}: ${queued.path}`) }
+  else if (/critical/.test(planLine)) note('plan: critical value not read')
   planned = 0
   note(`plan: skipped, ${planLine}`)
   phaseDone('plan', head)

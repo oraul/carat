@@ -18,3 +18,8 @@
 
 - [x] 4.1 Pass the model option inherit for a contributor start on the session profile (critical or escalated), asserted in the routing test
 - [x] 4.2 Move the critical-rule comment above criticalRule, anchor the queue-item pattern to the parenthesis, drop the source-grep escalate test, list README.md and tools/run_state.sh in the proposal Impact
+
+## 5. Closing advisories
+
+- [x] 5.1 State the queue item's critical place (end of the parenthesis, after a comma) in planner.md and docs/goals.md
+- [x] 5.2 Note 'plan: critical value not read' on the skipped-plan path when the queue line names critical and criticalOf reads none

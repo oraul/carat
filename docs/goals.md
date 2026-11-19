@@ -30,7 +30,7 @@ Every item of a lane queue names its tier and its size, as `(T2 user request, es
 
 ## Critical changes
 
-The planner names a change critical in `critical` of its plan, a rule letter and the path that triggers it, from this list; a critical run's contributor starts use the session's model at the session's effort, the rest the agent file's tier at high effort (see Calibration). The planner also writes it in the queue item's parenthesis as `critical LETTER PATH`, which a delivery that skips the planner reads. The run state stores the rule as `metric.critical`, so the trial's comparison leaves critical runs out.
+The planner names a change critical in `critical` of its plan, a rule letter and the path that triggers it, from this list; a critical run's contributor starts use the session's model at the session's effort, the rest the agent file's tier at high effort (see Calibration). The planner also writes it at the end of the queue item's parenthesis as `, critical LETTER PATH`, which a delivery that skips the planner reads. The run state stores the rule as `metric.critical`, so the trial's comparison leaves critical runs out.
 
 - a: a security item (T0, or a security finding in its tier or headings).
 - b: an edit of the merge gate or the guards: `tools/rules.sh`, `tools/gates.sh`, `tools/scan_text.sh`, `tools/agent_guard.sh`, `tools/run_state.sh`, `.claude/workflows/`, `.claude/agents/`, `.github/workflows/`.
