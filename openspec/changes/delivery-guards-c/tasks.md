@@ -11,5 +11,5 @@
 
 - [x] 3.1 Build the self-check-mismatch text once in `compareSelfCheck` and use it for the report note and the queued line (`.claude/workflows/deliver-change.js`; the first self-check case of `tools/tools_test.sh`)
 - [x] 3.2 Move the finished-check branch of `rounds()` into `finishCheck(v)` and the clearing of `selfCheck` into `settleRound`, replacing the layout-bound source regexes with cases that run both and an order-only check of the call (`tools/tools_test.sh`)
-- [x] 3.3 Count only the refusals of the contributor's own tree (tracked files differing from HEAD, untracked files spin compiles) as a contradicted self-check, an environmental one such as `CHECK_JOBS` noting nothing (`CONTRIBUTOR_REFUSAL`; the refusal case of `tools/tools_test.sh`; `docs/goals.md`)
+- [x] 3.3 Count only the refusals of the contributor's own tree (tracked files differing from HEAD, untracked files spin compiles) as a contradicted self-check, an environmental one such as `CHECK_JOBS` noting nothing (`CONTRIBUTOR_REFUSAL`; the refusal case and the case tying it to the messages of `tools/run_state.sh check` in `tools/tools_test.sh`; `docs/goals.md`)
 - [x] 3.4 Write the kept self-check as `(result && result.self_check) || ''` (`.claude/workflows/deliver-change.js` contributor)
