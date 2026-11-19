@@ -195,7 +195,6 @@
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
 #                               and metric.wall_min, then print the budget
-#   review-due                  print "due: sprint-N ..." with the sprint's
 #   ci-stages CHANGE COMMIT     record the seconds of each step of the spin
 #                               job of the newest ci run at COMMIT as
 #                               metric.ci.STEP, read with gh; exits 0 when
@@ -2273,75 +2272,72 @@ merged_of() {
   printf '%s\n' "$m"
 }
 
+# Prints each item of the queue on stdin as "item WHERE TEXT" and each
+# paragraph starting "The user-approved exception" (not its item form) as
+# "para WHERE TEXT", the one reader of the queue line form for queue_class
+# and queue_items. An item is numbered, or the line "The user-approved
+# exception: `NAME` (...)", its TEXT from the backticked name on; WHERE is
+# sprint under a "## Sprint N" heading, else pool, only a "# " or "## "
+# heading setting it, so a "###" sub-heading keeps its sprint's. An item's
+# or paragraph's continuation lines are joined by a space, to a blank line,
+# a heading, or the next item or paragraph.
+queue_records() {
+  awk '
+    function finish() { if (kind != "") print kind, (sprint ? "sprint" : "pool"), text; kind = "" }
+    {
+      line = $0
+      start = sub(/^[0-9]+[.] /, "", line) || sub(/^The user-approved exception: `/, "`", line)
+    }
+    start { finish(); kind = "item"; text = line; next }
+    /^The user-approved exception/ { finish(); kind = "para"; text = $0; next }
+    !NF || /^#/ { finish(); if (/^##? /) sprint = /^## Sprint [0-9]+/; next }
+    kind != "" { l = $0; sub(/^[ \t]+/, "", l); text = text " " l }
+    END { finish() }'
+}
+
 # Prints the class of NAME in the queue at the parent of COMMIT, the queue
 # it was delivered from, and in the queue at COMMIT, whose package step may
-# have applied the plan naming it, the first that either holds of: t0, its
-# item's first parenthesis starts with T0; outside, a paragraph starting
-# "The user-approved exception" (not its item form) names `NAME` in a
-# clause between semicolons holding OUTSIDE_MARK, before that clause's
-# first " run " or " runs " (so "`a` runs before `b`, outside the 3" puts
-# out a, not b); beyond, its item's first parenthesis carries
-# EXCEPTION_MARK; sprint, its item (numbered, or the line "The
-# user-approved exception: `NAME` (...)") sits under a "## Sprint N"
-# heading; pool, under any other. Nothing when neither queue names it or
-# COMMIT is no hash. An item's or paragraph's continuation lines are joined
-# to a blank line, a heading, or the next item.
+# have applied the plan naming it (queue_records over each), the first
+# that either holds of: t0, its item's first parenthesis starts with T0;
+# outside, an exception paragraph names `NAME` in a clause between
+# semicolons holding OUTSIDE_MARK, before that clause's first " run " or
+# " runs " (so "`a` runs before `b`, outside the 3" puts out a, not b);
+# beyond, its item's first parenthesis carries EXCEPTION_MARK; sprint, its
+# item sits under a "## Sprint N" heading; pool, under any other. Nothing
+# when neither queue names it or COMMIT is no hash.
 queue_class() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
-  for at in "$2^" "$2"; do queue_at "$at"; printf '#\n'; done |
+  for at in "$2^" "$2"; do queue_at "$at" | queue_records; done |
     C="$1" M="$EXCEPTION_MARK" O="$OUTSIDE_MARK" awk '
-    function finish(   n, i, part, cut) {
-      if (on) {
-        if (substr(item, length(C) + 5) ~ /^T0([^0-9]|$)/) t0 = 1
-        if (index(substr(item, 1, index(item, ")")), ENVIRON["M"])) beyond = 1
-        if (under_sprint) sprint = 1; else pool = 1
-      }
-      n = split(para, part, ";")
+    BEGIN { C = ENVIRON["C"] }
+    { text = $0; sub(/^[a-z]+ [a-z]+ /, "", text) }
+    $1 == "item" && index(text, "`" C "` (") == 1 {
+      if (substr(text, length(C) + 5) ~ /^T0([^0-9]|$)/) t0 = 1
+      if (index(substr(text, 1, index(text, ")")), ENVIRON["M"])) beyond = 1
+      if ($2 == "sprint") sprint = 1; else pool = 1
+    }
+    $1 == "para" {
+      n = split(text, part, ";")
       for (i = 1; i <= n; i++) {
         if (!index(part[i], ENVIRON["O"])) continue
         cut = match(part[i], / runs? /) ? substr(part[i], 1, RSTART) : part[i]
         if (index(cut, "`" C "`")) outside = 1
       }
-      on = 0; item = ""; para = ""; inpara = 0
     }
-    BEGIN { C = ENVIRON["C"] }
-    {
-      line = $0
-      start = sub(/^[0-9]+[.] /, "", line) || sub(/^The user-approved exception: `/, "`", line)
-    }
-    start { finish(); on = index(line, "`" C "` (") == 1; item = line; next }
-    /^The user-approved exception/ { finish(); para = $0; inpara = 1; next }
-    !NF || /^#/ { finish(); if (/^#/) under_sprint = /^## Sprint [0-9]+/; next }
-    {
-      l = $0; sub(/^[ \t]+/, "", l)
-      if (on) item = item " " l
-      else if (inpara) para = para " " l
-    }
-    END {
-      finish()
-      print t0 ? "t0" : outside ? "outside" : beyond ? "beyond" : sprint ? "sprint" : pool ? "pool" : ""
-    }'
+    END { print t0 ? "t0" : outside ? "outside" : beyond ? "beyond" : sprint ? "sprint" : pool ? "pool" : "" }'
 }
 
-# Prints the item naming NAME (numbered, or the line "The user-approved
-# exception: `NAME` (...)", its continuation lines joined by a space, to a
-# blank line, a heading, or the next item) on one line, from the queue at
-# the parent of COMMIT, the queue it was delivered from, or else from the
-# queue at COMMIT, whose package step may have applied the plan naming it
-# (item_lists); nothing when neither holds it or COMMIT is no hash.
+# Prints the item naming NAME (queue_records, its TEXT) on one line, from
+# the queue at the parent of COMMIT, the queue it was delivered from, or
+# else from the queue at COMMIT, whose package step may have applied the
+# plan naming it (item_lists); nothing when neither holds it or COMMIT is
+# no hash.
 queue_items() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do
-    held=$(queue_at "$at" | C="$1" awk '
-      {
-        item = $0
-        start = sub(/^[0-9]+[.] /, "", item) || sub(/^The user-approved exception: /, "", item)
-      }
-      start && on { exit }
-      start { on = index(item, "`" ENVIRON["C"] "` (") == 1; out = item; next }
-      !NF || /^#/ { if (on) exit; next }
-      on { line = $0; sub(/^[ \t]+/, "", line); out = out " " line }
-      END { if (on) print out }')
+    held=$(queue_at "$at" | queue_records | C="$1" awk '
+      $1 == "item" { text = $0; sub(/^[a-z]+ [a-z]+ /, "", text) }
+      $1 == "item" && index(text, "`" ENVIRON["C"] "` (") == 1 { print text; exit }')
     [ -z "$held" ] || { printf '%s\n' "$held"; return 0; }
   done
 }

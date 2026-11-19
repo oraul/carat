@@ -1720,7 +1720,7 @@ state init y1 chore/y1 > /dev/null
 state set y1 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due leaves out a change the exception line of its merged commit's queue names" 1 "^not due: sprint-3 has 0 of 5 changes merged [(]y1[)]; not counted, beyond the sprint: y1\$" state review-due
 # The parent's queue holds y2 unmarked and its package step's plan marks it
-# beyond the sprint at the merged commit: exception_item reads both queues.
+# beyond the sprint at the merged commit: queue_class reads both queues.
 state history > /dev/null
 printf 'sprint-3\ty1\n' >> docs/sprints.tsv
 printf '# Queue\n\n## Sprint 5\n\n1. `y2` (T1 pipeline, estimated small): second.\n' > docs/queue-feature.md
@@ -1734,14 +1734,16 @@ expect "run_state: review-due leaves out a change its merged commit's queue mark
 # A sprint counts only its queue's Sprint N items and their split parts: a
 # T0 item, a change the exception paragraph puts outside the 3 (not one it
 # names after "run"), and a pool item are left out, each named by its
-# reason, in merge order or not (sprint-count-t0).
+# reason, in merge order or not; an item under a sub-heading of the sprint
+# counts, and so does a pool item split from a counted sibling part (u1-c
+# beside u1-b, u1 itself unmerged) (sprint-count-t0).
 fresh sprintcount
-printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+printf 'sprint\tlast\nsprint-16\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
 { printf 'header\n'; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
-printf '# Queue: backlog\n\n## Sprint 1\n\nThe user-approved exception (a note): the three are the user%ss; `o1` and `o2`\n(Pool 1 and 2) run before `s1`, outside the 3, `o1` next.\n\n1. `s1` (T2 user request, estimated small): one.\n2. `t1` (T0 security High (9), estimated small): urgent.\n3. `t10` (T1 pipeline defect, estimated small): not T0.\n\n## Pool\n\n1. `o1` (T1 pipeline defect, estimated small): outside.\n2. `o2` (T1, estimated small): outside too.\n3. `s1-b` (T2, estimated small, the rest of `s1`, split): the rest.\n4. `p1` (T2, estimated small): a pool item.\n' "'" > docs/queue-backlog.md
+printf '# Queue: backlog\n\n## Sprint 17\n\nThe user-approved exception (a note): the three are the user%ss; `o1` and `o2`\n(Pool 1 and 2) run before `s1`, outside the 3, `o1` next.\n\n1. `s1` (T2 user request, estimated small): one.\n2. `t1` (T0 security High (9), estimated small): urgent.\n3. `t10` (T1 pipeline defect, estimated small): not T0.\n\n### Split\n\n4. `u1-b` (T2, estimated small, the first part of `u1`): a sprint item under a sub-heading.\n\n## Pool\n\n1. `o1` (T1 pipeline defect, estimated small): outside.\n2. `o2` (T1, estimated small): outside too.\n3. `s1-b` (T2, estimated small, the rest of `s1`, split): the rest.\n4. `p1` (T2, estimated small): a pool item.\n5. `u1-c` (T2, estimated small, the rest of `u1`, split): beside its counted sibling part.\n' "'" > docs/queue-backlog.md
 commit "docs: the queue"
-for c in s1-b o1 t1 t10 o2 s1 p1; do
+for c in s1-b o1 t1 u1-c t10 o2 s1 p1 u1-b; do
   echo "$c" >> README.md
   commit "feat: $c"
   state init "$c" "chore/$c" > /dev/null
@@ -1750,9 +1752,11 @@ done
 count_line=$(state review-due)
 expect "run_state: review-due leaves a T0 change out of the count" 0 "; not counted, T0: t1(;|\$)" echo "$count_line"
 expect "run_state: review-due leaves out a change the exception line puts outside the 3, not one it names after run" 0 "; not counted, outside the 3: o1, o2(;|\$)" echo "$count_line"
-expect "run_state: review-due counts a split part of a sprint item" 0 "^not due: sprint-1 has 3 of 5 changes merged " echo "$count_line"
+expect "run_state: review-due counts a split part of a sprint item" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
+expect "run_state: review-due counts an item under a sub-heading of its sprint" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
+expect "run_state: review-due counts a pool item split from a counted sibling part" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
 expect "run_state: review-due leaves a pool item out of the count" 0 "; not counted, not a sprint item: p1\$" echo "$count_line"
-expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-1 has 3 of 5 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
+expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-17 has 5 of 6 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10, u1-b, u1-c[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
 # 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).

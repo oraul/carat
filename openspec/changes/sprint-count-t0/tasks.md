@@ -13,3 +13,9 @@
 
 - [x] 3.1 README.md, `docs/codebase-map.md`, and the header and constants of `tools/run_state.sh` describe the count.
 - [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+
+## 4. Review fixes
+
+- [x] 4.1 `tools/tools_test.sh`: the sprintcount fixture holds a pool item `u1-c` beside a counted sprint item `u1-b`, `u1` unmerged, so `split_part`'s sibling branch decides it. Tested by "review-due counts a pool item split from a counted sibling part".
+- [x] 4.2 `tools/run_state.sh`, `queue_records`: one reader of the queue line form for `queue_class` and `queue_items`; only a `#` or `##` heading sets the sprint, so an item under a `###` sub-heading of the sprint counts. Tested by "review-due counts an item under a sub-heading of its sprint".
+- [x] 4.3 `tools/run_state.sh`: the usage header lists `review-due` once; `tools/tools_test.sh`: the comment before the y2 case names `queue_class`.

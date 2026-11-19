@@ -6,7 +6,7 @@
 
 ## Decisions
 
-- One reader, `queue_class`, over the queues at the merged commit's parent (the queue delivered from) and at the merged commit (whose package step may have applied the plan naming it), as `exception_item` read both. It replaces `exception_item`; `queue_items` stays for `item_lists`.
+- One reader, `queue_class`, over the queues at the merged commit's parent (the queue delivered from) and at the merged commit (whose package step may have applied the plan naming it), as `exception_item` read both. It replaces `exception_item`; `queue_items` stays for `item_lists`. Both read each queue through one reader, `queue_records`, which prints every item and exception paragraph joined on one line with its heading class (`sprint` under a `## Sprint N` heading, else `pool`, only a `#` or `##` heading changing it, so a `###` sub-heading keeps its sprint), so the queue line form is parsed in one place.
 - Precedence when several apply: `t0`, `outside`, `beyond`, `sprint`, `pool`. A sprint item at either commit is a sprint item, since its package step removes it from the queue.
 - Any `## Sprint N` heading counts as the sprint's heading, not only the sprint in progress: a change merged after a sprint's last counted change and before its records change still sits under the old heading, and a queue holds one Sprint heading per lane.
 - The outside-the-3 paragraph is prose; its names are the backticked ones of the semicolon clause holding `outside the 3`, before that clause's first ` run ` or ` runs `, so `` `a` and `b` run before `c`, outside the 3 `` puts out `a` and `b` and not `c`, matching every exception line the queues held in sprints 20 and 21.
