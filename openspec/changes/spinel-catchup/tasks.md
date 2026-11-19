@@ -20,3 +20,9 @@
 
 - [x] 3.1 Recheck the open notes of `docs/spinel-notes.md` (Known miscompilations and the other `Open:` notes) with reduced probes at the new pin and record each result there; each workaround the pin makes unnecessary whose removal is not trivial and tested goes to `docs/findings/spinel-catchup.md`; verify with `make docs-lint`, `make gates`, and `make spec-validate`.
   - Result: `private_constant` and the `when CONST` folding still reproduce at 0d1a7ca3 (the second also at c0502112); the destructuring, string-return, and empty-array probes answer correctly, so only reverting carat's rewrites decides them; the slab release is unchanged in `lib/sp_slab.c`; the versioned-entry defect has no reduced probe and is not rechecked. No workaround became unnecessary, so no finding is filed. New notes: `String#inspect` escapes illegal bytes since f49716bd, and a child waited for inside a `Fiber` no longer crashes since c6de72a2 (the probe segfaulted at c0502112 and printed 0 at 0d1a7ca3). The `byteindex` note no longer says the next bump meets 84aa303b1, which c0502112 already holds.
+
+## 4. Review fixes
+
+- [x] 4.1 Make the proposal's What Changes and Impact say the header was regenerated with no change, as task 1.2 records (quality advisory on `proposal.md`).
+- [x] 4.2 Say in `docs/spinel-notes.md` that the destructuring recheck at 0d1a7ca3 used a smaller probe than the f34005bf one (quality advisory on its destructuring note).
+- [x] 4.3 Keep the one fact of the `Fiber` note in `docs/spinel-notes.md` and drop the sentence about the Fiber study's plan (quality advisory on its Fiber note).

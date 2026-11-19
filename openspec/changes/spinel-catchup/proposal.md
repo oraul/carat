@@ -7,7 +7,7 @@
 ## What Changes
 
 - `SPINEL_REF` moves from c0502112d8cf8c6f57bc7e1ef5a2af1732407036 to the newest upstream commit that passes `make check` here, 0d1a7ca33a6edd44fad3b074e172f8a327697ebb unless a failure that carat cannot fix small and local forces an earlier one (the tasks record which and why).
-- `tools/spinel/spinel_rt_responds_generated.h` is regenerated at the new pin with `make spinel-header`, run with the c0502112 toolchain before `make toolchain`.
+- `tools/spinel/spinel_rt_responds_generated.h` is regenerated at the new pin with `make spinel-header`, run with the c0502112 toolchain before `make toolchain`; the output is byte-identical to the vendored file, so the diff leaves it unchanged.
 - Carat code changes only where a stage fails at the new pin and the fix is small and local, each named in the tasks; any new pitfall goes to `docs/spinel-notes.md`.
 - `docs/spinel-notes.md` notes each open miscompilation the new pin no longer shows; a workaround whose removal is not trivial and tested is recorded in `docs/findings/spinel-catchup.md` for a later `spinel-workarounds` change.
 
@@ -26,7 +26,7 @@ None. This is a toolchain change; `skip_specs` is set.
 ## Impact
 
 - `Makefile`: `SPINEL_REF`.
-- `tools/spinel/spinel_rt_responds_generated.h`: regenerated.
+- `tools/spinel/spinel_rt_responds_generated.h`: regenerated with no change, the generator's output at the new pin being byte-identical.
 - `tools/spinel/gen_respond_to_tables.rb`: unchanged; Spinel's `tools/gen_respond_to_tables.rb` and `tools/builtin_row_gen.rb` have no commit between the pins, only their inputs (`src/builtin_ops.c`, `lib/spinel_rt.h`) moved.
 - `docs/spinel-notes.md`: the rechecked open notes and any new pitfall.
 - CI: unchanged; its toolchain and compile caches are keyed on `make spinel-rev`, so the new pin builds a fresh toolchain on the first run.
