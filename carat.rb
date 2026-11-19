@@ -344,6 +344,7 @@ require_relative "carat/adapters/winbar"
 require_relative "carat/adapters/frame_presenter"
 require_relative "carat/adapters/sgr_table"
 require_relative "carat/adapters/screen_presenter"
+require_relative "carat/adapters/wiring_ledger"
 require_relative "carat/adapters/rc_config_gateway"
 require_relative "carat/adapters/editor_assembly"
 

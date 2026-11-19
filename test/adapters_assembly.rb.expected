@@ -1,4 +1,6 @@
 ok   strangers tells a second object from the shared one
+ok   the ledger answers no object for a pair it never recorded and replaces a recorded one in place
+ok   each discovery use case's recorded slots are its constructor's keywords
 ok   the buffer list
 ok   the completion menu
 ok   the key handler holds the one ShowCompletion, over the source the harness gave
@@ -98,4 +100,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 100 passed, 0 failed
+adapters_assembly: 102 passed, 0 failed

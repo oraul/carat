@@ -176,6 +176,7 @@ require_relative "key_decoder"
 require_relative "input_controller"
 require_relative "frame_presenter"
 require_relative "screen_presenter"
+require_relative "wiring_ledger"
 
 module Carat
   module Adapters
@@ -184,7 +185,9 @@ module Carat
     # that bin/carat.rb and the editor harness share, so both run the same
     # graph. Every shared collaborator, the records of the state included,
     # is built once here and handed on by keyword, and kept with a reader
-    # so a test can check that each is one object. The configuration is
+    # so a test can check that each is one object; what a holder without
+    # readers was handed is recorded in the wiring ledger, right after its
+    # construction and from the same instance variables. The configuration is
     # read once through its port; a value it leaves out falls back to
     # Vim's default in the domain, never here. The ex table and its runner
     # are built before the plugin host, which receives the runner; the
@@ -321,9 +324,11 @@ module Carat
       attr_reader :palette #: Domain::Palette
       attr_reader :open_palette #: UseCases::OpenPalette
       attr_reader :follow_palette #: UseCases::FollowPalette
+      attr_reader :wiring #: WiringLedger
 
       #: (terminal: Ports::TerminalPort, clock: Ports::ClockPort, files: Ports::FilePort, config: Ports::ConfigPort, processes: Ports::ProcessPort, messages: Ports::MessageQueuePort, completions: Ports::CompletionPort, plugin_list: Array[untyped]) -> void
       def initialize(terminal:, clock:, files:, config:, processes:, messages:, completions:, plugin_list:)
+        @wiring = WiringLedger.new
         @terminal = terminal
         @clock = clock
         @files = files
@@ -451,7 +456,12 @@ module Carat
 
         @edit_command_line = UseCases::EditCommandLine.new(preview_search: @preview_search)
         @hide_key_hints = UseCases::HideKeyHints.new(hints: @key_hints, close_float: @close_float)
+        @wiring.record("hide_key_hints", "hints", @key_hints)
+        @wiring.record("hide_key_hints", "close_float", @close_float)
         @follow_palette = UseCases::FollowPalette.new(palette: @palette, open_float: @open_float, close_float: @close_float)
+        @wiring.record("follow_palette", "palette", @palette)
+        @wiring.record("follow_palette", "open_float", @open_float)
+        @wiring.record("follow_palette", "close_float", @close_float)
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
         @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
 
@@ -512,6 +522,13 @@ module Carat
         UseCases::DocsHandler.register(@actions, request_hover: @request_hover, pin_hover: @pin_hover, toggle_reading: @toggle_reading)
         UseCases::DefinitionHandler.register(@actions, request_definition: @request_definition, choose_definition: @choose_definition, walk_jumps: @walk_jumps)
         @open_palette = UseCases::OpenPalette.new(actions: @actions, commands: @commands, keymap: @keymap, plugins: @plugins, palette: @palette, plugin_ui: @plugin_ui, search_prompt: @search_prompt)
+        @wiring.record("open_palette", "actions", @actions)
+        @wiring.record("open_palette", "commands", @commands)
+        @wiring.record("open_palette", "keymap", @keymap)
+        @wiring.record("open_palette", "plugins", @plugins)
+        @wiring.record("open_palette", "palette", @palette)
+        @wiring.record("open_palette", "plugin_ui", @plugin_ui)
+        @wiring.record("open_palette", "search_prompt", @search_prompt)
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
         UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
         UseCases::FoldHandler.register(@actions, operate: @operate, change_folds: UseCases::ChangeFolds.new)
@@ -526,6 +543,13 @@ module Carat
         end
 
         @show_key_hints = UseCases::ShowKeyHints.new(keymap: @keymap, input: @input, actions: @actions, plugins: @plugins, hints: @key_hints, open_float: @open_float, hide_key_hints: @hide_key_hints)
+        @wiring.record("show_key_hints", "keymap", @keymap)
+        @wiring.record("show_key_hints", "input", @input)
+        @wiring.record("show_key_hints", "actions", @actions)
+        @wiring.record("show_key_hints", "plugins", @plugins)
+        @wiring.record("show_key_hints", "hints", @key_hints)
+        @wiring.record("show_key_hints", "open_float", @open_float)
+        @wiring.record("show_key_hints", "hide_key_hints", @hide_key_hints)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices, plugins: @plugins)
         @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
