@@ -4450,20 +4450,43 @@ expect "closing loop: a closing commit that moved the head leaves the security r
 expect "closing loop: a records-only closing commit stands on the earlier check and security passes" 0 '^\["settled","aaaaaaa"\]$' \
   closing_js "return [checkOutcome('run_state: settled: only records changed from aaaaaaa to bbbbbbb: docs/x.md', 'bbbbbbb', 'aaaaaaa'), settleAfter(settleFrom(ran, ['quality advisory a.rb:1 wording']), 'aaaaaaa', 'bbbbbbb')]"
 # The real contributor function over a stubbed agent: the closing start's
-# prompt carries its numeric cap and it counts no rework round.
+# prompt carries its numeric cap and it counts no rework round. The agent
+# returns the next of results (a done result at the lane's head when none is
+# left), and the lane-head start, labelled record, the lane value, its
+# prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine contributor" "(async () => {
-    globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaa'
-    globalThis.prompts = []; globalThis.caps = []; globalThis.WORK = 1
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem recordStart laneHead contributor" "(async () => {
+    globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
+    globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'
+    globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1
     globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
     globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
-    globalThis.agent = async (prompt) => { prompts.push(prompt); return { head: 'bbbbbbb', summary: 's' } }
-    globalThis.continuation = () => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.note = () => {}
+    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: lane + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' } }
+    globalThis.continuation = (r) => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.pushedHint = () => ''
+    globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
     $1
   })()"
 }
-expect "closing loop: the closing start's prompt carries the numeric closing cap and it is no rework round" 0 '^\{"cap":"Tool calls: at most 40 in this start","caps":\["closing:40"\],"rework":0\}$' \
+expect "closing loop: the closing start's prompt carries the numeric closing cap and it is no rework round" 0 '^\{"cap":"Tool calls: at most 40 in this start","caps":\["closing:40","record:3"\],"rework":0\}$' \
   contributor_js "await contributor('close-advisories', 'd'); return { cap: /Tool calls: at most [0-9]+ in this start/.exec(prompts[0])[0], caps, rework }"
+# Card rule 1 made mechanical (delivery-guards-b): a done result whose head
+# is a placeholder, a typed short hash, or not the lane's
+# git rev-parse --short=12 HEAD is refused, noted, escalated, and restarted
+# once; a second refusal stops the run.
+expect "head guard: a head at the lane's HEAD is taken, with no note and no escalation" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":1,"queued":\[\],"escalated":false\}$' \
+  contributor_js "const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated }"
+expect "head guard: the lane-head start runs git rev-parse --short=12 HEAD in the change's worktree, once per done result" 0 '^\[1,true\]$' \
+  contributor_js "await contributor('implement', 'd'); return [headPrompts.length, headPrompts[0].includes('\n\ngit -C tmp/.lane-c rev-parse --short=12 HEAD\n\n')]"
+expect "head guard: a placeholder head is refused, noted head-refused, escalated, and restarted once with the reason" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":2,"queued":\["sh tools/run_state.sh note c escalation \\"a refused head\\"","sh tools/run_state.sh note c head-refused \\"contributor implement start 1: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD\\""\],"escalated":true,"told":true,"closable":true\}$' \
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
+expect "head guard: a well-formed head other than the lane's HEAD, or a typed short one, is refused" 0 '^\[\["head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb; restarted"\],"head bbbbbbb is not the 12-character form of git rev-parse --short=12 HEAD",""\]$' \
+  contributor_js "results = [{ status: 'done', head: 'cccccccccccc', summary: 's' }]; await contributor('fix', 'd'); return [notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .fix. result refused: /, '')), headProblem('bbbbbbb', 'bbbbbbbbbbbb'), headProblem('bbbbbbbbbbbb', 'bbbbbbbbbbbb')]"
+expect "head guard: a second refused head in one call stops the run, unmerged" 0 '^\{"ok":false,"starts":2,"stopped":"contributor \(package\) returned a refused head twice: head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb","refusals":2\}$' \
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'cccccccccccc', summary: 's' }]; const r = await contributor('package', 'd'); return { ok: !!r, starts: prompts.length, stopped, refusals: queued.filter((l) => l.includes('head-refused')).length }"
+expect "head guard: an unread lane head takes a well-formed head with a note and a closable head-unread note, never a placeholder" 0 '^\[true,"dddddddddddd",1,\["sh tools/run_state.sh note c head-unread \\"contributor implement start 1: lane head not read\\""\],true,false\]$' \
+  contributor_js "lane = null; results = [{ status: 'done', head: 'dddddddddddd', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'x', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, head, notes.filter((n) => n.includes('could not be read')).length, queued.slice(), queued.every((l) => CLOSABLE.test(l))]; const second = await contributor('implement', 'd'); return a.concat([!!second])"
+expect "head guard: a hostile head reaches the queued note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true\]$' \
+  contributor_js "results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's' }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-refused')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid is not')]"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
 expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"quality":\[\],"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
