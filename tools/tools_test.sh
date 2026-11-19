@@ -4569,8 +4569,8 @@ expect "contributor: the rules card is ten rules in at most 15 lines" 0 '^10 11$
   sh -c 'c=$(sed -n "/^Rules card:\$/,/^10[.] /p" "$1"); echo "$(printf "%s\n" "$c" | grep -c -E "^[0-9]+[.] ") $(printf "%s\n" "$c" | wc -l | tr -d " ")"' _ "$agents/contributor.md"
 expect "contributor: the card opens the file's body, before the mandate" 0 '^1$' \
   sh -c 'awk "/^Rules card:\$/ { c = NR } /^## Mandate\$/ { m = NR } END { print (c > 0 && c < m) ? 1 : 0 }" "$1"' _ "$agents/contributor.md"
-expect "contributor: the self-check names each checklist point and the self-review" 0 '^9$' \
-  sh -c 's=$(grep "^5[.] Self-check before returning" "$1"); n=0; for p in "empty range" "CRLF" "UTF-16 and multi-byte" "trailing blanks" "last line" "empty buffer" "a test per behavior change" "helper searched first" "self-review"; do printf "%s\n" "$s" | grep -q -F "$p" && n=$((n + 1)); done; echo $n' _ "$agents/contributor.md"
+expect "contributor: the self-check names each checklist point and the self-review" 0 '^10$' \
+  sh -c 's=$(grep "^5[.] Self-check before returning" "$1"); n=0; for p in "empty range" "CRLF" "UTF-16 and multi-byte" "trailing blanks" "last line" "empty buffer" "a test per behavior change" "helper searched first" "spec text matching the code" "self-review"; do printf "%s\n" "$s" | grep -q -F "$p" && n=$((n + 1)); done; echo $n' _ "$agents/contributor.md"
 expect "planner: a change editing the merge gate's rules lands that edit first" 0 "^1$" \
   grep -c -F "A change editing the merge gate's own rules (\`tools/rules.sh\` RECORDS_RE and the other patterns main's \`tools/gates.sh merge\` reads) lands that edit first as its own small change" "$agents/planner.md"
 expect "planner: the size check splits a brief of three or more parts or areas, sizes up after two overruns, and splits what a round-limit stop left" 0 "^1 1 1$" \

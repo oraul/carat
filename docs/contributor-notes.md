@@ -8,7 +8,7 @@ Read in order until you know what the change touches: the scout packs, trusting 
 
 ## Conflicts with main
 
-On a conflict with `main`, run `merge-main` and say so. On its conflicts merge `origin/main` by hand (the trailer of `CLAUDE.md`): keep both sides of appended files, regenerate generated ones with `make`, and stop and name a conflict where both sides changed the same logic. The fix stays in the push start; the checks and reviews rerun.
+On its conflicts merge `origin/main` by hand (the trailer of `CLAUDE.md`): keep both sides of appended files, regenerate generated ones with `make`, and stop and name a conflict where both sides changed the same logic. The fix stays in the push start; the checks and reviews rerun.
 
 ## Propose
 
@@ -43,3 +43,7 @@ The self-check of the implement mode and of the fix mode walks these points, eac
 ## Self-review
 
 After the self-check, read the committed diff once as the quality reviewer would, with the instructions of `.claude/agents/quality-reviewer.md`: a bug, an untested behavior change, and a mismatch between code and text block. Fix what blocks in place; record the rest in the findings file.
+
+## Waiting
+
+`sh tools/open_pr.sh wait <change>` polls up to 540 s, so the Bash call takes the timeout 600000.

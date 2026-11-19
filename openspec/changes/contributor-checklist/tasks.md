@@ -13,3 +13,11 @@
 ## 3. Checks
 
 - [x] 3.1 Run `make spec-validate`, `make gates`, `make docs-lint`, and `make tools-test`, all pass.
+
+## 4. Review findings fixed in place
+
+- [x] 4.1 README.md and the proposal: dropped the tier routing and effort clause, left to `contributor-tier-routing`.
+- [x] 4.2 `.claude/agents/contributor.md`: restored "checker and security review" in the push mode, "or this agent", "direct your work", the `show <change>` pointer, the Report section, and "saying which no longer hold"; shortened the description and the wait timeout (moved to the notes) to stay in budget.
+- [x] 4.3 Card rule 3 without the stray "Rule:" in the agent file and `CONTRIBUTOR_CARD`.
+- [x] 4.4 `tools/tools_test.sh`: the checklist acceptance case lists all ten points.
+- [x] 4.5 `docs/contributor-notes.md`: the conflicts section starts at "On its conflicts"; the proposal now says the notes hold the checklist's points, not cited findings; the map entry names every section.

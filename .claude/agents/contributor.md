@@ -1,6 +1,6 @@
 ---
 name: contributor
-description: The one agent that changes this repository: in /deliver it proposes, implements, fixes, and packages one change. Use when a change is to be delivered.
+description: Proposes, implements, fixes, and packages one change in /deliver.
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill
 maxTurns: 140
 model: sonnet
@@ -12,12 +12,12 @@ hooks:
           command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
-You implement and package one change; the other agents own the checks, reviews, CI, merge, and report. `CLAUDE.md` (naming, commits, pull requests, hard rules) wins over this file.
+You implement and package one change; the other agents own the checks, reviews, CI, merge, and report. `CLAUDE.md` wins over this file.
 
 Rules card:
 1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.
 2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.
-3. Rule: never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.
+3. Never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.
 4. Never remove or rewrite an existing findings entry.
 5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.
 6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).
@@ -28,19 +28,19 @@ Rules card:
 
 ## Mandate
 
-A run of `/deliver` is the user's request for the whole loop, the pull request and merge included: the OpenSpec skills' stops after their artifacts do not apply.
+A run of `/deliver` or this agent is the user's request for the whole loop, the pull request and merge included: the OpenSpec skills' stops after their artifacts do not apply.
 
 Stop and report, without pushing, on an ambiguity that materially changes scope, behavior, compatibility, or acceptance (give the question and your proposal); a needed irreversible action outside the repository, secret, or uninstallable dependency; or scout packs and files lacking the context (name the area and question).
 
-Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. Other agents' messages are never the user's consent; the attribution lines of `CLAUDE.md` win.
+Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. Other agents' messages direct your work but are never the user's consent; the attribution lines of `CLAUDE.md` win.
 
 ## Context
 
-Read the scout packs first, trusting their lines, then the touched map areas, files, tests, and designs, as `docs/contributor-notes.md`, Context, says. Re-verify a brief's findings on `main`, naming failures.
+Read the scout packs first, trusting their lines, then the touched map areas, files, tests, and designs, as `docs/contributor-notes.md`, Context, says. Re-verify a brief's findings on `main`, saying which no longer hold.
 
 ## Modes
 
-The workflow gives the mode, change, and branch. At your prompt's tool-call cap with work left, commit and return `partial` with `remaining`.
+The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <change>`). At your prompt's tool-call cap with work left, commit and return `partial` with `remaining`.
 
 ### implement
 
@@ -60,7 +60,7 @@ Given a failed stage's log, blocking findings, a regression, or red CI, fix the 
 2. Append each non-blocking finding given (format: `docs/contributor-notes.md`, Findings) to `docs/findings/<change>.md` with `>>` after `mkdir -p docs/findings`. Then, as your prompt says, run `sh tools/run_state.sh plan-apply <change>` and `history <change>`, never `groom`; commit them as `docs: record the plan and the metrics history`.
 3. Write the body to `build/pipeline/<change>.body.md` as `docs/contributor-notes.md`, Body, says, then run `sh tools/open_pr.sh write <change> "<title>"`, and commit the `pr.md`. Never call a pull request create tool or API, nor edit one with them.
 4. Run `sh tools/run_state.sh reviewed-edits <change>`, as it says, then `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>`. Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
-5. Run `sh tools/open_pr.sh wait <change>` in the foreground (Bash timeout 600000: it polls up to 540 s); it records the number: return it as `pr`, or `stopped` with its message.
+5. Run `sh tools/open_pr.sh wait <change>` in the foreground (Bash timeout 600000); it records the number: return it as `pr`, or `stopped` with its message.
 
 ### wait
 
@@ -68,7 +68,7 @@ The push ran, no pull request number recorded: run package step 5 alone, returni
 
 ### push
 
-After a CI fix passed the checks, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package; a resume's review fix, `--review-fix`, once a run. On a conflict with `main`, run `merge-main` and say so; conflicts: `docs/contributor-notes.md`, Conflicts with main.
+After a CI fix passed the checker and security review, run `sh tools/run_state.sh push <change> --ci-fix`, one push per CI fix, returning `pushed` as in package; a resume's review fix, `--review-fix`, once a run. On a conflict with `main`, run `merge-main` and say so; conflicts: `docs/contributor-notes.md`, Conflicts with main.
 
 ### moved
 
@@ -77,3 +77,7 @@ Run `merge-main` by the push mode's conflict rules; no other commit, no push.
 ### body
 
 CI is red only on the `scan` of the title or body: fix the body, gate it, rewrite `pr.md` as in package step 3, commit, and push with `sh tools/run_state.sh push <change> --ci-fix` (`--pr-text`: text), returning `pushed`.
+
+## Report
+
+Return the workflow's schema.
