@@ -35,5 +35,5 @@ None.
 
 - CLAUDE.md: the Commands line of `tools/open_pr.sh` names `message`, the merger's.
 - docs/codebase-map.md: area 1's `tools/open_pr.sh` entry names `message`.
-- README.md: unchanged, it does not describe the merge call or the commands of `tools/open_pr.sh`.
+- README.md: the pipeline paragraph says the merger squash-merges with the message `tools/open_pr.sh message` prints, the head passed as `expectedHeadSha`.
 - docs/architecture.md: unchanged, no layer, port, or roadmap item is touched.
