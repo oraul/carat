@@ -15,3 +15,4 @@
 - [x] 3.1 Make relativenumber an input of the frame key and test toggling on one presenter with the cursor on row 9
 - [x] 3.2 Pick LineNrFifth by the cursor flag so a closed fold holding the cursor is never a fifth number
 - [x] 3.3 Correct the class comment, the table comment, the theme test label and names, the WCAG sentence, and the 256-color note; assert the gutter group directly and a sign on the cursor row
+- [x] 3.4 Toggle relativenumber after two relative draws so each double-buffered frame is repainted; rewrap two comments; record the Light+ LineNrFifth choice in the design

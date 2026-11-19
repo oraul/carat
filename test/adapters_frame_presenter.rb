@@ -803,12 +803,11 @@ module AdaptersFramePresenterTest
     s.options.relativenumber = true
     f = draw(s, 14, 14)
     t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "relativenumber: row 4 shows 5 in LineNrFifth")
+    f = draw(s, 14, 14)
+    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "relativenumber: the second frame shows 5 in LineNrFifth")
     s.options.relativenumber = false
     f = draw(s, 14, 14)
-    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "turning relativenumber off repaints row 4 in LineNr")
-    s.options.relativenumber = true
-    f = draw(s, 14, 14)
-    t.assert_equal(D::Highlight::LINE_NUMBER_FIFTH, f.cell(4, 2).hl, "turning relativenumber on repaints row 4 in LineNrFifth")
+    t.assert_equal(D::Highlight::LINE_NUMBER, f.cell(4, 2).hl, "turning relativenumber off repaints a frame that held LineNrFifth in LineNr")
     s = state_for(["abc", "def"], "a.txt")
     s.options.cursorline = true
     s.mode = D::Mode::VISUAL

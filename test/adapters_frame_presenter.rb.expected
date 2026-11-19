@@ -175,8 +175,8 @@ ok   The gutter on the cursor line: the cursor line covers the gap and the numbe
 ok   the text takes its group on the layer, the status bar keeps its own
 ok   the sign column on the cursor line is lifted: a sign cell is its group on the layer
 ok   relativenumber: row 4 shows 5 in LineNrFifth
-ok   turning relativenumber off repaints row 4 in LineNr
-ok   turning relativenumber on repaints row 4 in LineNrFifth
+ok   relativenumber: the second frame shows 5 in LineNrFifth
+ok   turning relativenumber off repaints a frame that held LineNrFifth in LineNr
 ok   a selection on the cursor line keeps the Visual group on the layer, the cursor cell its own
 ok   the cursor on the opening parenthesis
 ok   the cursor on the closing parenthesis

@@ -53,8 +53,9 @@ module Carat
     # when nothing is highlighted, so a frame without search does no
     # other work. With cursorline the cursor's row of the current window
     # is lifted onto the cursor-line layer of groups from the window's left
-    # edge, the gutter included, to its right edge, its number in CursorLineNr, the layer
-    # being an input of the row like its cursor column. With
+    # edge, the gutter included, to its right edge, its number in
+    # CursorLineNr, the layer being an input of the row like its cursor
+    # column. With
     # indentguides a file window's rows (not a plugin's buffer, a float,
     # or the start screen) show IndentGuides after their tokens, the key
     # of a row's guides an input of the row and the guides' settings part
@@ -394,7 +395,8 @@ module Carat
       end
 
       # The geometry a frame is painted with: the size, the tab line, the
-      # tabstop, the indent guides' settings, whether numbers are relative, and every window's rectangle.
+      # tabstop, the indent guides' settings, whether numbers are relative,
+      # and every window's rectangle.
       #: (Integer, Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
       def build_key(rows, cols, tabline, tabstop, guides, relative, layout, ids)
         key = @key
