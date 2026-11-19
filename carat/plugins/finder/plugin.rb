@@ -85,7 +85,7 @@ module Carat
             api_version: Carat::PluginApi::VERSION,
             actions: {
               "plugin.finder.open" => "Find a file of the project by a fuzzy match of its path",
-              "plugin.finder.grep" => "Find a line in the files of the project by a fuzzy match of its text, and open the file there",
+              "plugin.finder.grep" => "Find a line in the files of the project by the words of its text, and open the file there",
               "plugin.finder.next" => "Highlight the next file in the finder",
               "plugin.finder.previous" => "Highlight the previous file in the finder",
               "plugin.finder.open_split" => "Open the highlighted file in a horizontal split",

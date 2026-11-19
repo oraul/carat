@@ -10,23 +10,26 @@ module Carat
       # first FILE_ROWS lines are searched, and only when the file is
       # small enough for that request; a file that cannot be read or holds
       # a NUL byte is skipped, and a line is cut at MAX_BYTES. Loading
-      # stops at MAX_LINES stored lines. A search keeps the MAX_ROWS best
-      # lines, scored by Matcher over the line's bytes from its start, with no
-      # file-name bonus (every query byte in order, ASCII case ignored), ranked by score,
-      # then a shorter file path, then listing order. Line text is
-      # untrusted, so a row shown goes through safe.
+      # stops at MAX_LINES stored lines. The query is split at spaces into
+      # terms, and a line matches when it holds every term as a substring,
+      # in any order, ASCII case ignored. A search keeps the MAX_ROWS best
+      # lines: more terms found as a whole word (Matcher.word_start? at the
+      # start, word_end? at the end) first, then more hits of the terms
+      # in the line, then a shorter file path, then listing order. Line
+      # text is untrusted, so a row shown goes through safe.
       class Grep
         MAX_ROWS = 200
-        MAX_LINES = 100_000
+        MAX_LINES = 400_000
         MAX_BYTES = 400
         FILE_ROWS = 1000
+        HIT_ROOM = 255
 
         # @rbs @files: Array[String]
         # @rbs @file_of: Array[Integer]
         # @rbs @numbers: Array[Integer]
         # @rbs @texts: Array[String]
         # @rbs @hits: Array[Integer]
-        # @rbs @query: String
+        # @rbs @terms: Array[String]
         # @rbs @capped: bool
         # @rbs @more: bool
 
@@ -37,7 +40,7 @@ module Carat
           @numbers = Grep.no_ints
           @texts = Grep.no_strings
           @hits = Grep.no_ints
-          @query = ""
+          @terms = Grep.no_strings
           @capped = false
           @more = false
         end
@@ -54,21 +57,21 @@ module Carat
           end
         end
 
-        # Keeps the best MAX_ROWS lines for the query; none for an empty
-        # one.
+        # Keeps the best MAX_ROWS lines for the query; none for a query
+        # with no term (empty, or only spaces).
         #: (String) -> void
         def search(query)
-          @query = query
+          @terms = split_terms(query)
           hits = Grep.no_ints
           @hits = hits
           @more = false
-          return if query.empty?
+          return if @terms.empty?
           keys = Grep.no_ints
           matched = 0
           floor = -1
           i = 0
           while i < @texts.length
-            score = Matcher.span_score(query, @texts[i], 0, @texts[i].bytesize)
+            score = line_score(@texts[i])
             if score >= 0
               matched += 1
               key = Matcher.key(score, @files[@file_of[i]].bytesize, i)
@@ -91,10 +94,10 @@ module Carat
           end
         end
 
-        # Whether no search has run, or the query was empty.
+        # Whether no search has run, or the query held no term.
         #: () -> bool
         def idle?
-          @query.empty?
+          @terms.empty?
         end
 
         # The rows kept by the last search.
@@ -131,16 +134,15 @@ module Carat
           @numbers[@hits[row]]
         end
 
-        # The 0-based column, in characters, of the first byte of the row
-        # that is the query's first byte, ASCII case ignored.
+        # The 0-based column, in characters, of the first byte of the
+        # first hit of the query's first term in the row, ASCII case
+        # ignored.
         #: (Integer) -> Integer
         def column_at(row)
+          return 0 if @terms.empty?
           text = @texts[@hits[row]]
-          return 0 if @query.empty?
-          first = Matcher.lower(@query.getbyte(0).to_i)
-          j = 0
-          j += 1 while j < text.bytesize && Matcher.lower(text.getbyte(j).to_i) != first
-          return 0 if j >= text.bytesize
+          j = Matcher.find(@terms[0], text, 0)
+          return 0 if j < 0
           text.byteslice(0, j).to_s.length
         end
 
@@ -199,6 +201,46 @@ module Carat
         end
 
         private
+
+        # The query's terms: its runs of bytes between spaces.
+        #: (String) -> Array[String]
+        def split_terms(query)
+          out = Grep.no_strings
+          start = 0
+          i = 0
+          while i <= query.bytesize
+            if i == query.bytesize || query.getbyte(i).to_i == 0x20
+              out << query.byteslice(start, i - start).to_s if i > start
+              start = i + 1
+            end
+            i += 1
+          end
+          out
+        end
+
+        # The score of the line for the terms, -1 when one is missing: 256
+        # for each term with a whole-word hit, plus the hits of all the
+        # terms, at most HIT_ROOM. Allocates nothing.
+        #: (String) -> Integer
+        def line_score(text)
+          words = 0
+          hits = 0
+          t = 0
+          while t < @terms.length
+            term = @terms[t]
+            j = Matcher.find(term, text, 0)
+            return -1 if j < 0
+            whole = false
+            while j >= 0
+              hits += 1
+              whole = true if !whole && Matcher.word_start?(text, j) && Matcher.word_end?(text, j + term.bytesize)
+              j = Matcher.find(term, text, j + term.bytesize)
+            end
+            words += 1 if whole
+            t += 1
+          end
+          words * (HIT_ROOM + 1) + (hits > HIT_ROOM ? HIT_ROOM : hits)
+        end
 
         # The MAX_ROWS largest keys, so a search keeps a bounded list.
         #: (Array[Integer]) -> Array[Integer]

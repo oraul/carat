@@ -14,7 +14,34 @@ ok   a camel case start counts as a word start
 ok   a tighter span ranks above a looser one
 ok   a shorter path breaks a tie
 ok   the listing order breaks a tie of equal paths
+ok   a term at the start is found at 0
+ok   a term in the middle is found there
+ok   case is ignored on both sides
+ok   a term at the very end is found
+ok   a later hit is found from past the first
+ok   scattered bytes are not a hit
+ok   a term longer than the text is not a hit
+ok   an empty term is not a hit
+ok   a multi-byte term is found by its bytes
+ok   the first byte starts a word
+ok   a letter before does not start a word
+ok   a digit before does not start a word
+ok   a space before starts a word
+ok   an underscore before starts a word
+ok   a quote before starts a word
+ok   an uppercase letter after a lowercase one starts a word
+ok   an uppercase letter after an uppercase one does not
+ok   a multi-byte character before does not start a word
+ok   the end of the text ends a word
+ok   a letter after does not end a word
+ok   a digit after does not end a word
+ok   a space after ends a word
+ok   an underscore after ends a word
+ok   a dot after ends a word
+ok   an uppercase letter after a lowercase one ends a word
+ok   an uppercase letter after an uppercase one does not
+ok   a multi-byte character after does not end a word
 ok   a match whose gaps outweigh its points scores 0, plus the name bonus in the name
 ok   a key keeps its index
 ok   the file name starts after the last slash
-plugins_finder_matcher: 19 passed, 0 failed
+plugins_finder_matcher: 46 passed, 0 failed

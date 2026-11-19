@@ -52,6 +52,51 @@ module PluginsFinderMatcherTest
       above?(row[0], row[1], row[2])
     end
 
+    # Rows are [label, [term, text, from], the byte index or -1].
+    t.cases([
+      ["a term at the start is found at 0", ["abc", "abcd", "0"], 0],
+      ["a term in the middle is found there", ["bc", "abcd", "0"], 1],
+      ["case is ignored on both sides", ["ABc", "xaBC", "0"], 1],
+      ["a term at the very end is found", ["cd", "abcd", "0"], 2],
+      ["a later hit is found from past the first", ["ab", "abxab", "1"], 3],
+      ["scattered bytes are not a hit", ["abc", "axbxc", "0"], -1],
+      ["a term longer than the text is not a hit", ["abcd", "abc", "0"], -1],
+      ["an empty term is not a hit", ["", "abc", "0"], -1],
+      ["a multi-byte term is found by its bytes", ["é", "caf\u00e9", "0"], 3]
+    ]) do |row|
+      M.find(row[0].to_s, row[1].to_s, row[2].to_i)
+    end
+
+    # Rows are [label, [text, start], whether a word starts there].
+    t.cases([
+      ["the first byte starts a word", ["abc", "0"], true],
+      ["a letter before does not start a word", ["abc", "1"], false],
+      ["a digit before does not start a word", ["1bc", "1"], false],
+      ["a space before starts a word", ["a bc", "2"], true],
+      ["an underscore before starts a word", ["a_bc", "2"], true],
+      ["a quote before starts a word", ["'bc'", "1"], true],
+      ["an uppercase letter after a lowercase one starts a word", ["aBc", "1"], true],
+      ["an uppercase letter after an uppercase one does not", ["ABc", "1"], false],
+      ["a multi-byte character before does not start a word", ["ébc", "2"], false]
+    ]) do |row|
+      M.word_start?(row[0].to_s, row[1].to_i)
+    end
+
+    # Rows are [label, [text, end], whether a word ends there].
+    t.cases([
+      ["the end of the text ends a word", ["abc", "3"], true],
+      ["a letter after does not end a word", ["abcd", "3"], false],
+      ["a digit after does not end a word", ["abc1", "3"], false],
+      ["a space after ends a word", ["abc d", "3"], true],
+      ["an underscore after ends a word", ["abc_d", "3"], true],
+      ["a dot after ends a word", ["abc.d", "3"], true],
+      ["an uppercase letter after a lowercase one ends a word", ["abcD", "3"], true],
+      ["an uppercase letter after an uppercase one does not", ["ABCD", "3"], false],
+      ["a multi-byte character after does not end a word", ["abc\u00e9", "3"], false]
+    ]) do |row|
+      M.word_end?(row[0].to_s, row[1].to_i)
+    end
+
     t.assert_equal([256, 0], [score_of("ab", "xaccccccccccccccccccccccccccccccb"), score_of("ab", "xaccccccccccccccccccccccccccccccc/b.rb")], "a match whose gaps outweigh its points scores 0, plus the name bonus in the name")
     t.assert_equal([7, 0, 99_999], [M.index_of(M.key(5, 3, 7)), M.index_of(M.key(0, 2000, 0)), M.index_of(M.key(1, 1, 99_999))], "a key keeps its index")
     t.assert_equal([0, 4, 4], [M.name_start("a.rb"), M.name_start("lib/a.rb"), M.name_start("lib/")], "the file name starts after the last slash")
