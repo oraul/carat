@@ -576,9 +576,16 @@ expect "run_state: the figures usage and tokens write during a running check lea
 # resumed workflow rejoins the check.
 LANE_SLOW=8 lane_check 1 slow > /dev/null 2>&1
 lane_running
-state phase isolated report "$(git rev-parse --short=12 HEAD)" > /dev/null
-state note isolated overrun "the check rerun limit stopped the run" > /dev/null
+close_head=$(git rev-parse --short=12 HEAD)
+expect "run_state: a stopped workflow's close records the report phase during a running check" 0 "^$" state phase isolated report "$close_head"
+expect "run_state: the report phase recorded during a running check reads back" 0 "^$close_head$" state get isolated phase.report
+expect "run_state: a stopped workflow's close records a note during a running check" 0 "^$" state note isolated overrun "the check rerun limit stopped the run"
 expect "run_state: the phase and note a stopped workflow's close writes during a running check leave it passing" 0 "^rejoined: every stage passed$" lane_rejoin slow
+# state_view leaves out the phases the workflow's CLOSABLE lines record,
+# named once in run_state.sh as CLOSE_PHASES.
+close_phases=$(sed -n 's/^CLOSE_PHASES="\(.*\)"$/\1/p' "$here/run_state.sh")
+closable_phases=$(sed -n 's/^const CLOSABLE = .*phase \[a-z0-9-\]+ (\([a-z|]*\)) \[0-9a-f\]{7,40}|.*/\1/p' "$here/../.claude/workflows/deliver-change.js" | tr '|' ' ')
+expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE lines" 0 "^${close_phases:-none}$" printf '%s\n' "$closable_phases"
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"

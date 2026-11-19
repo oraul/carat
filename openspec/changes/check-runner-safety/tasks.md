@@ -15,6 +15,7 @@
 - [x] 2.7 Review fix: the rejoin cases expect the waiter's "check: rejoining the check running at" line beside every stage passed (`lane_rejoin` in `tools/tools_test.sh`), so a fresh check no longer passes them.
 - [x] 2.8 Review fix: `state_view` also leaves out the notes (`note.*`) and the phases a workflow's close records (`phase.plan`, `implement`, `package`, `ci`, `merge`, `retro`, `report`, the workflow's `CLOSABLE` family), so the close of a workflow that stops while its check runs leaves the rejoined check passing. Tested by "the phase and note a stopped workflow's close writes during a running check leave it passing", which fails with the earlier `state_view`.
 - [x] 2.9 Review fix: the usage and tokens rejoin case expects tokens to count the start ("tokens counts a start during a running check"), so it proves `metric.start.*` and `metric.weighted.*` are left out.
+- [x] 2.10 Closing: the stopped close's rejoin case checks its phase and note calls (exit 0, no output) and reads the report phase back, so a refused phase or note fails it, by "a stopped workflow's close records the report phase during a running check", "the report phase recorded during a running check reads back", and "a stopped workflow's close records a note during a running check".
 
 ## 3. Documents and self-check
 
