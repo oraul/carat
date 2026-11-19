@@ -17,4 +17,4 @@
 ## 3. Documents and self-check
 
 - [x] 3.1 README.md and `docs/codebase-map.md` describe the clone's toolchain copy and the failed check.
-- [ ] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+- [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
