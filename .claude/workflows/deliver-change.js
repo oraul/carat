@@ -708,13 +708,6 @@ function reviewed(kind, passed, commit, counts) {
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
-// Runs the queued records with the metric line through one agent, only
-// when a check or review record is queued, which the pre-push and merge
-// gates read and only an unguarded start may write; every other line and
-// the figures wait for the closing start. The agent's own cost reaches the
-// next line.
-// force writes the metric line though only closable lines wait (the closing
-// loop's figures, held after a start that committed nothing).
 // recordStart is the one start of the record profile, running one command
 // from the repository root and returning its RECORDED result (flush, laneHead).
 async function recordStart(command, label) {
@@ -722,6 +715,13 @@ async function recordStart(command, label) {
     `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
     calibrate('record', { schema: withCalls(RECORDED), label })), callCap('record'))
 }
+// Runs the queued records with the metric line through one agent, only
+// when a check or review record is queued, which the pre-push and merge
+// gates read and only an unguarded start may write; every other line and
+// the figures wait for the closing start. The agent's own cost reaches the
+// next line.
+// force writes the metric line though only closable lines wait (the closing
+// loop's figures, held after a start that committed nothing).
 async function flush(force = false) {
   if (!force && !pending.some((l) => !CLOSABLE.test(l))) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
@@ -930,8 +930,9 @@ const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --sh
 // refused. The workflow has no shell, so laneHead reads the lane's head in
 // a start of the record profile (recordStart) that runs that one command;
 // '' when it could not, and then a well-formed head is taken, noted
-// head-unread (the check compares its own commit with it). safeText is all of a reported head that reaches a
-// note or a queued record line: no quote or shell character.
+// head-unread (the check compares its own commit with it). safeText is all
+// of a reported head that reaches a note or a queued record line: no quote
+// or shell character.
 const HEAD12 = /^[0-9a-f]{12}$/
 function safeText(text) {
   return String(text || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'empty'
