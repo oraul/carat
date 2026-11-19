@@ -5,4 +5,4 @@
 ## 2. Tests and docs
 
 - [x] 2.1 Tools-test cases: a match the failed check contradicts is noted `self-check-mismatch` and moves `calibrated.contributor` to `session/session`; a mismatch, a passed check, or another mode's start writes no note; `contributor()` records the implement start's self-check (`tools/tools_test.sh`)
-- [ ] 2.2 Name the contradicted self-check as an escalation trigger in `docs/goals.md` and the README's pipeline paragraph (checked by `make docs-lint`)
+- [x] 2.2 Name the contradicted self-check as an escalation trigger in `docs/goals.md` and the README's pipeline paragraph (checked by `make docs-lint`)
