@@ -30,4 +30,4 @@ None.
 
 ## Impact
 
-`.claude/workflows/deliver-change.js`, `.claude/agents/planner.md`, `docs/goals.md`, `tools/tools_test.sh`.
+`.claude/workflows/deliver-change.js`, `.claude/agents/planner.md`, `docs/goals.md`, `tools/tools_test.sh`, `README.md`, `tools/run_state.sh`.

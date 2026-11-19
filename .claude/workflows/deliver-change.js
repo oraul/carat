@@ -146,15 +146,12 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
 const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 const calibrated = {}
-// The rule letter that makes this run critical: the plan's, or e for a large
-// estimate. A critical run, and one that escalated, takes its contributor
-// starts on the session's model at the session's effort.
 // The rule and path of a critical value: the plan's whole value ("b tools/x.sh"),
 // or the "critical LETTER PATH" the planner wrote in a queue item's parenthesis;
 // null for anything else (two paths, prose, a letter outside a to e).
 function criticalOf(text) {
   const s = String(text || '').trim()
-  const m = /^([a-e]) ([A-Za-z0-9_./-]+)$/.exec(s) || /\bcritical ([a-e]) ([A-Za-z0-9_./-]+)/.exec(s)
+  const m = /^([a-e]) ([A-Za-z0-9_./-]+)$/.exec(s) || /, critical ([a-e]) ([A-Za-z0-9_.\/-]+)\)/.exec(s)
   return m ? { rule: m[1], path: m[2] } : null
 }
 // What a restart carries on of the routing: the rule, the escalation, and the
@@ -164,12 +161,18 @@ function restoreRouting(st) {
   escalated = st['metric.escalated'] === '1'
   blockingQualityRounds = /^[0-9]+$/.test(st['metric.quality_blocked'] || '') ? Number(st['metric.quality_blocked']) : 0
 }
+// The rule letter that makes this run critical: the plan's, or e for a large
+// estimate. A critical run, and one that escalated, takes its contributor
+// starts on the session's model at the session's effort.
 function criticalRule() { return critical || (estimate === 'large' ? 'e' : '') }
 function calibrate(kind, opts) {
   const profile = kind === 'contributor' && (criticalRule() || escalated) ? 'session/session' : CALIBRATION[kind]
   calibrated[kind] = profile
   const effort = profile.split('/')[1]
-  return effort === 'session' ? opts : Object.assign({}, opts, { effort })
+  const routed = effort === 'session' ? opts : Object.assign({}, opts, { effort })
+  // The contributor's agent file names the mid tier, so the session's model is
+  // asked for by name: inherit, the option that overrides that line.
+  return kind === 'contributor' && profile.startsWith('session/') ? Object.assign({}, routed, { model: 'inherit' }) : routed
 }
 // The first start that fails its work moves the later contributor starts of
 // the run to the session's model, noted in the run state (once, and never in a

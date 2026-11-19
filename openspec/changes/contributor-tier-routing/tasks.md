@@ -13,3 +13,8 @@
 - [x] 3.1 Read the critical rule from the queue item (criticalOf) in the skipped-plan branch, tested
 - [x] 3.2 Restore the blocking quality rounds on resume (restoreRouting, metric.quality_blocked), tested
 - [x] 3.3 Plan critical schema pattern and an unparsed-value note, planner.md text restored, test label and declarations fixed, run_state header lists the metrics
+
+## 4. Quality round 2 fixes
+
+- [x] 4.1 Pass the model option inherit for a contributor start on the session profile (critical or escalated), asserted in the routing test
+- [x] 4.2 Move the critical-rule comment above criticalRule, anchor the queue-item pattern to the parenthesis, drop the source-grep escalate test, list README.md and tools/run_state.sh in the proposal Impact
