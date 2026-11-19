@@ -13,3 +13,9 @@
 
 - [x] 3.1 CLAUDE.md Commands, `docs/codebase-map.md` area 1, the headers of `tools/open_pr.sh` and `tools/agent_guard.sh` describe `message` and the head parameter; the finding on the hooks is appended to `docs/findings/merge-body-sections.md`.
 - [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+
+## 4. Review fixes
+
+- [x] 4.1 Security (Low): `.claude/agents/merger.md` step 5 runs `open_pr.sh message` in the main checkout, with no `cd` into the worktree, so main's copy runs, never the branch's; `tools/agent_guard.sh` refuses `open_pr.sh message` after a `cd` into a worktree in the same call. Tested by "guard: merger refuses open_pr message after a cd into a worktree, the branch's copy" and "guard: merger prints the squash message before a cd into a worktree".
+- [x] 4.2 Quality: `open_pr.sh message` computes the body once with one `sed '1,2d'` and prints it with the blank line and the trailer, dropping the awk loop the command substitution made dead; the existing message cases still pass.
+- [x] 4.3 Quality: a case with two `DATE-CHANGE` archive directories each holding `pr.md`: "open_pr: message refuses a change with two archived pr.md at the sha".
