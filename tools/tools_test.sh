@@ -2650,6 +2650,8 @@ expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_w
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
 expect "guard: merger prints the squash message at the pushed head" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger refuses open_pr message at a short sha" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message c 0123456789ab'
+expect "guard: merger refuses open_pr message after a cd into a worktree, the branch's copy" 2 "tools/open_pr.sh message after cd tmp/.lane-c" guard merger 'cd tmp/.lane-c && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
+expect "guard: merger prints the squash message before a cd into a worktree" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567 && cd tmp/.lane-c'
 expect "guard: merger refuses open_pr message of a path" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message ../c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
