@@ -12,3 +12,9 @@
 
 - [x] 3.1 README.md, `docs/codebase-map.md`, and the header of `tools/run_state.sh` describe the write and the held line; the `trusted` case's key order is updated.
 - [x] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.
+
+## 4. Review advisories fixed in place
+
+- [x] 4.1 `tools/run_state.sh`: `review_due` collects `merge_unrecorded` itself; `sprint_state`, which `groom` and `sprint-row` also call, no longer computes `sprint_uncounted`.
+- [x] 4.2 `tools/run_state.sh`, `phase`: the recorded-merged refusal sits in the `merge:*` arm beside `merged_at`, since `squash_of_change` already checks it for the word `merged`; after the case only the write of an empty `merged` remains.
+- [x] 4.3 `tools/tools_test.sh`: "review-due names no merge phase that is not a commit hash" and "review-due names the waiting plan before a merge phase without its merged commit".

@@ -1777,6 +1777,9 @@ merge_only a6 "$unrecorded"
 merge_only sprint-1-records "$unrecorded"
 expect "run_state: review-due names a merge phase recorded without its merged commit, a review run's left out" 1 "^not due: sprint-1 cannot count a merge phase recorded without its merged commit: a6 at $unrecorded; record each with sh tools/run_state.sh set NAME merged COMMIT\$" state review-due
 rm build/pipeline/a6.json build/pipeline/sprint-1-records.json
+merge_only a6 not-a-commit
+expect "run_state: review-due names no merge phase that is not a commit hash" 1 "^not due: sprint-1 has 3 of 5" state review-due
+rm build/pipeline/a6.json
 { mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics-backlog.tsv
 merge_only a4 "$unrecorded"
 expect "run_state: review-due leaves out a merge phase without merged of a change with a history row" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]" state review-due
@@ -1809,6 +1812,11 @@ expect "run_state: groom holds a plan whose sprint sweep did not run" 0 "^groom:
 expect "run_state: review-due stays due while the sprint sweep did not run" 0 "^due: sprint-2 has 5 changes merged" state review-due
 state review sprint-2-sweep periodic-security partial "high=0 medium=0 low=0 blocking=0 missed=tools" > /dev/null
 expect "run_state: review-due is not due while the sprint plan waits, its sweep partial" 1 "^not due: sprint-2 is planned" state review-due
+# The waiting plan's line comes before the held line of a merge phase
+# without its merged commit (merged-record).
+merge_only b7 "$unrecorded"
+expect "run_state: review-due names the waiting plan before a merge phase without its merged commit" 1 "^not due: sprint-2 is planned" state review-due
+rm build/pipeline/b7.json
 printf '# Queue\n\n## Sprint 3\n\n1. `b6` (T5, estimated small): six.\n' > build/plan/queue-backlog.md
 expect "run_state: plan-needed reads a waiting sprint plan" 1 "^not needed: b6 heads build/plan/queue-backlog[.]md, estimated small" state plan-needed b6
 # The backlog grooming: duplicates by location, removals by heading.
