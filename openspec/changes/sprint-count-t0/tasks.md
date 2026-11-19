@@ -20,3 +20,7 @@
 - [x] 4.2 `tools/run_state.sh`, `queue_records`: one reader of the queue line form for `queue_class` and `queue_items`; only a `#` or `##` heading sets the sprint, so an item under a `###` sub-heading of the sprint counts. Tested by "review-due counts an item under a sub-heading of its sprint".
 - [x] 4.3 `tools/run_state.sh`: the usage header lists `review-due` once; `tools/tools_test.sh`: the comment before the y2 case names `queue_class`.
 - [x] 4.4 `tools/tools_test.sh`: the split-part, sub-heading, and sibling-part cases each assert their own name is absent from every not-counted list (`counted`), the count and the pool list kept in one case, so no label repeats another's check.
+
+## 5. Closing advisories
+
+- [x] 5.1 `tools/tools_test.sh`, `counted`: a name also has to appear in review-due's merged list, the part before the first `)`, so a change review-due never saw prints `unseen NAME` and fails its case.

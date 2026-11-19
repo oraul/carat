@@ -1752,10 +1752,15 @@ done
 count_line=$(state review-due)
 expect "run_state: review-due leaves a T0 change out of the count" 0 "; not counted, T0: t1(;|\$)" echo "$count_line"
 expect "run_state: review-due leaves out a change the exception line puts outside the 3, not one it names after run" 0 "; not counted, outside the 3: o1, o2(;|\$)" echo "$count_line"
-# counted NAME: whether review-due's line leaves NAME out of every
-# not-counted list, the part after its merged list, so each counted
-# scenario is proven by its own name.
+# counted NAME: whether review-due's line names NAME in its merged list,
+# the part before the first ")", and leaves it out of every not-counted
+# list, the part after it, so each counted scenario is proven by its own
+# name and a change review-due never saw does not pass.
 counted() {
+  if ! printf '%s\n' "${count_line%%)*}" | grep -Eq -- "[(, ]$1(,|\$)"; then
+    echo "unseen $1"
+    return
+  fi
   case "$(printf '%s\n' "${count_line#*)}" | grep -E -- "[ ,]$1(,|;|\$)")" in
     "") echo "counted $1" ;;
     *) echo "left out $1" ;;
