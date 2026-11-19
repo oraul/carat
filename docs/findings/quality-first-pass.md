@@ -57,3 +57,12 @@
 - Location: the contributor's last fix start of this change (head 76a1d047c65f), workflow phase implement
 - Why: the contributor, on the mid tier as a trial (#219), returned the word placeholder instead of its schema result, so the workflow recorded the head as unknown and the run stopped; the fix had committed and its check stages passed, so only the return was lost.
 - Fix: count it against the trial; have the workflow reject a placeholder return and re-ask for the schema, reading the head from git when the branch moved.
+### An advisory-only fix round re-runs every review (sprint-19-records retro 5)
+- Location: `.claude/workflows/deliver-change.js` (the fix-in-place round's re-review); joins the queued `rework-review-repeat` (backlog Pool 21).
+- Why: sprint-19-records spent rework 1 on 4 advisory findings and 0 blocking, 1 fixed in place and 3 recorded; the second round re-ran check (passed), security (0 findings), and quality (0 blocking, 3 advisory); reviews took 13,756 of 34,522 output tokens (40%) and 27 of 69 tool calls (39%), as on sprint-17-records (30,387 of 72,515, 42%) and sprint-18-records (25,498 of 86,421, 30%), both rework 2.
+- Fix: a round that fixes only advisory text in the change's own OpenSpec files does not re-run security and quality on the unchanged rest of the diff. Accepted when such a run records no second security and quality start and records-change rework drops to 0.
+
+### The benchmark starts on a docs-only change for want of a recorded measurement (sprint-19-records retro 6)
+- Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition); joins the queued `bench-skip-no-code` (backlog Pool 26).
+- Why: sprint-19-records' benchmark spent 3,513 output tokens and 5 calls (10% of output) on a docs-only diff, building base and change only to report no difference, started because build/metrics was missing; sprint-17-records 4,147 / 6, sprint-18-records 4,721 / 14; bench passes first 177 of 178.
+- Fix: a change touching no file under carat/, bin/, test/, or bench/ starts no benchmark agent and carries its bench result as equal. Accepted when a docs-only or records-only run records no benchmark start.
