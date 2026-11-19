@@ -54,9 +54,9 @@ module EditorCmdlineTest
     # Unknown command.
     h = editor(files_with("ab\n"))
     h.type(":foo<CR>")
-    t.assert_equal("E492: Not an editor command: foo", h.message_row, "unknown command reports E492")
+    t.assert_equal("✖ E492: Not an editor command: foo", h.message_row, "unknown command reports E492")
     t.assert_equal(:normal, h.mode, "back in normal mode after an unknown command")
-    t.assert_equal(Carat::Domain::Highlight::MESSAGE_ERROR, h.frame.cell(9, 0).hl, "E492 is shown as an error")
+    t.assert_equal([Carat::Domain::Highlight::DIAGNOSTIC_ERROR, Carat::Domain::Highlight::MESSAGE_ERROR], [h.frame.cell(9, 0).hl, h.frame.cell(9, 2).hl], "E492 is shown as an error, its icon and its code in the error groups")
 
     # Write.
     h = editor(files_with("one\ntwo\n"))
@@ -78,7 +78,7 @@ module EditorCmdlineTest
     t.assert_equal(true, h.quit?, "quit ends the editor on a clean buffer")
     h = editor(files_with("ab\n"))
     h.type("ix<Esc>:q<CR>")
-    t.assert_equal([false, E37, :normal], [h.quit?, h.message_row, h.mode], "quit refused while modified")
+    t.assert_equal([false, "✖ " + E37, :normal], [h.quit?, h.message_row, h.mode], "quit refused while modified")
     h.type(":quit<CR>")
     t.assert_equal(false, h.quit?, "long form quit refused too")
     h.type(":q!<CR>")
@@ -143,7 +143,7 @@ module EditorCmdlineTest
     h.type(":e new.txt<CR>")
     t.assert_equal(["new.txt", [""], "\"new.txt\" [New]"], [h.buffer.path, h.lines, h.message_row], "edit starts a new file")
     h.type("ix<Esc>:e b.txt<CR>")
-    t.assert_equal([E37, "new.txt"], [h.message_row, h.buffer.path], "edit refused while modified")
+    t.assert_equal(["✖ " + E37, "new.txt"], [h.message_row, h.buffer.path], "edit refused while modified")
     h.type(":e!<CR>")
     t.assert_equal([[""], false], [h.lines, h.buffer.modified?], "forced reload discards changes")
     h.type(":edit a.txt<CR>")
@@ -161,10 +161,10 @@ module EditorCmdlineTest
     hostile.put("link.txt", "linked\n")
     hostile.link("link.txt")
     t.table([
-      ["a directory", ":e lib<CR>", ["\"lib\" is a directory", true, "a.txt", ["ab"]]],
-      ["a FIFO", ":e pipe<CR>", ["\"pipe\" is not a file", true, "a.txt", ["ab"]]],
-      ["a device", ":e /dev/zero<CR>", ["\"/dev/zero\" is not a file", true, "a.txt", ["ab"]]],
-      ["a file over the limit", ":e big.bin<CR>", ["E484: Can't open file big.bin: File too large", true, "a.txt", ["ab"]]],
+      ["a directory", ":e lib<CR>", ["✖ \"lib\" is a directory", true, "a.txt", ["ab"]]],
+      ["a FIFO", ":e pipe<CR>", ["✖ \"pipe\" is not a file", true, "a.txt", ["ab"]]],
+      ["a device", ":e /dev/zero<CR>", ["✖ \"/dev/zero\" is not a file", true, "a.txt", ["ab"]]],
+      ["a file over the limit", ":e big.bin<CR>", ["✖ E484: Can't open file big.bin: File too large", true, "a.txt", ["ab"]]],
       ["a linked regular file opens", ":e link.txt<CR>", ["\"link.txt\" 1L, 7B", false, "link.txt", ["linked"]]]
     ]) do |keys|
       hh = editor(hostile)
@@ -229,9 +229,9 @@ module EditorCmdlineTest
     # A message stays until the next key.
     h = editor(files_with("ab\n"))
     h.type(":foo<CR>")
-    t.assert_equal("E492: Not an editor command: foo", h.message_row, "message shown")
+    t.assert_equal("✖ E492: Not an editor command: foo", h.message_row, "message shown")
     h.wait
-    t.assert_equal("E492: Not an editor command: foo", h.message_row, "message stays while idle")
+    t.assert_equal("✖ E492: Not an editor command: foo", h.message_row, "message stays while idle")
     h.type("l")
     t.assert_equal("", h.message_row, "message clears on the next key")
 
@@ -254,9 +254,9 @@ module EditorCmdlineTest
     h.type(":tabnew<CR>:tabnew<CR>:tabfirs<CR>")
     t.assert_equal([3, 1], [h.tab_count, h.tab_index], "tabfirs goes to the first tab page")
     h.type(":tabf<CR>")
-    t.assert_equal("E492: Not an editor command: tabf", h.message_row, "a spelling shorter than the abbreviation is unknown")
+    t.assert_equal("✖ E492: Not an editor command: tabf", h.message_row, "a spelling shorter than the abbreviation is unknown")
     h.type(":vsplitx<CR>")
-    t.assert_equal("E492: Not an editor command: vsplitx", h.message_row, "a spelling longer than the full name is unknown")
+    t.assert_equal("✖ E492: Not an editor command: vsplitx", h.message_row, "a spelling longer than the full name is unknown")
 
     # The command history: <Up> and <Down> recall by the typed prefix.
     h = editor(files_with("ab\n"))

@@ -63,10 +63,10 @@ module EditorRegistersTest
 
     h = editor("ab\n")
     h.type("\"bp")
-    t.assert_equal("E353: Nothing in register b", h.message_row, "an empty named register reports E353")
+    t.assert_equal("✖ E353: Nothing in register b", h.message_row, "an empty named register reports E353")
     t.assert_equal(["ab"], h.lines, "and changes nothing")
     h.type("\"Bp")
-    t.assert_equal("E353: Nothing in register B", h.message_row, "the message names the register as typed")
+    t.assert_equal("✖ E353: Nothing in register B", h.message_row, "the message names the register as typed")
 
     h = editor("one\ntwo\n")
     h.type("\"ayy")

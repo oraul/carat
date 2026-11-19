@@ -52,7 +52,7 @@ module EditorScreenTest
 
     h.type("i")
     t.assert_true(h.terminal.last_write.include?("\e[6 q"), "insert mode switches to the bar cursor")
-    t.assert_equal("-- INSERT --", h.message_row, "message row shows insert")
+    t.assert_equal("", h.message_row, "message row stays blank in insert mode")
     h.type("<Esc>")
     t.assert_true(h.terminal.last_write.include?("\e[2 q"), "normal mode switches back to the block cursor")
 

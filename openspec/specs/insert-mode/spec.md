@@ -82,13 +82,6 @@ Escape SHALL return to normal mode and move the cursor one column left unless it
 - **WHEN** Escape is pressed in insert mode at column 0
 - **THEN** the mode is normal and the cursor is at column 0
 
-### Requirement: The mode indicator shows insert mode
-While in insert mode the message row SHALL show "-- INSERT --", and it SHALL be cleared on returning to normal mode.
-
-#### Scenario: Indicator on and off
-- **WHEN** "i" is pressed and then Escape
-- **THEN** the message row shows "-- INSERT --" after "i" and is empty after Escape
-
 ### Requirement: Expandtab pads to the tab stop by display column
 With expandtab on, Tab SHALL insert the spaces that reach the next multiple of tabstop counted in screen cells, a tab before the cursor counting the cells it spans and a wide character two.
 
@@ -99,3 +92,10 @@ With expandtab on, Tab SHALL insert the spaces that reach the next multiple of t
 #### Scenario: Expandtab after a wide character
 - **WHEN** the line is the wide character "あ" with tabstop 4 and expandtab on, and "A" then Tab are pressed
 - **THEN** the line is "あ" and two spaces, ending at screen cell 4, and the cursor is at column 3
+
+### Requirement: Insert mode leaves the message row blank
+In insert mode with no message pending the message row SHALL be blank, since the status bar's mode pill shows the mode; a message SHALL still show.
+
+#### Scenario: No indicator in insert mode
+- **WHEN** "i" is pressed
+- **THEN** the message row is blank and the status bar shows the INSERT pill

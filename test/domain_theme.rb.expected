@@ -1,6 +1,6 @@
 ok   every id has a name
-ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, and LineNrFifth are the last UI groups
-ok   64 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, and MsgDim are the last UI groups
+ok   65 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   the status bar's count groups follow its lsp groups
@@ -210,6 +210,25 @@ ok   another icon in SignColumn
 ok   an unknown name in SignColumn
 ok   a diagnostic sign's group by its severity
 ok   a severity outside 1 to 4 is drawn as a hint
+ok   the message groups' colors: carat-dark
+ok   the message groups' attributes: carat-dark
+ok   MsgDim has no background of its own: carat-dark
+ok   the message groups' colors: carat-light
+ok   the message groups' attributes: carat-light
+ok   MsgDim has no background of its own: carat-light
+ok   the message groups' colors: one_dark
+ok   the message groups' attributes: one_dark
+ok   MsgDim has no background of its own: one_dark
+ok   the message groups' colors: one_light
+ok   the message groups' attributes: one_light
+ok   MsgDim has no background of its own: one_light
+ok   the message groups' colors: dark_plus
+ok   the message groups' attributes: dark_plus
+ok   MsgDim has no background of its own: dark_plus
+ok   the message groups' colors: light_plus
+ok   the message groups' attributes: light_plus
+ok   MsgDim has no background of its own: light_plus
+ok   the dim message group's name
 ok   The command pill is cyan: carat-dark
 ok   The command pill is cyan: carat-light
 ok   The command pill is cyan: one_dark
@@ -299,4 +318,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 301 passed, 0 failed
+domain_theme: 320 passed, 0 failed

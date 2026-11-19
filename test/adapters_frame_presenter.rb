@@ -104,8 +104,21 @@ module AdaptersFramePresenterTest
     draw(s, 6, 20)
   end
 
+  # The highlight of count cells of a row from column from.
+  #: (Carat::Domain::Frame, Integer, Integer, Integer) -> Array[Integer]
+  def self.row_groups(frame, row, from, count)
+    out = []
+    c = from
+    while c < from + count
+      out << frame.cell(row, c).hl
+      c += 1
+    end
+    out
+  end
+
   # The highlight of each cell of a row from frame column 4, where the text
   # starts, for count cells.
+  #: (Carat::Domain::Frame, Integer, Integer) -> Array[Integer]
   def self.highlights(frame, row, count)
     out = []
     c = 4
@@ -334,26 +347,93 @@ module AdaptersFramePresenterTest
     s.show("written", false)
     f = draw(s, 6, 30)
     t.assert_equal("written", f.row_text(5).strip, "a pending message wins over the diagnostic")
+    t.assert_equal(D::Highlight::MESSAGE_DIM, f.cell(5, 0).hl, "an information message is dim")
     s.clear_message
     s.mode = D::Mode::INSERT
     f = draw(s, 6, 30)
-    t.assert_equal("-- INSERT --", f.row_text(5).strip, "the insert indicator wins over the diagnostic")
+    t.assert_equal("", f.row_text(5).strip, "insert mode draws no indicator over the diagnostic")
 
     # Message row priorities.
+    # Scenario: Message replaces the mode indicator (the icon first).
+    # Scenario: An error without a code.
+    # Scenario: The error icon follows option.icons.
+    # Scenario: An information message is dim.
+    # Scenario: The hit-enter line is a question.
+    # Scenario: Pending keys are dim.
+    # Scenario: NO_COLOR keeps the groups.
     s = state_for(["ab"], "a.txt")
     s.mode = D::Mode::INSERT
     f = draw(s, 6, 30)
-    t.assert_equal("-- INSERT --", f.row_text(5), "insert indicator")
+    t.assert_equal("", f.row_text(5), "insert mode leaves the message row blank, the pill shows the mode")
     t.assert_equal(:bar, f.cursor_shape, "Shape in insert mode: bar cursor in insert mode")
     s.show("E37: No write since last change (add ! to override)", true)
     f = draw(s, 6, 60)
-    t.assert_equal("E37: No write since last change (add ! to override)", f.row_text(5), "message replaces the indicator")
-    t.assert_equal(D::Highlight::MESSAGE_ERROR, f.cell(5, 0).hl, "error message highlight")
+    t.assert_equal("✖ E37: No write since last change (add ! to override)", f.row_text(5), "an error message in insert mode shows its icon first")
+    t.assert_equal([D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::NORMAL, D::Highlight::NORMAL], row_groups(f, 5, 0, 8), "error message: the icon and its space, the code E37: in ErrorMsg, the text in Normal")
+    s.show("no such name", true)
+    f = draw(s, 6, 60)
+    t.assert_equal(["✖ no such name", D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::NORMAL, D::Highlight::NORMAL], [f.row_text(5), f.cell(5, 0).hl, f.cell(5, 2).hl, f.cell(5, 13).hl], "an error without a code is its icon and its text in Normal")
+    ["E:x", "E12x", "e5: y", "E"].each do |text|
+      s.show(text, true)
+      f = draw(s, 6, 60)
+      t.assert_equal([D::Highlight::NORMAL, D::Highlight::NORMAL], [f.cell(5, 2).hl, f.cell(5, 3).hl], "no code in #{text}")
+    end
+    s.show("E5: ñandú", true)
+    f = draw(s, 6, 60)
+    t.assert_equal(["✖ E5: ñandú", D::Highlight::MESSAGE_ERROR, D::Highlight::NORMAL, D::Highlight::NORMAL], [f.row_text(5), f.cell(5, 4).hl, f.cell(5, 6).hl, f.cell(5, 10).hl], "the text after a code keeps its multi-byte letters")
+    f = draw(s, 6, 6)
+    t.assert_equal("✖ E5:", f.row_text(5), "an error row is cut at the screen's width")
+    s.options.icons = "ascii"
+    t.assert_equal("X E5: ñandú", draw(s, 6, 60).row_text(5), "option.icons ascii gives the error an X")
+    s.options.icons = "unicode"
+    P.plain = true
+    f = draw(s, 6, 60)
+    t.assert_equal(["X E5: ñandú", D::Highlight::DIAGNOSTIC_ERROR, D::Highlight::MESSAGE_ERROR, D::Highlight::NORMAL], [f.row_text(5), f.cell(5, 0).hl, f.cell(5, 2).hl, f.cell(5, 6).hl], "NO_COLOR keeps the groups and draws the icon in ASCII")
+    P.plain = false
+    s.show("written", false)
+    f = draw(s, 6, 60)
+    t.assert_equal(["written", D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.row_text(5), f.cell(5, 0).hl, f.cell(5, 6).hl], "an information message is dim from its first to its last cell")
+    s.show("one\ntwo", false)
+    f = draw(s, 6, 40)
+    t.assert_equal([D::Highlight::QUESTION, D::Highlight::QUESTION], [f.cell(5, 0).hl, f.cell(5, 38).hl], "the hit-enter line is a question")
+    s.clear_message
+    s.mode = D::Mode::NORMAL
+    INPUT.pending_keys = [34, 97, 50, 100]
+    f = draw(s, 6, 30)
+    t.assert_equal(["\"a2d", D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.row_text(5).strip, f.cell(5, 26).hl, f.cell(5, 28).hl, f.cell(5, 29).hl], "the pending keys are dim at the right edge")
+    INPUT.take_keys
+    # The rows of the command line and the message row in both carat
+    # themes: the colors and the bold of each group.
+    ["carat-dark", "carat-light"].each do |name|
+      theme = D::Themes.find(name, "terminal")
+      palette = D::Themes::PALETTES[D::Themes::NAMES.index(name).to_i]
+      red = palette_rgb(palette, D::Themes::RED)
+      fg = theme.fg(D::Highlight::NORMAL)
+      dim = palette_rgb(palette, D::Themes::DIM)
+      s.show("E37: bad", true)
+      f = draw(s, 6, 30)
+      t.assert_equal([red, 0, red, D::Theme::BOLD, fg, 0], [theme.fg(f.cell(5, 0).hl), theme.attr(f.cell(5, 0).hl), theme.fg(f.cell(5, 2).hl), theme.attr(f.cell(5, 2).hl), theme.fg(f.cell(5, 7).hl), theme.attr(f.cell(5, 7).hl)], "an error row: a red icon, a bold red code, the text in the foreground: #{name}")
+      s.show("written", false)
+      f = draw(s, 6, 30)
+      t.assert_equal(dim, theme.fg(f.cell(5, 0).hl), "an information message is dim: #{name}")
+      s.clear_message
+      s.mode = D::Mode::CMDLINE
+      s.cmdline = "wq"
+      f = draw(s, 6, 30)
+      t.assert_equal([dim, fg], [theme.fg(f.cell(5, 0).hl), theme.fg(f.cell(5, 1).hl)], "the colon is dim and the typed text is in the foreground: #{name}")
+      s.mode = D::Mode::NORMAL
+      INPUT.pending_keys = [34, 97]
+      f = draw(s, 6, 30)
+      t.assert_equal(dim, theme.fg(f.cell(5, 29).hl), "the pending keys are dim: #{name}")
+      INPUT.take_keys
+      s.clear_message
+    end
     s.clear_message
     s.mode = D::Mode::CMDLINE
     s.cmdline = "wq"
     f = draw(s, 6, 30)
     t.assert_equal(":wq", f.row_text(5), "command line with colon")
+    t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::NORMAL, D::Highlight::NORMAL], [f.cell(5, 0).hl, f.cell(5, 1).hl, f.cell(5, 2).hl], "the colon is dim and the typed text is Normal")
     t.assert_equal([5, 3], [f.cursor_row, f.cursor_col], "cursor after the command line text")
 
     # Vertical scrolling with scrolloff.
@@ -645,16 +725,20 @@ module AdaptersFramePresenterTest
 
     # A plugin's prompt takes the place of the colon, with the cursor after
     # the text.
+    # Scenario: Prompt in place of the colon.
+    # Scenario: The command line's prompt is dim.
     s = state_for(["one"], "a.txt")
     s.mode = D::Mode::CMDLINE
     UI.open_prompt("test", "", "Rename to: ")
     s.cmdline = "a.rb"
     f = draw(s, 6, 40)
     t.assert_equal(["Rename to: a.rb", 5, 15], [f.row_text(5), f.cursor_row, f.cursor_col], "the prompt row and the cursor after it")
+    t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM, D::Highlight::NORMAL, D::Highlight::NORMAL], [f.cell(5, 0).hl, f.cell(5, 10).hl, f.cell(5, 11).hl, f.cell(5, 14).hl], "a plugin's prompt is dim and its text is Normal")
     UI.close_prompt
     f = draw(s, 6, 40)
     t.assert_equal([":a.rb", 5], [f.row_text(5), f.cursor_col], "an ex command line keeps its colon")
 
+    # Scenario: Visual block indicator (the blockwise mode line below).
     f = visual_frame(["abc"], D::Mode::VISUAL, [0, 0], [0, 1])
     t.assert_equal([VIS, NOR, NOR, NOR], highlights(f, 0, 4), "charwise: the anchor's cell is selected, the cursor's cell keeps its highlight")
     t.assert_equal("-- VISUAL --", f.row_text(5), "the charwise mode line")

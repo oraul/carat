@@ -72,10 +72,12 @@ module EditorInsertTest
     h.type("i<Tab>")
     t.assert_equal([["\t"], [0, 1]], [h.lines, h.cursor], "noexpandtab inserts a tab character")
 
-    # Mode indicator and cursor shape.
+    # Scenario: No indicator in insert mode.
+    # Message row in insert mode (no indicator) and cursor shape.
     h = editor("ab\n", false, true)
     h.type("i")
-    t.assert_equal("-- INSERT --", h.message_row, "insert indicator shown")
+    t.assert_equal("", h.message_row, "insert mode leaves the message row blank, the status bar pill shows INSERT")
+    t.assert_true(h.status_row.include?("INSERT"), "the status bar's pill shows the mode")
     t.assert_equal(:bar, h.frame.cursor_shape, "bar cursor in insert mode")
     h.type("<Esc>")
     t.assert_equal("", h.message_row, "indicator cleared in normal mode")

@@ -206,7 +206,7 @@ module EditorWindowsTest
     h = editor(4, 80)
     h.type("<C-w>s")
     t.assert_equal(1, h.window_count, "E36 leaves one window")
-    t.assert_equal(D::Highlight::MESSAGE_ERROR, h.frame.cell(3, 0).hl, "E36 is shown as an error")
+    t.assert_equal(D::Highlight::DIAGNOSTIC_ERROR, h.frame.cell(3, 0).hl, "E36 is shown as an error")
 
     # Files in the new window: rows are [label, keys, [paths, lines, modified]].
     t.table([
@@ -289,7 +289,7 @@ module EditorWindowsTest
     h = session("<C-w><C-q>")
     t.assert_equal(true, h.quit?, "Ctrl-W Ctrl-Q on the last window quits")
     h = session("x<C-w>q")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], "Ctrl-W q on the last window refuses a modified buffer")
+    t.assert_equal([false, "✖ " + E37], [h.quit?, h.message_row], "Ctrl-W q on the last window refuses a modified buffer")
     h = session("<C-w>sx:q<CR>")
     t.assert_equal([1, false, true], [h.window_count, h.quit?, h.buffer.modified?], "the other window keeps showing the modified buffer")
 
@@ -311,14 +311,14 @@ module EditorWindowsTest
     h.type(":qa<CR>")
     t.assert_equal([false, unsaved("b.txt"), "b.txt"], [h.quit?, h.message, h.buffer.path], "and :qa is refused, showing it")
     h.type(":q<CR>")
-    t.assert_equal([false, E37], [h.quit?, h.message_row], ":q on the last window is refused by the modified buffer it shows")
+    t.assert_equal([false, "✖ " + E37], [h.quit?, h.message_row], ":q on the last window is refused by the modified buffer it shows")
     # Under option.gt buffers :q on the last window closes the buffer tab
     # while another listed file buffer exists; the hidden-buffer refusal
     # of option.gt tabpages is in test/editor_buffers.rb.
     h.type(":b! 1<CR>:q<CR>")
     t.assert_equal([false, "", "b.txt", ["b.txt"]], [h.quit?, h.message, h.buffer.path, h.buffer_paths], ":q on the last window closes the buffer tab and shows the modified hidden buffer")
     h.type(":q<CR>")
-    t.assert_equal([false, E37, ["z"]], [h.quit?, h.message_row, h.lines], ":q on the last listed buffer is refused by its changes")
+    t.assert_equal([false, "✖ " + E37, ["z"]], [h.quit?, h.message_row, h.lines], ":q on the last listed buffer is refused by its changes")
     h.type(":q!<CR>")
     t.assert_equal(true, h.quit?, "a :q! on the last listed buffer quits")
     h = session(":sp b.txt<CR>x<C-w>c<C-w>o")
@@ -328,10 +328,10 @@ module EditorWindowsTest
 
     # E141 names the buffer by its list position.
     h = session(":new<CR>ix<Esc><C-w>jx:wa<CR>")
-    t.assert_equal(["E141: No file name for buffer 2", "ne\ntwo\nthree\n"], [h.message_row, h.files.get("a.txt")], ":wa reports the nameless buffer and writes the others")
+    t.assert_equal(["✖ E141: No file name for buffer 2", "ne\ntwo\nthree\n"], [h.message_row, h.files.get("a.txt")], ":wa reports the nameless buffer and writes the others")
     t.assert_equal([true, false], [h.assembly.buffers.buffer_at(1).modified?, h.quit?], "the nameless buffer stays modified")
     h.type(":wqa<CR>")
-    t.assert_equal([false, "E141: No file name for buffer 2"], [h.quit?, h.message_row], ":wqa does not quit while a buffer could not be written")
+    t.assert_equal([false, "✖ E141: No file name for buffer 2"], [h.quit?, h.message_row], ":wqa does not quit while a buffer could not be written")
 
     t.finish
   end

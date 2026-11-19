@@ -1388,20 +1388,46 @@ module Carat
         frame.put(frame_row, 0, diagnostic.message, Domain::Highlight.diagnostic_group(diagnostic.severity))
       end
 
+      # The pending message: an error as the error icon, its code, and the
+      # text, any other message dim.
+      #: (Domain::Frame, Integer, Domain::EditorState) -> void
+      def paint_message_text(frame, frame_row, state)
+        text = state.message
+        unless state.message_error
+          frame.put(frame_row, 0, text, Domain::Highlight::MESSAGE_DIM)
+          return
+        end
+        set = @plain ? "ascii" : state.options.icons
+        col = frame.put(frame_row, 0, Domain::Icons.glyph("error", set), Domain::Highlight::DIAGNOSTIC_ERROR)
+        col = frame.put(frame_row, col, " ", Domain::Highlight::DIAGNOSTIC_ERROR)
+        code = error_code_length(text)
+        col = frame.put_within(frame_row, col, text, Domain::Highlight::MESSAGE_ERROR, col + code) if code > 0
+        frame.put_from(frame_row, col, text, code, Domain::Highlight::NORMAL, frame.cols)
+      end
+
+      # The bytes of the code an error message starts with: an E, digits,
+      # and the colon; 0 for a message that does not start so.
+      #: (String) -> Integer
+      def error_code_length(text)
+        return 0 unless text.getbyte(0) == 69
+        i = 1
+        while i < text.bytesize && text.getbyte(i).to_i >= 48 && text.getbyte(i).to_i <= 57
+          i += 1
+        end
+        i > 1 && text.getbyte(i) == 58 ? i + 1 : 0
+      end
+
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
-          col = frame.put(frame_row, 0, command_prefix(state), Domain::Highlight::NORMAL)
+          col = frame.put(frame_row, 0, command_prefix(state), Domain::Highlight::MESSAGE_DIM)
           frame.put(frame_row, col, state.cmdline, Domain::Highlight::NORMAL)
           return
         end
         if state.list_message?
-          frame.put(frame_row, 0, HIT_ENTER, Domain::Highlight::NORMAL)
+          frame.put(frame_row, 0, HIT_ENTER, Domain::Highlight::QUESTION)
         elsif !state.message.empty?
-          hl = state.message_error ? Domain::Highlight::MESSAGE_ERROR : Domain::Highlight::NORMAL
-          frame.put(frame_row, 0, state.message, hl)
-        elsif state.mode == Domain::Mode::INSERT
-          frame.put(frame_row, 0, "-- INSERT --", Domain::Highlight::NORMAL)
+          paint_message_text(frame, frame_row, state)
         elsif state.mode == Domain::Mode::VISUAL
           frame.put(frame_row, 0, "-- VISUAL --", Domain::Highlight::NORMAL)
         elsif state.mode == Domain::Mode::VISUAL_LINE
@@ -1415,7 +1441,7 @@ module Carat
         return if showcmd.empty?
         showcmd = showcmd[showcmd.length - SHOWCMD_WIDTH, SHOWCMD_WIDTH] if showcmd.length > SHOWCMD_WIDTH
         start = cols - showcmd.length
-        frame.put(frame_row, start, showcmd, Domain::Highlight::NORMAL) if start >= 0
+        frame.put(frame_row, start, showcmd, Domain::Highlight::MESSAGE_DIM) if start >= 0
       end
     end
   end
