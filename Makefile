@@ -438,7 +438,7 @@ tools-test:
 docs-lint:
 	sh tools/docs_lint.sh
 
-## gates: run the rule gates that need only git on the branch against origin/main (trailer, content, snapshots, docs, scenarios, cases, attribution); tools/gates.sh has the rest
+## gates: run the rule gates that need only git on the branch against origin/main (trailer, content, snapshots, docs, scenarios, cases, findings, attribution); tools/gates.sh has the rest
 gates:
 	sh tools/gates.sh static
 

@@ -26,6 +26,10 @@
 #   cases      a branch changing a code line (not blank, not a comment) of a
 #              shell script under tools/ other than tools_test.sh adds or
 #              changes an expect case in tools/tools_test.sh
+#   findings   findings are append-only: every `### ` heading under
+#              docs/findings/ at BASE or at an earlier commit of the branch
+#              is still there at HEAD; only a sprint-N-records change
+#              (groom) may remove entries
 #   attribution  .claude/settings.json sets Claude Code's attribution to
 #              exactly the trailer on commits, no pull request text, and no
 #              session link
@@ -50,13 +54,14 @@
 #              make it the run state), has the template's shape, no comment,
 #              angle bracket, empty bullet, footer, URL, email, session id, or
 #              model name, and a Testing line naming the security review
-#   static     trailer, content, snapshots, docs, scenarios, cases, attribution
+#   static     trailer, content, snapshots, docs, scenarios, cases, findings,
+#              attribution
 #              (make gates)
 #   origin     no risky configuration key (core.hooksPath among them), no
 #              hook but a sample in .git/hooks; an origin/ base equal to origin's
 #   pre-push   origin, static, security, stages (tools/run_state.sh push)
-#   merge F    origin, trailer, content, security, stages, passed, records,
-#              pushes, pr-body F, then gated: the head they passed at
+#   merge F    origin, trailer, content, findings, security, stages, passed,
+#              records, pushes, pr-body F, then gated: the head they passed at
 #              (the merger, from a worktree of origin/main at
 #              tmp/.merge-gates, so the branch cannot have edited the gates)
 #
@@ -410,14 +415,17 @@ gate_pushes() {
   reviews=$(state review_fixes)
   # A run state written before merge-main-path has no main_moved: 0.
   moved=$(state main_moved)
+  texts=$(state pr_text_fixes)
   if [ "${reviews:-0}" -gt 1 ]; then
     bad "$reviews review fix pushes; one is allowed a run"
   elif [ "${moved:-0}" -gt 1 ]; then
     bad "$moved main-moved pushes; one is allowed a run"
-  elif [ "${pushes:-0}" -gt $((1 + ${fixes:-0} + ${reviews:-0} + ${moved:-0})) ]; then
-    bad "$pushes pushes for ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), and ${moved:-0} main-moved push(es); one is allowed, plus one per CI fix, one review fix, and one main-moved push"
+  elif [ "${texts:-0}" -gt 1 ]; then
+    bad "$texts pull request text pushes; one is allowed a run"
+  elif [ "${pushes:-0}" -gt $((1 + ${fixes:-0} + ${reviews:-0} + ${moved:-0} + ${texts:-0})) ]; then
+    bad "$pushes pushes for ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), ${moved:-0} main-moved push(es), and ${texts:-0} pull request text push(es); one is allowed, plus one per CI fix, one review fix, one main-moved push, and one pull request text push"
   else
-    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), ${moved:-0} main-moved push(es)"
+    ok "${pushes:-0} push(es), ${fixes:-0} CI fix(es), ${reviews:-0} review fix(es), ${moved:-0} main-moved push(es), ${texts:-0} pull request text push(es)"
   fi
 }
 
@@ -493,6 +501,31 @@ gate_records() {
   [ $failed -ne $start ] || ok "the run state holds the workflow's $(echo $RECORDS | wc -w | tr -d ' ') record(s)"
 }
 
+# Findings are append-only: each `### ` heading under docs/findings/ at
+# the fork point of BASE and HEAD, and each one a non-merge commit of BASE..HEAD added, is still
+# present at HEAD, in the same file (a merge of a moved main brings in the
+# groomed entries it removed, so the merged tree is not compared). Only the
+# records change of a sprint (sprint-N-records, whose groom folds and
+# prunes the findings) may remove one.
+gate_findings() {
+  gate=findings
+  start=$failed
+  if printf '%s' "$change" | grep -qxE 'sprint-[0-9]+-records'; then
+    ok "a records change may remove entries"
+    return
+  fi
+  fork=$(git merge-base "$base" HEAD 2>/dev/null) || fork=$base
+  findings_now=$(git grep -I --no-color -e '^### ' HEAD -- docs/findings 2>/dev/null | sed 's/^[^:]*://' | sort -u)
+  findings_gone=$( {
+    git grep -I --no-color -e '^### ' "$fork" -- docs/findings 2>/dev/null | sed 's/^[^:]*://'
+    git log --no-merges --no-color --no-renames --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --format= -p "$fork..HEAD" -- docs/findings 2>/dev/null |
+      awk '/^\+\+\+ /{ f = substr($0, 7) } /^\+### /{ print f ":" substr($0, 2) }'
+  } | sort -u | grep -v -x -F -e "$findings_now" )
+  [ -z "$findings_gone" ] || bad "an entry of docs/findings/ present at the base or added by a commit of the branch is missing at HEAD (findings are append-only):
+$findings_gone"
+  [ $failed -ne $start ] || ok "no findings entry removed"
+}
+
 # Claude Code's attribution, set in .claude/settings.json at the top of the
 # work tree: exactly the trailer on commits, no text added to a pull
 # request, and no session link in either. Fixed-string matches: the file is
@@ -550,6 +583,7 @@ case "$target" in
   docs) gate_docs ;;
   scenarios) gate_scenarios ;;
   cases) gate_cases ;;
+  findings) gate_findings ;;
   attribution) gate_attribution ;;
   origin) gate_origin ;;
   security) gate_security ;;
@@ -557,12 +591,12 @@ case "$target" in
   pushes) gate_pushes ;;
   records) gate_records ;;
   pr-body) gate_pr_body "$body" ;;
-  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_attribution ;;
-  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_security; gate_stages ;;
+  static) gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_findings; gate_attribution ;;
+  pre-push) gate_origin; gate_trailer; gate_content; gate_snapshots; gate_docs; gate_scenarios; gate_cases; gate_findings; gate_security; gate_stages ;;
   passed) gate_passed ;;
   merge)
     sh "$here/run_state.sh" gated "$change" clear >/dev/null || bad "the merge record gated could not be cleared"
-    gate_origin; gate_trailer; gate_content; gate_security; gate_stages; gate_passed; gate_records; gate_pushes; gate_pr_body "$body"
+    gate_origin; gate_trailer; gate_content; gate_findings; gate_security; gate_stages; gate_passed; gate_records; gate_pushes; gate_pr_body "$body"
     # The head every merge gate passed at, which the merge tool's hook in
     # tools/agent_guard.sh requires as the expected head.
     [ $failed -ne 0 ] || sh "$here/run_state.sh" gated "$change" pass >/dev/null || bad "the merge record gated could not be written" ;;
