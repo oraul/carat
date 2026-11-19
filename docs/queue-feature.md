@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 20
 
-1. `vim-folds-windows` (T2 user request, estimated medium, Sprint 20 by the user's request, pushed back 2): folds and windows disagree with Vim at four places (`carat/use_cases/arrange_view.rb:60`, `carat/domain/layout.rb:229`, `carat/domain/buffer_list.rb:370`, `carat/domain/buffer.rb:648`). Fix outline: the contributor reads the four places and matches Vim. Accepted when `zfjiX` edits inside the fold as Vim does and `zfj<C-w>s<C-w>c` leaves 1 fold list, each a table row. Backlog: none (no open heading names its four locations).
-2. `vim-folds-c` (T2 user request, estimated medium, Sprint 20 by the user's request, pushed back 2): `zR`, `zM`, `zj`, `zk`, `[z`, `]z` are missing (`carat/use_cases/actions/fold_handler.rb:43`). Accepted when each has a `docs/compatibility.md` row, a `config/default.caratrc` binding in every mode its motion needs, and a table-driven test row matching Vim. Backlog: none.
+1. `vim-folds-c` (T2 user request, estimated medium, Sprint 20 by the user's request, pushed back 2): `zR`, `zM`, `zj`, `zk`, `[z`, `]z` are missing (`carat/use_cases/actions/fold_handler.rb:43`). Accepted when each has a `docs/compatibility.md` row, a `config/default.caratrc` binding in every mode its motion needs, and a table-driven test row matching Vim. Backlog: none.
 
 ## Pool
 
@@ -38,9 +37,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Split (T2, size rule, three or more parts): the brief holds 5 independently testable parts; `cursor-and-messages` delivers parts 1 to 3 (cursor line across the gutter, cursor and relative numbers, steady shapes), parts 4 and 5 queued as `message-styling` in Pool 2.
-- Estimate medium (T2): the Facet rows guide-colors 922,993, facet-palette 1,273,459, background-default 1,095,842, gutter-signcolumn 1,207,861, match-paren 1,005,270 total tokens (61 to 95 minutes) all exceed small (500k, 25 minutes); only gutter-signcolumn of the last two over, no size up.
-- Sprint 20, 3 features (T2, the user's decisions, match-paren note 13): `cursor-and-messages` delivered, `vim-folds-windows` and `vim-folds-c` stay; `message-styling` waits behind `vim-case-operators` (pushed back 3, first in Sprint 21).
-- Security first (T0), none open: no pending High or Medium at confidence 8 or above; sprint-19 review's one finding Low (5) at `deliver-change.js:952`.
-- Pending notes (T1): `sprint-19-records` notes 1 to 4 are quality advisories on the backlog groom, the backlog lane's, none placed here.
+- Delivered (T2, the user's Sprint 20 request): `vim-folds-windows` leaves Sprint 20 as written at 2bcdb7780cd3; `vim-folds-c` stays, Sprint 20 holds its 3 features (`cursor-and-messages`, `vim-folds-windows`, `vim-folds-c`).
+- No split (T2, size rule): 4 locations in 2 map areas (8 edit path, 11 windows), 2 acceptance rows, under the 3-part rule and the about-four-fixes rule.
+- Estimate medium (T2): vim-folds-b 904,033 / 44.8 min, match-paren 1,005,270 / 69 min, gutter-signcolumn 1,207,861 / 70 min; of the last two only gutter-signcolumn over 1,200,000, no size up.
+- Overrun (T1): `cursor-and-messages` notes 17 and 18, 255,478 output tokens against 200,000; one run, budgets tracked not enforced, no item.
+- Security first (T0), none open: no pending `review.periodic-*` High or Medium at confidence 8 or above; sprint-19 review Low (5) only.
+- Pending notes (T1): `cursor-and-messages` notes 1 to 16 and `quality-first-pass` 1 to 18 are quality notes, handled already; the latter is the backlog lane's.
 - Merge gate (T1): the brief edits no `tools/rules.sh`, no split for it.
