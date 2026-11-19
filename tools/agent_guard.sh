@@ -87,7 +87,7 @@
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history groom plan-apply merge-main
 #                reviewed-edits, push CHANGE
-#                [--ci-fix | --review-fix | --main-moved],
+#                [--ci-fix | --review-fix | --main-moved | --pr-text],
 #                set CHANGE pr N; sh tools/gates.sh GATE... or pr-body BODY;
 #                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
 #                [SECONDS], which push nothing; never a pull request
@@ -616,8 +616,8 @@ run_state_form() {
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     contributor:push)
-      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ] || [ "$3" = --main-moved ]; } ||
-        refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix | --main-moved]" ;;
+      [ $# -ge 2 ] && [ $# -le 3 ] && matches "$2" "$CHANGE_NAME" && { [ $# -eq 2 ] || [ "$3" = --ci-fix ] || [ "$3" = --review-fix ] || [ "$3" = --main-moved ] || [ "$3" = --pr-text ]; } ||
+        refuse "tools/run_state.sh push other than CHANGE [--ci-fix | --review-fix | --main-moved | --pr-text]" ;;
     merger:set|contributor:set)
       [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh set other than CHANGE KEY VALUE"
       case "$profile:$3" in

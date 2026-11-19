@@ -824,6 +824,26 @@ state review pushing security pass "no finding" > /dev/null
 expect "run_state: a review fix allows one more push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --review-fix
 expect "gates: pushes allow one review fix" 0 "3 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 0 main-moved" gates pushes
+# A rewrite of pr.md the text review blocked pushes once a run (--pr-text),
+# which needs no red CI.
+expect "run_state: a pull request text push needs a recorded push other than the head" 1 "needs a recorded push other than HEAD" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
+echo text >> README.md
+commit "docs: rewrite the pull request text"
+state stage pushing lint true > /dev/null
+state phase pushing check > /dev/null
+state review pushing security pass "no finding" > /dev/null
+expect "run_state: a pull request text push is allowed without a red CI" 0 "ok   pushes|ok   stages" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
+expect "run_state: a pull request text push is counted" 0 "^1$" state get pushing pr_text_fixes
+expect "gates: pushes allow one pull request text push" 0 "4 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 0 main-moved push[(]es[)], 1 pull request text" gates pushes
+echo more >> README.md
+commit "docs: a second rewrite"
+expect "run_state: a second pull request text push is refused" 1 "refused: 1 pull request text push[(]es[)] made; one is allowed a run" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
+state set pushing pr_text_fixes 2 > /dev/null
+expect "gates: pushes refuse a second pull request text push" 1 "2 pull request text pushes; one is allowed a run" gates pushes
+state set pushing pr_text_fixes 1 > /dev/null
 echo again >> README.md
 commit "chore: a second review fix"
 expect "run_state: a second review fix push is refused" 1 "refused: 1 review fix push" \
@@ -853,7 +873,7 @@ state review pushing security pass "no finding" > /dev/null
 expect "run_state: a moved-main merge is pushed once as a main-moved push" 0 "ok   pushes|ok   stages" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --main-moved
 expect "run_state: a main-moved push is counted" 0 "^1$" state get pushing main_moved
-expect "gates: pushes allow one main-moved push" 0 "4 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 1 main-moved push" gates pushes
+expect "gates: pushes allow one main-moved push" 0 "5 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 1 main-moved push" gates pushes
 echo changed >> README.md
 commit "chore: an edit of a file of the change"
 expect "run_state: moved reruns the reviews when a file of the change changed" 1 "^moved: the merge changed files of the change: README[.]md; the reviews run again" \
@@ -2540,7 +2560,7 @@ expect "guard: the merger refuses open_pr" 2 "tools/open_pr.sh" guard merger 'sh
 expect "guard: contributor pushes a CI fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --ci-fix'
 expect "guard: contributor pushes a resume's review fix" 0 "^$" guard contributor 'sh tools/run_state.sh push c --review-fix'
 expect "guard: contributor pushes the merge of a moved main" 0 "^$" guard contributor 'sh tools/run_state.sh push c --main-moved'
-expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix [|] --main-moved\]" guard contributor 'sh tools/run_state.sh push c --force'
+expect "guard: contributor refuses a push of another kind" 2 "push other than CHANGE \[--ci-fix [|] --review-fix [|] --main-moved [|] --pr-text\]" guard contributor 'sh tools/run_state.sh push c --force'
 expect "guard: checker compares the change's files after a main-moved merge" 0 "^$" guard read 'sh tools/run_state.sh moved c abc1234'
 expect "guard: checker refuses moved without a commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c'
 expect "guard: checker refuses moved at a symbolic commit" 2 "moved other than CHANGE COMMIT" guard read 'sh tools/run_state.sh moved c HEAD'
@@ -3322,6 +3342,15 @@ findings_repo findings3
 git_q rm -q docs/findings/other.md
 commit "docs: drop the file"
 expect "gates: findings refuses a removed findings file" 1 "### Old entry" gates findings
+findings_repo findings4
+printf '### Branch entry\n' > docs/findings/mine.md
+commit "docs: a branch entry"
+git_q checkout -q main
+git_q rm -q docs/findings/other.md
+commit "docs: main grooms an entry"
+git_q checkout -q "chore/findings4"
+git_q merge -q --no-edit main
+expect "gates: findings passes a merged main that groomed an entry" 0 "ok   findings: no findings entry removed" gates findings
 findings_repo sprint-3-records
 printf '### Other\n' > docs/findings/other.md
 commit "docs: groom"
@@ -3972,7 +4001,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,package,push,body,wait planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,package,push,body,wait planner:planner quality-reviewer:quality,prtext retrospective:close scout:scout security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -4128,8 +4157,8 @@ expect "workflow: the quality first pass is asked for every blocking finding" 0 
 # The pull request text review (delivery-guards): a pr.md claiming work the
 # diff lacks, or the proposal's Out of scope moved out, blocks and goes back
 # to the body rewrite; a clean one, and a missing result, do not.
-expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '^\[true,"",null,true,true\]$' \
-  js "$wf" "prTextTask prTextBlocks" "[prTextBlocks({ blocking: ['Changes bullet 4 claims command-line styling; the diff has none'], advisory: [] }).includes('claims what the diff does not contain'), prTextBlocks({ blocking: [], advisory: [] }), prTextBlocks(null), prTextTask('c').includes('Out of scope'), prTextTask('c').includes('git diff origin/main...HEAD')]"
+expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '^\[true,"",null,"unchecked","pass","rewrite","stop",true,true\]$' \
+  js "$wf" "prTextTask prTextBlocks prTextStep" "[prTextBlocks({ blocking: ['Changes bullet 4 claims command-line styling; the diff has none'], advisory: [] }).includes('claims what the diff does not contain'), prTextBlocks({ blocking: [], advisory: [] }), prTextBlocks(null), prTextStep(0, null), prTextStep(0, { blocking: [] }), prTextStep(0, { blocking: ['x'] }), prTextStep(1, { blocking: ['x'] }), prTextTask('c').includes('Out of scope'), prTextTask('c').includes('git diff origin/main...HEAD')]"
 # Fix in place (pipeline-diet-b cut 4b): the findings of the change's files
 # ride with the blocking ones, or get a round of their own with a round to
 # spare, are re-reviewed at the new head, and leave the hand-over only when

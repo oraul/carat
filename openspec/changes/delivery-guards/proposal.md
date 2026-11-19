@@ -7,8 +7,8 @@ The mid-tier contributor trial's first deliveries showed two defects that reache
 ## What Changes
 
 - A `findings` gate in `tools/gates.sh`, in `static` (so `make gates` and the push gates run it) and in `merge`: it fails when a `### ` heading under `docs/findings/` at the base or at any earlier commit of the branch is missing at HEAD. A `sprint-N-records` change, whose `groom` folds and prunes the findings, passes it.
-- A pull request text review in `.claude/workflows/deliver-change.js`: after the package step pushes `pr.md`, a capped quality-reviewer start of the session model compares its Summary and Changes with the committed diff and the archived proposal's Out of scope. A claim not in the diff, or work the proposal moved out, blocks; the contributor's `body` mode rewrites `pr.md` and pushes it as a CI fix, and the text is reviewed once more, a second block stopping the run.
-- Tools-test cases for both, and the `findings` line in the gates' usage text, the Makefile `gates` description, README.md, and README.md.
+- A pull request text review in `.claude/workflows/deliver-change.js`: after the package step pushes `pr.md`, a capped quality-reviewer start of the session model compares its Summary and Changes with the committed diff and the archived proposal's Out of scope. A claim not in the diff, or work the proposal moved out, blocks; the contributor's `body` mode rewrites `pr.md` and pushes it with the new `push --pr-text` kind, and the text is reviewed once more, a second block stopping the run.
+- Tools-test cases for both, and the `findings` line in the gates' usage text, the Makefile `gates` description, and README.md.
 - Two findings appended: the dropped `LineNrFifth` entry back in `docs/findings/cursor-and-messages.md`, and the claim of the squash body of #223 in `docs/findings/delivery-guards.md`.
 
 Out of scope: the result contract (a contributor result whose head is not the lane's HEAD gets one restart) and the `self-check-mismatch` note, both queued as `delivery-guards-b`; any edit of `tools/rules.sh`.

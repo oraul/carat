@@ -1161,7 +1161,7 @@ async function continueReview(kind, scope, first) {
 // and Changes with the committed diff and the archived proposal's Out of
 // scope, since a contributor's own text reached main claiming work the diff
 // lacks. Any claim not in the diff, or work the proposal moved out, blocks:
-// the contributor's body mode rewrites pr.md and pushes it as a CI fix, and
+// the contributor's body mode rewrites pr.md and pushes it with --pr-text, and
 // the text is reviewed once more. tools/tools_test.sh runs these helpers.
 function prTextTask(change) {
   return `Review the pull request text only, not the code. Read the archived change's pr.md and proposal.md (the directory openspec/changes/archive/DATE-${change}/) and the committed diff against origin/main (\`git diff origin/main...HEAD\`). Return as blocking, one finding each with the claim quoted, every claim of pr.md's Summary or Changes that the diff does not contain, and every piece of work the proposal's Out of scope moved elsewhere that pr.md claims as done; return nothing blocking when each claim is in the diff.`
@@ -1173,24 +1173,34 @@ function prTextBlocks(r) {
   const found = Array.isArray(r.blocking) ? r.blocking : []
   return found.length ? `the pull request text claims what the diff does not contain:\n- ${found.join('\n- ')}` : ''
 }
+// The decision of one text review round: 'unchecked' when the review
+// returned no result, 'pass' when nothing blocks, 'stop' when the second
+// round still blocks, else 'rewrite'.
+function prTextStep(round, r) {
+  const why = prTextBlocks(r)
+  if (why === null) return 'unchecked'
+  if (!why) return 'pass'
+  return round >= 1 ? 'stop' : 'rewrite'
+}
 async function prTextReview() {
   for (let round = 0; round < 2; round++) {
     phase('Package')
-    const r = await measured('quality', () => agent(`${intro()} ${prTextTask(state.change)}${capLine('prtext')}`,
+    const r = await measured('prtext', () => agent(`${intro()} ${prTextTask(state.change)}${capLine('prtext')}`,
       calibrate('quality', { agentType: 'quality-reviewer', schema: withCalls(QUALITY), phase: 'Package', label: 'quality-reviewer: pull request text' })), callCap('prtext'))
-    const why = prTextBlocks(r)
-    if (why === null) {
+    const step = prTextStep(round, r)
+    if (step === 'unchecked') {
       note('the pull request text review returned no result; the text was not checked against the diff')
       return
     }
-    if (!why) return
+    if (step === 'pass') return
+    const why = prTextBlocks(r)
     note(`pull request text blocked (round ${round + 1}): ${why}`)
     queue(`sh tools/run_state.sh note ${state.change} pr-text-blocked "round ${round + 1}: ${r.blocking.length} claim(s) not in the diff"`, head)
-    if (round === 1) {
+    if (step === 'stop') {
       stopped = `the pull request text still claims what the diff does not contain after a rewrite: ${r.blocking.join('; ')}`
       return
     }
-    if (!(await contributor('body', `The quality review of the pull request text blocked it, as a body-mode rewrite of pr.md, not a red CI. ${why}\nRewrite the Summary and Changes of the body file to claim only what the committed diff contains, never adding work the proposal's Out of scope moved elsewhere; gate it, rewrite pr.md, commit, and push with \`sh tools/run_state.sh push ${state.change} --ci-fix\`.`))) return
+    if (!(await contributor('body', `The quality review of the pull request text blocked it, as a body-mode rewrite of pr.md, not a red CI. ${why}\nRewrite the Summary and Changes of the body file to claim only what the committed diff contains, never adding work the proposal's Out of scope moved elsewhere; gate it, rewrite pr.md, commit, and push with \`sh tools/run_state.sh push ${state.change} --pr-text\`, not --ci-fix: no CI run is red.`))) return
   }
 }
 

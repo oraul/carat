@@ -164,7 +164,7 @@
 #                               without a history row, else the last row;
 #                               exit 0 when allocations and rounds equal
 #                               them, 1 otherwise
-#   push CHANGE [--ci-fix|--review-fix|--main-moved]
+#   push CHANGE [--ci-fix|--review-fix|--main-moved|--pr-text]
 #                               run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red) plus
 #                               one review fix a run (a resume past the push
@@ -172,7 +172,10 @@
 #                               than HEAD) plus one main-moved push a run (a
 #                               merge refused because main moved: a recorded
 #                               push other than HEAD that does not hold BASE,
-#                               origin/main, and a HEAD that does), push the
+#                               origin/main, and a HEAD that does) plus one
+#                               pull request text push a run (a rewrite of
+#                               pr.md the text review blocked: a recorded
+#                               push other than HEAD), push the
 #                               branch with upstream tracking, and count it
 #   metric CHANGE NAME=VALUE... record metric.NAME; names are [a-z0-9_.-], values
 #                               [A-Za-z0-9_.,:/=+-]
@@ -1299,6 +1302,7 @@ push_branch() {
   fixes=$(count ci_fixes)
   reviews=$(count review_fixes)
   moved=$(count main_moved)
+  texts=$(count pr_text_fixes)
   case "${1:-}" in
     --ci-fix)
       case "$(read_key ci)" in
@@ -1320,11 +1324,17 @@ push_branch() {
       git merge-base --is-ancestor "$base" HEAD && ! git merge-base --is-ancestor "$base" "$pushed" ||
         die "push: refused: a main-moved push needs a HEAD holding $base that the recorded push does not (run merge-main)"
       moved=1 ;;
+    --pr-text)
+      [ "$texts" -eq 0 ] || die "push: refused: $texts pull request text push(es) made; one is allowed a run"
+      pushed=$(read_key pushed)
+      [ -n "$pushed" ] && [ "$pushed" != "$(git rev-parse HEAD)" ] ||
+        die "push: refused: a pull request text push needs a recorded push other than HEAD (pushed)"
+      texts=1 ;;
     "") ;;
-    *) die "push: unknown push kind: $1 (--ci-fix, --review-fix, or --main-moved)" ;;
+    *) die "push: unknown push kind: $1 (--ci-fix, --review-fix, --main-moved, or --pr-text)" ;;
   esac
-  if [ "$pushes" -ge $((1 + fixes + reviews + moved)) ]; then
-    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes), one review fix ($reviews), and one main-moved push ($moved)"
+  if [ "$pushes" -ge $((1 + fixes + reviews + moved + texts)) ]; then
+    die "push: refused: $pushes push(es) made; one is allowed, plus one per CI fix ($fixes), one review fix ($reviews), one main-moved push ($moved), and one pull request text push ($texts)"
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
@@ -1337,6 +1347,7 @@ push_branch() {
   write_key ci_fixes "$fixes"
   [ "$reviews" -eq 0 ] || write_key review_fixes "$reviews"
   [ "$moved" -eq 0 ] || write_key main_moved "$moved"
+  [ "$texts" -eq 0 ] || write_key pr_text_fixes "$texts"
   write_key pushed "$(git rev-parse HEAD)"
   # A new head needs the merge gates again, and a marker branch code
   # planted in this run state before the push is gone; the merge gates
