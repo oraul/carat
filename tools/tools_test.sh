@@ -1124,10 +1124,14 @@ expect "open_pr: message refuses a change with no archived pr.md at the sha" 1 "
   sh "$here/open_pr.sh" message absent "$(git rev-parse HEAD)"
 expect "open_pr: message refuses a name that is not a change name" 1 "not a change name" \
   sh "$here/open_pr.sh" message ../openpr "$(git rev-parse HEAD)"
-mkdir -p openspec/changes/archive/2026-01-02-emptypr openspec/changes/archive/2026-01-02-trailpr
+mkdir -p openspec/changes/archive/2026-01-02-emptypr openspec/changes/archive/2026-01-02-trailpr openspec/changes/archive/2026-01-03-twopr openspec/changes/archive/2026-01-04-twopr
 printf 'chore: no body\n\n\n' > openspec/changes/archive/2026-01-02-emptypr/pr.md
 printf 'chore: trailing blanks\n\n## Summary\n\nA line.  \n\n\n' > openspec/changes/archive/2026-01-02-trailpr/pr.md
-commit "chore: a pr.md without a body and one ending in blank lines"
+printf 'chore: one\n\n## Summary\n\nOne.\n' > openspec/changes/archive/2026-01-03-twopr/pr.md
+printf 'chore: two\n\n## Summary\n\nTwo.\n' > openspec/changes/archive/2026-01-04-twopr/pr.md
+commit "chore: a pr.md without a body, one ending in blank lines, and a change archived twice"
+expect "open_pr: message refuses a change with two archived pr.md at the sha" 1 "holds no one archived pr.md of twopr" \
+  sh "$here/open_pr.sh" message twopr "$(git rev-parse HEAD)"
 expect "open_pr: message refuses a pr.md with no body" 1 "has no body" \
   sh "$here/open_pr.sh" message emptypr "$(git rev-parse HEAD)"
 expect "open_pr: message drops the body's trailing blank lines, keeping a line's trailing spaces" 0 "^same$" \
