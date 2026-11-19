@@ -4086,7 +4086,6 @@ expect "calibration: the planner, quality, security, and close starts keep the s
 js() {
   file=$1 names=$2 expr=$3
   {
-    echo "var critical = '', escalated = false, blockingQualityRounds = 0;"
     for n in $names; do
       awk -v n="$n" 'index($0, "function " n "(") == 1 || index($0, "async function " n "(") == 1 { on = 1 }
         on { print; if ($0 == "}") exit; next }
@@ -4099,7 +4098,7 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION calibrated criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "$1"
+  js "$wf" "SIZES CHANGE CALIBRATION calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
@@ -4111,13 +4110,19 @@ expect "workflow: a restart restores the recorded profiles of the kinds not used
 # the high effort, a critical one (the plan's rule, or a large estimate) and one
 # after an escalation take the session's model and effort, none passed.
 expect "routing: a normal contributor start carries the high effort and a critical one none" 0 '^\["high",null,null,"agent/high","session/session"\]$' \
-  calib_js "(() => { estimate = 'medium'; const a = calibrate('contributor', {}).effort; critical = 'b'; const b = calibrate('contributor', {}).effort; const c = calibrate('scout', {}); critical = ''; estimate = 'large'; const d = calibrate('contributor', {}).effort; estimate = 'medium'; calibrate('contributor', {}); const x = calibrated.contributor; critical = 'b'; calibrate('contributor', {}); return [a, b === undefined ? null : b, d === undefined ? null : d, x, calibrated.contributor] })()"
-expect "routing: a self-check mismatch, a non-result, and a second blocking quality round each escalate once, noted" 0 '^\[false,true,"session/session",1\]$' \
+  calib_js "(() => { estimate = 'medium'; const a = calibrate('contributor', {}).effort; critical = 'b'; const b = calibrate('contributor', {}).effort; critical = ''; estimate = 'large'; const d = calibrate('contributor', {}).effort; estimate = 'medium'; calibrate('contributor', {}); const x = calibrated.contributor; critical = 'b'; calibrate('contributor', {}); return [a, b === undefined ? null : b, d === undefined ? null : d, x, calibrated.contributor] })()"
+expect "routing: escalate runs once and notes once, moving the contributor to the session's model" 0 '^\[false,true,"session/session",1\]$' \
   calib_js "(() => { estimate = 'medium'; critical = ''; escalated = false; globalThis.notes = []; globalThis.head = 'a'; globalThis.state = { change: 'c' }; globalThis.note = (l) => {}; globalThis.queue = (l) => notes.push(l); const before = escalated; escalate('a self-check mismatch'); escalate('a start returned no result'); return [before, escalated, calibrate('contributor', {}) && calibrated.contributor, notes.length] })()"
 expect "routing: a critical run records its rule and escalates nothing" 0 ' critical=b.* 0"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = 'small'; planned = null; state = { change: 'c' }; critical = 'b'; escalated = false; globalThis.notes = []; globalThis.queue = (l) => notes.push(l); escalate('x'); return metricLine() + ' ' + notes.length })()"
-expect "routing: the workflow escalates on the three triggers and reads the plan's critical rule" 0 '^3 1 1$' \
-  sh -c 'echo "$(grep -c "escalate(.a " "$1") $(grep -c "blockingQualityRounds >= 2" "$1") $(grep -c "const rule = /\^(\[a-e\]) " "$1")"' _ "$wf"
+expect "routing: the workflow calls escalate on the three triggers" 0 '^3 1$' \
+  sh -c 'echo "$(grep -c "escalate(.a " "$1") $(grep -c "blockingQualityRounds >= 2" "$1")"' _ "$wf"
+expect "routing: criticalOf reads a plan value and a queue item's rule, and rejects the rest" 0 '^\[\{"rule":"b","path":"tools/rules.sh"\},\{"rule":"a","path":"carat/x.rb"\},null,null,null,null\]$' \
+  calib_js "[criticalOf('b tools/rules.sh'), criticalOf('(T0 pipeline, estimated medium, critical a carat/x.rb), why'), criticalOf('b tools/a.sh tools/b.sh'), criticalOf('f tools/a.sh'), criticalOf('see the guards'), criticalOf('')]"
+expect "routing: restoreRouting restores the rule, the escalation, and the quality rounds, and drops bad values" 0 '^\["b",true,1,"",false,0\]$' \
+  calib_js "(() => { restoreRouting({ 'metric.critical': 'b', 'metric.escalated': '1', 'metric.quality_blocked': '1' }); const a = [critical, escalated, blockingQualityRounds]; restoreRouting({ 'metric.critical': 'x tools', 'metric.quality_blocked': 'many' }); return a.concat([critical, escalated, blockingQualityRounds]) })()"
+expect "routing: the metric line carries the quality rounds a restart restores" 0 ' quality_blocked=1"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; blockingQualityRounds = 1; return metricLine() })()"
 expect "routing: the planner and the goals name the critical rules" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "critical. (rule letter" "$1/planner.md") $(grep -c "^## Critical changes\$" "$2/docs/goals.md")"' _ "$agents" "$here/.."
 # A delivery's planner writes its own plan directory, and its package step
@@ -4334,7 +4339,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
 }
 close_back=$PWD
 fresh closes

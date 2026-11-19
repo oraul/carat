@@ -149,6 +149,21 @@ const calibrated = {}
 // The rule letter that makes this run critical: the plan's, or e for a large
 // estimate. A critical run, and one that escalated, takes its contributor
 // starts on the session's model at the session's effort.
+// The rule and path of a critical value: the plan's whole value ("b tools/x.sh"),
+// or the "critical LETTER PATH" the planner wrote in a queue item's parenthesis;
+// null for anything else (two paths, prose, a letter outside a to e).
+function criticalOf(text) {
+  const s = String(text || '').trim()
+  const m = /^([a-e]) ([A-Za-z0-9_./-]+)$/.exec(s) || /\bcritical ([a-e]) ([A-Za-z0-9_./-]+)/.exec(s)
+  return m ? { rule: m[1], path: m[2] } : null
+}
+// What a restart carries on of the routing: the rule, the escalation, and the
+// blocking quality rounds so far (metric.quality_blocked).
+function restoreRouting(st) {
+  critical = /^[a-e]$/.test(st['metric.critical'] || '') ? st['metric.critical'] : ''
+  escalated = st['metric.escalated'] === '1'
+  blockingQualityRounds = /^[0-9]+$/.test(st['metric.quality_blocked'] || '') ? Number(st['metric.quality_blocked']) : 0
+}
 function criticalRule() { return critical || (estimate === 'large' ? 'e' : '') }
 function calibrate(kind, opts) {
   const profile = kind === 'contributor' && (criticalRule() || escalated) ? 'session/session' : CALIBRATION[kind]
@@ -307,7 +322,7 @@ const PLAN = {
     notes: { ...LINES, description: 'for the contributor: findings the change only writes to docs/findings/CHANGE.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
-    critical: { type: 'string', description: 'empty, or a rule letter a to e of docs/goals.md, Critical changes, then a space and the path that makes the change critical' },
+    critical: { type: 'string', pattern: '^([a-e] [A-Za-z0-9_./-]+)?$', description: 'empty, or a rule letter a to e of docs/goals.md, Critical changes, then a space and the path that makes the change critical' },
     records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history) from this change\'s package step' },
   },
   required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
@@ -548,6 +563,7 @@ function metricLine() {
   if (planned !== null) pairs.push(`planned=${planned}`)
   if (criticalRule()) pairs.push(`critical=${criticalRule()}`)
   if (escalated) pairs.push('escalated=1')
+  if (blockingQualityRounds > 0) pairs.push(`quality_blocked=${blockingQualityRounds}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
   const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|[a-e]|(agent|session)\/(low|high|session))$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
@@ -585,8 +601,7 @@ function seed() {
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (/^[0-9]+$/.test(state['metric.ci_wait_calls'] || '')) ciWaitCalls = Number(state['metric.ci_wait_calls'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
-  if (/^[a-e]$/.test(state['metric.critical'] || '')) critical = state['metric.critical']
-  escalated = state['metric.escalated'] === '1'
+  restoreRouting(state)
   if (/^[0-9]+$/.test(state['metric.advisories_closed'] || '') && /^[0-9]+$/.test(state['metric.advisories_left'] || '')) { closingFigures.closed = Number(state['metric.advisories_closed']); closingFigures.left = Number(state['metric.advisories_left']); closingLoop = closingFigures.closed + closingFigures.left > 0 }
   // The notes in the order they were recorded. The advisories of every
   // quality review of the run, which its reviewers recorded as
@@ -1631,6 +1646,8 @@ if (!stopped && planSkipped(state, planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
   if (size) estimate = size[1]
+  const queued = criticalOf(planLine)
+  if (queued) { critical = queued.rule; note(`critical by rule ${queued.rule}: ${queued.path}`) }
   planned = 0
   note(`plan: skipped, ${planLine}`)
   phaseDone('plan', head)
@@ -1648,8 +1665,9 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
     // Stored with the figures, so budget and the history row keep it after
     // the queue item leaves the queue.
     if (SIZES.includes(p.estimate)) estimate = p.estimate
-    const rule = /^([a-e]) ([A-Za-z0-9_./-]+)$/.exec(String(p.critical || '').trim())
-    if (rule) { critical = rule[1]; note(`critical by rule ${rule[1]}: ${rule[2]}`) }
+    const rule = criticalOf(p.critical)
+    if (rule) { critical = rule.rule; note(`critical by rule ${rule.rule}: ${rule.path}`) }
+    else if (String(p.critical || '').trim()) note(`plan: critical value not read: ${String(p.critical).trim().slice(0, 80)}`)
     if (p.records === 'skip') excludeRecords('the planner')
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
     else phaseDone('plan', head)
