@@ -3290,6 +3290,43 @@ commit "chore: written on $TIER"
 expect "gates: content refuses a model name in a commit message" 1 "commit [0-9a-f]+.*$TIER" gates content
 expect "gates: backup is no longer a gate" 2 "unknown gate backup" gates backup
 
+# findings: append-only (delivery-guards): a heading under docs/findings/ at
+# the base or at an earlier branch commit stays; a records change may drop.
+findings_repo() {
+  fresh "$1"
+  git_q checkout -q main
+  mkdir -p docs/findings
+  printf '### Old entry\n- Location: a\n- Why: b\n- Fix: c\n' > docs/findings/other.md
+  commit "docs: findings on main"
+  git_q checkout -q -B "chore/$1"
+}
+findings_repo findings
+printf '### New entry\n- Location: a\n' >> docs/findings/other.md
+commit "docs: append a finding"
+expect "gates: findings passes an appended entry" 0 "ok   findings: no findings entry removed" gates findings
+echo "text" >> docs/findings/other.md
+commit "docs: edit beside a heading"
+expect "gates: findings allows prose edits under a heading" 0 "ok   findings" gates findings
+printf '### Old entry\n- Location: a\n' > docs/findings/other.md
+commit "docs: drop a finding"
+expect "gates: findings refuses a heading removed since the base" 1 "FAIL findings: an entry of docs/findings/" gates findings
+expect "gates: findings names the removed heading" 1 "### New entry" gates findings
+expect "gates: static runs findings" 1 "FAIL findings" gates static
+findings_repo findings2
+printf '### Late entry\n' >> docs/findings/other.md
+commit "docs: add"
+printf '### Old entry\n### Late entry renamed\n' > docs/findings/other.md
+commit "docs: rename an entry"
+expect "gates: findings refuses a renamed heading" 1 "### Late entry" gates findings
+findings_repo findings3
+git_q rm -q docs/findings/other.md
+commit "docs: drop the file"
+expect "gates: findings refuses a removed findings file" 1 "### Old entry" gates findings
+findings_repo sprint-3-records
+printf '### Other\n' > docs/findings/other.md
+commit "docs: groom"
+expect "gates: findings lets a sprint records change remove entries" 0 "ok   findings: a records change" gates findings
+
 fresh cases
 echo "echo changed" >> tools/base.sh
 commit "chore: change a tool"
@@ -4088,6 +4125,11 @@ expect "workflow: a full round after a settled one names no settled commit for T
 # continued review is not (pipeline-diet-b cut 4).
 expect "workflow: the quality first pass is asked for every blocking finding" 0 '^\[true,false,false\]$' \
   js "$wf" "qualityTask" "[qualityTask('', ''), qualityTask('\nThe last quality review, at abc1234, was blocked. Review the whole branch diff.', ''), qualityTask('', '\nThe last start reached its cap')].map((t) => t.includes('every blocking finding'))"
+# The pull request text review (delivery-guards): a pr.md claiming work the
+# diff lacks, or the proposal's Out of scope moved out, blocks and goes back
+# to the body rewrite; a clean one, and a missing result, do not.
+expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '^\[true,"",null,true,true\]$' \
+  js "$wf" "prTextTask prTextBlocks" "[prTextBlocks({ blocking: ['Changes bullet 4 claims command-line styling; the diff has none'], advisory: [] }).includes('claims what the diff does not contain'), prTextBlocks({ blocking: [], advisory: [] }), prTextBlocks(null), prTextTask('c').includes('Out of scope'), prTextTask('c').includes('git diff origin/main...HEAD')]"
 # Fix in place (pipeline-diet-b cut 4b): the findings of the change's files
 # ride with the blocking ones, or get a round of their own with a round to
 # spare, are re-reviewed at the new head, and leave the hand-over only when
