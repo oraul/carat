@@ -11,6 +11,8 @@
 - [x] 2.3 Review fix: `state_view` leaves out only the figures the checker's line writes (the names of the workflow's `metricLine`), so a measurement (`metric.allocs.*`, `metric.rounds.*`, `metric.us.*`) a stage writes fails the check. Tested by "the figures a checker's line writes during a running check leave it passing" and "a stage that writes a measurement into the delivery clone's run state fails the check".
 - [x] 2.4 Review fix: the scan of the common directory's `config.worktree` is tested by "a stage that writes the common directory's config.worktree by an absolute path fails the check".
 - [x] 2.5 Review fix: the run-state comparison moves out of `escaped_paths` into `state_unexpected`, beside `state_view`.
+- [x] 2.6 Review fix: `state_view` compares, of the figures (`metric.*`), only the measurements (`metric.allocs.*`, `metric.rounds.*`, `metric.us.*`, `metric.analysis_ms.*`), which only the metrics command imports, so the figures /deliver's `usage` and `tokens` write while a check runs leave a rejoined check passing and no copy of the workflow's `metricLine` names remains. Tested by "the figures usage and tokens write during a running check leave it passing", which fails with the earlier list.
+- [x] 2.7 Review fix: the rejoin cases expect the waiter's "check: rejoining the check running at" line beside every stage passed (`lane_rejoin` in `tools/tools_test.sh`), so a fresh check no longer passes them.
 
 ## 3. Documents and self-check
 

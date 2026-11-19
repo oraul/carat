@@ -531,12 +531,14 @@ expect "run_state: a stage that writes a linked worktree's git directory fails t
 # A check in a linked worktree that a waiter rejoins: the waiter reads the
 # tree with no optional lock, so a tracked file whose stat changed (under
 # build/plan, which the scan leaves out) leaves the worktree's index; the
-# figures the checker's line writes meanwhile leave the run state passing.
+# figures the checker's line and /deliver's usage and tokens write
+# meanwhile leave the run state passing. lane_rejoin prints its line only
+# when the waiter rejoined the running check and every stage passed.
 mkdir -p build/plan && echo tracked > build/plan/tracked
 git_q add -f build/plan/tracked
 git_q commit -q -m "chore: tracked" -m "$TRAILER"
 lane_check() {
-  env SLOW=4 CHECK_WAIT="$1" STAGES=reach MAKE="$work/bin/reach-make" REACH="$2" TOP="$work/isolated-lane" \
+  env SLOW="${LANE_SLOW:-4}" CHECK_WAIT="$1" STAGES=reach MAKE="$work/bin/reach-make" REACH="$2" TOP="$work/isolated-lane" \
     TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 }
 lane_running() {
@@ -544,13 +546,31 @@ lane_running() {
   until state get isolated stage.reach 2>/dev/null | grep -q '^running ' || [ $n -ge 20 ]; do sleep 1; n=$((n + 1)); done
   sleep 1
 }
+lane_rejoin() {
+  lane_out=$(lane_check 120 "$1" 2>&1)
+  printf '%s\n' "$lane_out"
+  printf '%s\n' "$lane_out" | grep -q '^check: rejoining the check running at ' &&
+    printf '%s\n' "$lane_out" | grep -q 'every stage passed' && echo "rejoined: every stage passed"
+}
 lane_check 1 touch > /dev/null 2>&1
 lane_running
-expect "run_state: a waiter rejoining a check in a linked worktree leaves its index though a tracked file's stat changed" 0 "every stage passed" lane_check 120 touch
+expect "run_state: a waiter rejoining a check in a linked worktree leaves its index though a tracked file's stat changed" 0 "^rejoined: every stage passed$" lane_rejoin touch
 lane_check 1 slow > /dev/null 2>&1
 lane_running
 state metric isolated phase.checker=1/1 first.check=1 estimate=large > /dev/null
-expect "run_state: the figures a checker's line writes during a running check leave it passing" 0 "every stage passed" lane_check 120 slow
+expect "run_state: the figures a checker's line writes during a running check leave it passing" 0 "^rejoined: every stage passed$" lane_rejoin slow
+# usage and tokens, which /deliver runs after a workflow returns, write
+# metric.total_tokens, metric.wall_min, metric.start.*, and
+# metric.weighted.* while the check it left runs; the next workflow
+# rejoins it.
+mkdir -p "$work/wf_lane"
+echo '{"type":"assistant","message":{"id":"msg_l","model":"vendor-large-1","content":[],"usage":{"input_tokens":10,"cache_creation_input_tokens":0,"cache_read_input_tokens":0,"output_tokens":5}}}' > "$work/wf_lane/agent-l.jsonl"
+echo '{"description":"checker","workflowPhase":"Check"}' > "$work/wf_lane/agent-l.meta.json"
+LANE_SLOW=8 lane_check 1 slow > /dev/null 2>&1
+lane_running
+state usage isolated 5000 3.5 > /dev/null
+state tokens isolated "$work/wf_lane" > /dev/null
+expect "run_state: the figures usage and tokens write during a running check leave it passing" 0 "^rejoined: every stage passed$" lane_rejoin slow
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"

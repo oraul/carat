@@ -993,13 +993,14 @@ escape_mark() {
   escape_state=$(state_view)
 }
 
-# The run state's lines, commas removed, but the figures the checker's
-# line writes again when it rejoins a running check: the names metricLine
-# of the delivery workflow writes. A measurement (allocs.*, rounds.*,
-# us.*), which only the metrics command imports, stays compared.
+# The run state's lines, commas removed, of every record but the figures
+# (metric.*) other than the measurements (allocs.*, rounds.*, us.*,
+# analysis_ms.*), which only the metrics command imports: the checker's
+# line and /deliver's usage and tokens write figures again while a
+# rejoined check runs.
 state_view() {
   sed 's/,$//' "$(state_file)" |
-    grep -v -E '^  "metric[.]((phase|first|calib)[.][a-z0-9_.-]+|rework|extra|stop|ci_min|ci_wait_calls|advisories_closed|advisories_left|estimate|planned|critical|escalated|quality_blocked)"'
+    awk '!/^  "metric[.]/ || /^  "metric[.](allocs|rounds|us|analysis_ms)[.]/'
 }
 
 # escape_scan PATH: the paths under PATH, its link followed, changed since
