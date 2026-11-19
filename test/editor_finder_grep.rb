@@ -63,16 +63,46 @@ module EditorFinderGrepTest
     files
   end
 
-  # More lines than the store holds: guide.md and 100 files of 1000 lines.
-  def self.huge
+  # guide.md and count files of 1000 lines each.
+  def self.huge(count)
     files = Carat::Doubles::MemoryFiles.new
     files.move_to(ROOT)
     files.put("docs/guide.md", "guide\n")
     i = 0
-    while i < 100
-      files.put("f#{i + 100}.txt", "x\n" * 1000)
+    while i < count
+      files.put("f#{i}.txt", "x\n" * 1000)
       i += 1
     end
+    files
+  end
+
+  # Lines for the term matching: a whole-word hit, a hit after a scattered
+  # one, scattered letters only, a prefix that diverges, a hit between
+  # underscores, a longer word, two whole-word hits (g.txt), and a part-word
+  # line with more hits and a shorter path.
+  def self.terms
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    files.put("a.txt", "explorer open\n")
+    files.put("bb.txt", "e x p l o r e r and later Explorer here\n")
+    files.put("ccc.txt", "ezzzxpzzzlzzzozzzrzzezrrr\n")
+    files.put("dddd.txt", "exploring\n")
+    files.put("eeeee.txt", "my_explorer_x\n")
+    files.put("ffffff.txt", "unexplorered\n")
+    files.put("g.txt", "Explorer Explorer\n")
+    files.put("h", "xexplorer explorerx explorerz\n")
+    files
+  end
+
+  # A line of 300 x's (no whole-word hit, more hits than HIT_ROOM) on a short
+  # path, and a single whole-word x on a longer one.
+  def self.dense
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    files.put("a", "x" * 300 + "\n")
+    files.put("long/path.txt", "x\n")
     files
   end
 
@@ -97,7 +127,11 @@ module EditorFinderGrepTest
   end
 
   def self.shown(keys)
-    h = editor_on(disk, "")
+    shown_in(disk, keys)
+  end
+
+  def self.shown_in(files, keys)
+    h = editor_on(files, "")
     h.type(keys.to_s)
     floats(h)
   end
@@ -105,7 +139,11 @@ module EditorFinderGrepTest
   # The file, the cursor row and column, the window count, the tab count,
   # and the floats left after the keys.
   def self.opened(keys, config)
-    h = editor_on(disk, config)
+    opened_in(disk, keys, config)
+  end
+
+  def self.opened_in(files, keys, config)
+    h = editor_on(files, config)
     h.type(keys.to_s)
     c = h.cursor
     [h.buffer.path.to_s, c[0], c[1], h.windows.length, h.tab_count, h.state.tab.floats.count]
@@ -120,9 +158,13 @@ module EditorFinderGrepTest
       # Scenario: Space f g opens the grep picker
       ["Space f g opens the picker: an empty query lists nothing", "<Space>fg", ["Grep 0/10|Type to search the files' lines"]],
       # Scenario: Typing lists the matching lines best first
-      ["a match and its rank order: a line starting with the query first, the shorter path first among equals", "<Space>fghello", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/ctrl.txt:1: hello  [31mred \n  lib/alpha.rb:2:   puts 'hello'"]],
-      ["case is ignored", "<Space>fgHELLO", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/ctrl.txt:1: hello  [31mred \n  lib/alpha.rb:2:   puts 'hello'"]],
-      ["a query matches by bytes in order, not as a substring", "<Space>fgwrt", ["Grep 1/10|> docs/guide.md:2: Todo: write"]],
+      ["a match and its rank order: whole-word hits, the shorter path first among equals, then listing order", "<Space>fghello", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      ["case is ignored", "<Space>fgHELLO", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      # Scenario: Scattered letters do not match
+      ["scattered letters do not match", "<Space>fgwrt", ["Grep 0/10|No match"]],
+      ["a substring matches", "<Space>fgwrite", ["Grep 1/10|> docs/guide.md:2: Todo: write"]],
+      # Scenario: A query of only spaces lists nothing
+      ["a query of spaces lists nothing", "<Space>fg   ", ["Grep 0/10|Type to search the files' lines"]],
       # Scenario: No line matches
       ["no match", "<Space>fgzzz", ["Grep 0/10|No match"]],
       ["a backspace widens the match again", "<Space>fgzzz<BS><BS><BS>", ["Grep 0/10|Type to search the files' lines"]],
@@ -133,8 +175,8 @@ module EditorFinderGrepTest
       ["control bytes show as spaces", "<Space>fgred", ["Grep 1/10|> lib/ctrl.txt:1: hello  [31mred "]],
       ["invalid UTF-8 shows as question marks", "<Space>fgbad", ["Grep 1/10|> lib/ctrl.txt:2: bad ??"]],
       # Scenario: Files that cannot be searched are left out
-      ["a binary file, a file over the read limit, an empty file, and an ignored directory add no line", "<Space>fghello", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/ctrl.txt:1: hello  [31mred \n  lib/alpha.rb:2:   puts 'hello'"]],
-      ["Ctrl-N moves the highlight", "<Space>fghello<C-n>", ["Grep 3/10|  lib/beta.rb:2: hello world\n> lib/ctrl.txt:1: hello  [31mred \n  lib/alpha.rb:2:   puts 'hello'"]]
+      ["a binary file, a file over the read limit, an empty file, and an ignored directory add no line", "<Space>fghello", ["Grep 3/10|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      ["Ctrl-N moves the highlight", "<Space>fghello<C-n>", ["Grep 3/10|  lib/beta.rb:2: hello world\n> lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]]
     ]) do |keys|
       shown(keys)
     end
@@ -155,7 +197,7 @@ module EditorFinderGrepTest
       # Scenario: Picking a row opens the file at its line and column
       ["Enter opens the file at the line", ["<Space>fghello<CR>", ""], ["lib/beta.rb", 1, 0, 1, 1, 0]],
       ["Enter opens at the first matched byte, counted in characters", ["<Space>fgx = 1<CR>", ""], ["lib/utf.rb", 0, 5, 1, 1, 0]],
-      ["Enter opens a line past the first", ["<Space>fgwrt<CR>", ""], ["docs/guide.md", 1, 6, 1, 1, 0]],
+      ["Enter opens a line past the first", ["<Space>fgwrite<CR>", ""], ["docs/guide.md", 1, 6, 1, 1, 0]],
       ["Enter on no match keeps the prompt", ["<Space>fgzzz<CR>", ""], ["docs/guide.md", 0, 0, 1, 1, 1]],
       ["Esc opens nothing", ["<Space>fghello<Esc>", ""], ["docs/guide.md", 0, 0, 1, 1, 0]],
       # Scenario: The split, vertical split, and tab picks open at the line
@@ -166,6 +208,41 @@ module EditorFinderGrepTest
     ]) do |input|
       opened(input[0], input[1])
     end
+
+    # Scenario: The column is the first byte of the first term's hit
+    # Rows are [label, [keys, config], [file, row, column, windows, tabs, floats]].
+    t.cases([
+      ["a hit after scattered letters opens at the hit, not at the scattered start", ["<Space>fgexplorer<C-n><C-n><CR>", ""], ["bb.txt", 0, 26, 1, 1, 0]],
+      ["the first term of two sets the column", ["<Space>fgopen explorer<CR>", ""], ["a.txt", 0, 9, 1, 1, 0]],
+      ["the terms swapped set the column of the other", ["<Space>fgexplorer open<CR>", ""], ["a.txt", 0, 0, 1, 1, 0]],
+      ["case is ignored in the column", ["<Space>fgEXPLORER<C-n><C-n><CR>", ""], ["bb.txt", 0, 26, 1, 1, 0]]
+    ]) do |input|
+      opened_in(terms, input[0], input[1])
+    end
+
+    # Terms: a line matches when it holds every term as a substring
+    # Rows are [label, keys, floats]. Nine lines are stored: the guide's and
+    # one in each of the eight files.
+    t.table([
+      # Scenario: A whole-word hit ranks above a part-word hit
+      ["a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing", "<Space>fgexplorer", ["Grep 6/9|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
+      # Scenario: Case is ignored in the query
+      ["case is ignored in the query", "<Space>fgEXPLORER", ["Grep 6/9|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
+      # Scenario: Two terms match in any order
+      ["two terms match in either order", "<Space>fgopen explorer", ["Grep 1/9|> a.txt:1: explorer open"]],
+      ["the terms swapped match the same line", "<Space>fgexplorer open", ["Grep 1/9|> a.txt:1: explorer open"]],
+      ["extra spaces between and around the terms are ignored", "<Space>fg  open   explorer  ", ["Grep 1/9|> a.txt:1: explorer open"]],
+      ["a line holding one of two terms does not match", "<Space>fgexplorer zzz", ["Grep 0/9|No match"]],
+      # Scenario: Scattered letters do not match
+      ["scattered letters match nothing", "<Space>fgezxplzorzer", ["Grep 0/9|No match"]]
+    ]) do |keys|
+      shown_in(terms, keys)
+    end
+
+    # Scenario: A whole-word hit ranks above a part-word hit (the hit count is clamped, so 300 hits stay below one whole word)
+    h = editor_on(dense, "")
+    h.type("<Space>fgx")
+    t.assert_equal("Grep 2/3|> long/path.txt:1: x\n  a:1: " + "x" * 300, floats(h)[0].to_s, "a line of 300 part-word hits ranks below a whole-word line on a longer path")
 
     # Scenario: The picker stores only bounded lines of each file (the shown-safely rows of invalid bytes and C1 controls too)
     h = editor_on(bounded, "")
@@ -181,8 +258,8 @@ module EditorFinderGrepTest
     h.type("<Space>fgz")
     t.assert_equal("Grep 1/1006|> bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut at 400 bytes, not emptied")
     h = editor_on(bounded, "")
-    h.type("<Space>fgcd")
-    t.assert_equal("Grep 1/1006|> c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space")
+    h.type("<Space>fgc d")
+    t.assert_equal("Grep 1/1006|> c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space, the two terms on either side of it")
     h = editor_on(bounded, "")
     h.type("<Space>fghit")
     t.assert_equal("Grep 200+/1006", h.state.tab.floats.at(0).spec.title.to_s, "only the first 1000 lines of a file are stored")
@@ -191,9 +268,13 @@ module EditorFinderGrepTest
     h.type("<C-n>" * 250)
     shown = floats(h)[0].to_s
     t.assert_equal(true, shown.end_with?("rows.txt:200: hit"), "the last shown row is the 200th line, the cap")
-    h = editor_on(huge, "")
+    h = editor_on(huge(400), "")
     h.type("<Space>fgx")
-    t.assert_equal("Grep 200+/100000+", h.state.tab.floats.at(0).spec.title.to_s, "the 100,000-line store cap is marked when it cuts a file")
+    t.assert_equal("Grep 200+/400000+", h.state.tab.floats.at(0).spec.title.to_s, "the 400,000-line store cap is marked when it cuts a file")
+    # Scenario: A tree the size of this repository is searched whole
+    h = editor_on(huge(150), "")
+    h.type("<Space>fgx")
+    t.assert_equal("Grep 200+/150001", h.state.tab.floats.at(0).spec.title.to_s, "150,001 lines, past the old 100,000-line cap, are all stored with no cap mark")
 
     # Scenario: The grep list uses the whole width of a wide screen
     h = editor_on(disk, "", 120)

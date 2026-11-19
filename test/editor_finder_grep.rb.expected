@@ -1,7 +1,9 @@
 ok   Space f g opens the picker: an empty query lists nothing
-ok   a match and its rank order: a line starting with the query first, the shorter path first among equals
+ok   a match and its rank order: whole-word hits, the shorter path first among equals, then listing order
 ok   case is ignored
-ok   a query matches by bytes in order, not as a substring
+ok   scattered letters do not match
+ok   a substring matches
+ok   a query of spaces lists nothing
 ok   no match
 ok   a backspace widens the match again
 ok   CRLF lines show without the carriage return
@@ -23,16 +25,29 @@ ok   Ctrl-X opens a split at the line
 ok   Ctrl-V opens a vertical split at the line
 ok   Ctrl-T opens a tab page at the line
 ok   Ctrl-T opens a buffer tab at the line
+ok   a hit after scattered letters opens at the hit, not at the scattered start
+ok   the first term of two sets the column
+ok   the terms swapped set the column of the other
+ok   case is ignored in the column
+ok   a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing
+ok   case is ignored in the query
+ok   two terms match in either order
+ok   the terms swapped match the same line
+ok   extra spaces between and around the terms are ignored
+ok   a line holding one of two terms does not match
+ok   scattered letters match nothing
+ok   a line of 300 part-word hits ranks below a whole-word line on a longer path
 ok   a valid character beside an invalid byte stays whole
 ok   a 500-byte line is cut at 400 bytes
 ok   the cut falls back to a character boundary
 ok   a line of continuation bytes is cut at 400 bytes, not emptied
-ok   a C1 control (the CSI U+009B) shows as a space
+ok   a C1 control (the CSI U+009B) shows as a space, the two terms on either side of it
 ok   only the first 1000 lines of a file are stored
 ok   the first shown row is the first line of the file
 ok   the last shown row is the 200th line, the cap
-ok   the 100,000-line store cap is marked when it cuts a file
+ok   the 400,000-line store cap is marked when it cuts a file
+ok   150,001 lines, past the old 100,000-line cap, are all stored with no cap mark
 ok   no preview float beside the grep list at 120 columns
 ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 37 passed, 0 failed
+editor_finder_grep: 52 passed, 0 failed
