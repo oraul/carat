@@ -1671,7 +1671,7 @@ mrow() {
 }
 # A change whose queue item, at its squash commit's parent, carries the
 # words "beyond the sprint" in its parenthesis is not counted toward the five,
-# one such change per sprint (SPRINT_EXCEPTIONS), and the groomed row ends at
+# every such change (sprint-count-t0), and the groomed row ends at
 # the fifth counted change, so a later exception's row goes to the next
 # sprint; an item marked only "the user-approved exception", which lifts the
 # one-pipeline limit, still counts (sprint-tidy, review-coverage).
@@ -1679,7 +1679,7 @@ fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
 { printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics-backlog.tsv
-printf '# Queue\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue-backlog.md
+printf '# Queue\n\n## Sprint 1\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue-backlog.md
 commit "docs: the queue"
 echo x1 >> README.md
 commit "feat: x1"
@@ -1710,7 +1710,7 @@ echo x3 >> README.md
 commit "feat: x3"
 state init x3 chore/x3 > /dev/null
 state set x3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
-expect "run_state: review-due counts a change beyond the sprint past the sprint's one exception" 1 "^not due: sprint-2 has 1 of 5 changes merged [(]x2, x3[)]; not counted, beyond the sprint: x2\$" state review-due
+expect "run_state: review-due leaves out every change beyond the sprint" 1 "^not due: sprint-2 has 0 of 5 changes merged [(]x2, x3[)]; not counted, beyond the sprint: x2, x3\$" state review-due
 state history > /dev/null
 printf 'sprint-2\tx3\n' >> docs/sprints.tsv
 printf '# Queue\n\n## Sprint 4\n\nThe user-approved exception: `y1` (T1 pipeline, estimated small, beyond the sprint): first.\n' > docs/queue-feature.md
@@ -1731,6 +1731,28 @@ commit "chore: y2 with the plan marking it"
 state init y2 chore/y2 > /dev/null
 state set y2 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: review-due leaves out a change its merged commit's queue marks beyond the sprint though the parent's held it unmarked" 1 "^not due: sprint-4 has 0 of 5 changes merged [(]y2[)]; not counted, beyond the sprint: y2\$" state review-due
+# A sprint counts only its queue's Sprint N items and their split parts: a
+# T0 item, a change the exception paragraph puts outside the 3 (not one it
+# names after "run"), and a pool item are left out, each named by its
+# reason, in merge order or not (sprint-count-t0).
+fresh sprintcount
+printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
+printf '# Backlog\n' > docs/backlog.md
+{ printf 'header\n'; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
+printf '# Queue: backlog\n\n## Sprint 1\n\nThe user-approved exception (a note): the three are the user%ss; `o1` and `o2`\n(Pool 1 and 2) run before `s1`, outside the 3, `o1` next.\n\n1. `s1` (T2 user request, estimated small): one.\n2. `t1` (T0 security High (9), estimated small): urgent.\n3. `t10` (T1 pipeline defect, estimated small): not T0.\n\n## Pool\n\n1. `o1` (T1 pipeline defect, estimated small): outside.\n2. `o2` (T1, estimated small): outside too.\n3. `s1-b` (T2, estimated small, the rest of `s1`, split): the rest.\n4. `p1` (T2, estimated small): a pool item.\n' "'" > docs/queue-backlog.md
+commit "docs: the queue"
+for c in s1-b o1 t1 t10 o2 s1 p1; do
+  echo "$c" >> README.md
+  commit "feat: $c"
+  state init "$c" "chore/$c" > /dev/null
+  state set "$c" merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+done
+count_line=$(state review-due)
+expect "run_state: review-due leaves a T0 change out of the count" 0 "; not counted, T0: t1(;|\$)" echo "$count_line"
+expect "run_state: review-due leaves out a change the exception line puts outside the 3, not one it names after run" 0 "; not counted, outside the 3: o1, o2(;|\$)" echo "$count_line"
+expect "run_state: review-due counts a split part of a sprint item" 0 "^not due: sprint-1 has 3 of 5 changes merged " echo "$count_line"
+expect "run_state: review-due leaves a pool item out of the count" 0 "; not counted, not a sprint item: p1\$" echo "$count_line"
+expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-1 has 3 of 5 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
 # 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).
