@@ -27,5 +27,5 @@ Assumptions: only the current window draws a pair; the group is painted after se
 - Code: `carat/adapters/frame_presenter.rb`, `carat/adapters/painted_rows.rb`.
 - Tests: `test/adapters_frame_presenter.rb` (and its snapshot).
 - Docs: `docs/compatibility.md`, `docs/architecture.md` section 8 (FramePresenter), `docs/codebase-map.md` area 13.
-- README.md: unchanged, no user-visible list names the highlights this adds beyond the palette sentence, which already lists the groups' colors.
+- README.md: changed, a sentence names the paired bracket highlight.
 - docs/architecture.md: changed, the FramePresenter paragraph names the pair and the row record's new key.
