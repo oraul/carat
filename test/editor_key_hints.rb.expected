@@ -19,6 +19,9 @@ ok   a plugin's binding shows its manifest's description
 ok   a disabled plugin's prefix shows no hints
 ok   a key completes the binding and closes the hints
 ok   Esc closes the hints and cancels the keys
+ok   Esc with no hints shown closes nothing
+ok   the hints show from the last line and Esc leaves the cursor there
+ok   the hints show over an empty buffer and Esc leaves it empty
 ok   the next key closes the hints at once
 ok   the next level shows after the delay
 ok   Ctrl-W hints fill several columns of the room
@@ -35,4 +38,4 @@ ok   a prefix that is also bound shows no hints and timeoutlen resolves it
 ok   a delay out of range is reported
 ok   the delay stays the default
 ok   a group line without a name is reported
-editor_key_hints: 37 passed, 0 failed
+editor_key_hints: 40 passed, 0 failed

@@ -2,8 +2,8 @@
 
 ## 1. Edge-case tests first
 
-- [ ] 1.1 `test/editor_palette.rb`: a text of colons alone lists every entry, a trailing blank is part of the text, and the palette over an empty buffer lists every entry and Esc leaves the buffer empty (proved by the tests' labels)
-- [ ] 1.2 `test/editor_key_hints.rb`: Esc with no hints shown closes nothing, the hints show from the last line and over an empty buffer, and Esc leaves the cursor and text (proved by the tests' labels)
+- [x] 1.1 `test/editor_palette.rb`: a text of colons alone lists every entry, a trailing blank is part of the text, and the palette over an empty buffer lists every entry and Esc leaves the buffer empty (proved by the tests' labels)
+- [x] 1.2 `test/editor_key_hints.rb`: Esc with no hints shown closes nothing, the hints show from the last line and over an empty buffer, and Esc leaves the cursor and text (proved by the tests' labels)
 
 ## 2. The wiring ledger
 
