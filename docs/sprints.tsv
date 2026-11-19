@@ -19,3 +19,4 @@ sprint-16	moved-review-carry	6	secret-patterns,git-signs-transport,vim-line-comm
 sprint-17	vim-line-commands-c	6	tab-close-d,pipeline-diet,vim-folds-b,pipeline-diet-b,squash-body-full,vim-line-commands-c	540.0	90.0	9959788	4	check:5/6,quality:3/6,security:6/6,bench:6/6,ci:6/6,gates:5/6
 sprint-18	sign-colors	6	guide-colors,groom-proof,facet-palette,backlog-throughput,background-default,sign-colors	519.0	86.5	7275494	4	check:6/6,quality:4/6,security:6/6,bench:6/6,ci:6/6,gates:6/6
 sprint-19	match-paren	6	groom-security-mark,review-lite,check-stage-order,gutter-signcolumn,contributor-tier-trial,match-paren	351.0	58.5	6157177	2	check:5/6,quality:2/6,security:6/6,bench:6/6,ci:5/6,gates:6/6
+sprint-20	contributor-tier-routing	7	quality-first-pass,cursor-and-messages,delivery-guards,vim-folds-windows,contributor-checklist,closing-loop,contributor-tier-routing	577.0	82.4	9461780	3	check:3/7,quality:1/7,security:7/7,bench:7/7,ci:7/7,gates:7/7

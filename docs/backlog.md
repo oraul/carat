@@ -6521,10 +6521,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: git-signs-status-b recorded plan=0/10, areas=0/2, scout=0/14 against plan 10,124 to 25,457 and scout 18,002 to 64,257 output in the last 10 feature rows, so its output total and the check-pass budget line undercount.
 - Fix: accepted when a resumed run's carried phases show their recorded tokens or are marked carried in the phases and the history row, never 0 beside non-zero calls.
 
-### Quality fails its first pass on about half the runs
-- Location: the quality review's blocking findings across the lane histories (git-signs-status-b retro note 11).
-- Why: quality first pass 62/123 against 117/124 or better for every other gate; first.quality 0 on git-signs-status-a and git-signs-status-b (plugin state keyed by buffer id with no rename case); the fix round took output from 164,154 to 342,779, over medium's 200,000.
-- Fix: find what the blocking findings of the last ten quality first-pass failures share and remove the cause upstream; accepted when quality first pass reaches 7 of the next 10 runs.
 ### No hover test shows a flowed paragraph, and the README names the flow only for the reading view
 - Location: test/adapters_hover.rb, README.md:69
 - Why: MarkdownText.parse is shared, so the paragraph and quote flow and the hanging prefix also reach the hover and completion floats, but no test proves it there and the README states it only for the reading view.
@@ -7491,11 +7487,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the design states a behavior change for a PinHover split, which now switches itself instead of the file window, yet only the reading view has flows, so a regression of the pinned split would pass.
 - Fix: add one flow row that pins a hover split and runs :bn there, expecting the split to switch and the file window to keep its buffer.
 
-### A closed window's folds stay tracked and are shifted on every edit
-- Location: carat/domain/window.rb:85
-- Why: performance; a closed window's Folds stay in its buffer's fold_lists, so every later edit of the buffer keeps shifting dead fold records (named in the change's design risks).
-- Fix: untrack the folds when Layout or the tab list removes a window.
-
 ### Cursor display column inside a closed fold drifts from the drawn one
 - Location: carat/use_cases/arrange_view.rb:107
 - Why: correctness; ArrangeView takes the cursor's display column from the line's column even inside a closed fold, while FramePresenter (carat/adapters/frame_presenter.rb:734) uses window.left there, so the scroll and the drawn cursor can disagree.
@@ -7515,11 +7506,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/use_cases/put_register.rb:32
 - Why: correctness, Neovim parity; a linewise p on a closed fold puts the lines inside the fold, hidden, where Neovim's do_put puts them below the fold's last line (P above its first).
 - Fix: for a linewise entry pass the position at folds.last_row(cursor.row) for p, with an editor_folds row proving it.
-
-### Closing a split or a tab never untracks its windows' folds
-- Location: carat/domain/buffer_list.rb:370
-- Why: performance and a missing test; a closed window (layout.close, and tabs.remove_tab at line 368) never untracks its Folds, so buffer.fold_lists keeps every closed split's folds and each later splice shifts them.
-- Fix: call drop_folds on the closing window (each window of a removed tab) before closing it, and assert fold_lists.length after zfj<C-w>s<C-w>c in test/editor_folds.rb.
 
 ### Visual modes do not take in closed folds
 - Location: carat/use_cases/arrange_view.rb:138
@@ -7583,11 +7569,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: .claude/workflows/deliver-change.js:855 (narrowedFrom)
 - Why: Correctness. When the reviews run again after a main-moved merge, narrowedFrom returns the pre-merge pass, so the quality and security reviews read `git diff <pass> HEAD`, which holds every commit main gained, and can block the change on main's code or spend the review on code that is not the change's.
 - Fix: Skip the narrowing and review the whole branch diff (origin/main...HEAD) when the check that preceded the reviews ran with movedFrom set; add a tools_test or workflow case that asserts the review range after a main-moved merge.
-
-### The quality review fails its first pass most often, and its round costs most (plugin-lazy-activate retro)
-- Location: the contributor's self-check in `.claude/agents/contributor.md` and the implement phase of `.claude/workflows/deliver-change.js`
-- Why: status shows quality 85/153 first passes against check 150/153 and security 147/153; plugin-lazy-activate failed quality with 2 blocking findings (a test expectation edited against plugin-host spec.md:100 and :115 left in force; a new raise branch at `carat/use_cases/plugins/plugin_syntax.rb:48` without its test), its rework round costing 104,027 of 343,926 output tokens (30 percent); lsp-container-b and vim-folds-a also failed quality first.
-- Fix: the contributor returns work the quality reviewer passes first, without a new phase; accepted when quality passes first on 8 or more of the next 10 feature runs with neither blocking kind above.
 
 ### A check start returns a pass at a commit other than the lane head (sprint-size-six retro)
 - Location: the check phase of `.claude/workflows/deliver-change.js` and `check` in `tools/run_state.sh`
@@ -8087,11 +8068,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/agent_guard.sh:1027 (merge hook lookup), tools/open_pr.sh:167
 - Why: quality advisory, one clear way: the hook finds the archived pr.md by a non-recursive listing and a cat-file check while open_pr.sh still lists the whole archive with ls-tree -r, two lookups of the same file that grow apart.
 - Fix: give open_pr.sh the same non-recursive listing of the archive's entries, or share one lookup.
-
-### The contributor returns work the quality review blocks on its first pass (plugin-lazy-activate retro 11)
-- Location: `.claude/agents/contributor.md`, the contributor's self-check before it returns; `.claude/workflows/deliver-change.js`, the quality round.
-- Why: quality passes first 85 of 153 runs against check 150/153 and security 147/153; plugin-lazy-activate had 2 blocking findings of two kinds (a test expectation edited against plugin-host spec.md:100 and :115 left in force; a new raise branch at plugin_syntax.rb:48 without its test), its rework round 104,027 output tokens, 30 percent of 343,926; lsp-container-b and vim-folds-a also quality:0 in the feature lane's last 10.
-- Fix: make the contributor catch these two kinds before it returns, without adding a phase; accepted when status shows quality first passes at 8 or more of the next 10 feature runs and none of these two blocking kinds.
 
 ### A scout runs for an area the change barely edits (plugin-lazy-activate retro 12)
 - Location: `.claude/workflows/deliver-change.js`, the scout plan from the areas start.
@@ -8639,3 +8615,688 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `test/adapters_frame_presenter.rb:167`
 - Why: pair_case has no row with multibyte text before the bracket or a window scrolled sideways (left > 0), where code-point indexing and fill_columns clipping could go wrong.
 - Fix: add a row with a non-ASCII character before ( and one scrolled left so only one bracket is visible. Queued in `render-tidy`.
+
+### The lane history files keep a 22-column header above 24-field rows
+- Location: `docs/metrics-feature.tsv` and `docs/metrics-backlog.tsv` header line, and `HEADER` in `tools/run_state.sh`.
+- Why: `history_row` now appends `advisories_closed` and `advisories_left`, but a file that already exists keeps its old header, so the first rows carrying them have two fields the header does not name.
+- Fix: a records change that adds the two names to each header line, with the test that every history row has the header's columns (now 24 for a fresh file) read against the header of the file.
+### Process text of the closing loop is absent from CLAUDE.md and docs/goals.md
+- Location: `CLAUDE.md` Agents section (30,713 of 30,720 bytes) and `docs/goals.md` line about own-file advisories fixed in place within the rounds.
+- Why: both describe advisories as fixed in place or recorded; the closing loop adds one last start after the rounds, described only in README.md and `docs/contributor-notes.md`.
+- Fix: when budget allows, one sentence in the CLAUDE.md contributor bullet and the planner's goals text naming `close-advisories`, once its recorded figures show whether it stays.
+
+### closeAdvisories trusts the contributor's reported head to skip the re-review
+- Location: .claude/workflows/deliver-change.js, closeAdvisories (head === before)
+- Why: a closing start that committed code but reported the old head would skip verify() in the workflow; the pre-push and merge gates (settled_at) still refuse a security pass that code changed since, so nothing is bypassed in practice. The workflow holds no shell, so a lane head read needs a new record start (new behavior).
+- Fix: have the checker's verdict commit or a rev-parse record start give the lane head, compare it with before, and skip verify() only when they match.
+### closeAdvisories trusts the contributor's self-reported head
+- Location: .claude/workflows/deliver-change.js, closeAdvisories (around line 1383 and 1404)
+- Why: when the closing start reports the earlier head, verify() and the security re-review are skipped, and since c5285fbabaac the same comparison clears awaiting; a start that committed code but reported the old head (for example after injection carried in advisory text) would reach package without a fresh workflow security review. The pre-push and merge gates (tools/gates.sh settled_at) still refuse a stale security pass, so nothing is bypassed in practice.
+- Fix: compare the lane's actual HEAD (git rev-parse HEAD, read by a record start or taken from the checker's verdict commit) with before, not the returned head, before skipping verify() and clearing awaiting. Defense in depth only.
+
+### closing figures are a lower bound after a resume during the closing re-review
+- Location: .claude/workflows/deliver-change.js:1400 and openspec tasks 5.6 of closing-loop
+- Why: the comment says final figures follow the early flush, but a resume during the closing re-review restores closed 0 left N, closeAdvisories returns at once, and awaiting and fixedInPlace are not restored, so advisories_closed stays 0 however many the re-review confirms.
+- Fix: word the comment and the task as a lower bound on a resume, or record the confirmed count from the resumed re-review's fixed_in_place.
+
+### Waiting timeout stated twice in the contributor notes
+- Location: docs/contributor-notes.md:49 and .claude/agents/contributor.md:63
+- Why: the Waiting section repeats the Bash timeout 600000 that package step 5 still states, and step 5 does not point to the section, so the 540 s reason is read only by chance.
+- Fix: keep the timeout in one place, either step 5 pointing to docs/contributor-notes.md, Waiting, or the section dropped.
+### Unclear antecedent in the merge-main notes
+- Location: docs/contributor-notes.md:11
+- Why: the section opens "On its conflicts", whose antecedent (merge-main) is only in contributor.md, so the notes read alone leave "its" unclear.
+- Fix: write "On the conflicts of merge-main".
+
+### Escalation triggers have no driven test
+- Location: .claude/workflows/deliver-change.js:934, :935, :1326
+- Why: only escalate itself is driven in tools/tools_test.sh; the three call sites (no result, self-check mismatch, second blocking quality round) are not exercised, so a removed trigger passes.
+- Fix: drive contributor() with a stubbed null result and a self_check mismatch result, and reviews() with two blocking quality results, asserting escalated.
+
+### Critical read in the queue line matches the word anywhere
+- Location: .claude/workflows/deliver-change.js:1654
+- Why: /critical/ matches the word in the queue line's name or reason, so a non-critical item whose reason says critical notes a spurious "plan: critical value not read", and unlike the planned-path note the note omits the unread text.
+- Fix: test for critical inside the parenthesis only (for example /[(,] ?critical\b[^)]*\)/) and append the unread text as the planned-path note does.
+
+### Skipped-plan critical note has no driven test
+- Location: .claude/workflows/deliver-change.js:1654
+- Why: the skipped-plan note is top-level code no test drives, nor is the planned-path note at :1674.
+- Fix: move the skipped-plan critical read into a helper returning the rule or the note and drive it in tools/tools_test.sh calib_js with a read, an unread, and a no-critical queue line.
+
+### light_plus LineNrFifth is the teal accent
+- Location: carat/domain/themes.rb:482 (LIGHT_PLUS DIM 0x1f6b82, FAINT gray)
+- Why: LineNrFifth maps to DIM, so in light_plus every fifth number is an accent color rather than a dim gray step.
+- Fix: map LineNrFifth to a gray in light_plus or record the choice in the design.
+### frame_presenter class comment leaves a short line
+- Location: carat/adapters/frame_presenter.rb:57
+- Why: the rewrapped class comment leaves a line ending in 'column. With' before 'indentguides' on the next line, which reads badly
+- Fix: reflow lines 57 to 59 so the sentence 'With indentguides ...' continues the paragraph
+
+### LineNrFifth has no 16-color or NO_COLOR distinction
+- Location: carat/domain/themes.rb (the LineNrFifth row)
+- Why: under 16 colors and NO_COLOR every fifth relative number looks like the others.
+- Fix: give it a bold attribute or a basic-index accent there.
+
+### The squash body of #223 claims styling its diff lacks
+- Location: the squash commit of cursor-and-messages (#223): its Summary and Changes bullets 4 to 6
+- Why: they claim command-line and message styling that the diff does not contain, so the history on main says something untrue.
+- Fix: make it true with the message-styling change, which delivers that styling.
+- Merged: ### Message styling claimed by 223 is not in its diff
+- Location: the squash body of pull request 223 (cursor-and-messages)
+- Why: it claims command-line and message styling that its diff does not contain
+- Fix: make it true with the message-styling change
+
+### The pull request text review is skipped on a resume past the package phase
+- Location: .claude/workflows/deliver-change.js (prTextReview call after the package step)
+- Why: it runs only in the start that packages, so a resume after the push never reviews the text; no verdict of it is recorded
+- Fix: record the review's verdict (a phase or a note the run state returns) and run it on resume when none is recorded
+### Text review is skipped on a resume past the package phase
+- Location: .claude/workflows/deliver-change.js:1606 and :1616
+- Why: the pull request text review runs only in the start that packages; a resume past the package phase skips it silently (still present, recorded instead of fixed)
+- Fix: record the text review's verdict and run it on resume when none is recorded
+### Findings gate docs say BASE where the code uses the fork point
+- Location: tools/gates.sh:29, :505, :524
+- Why: the usage line says headings at BASE, the gate_findings comment mixes the fork point with BASE..HEAD, and the failure message says present at the base, while the code reads the fork point and fork..HEAD
+- Fix: say the fork point of BASE and HEAD and fork..HEAD in all three
+### Design decision on findings is stale
+- Location: openspec/changes/archive/2026-11-19-delivery-guards/design.md:9
+- Why: the findings decision still lists headings with git grep at the base, not at the fork point of the base and HEAD
+- Fix: say the fork point and that a moved main not yet merged is ignored
+### Proposal docs currency
+- Location: openspec/changes/archive/2026-11-19-delivery-guards/proposal.md:16 and :19
+- Why: it says CLAUDE.md is unchanged at its size budget, but the branch edits its push allowance (CLAUDE.md:41), and line 16 repeats the --pr-text push twice
+- Fix: say CLAUDE.md is updated, the push allowance names the text fix push, and drop the repeated clause on line 16
+### Advisory fixes take two paths and an advisory-only round counts as rework (closing-loop retro 10)
+- Location: `.claude/workflows/deliver-change.js` (the in-place round, `inPlaceRound` 'alone', and the closing loop at package)
+- Why: closing-loop rework 2 of 3, round 2 advisory-only (note 8, 0 blocking), its rerun (tools-test 135 s, every review again) raised note 9; reviews 43,866 of 191,898 output tokens (22.9%), 57 of 233 calls; quality first pass 101 of 183.
+- Fix: keep one advisory path, so an advisory-only round is never a rework round and a run starts at most one contributor for advisories; accepted when a tools-test case shows a run with advisory-only reviews records rework unchanged and starts exactly one advisory start.
+
+### Pull request finding counts are hand-written and checked after the push (closing-loop retro 11)
+- Location: `tools/open_pr.sh` (the body gate before the first push)
+- Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
+- Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
+### Grep picker reads every file synchronously when it opens
+- Location: carat/plugins/finder/grep.rb, Grep#load
+- Why: a large tree makes the editor wait once at open (one read_file call per file, up to 100,000 stored lines); the user's nothing-waits rule is only met by bounding it.
+- Fix: stream the read as a background task once finder-streaming and plugin-tasks land after spinel-bump, searching what has arrived.
+### Grep column is the first query byte, not the tightened match start
+- Location: carat/plugins/finder/grep.rb, Grep#column_at
+- Why: Matcher tightens the match from its end, so the highlighted span can start later than the first occurrence of the query's first byte; the cursor then lands a little early on such lines.
+- Fix: expose the span start from Matcher.span_score (a second method, no extra allocation) and use it for the column.
+### Grep files are searched only to their first 1000 lines
+- Location: carat/plugins/finder/grep.rb, FILE_ROWS
+- Why: read_file answers at most 1000 rows, so a match deeper in a long file is not found.
+- Fix: a read request with a start row, a plugin API minor bump, then read the file in pages.
+
+### Grep helper duplication with the plugin
+- Location: carat/plugins/finder/grep.rb (strings, ints), carat/plugins/finder/plugin.rb (no_paths)
+- Why: the typed-empty array helpers repeat across two classes of one plugin.
+- Fix: one shared helper per type in the plugin directory, used by both.
+
+### No grep scenario in the bench
+- Location: bench/ (finder scenarios), carat/plugins/finder/grep.rb search
+- Why: the finder bench measures paths only, so the grep search cost per key is unmeasured; the search is now bounded in memory but still scores every stored line.
+- Fix: add a grep scenario to the bench and the map's Bench line.
+- Merged: ### No bench scenario for the grep search
+- Location: bench/ scenarios, carat/plugins/finder/grep.rb search
+- Why: each key scores up to 100,000 lines and sorts every match to keep 200; the finder bench measures paths only.
+- Fix: add a grep scenario and its map Bench line, or keep a bounded top-200 selection instead of a full sort.
+
+### Findings file holds a fixed entry and a stale duplicate
+- Location: docs/findings/finder-grep.md, the entries Grep helper duplication with the plugin and No bench scenario for the grep search
+- Why: the duplication entry is fixed and the older bench entry (its Why still says it sorts every match) is superseded by the No grep scenario entry, so the file holds a fixed entry and a stale duplicate
+- Fix: drop the fixed duplication entry and the older bench entry, keeping the new one (a grooming step, as no agent removes entries during a delivery)
+
+### Code map Grep line omits public class methods
+- Location: docs/codebase-map.md:568, the Grep line
+- Why: it lists the public methods but not the class methods no_strings and no_ints (nor utf8_size), so the map is stale
+- Fix: add no_strings, no_ints, and utf8_size to the method list
+### Advisory fixes take two paths and an advisory-only round counts as rework (closing-loop retro 10)
+- Location: `.claude/workflows/deliver-change.js` (the in-place round, `inPlaceRound` 'alone', and the closing loop at package)
+- Why: closing-loop rework 2 of 3, round 2 advisory-only (note 8, 0 blocking), its rerun (tools-test 135 s, every review again) raised note 9; reviews 43,866 of 191,898 output tokens (22.9%), 57 of 233 calls; quality first pass 101 of 183.
+- Fix: keep one advisory path, so an advisory-only round is never a rework round and a run starts at most one contributor for advisories; accepted when a tools-test case shows a run with advisory-only reviews records rework unchanged and starts exactly one advisory start.
+
+### Pull request finding counts are hand-written and checked after the push (closing-loop retro 11)
+- Location: `tools/open_pr.sh` (the body gate before the first push)
+- Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
+- Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
+
+### Mid-tier contributor returned a placeholder result
+- Location: the contributor's fix start for round 2's blocking finding (tools/tools_test.sh:4304 at 76a1d047c65f)
+- Why: the start returned no result ("placeholder") after committing its fix, so the workflow recorded the head as unknown and the run needed a resume; a trial breach of the schema-return rule by the mid-tier contributor (#219).
+- Fix: count it against the trial; keep the schema-checked return, and have the workflow resume from the lane branch head (git rev-parse) when a start returns a placeholder.
+- Merged: ### Contributor returned a placeholder instead of a result (mid-tier trial)
+- Location: the contributor's last fix start of this change (head 76a1d047c65f), workflow phase implement
+- Why: the contributor, on the mid tier as a trial (#219), returned the word placeholder instead of its schema result, so the workflow recorded the head as unknown and the run stopped; the fix had committed and its check stages passed, so only the return was lost.
+- Fix: count it against the trial; have the workflow reject a placeholder return and re-ask for the schema, reading the head from git when the branch moved.
+
+### Quality handler note test only greps the literal text
+- Location: tools/tools_test.sh:4303
+- Why: the handler case only greps the literal note text, so the order (re-raises removed before misses are noted) and that an unmarked finding is not noted go unexercised.
+- Fix: move the quality blocking split into a pure helper returning the raised and missed findings and test it through speed_js.
+
+### First-pass miss marker matches anywhere in the text
+- Location: .claude/workflows/deliver-change.js:430
+- Why: the marker regex matches anywhere in the text, case-sensitively, so a negation such as not a first-pass miss counts and First-pass miss does not.
+- Fix: match the marker only right after the location findingAt returns, as the agent file asks, case-insensitively.
+
+### README wording of the miss rule differs from the agent file
+- Location: README.md:190
+- Why: on lines the last review did not see changed is unclear and differs from the agent file; the quality step also still says the first pass reads every file of the diff to its end, while the agent file says each changed hunk with its enclosing function.
+- Fix: say on lines unchanged since the last review, as .claude/agents/quality-reviewer.md:21 does, and use the agent file's reading wording.
+
+### Marker refers to the wrong review commit
+- Location: .claude/agents/quality-reviewer.md:21
+- Why: that diff refers to the diff since the last passed review, while a blocked round's input names the last review's commit, blocked or passed.
+- Fix: tie the marker to the commit the input names, the last quality review, as priorQuality words it.
+
+### Whole-branch quality input lists no blocking findings
+- Location: .claude/workflows/deliver-change.js:906
+- Why: the agent file excludes the blocking findings its input lists, but priorQuality lists them only on the scoped path; on the whole-branch path none are listed, so the reviewer marks a still-unfixed blocking finding first-pass miss and only qualitySplit's prior filter keeps the record right.
+- Fix: list the last review's blocking findings in the whole-branch input too when qualityBlocking holds them.
+
+### Proposal still words the old miss rule
+- Location: openspec/changes/archive/2026-11-19-quality-first-pass/proposal.md:9
+- Why: What Changes still says lines the diff since the last review did not change and names only firstPassMiss, not that a miss is only a new finding nor the qualitySplit helper; it (and tasks.md:5) still says the first pass reads every file of the diff to its end.
+- Fix: word bullets 9 to 11 as the agent file and tasks 2.1 and 2.2 do, and say each changed hunk is read with its enclosing function.
+
+### firstPassMiss cases duplicate each other
+- Location: tools/tools_test.sh:4301
+- Why: the firstPassMiss case at 4301 and the marker case at 4305 both prove a marked finding counts.
+- Fix: fold the unmarked case of 4301 into the 4305 case and drop 4301.
+
+### Task 1.2 names a test that does not exist
+- Location: openspec/changes/archive/2026-11-19-quality-first-pass/tasks.md:6
+- Why: task 1.2 names a test, a blocking quality finding on unchanged lines is noted as a first-pass miss, that tools/tools_test.sh does not contain.
+- Fix: name the existing tests (a first-pass miss is noted only for a new marked finding; the quality handler notes first-pass misses only when the prior list is the last review's).
+
+### The known argument of the quality handler is derived inline and untested
+- Location: .claude/workflows/deliver-change.js:1207
+- Why: the commit of review.quality equal to qualityAt is derived inline in the handler and never run by a test, so the resumed-without-notes case is unproven.
+- Fix: compute it in a small pure helper over ran and qualityAt and test it through speed_js.
+
+### One-use alias of split.raised
+- Location: .claude/workflows/deliver-change.js:1209
+- Why: const raised = split.raised is a one-use alias.
+- Fix: concat split.raised directly.
+
+### An advisory-only fix round re-runs every review (sprint-19-records retro 5)
+- Location: `.claude/workflows/deliver-change.js` (the fix-in-place round's re-review); joins the queued `rework-review-repeat` (backlog Pool 21).
+- Why: sprint-19-records spent rework 1 on 4 advisory findings and 0 blocking, 1 fixed in place and 3 recorded; the second round re-ran check (passed), security (0 findings), and quality (0 blocking, 3 advisory); reviews took 13,756 of 34,522 output tokens (40%) and 27 of 69 tool calls (39%), as on sprint-17-records (30,387 of 72,515, 42%) and sprint-18-records (25,498 of 86,421, 30%), both rework 2.
+- Fix: a round that fixes only advisory text in the change's own OpenSpec files does not re-run security and quality on the unchanged rest of the diff. Accepted when such a run records no second security and quality start and records-change rework drops to 0.
+
+### The benchmark starts on a docs-only change for want of a recorded measurement (sprint-19-records retro 6)
+- Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition); joins the queued `bench-skip-no-code` (backlog Pool 26).
+- Why: sprint-19-records' benchmark spent 3,513 output tokens and 5 calls (10% of output) on a docs-only diff, building base and change only to report no difference, started because build/metrics was missing; sprint-17-records 4,147 / 6, sprint-18-records 4,721 / 14; bench passes first 177 of 178.
+- Fix: a change touching no file under carat/, bin/, test/, or bench/ starts no benchmark agent and carries its bench result as equal. Accepted when a docs-only or records-only run records no benchmark start.
+
+- quality advisory, docs/backlog.md:8596, stale entry: the folded 'guide-colors retro entries are folded twice' note cites old line numbers and is half resolved, since this groom removed the advisory-only copies while 'The merge phase spends output out of proportion to its calls' (:8372, :8386) and 'A passing check phase costs a full agent start' (:8377, :8391) stay duplicated. Fix: list :8386 and :8391 as duplicate and this note as fixed in the next groom.txt.
+- quality advisory, docs/backlog.md:8383 and :8402, the two SECURITY_MARK security entries stay open although docs/queue-feature.md's Sprint 20 notes say b5b0aec (#214) fixed them and the folded entry at :8604 asks to close them. Fix: list both as fixed by b5b0aec in the next groom.txt after checking its tools-test cases.
+- quality advisory, docs/backlog.md:8555, :8574, :8619, format: folded headings follow the previous entry's Fix line with no blank line, the fold defect the entry at :8608 already records. Fix: have groom put a blank line before each folded heading (groom-fold-format) and fold this into that entry.
+
+### Replace mode cannot be entered, so its fold opening has no test
+- Location: carat/use_cases/arrange_view.rb (typing), carat/domain/mode.rb REPLACE
+- Why: no key or handler enters Mode::REPLACE (R is unbound), so the replace branch that opens closed folds cannot be proved by a table row; the quality advisory asked for zfjRX<Esc>.
+- Fix: when R is implemented, add the row zfjRX<Esc> expecting [[0, 1, false]] and the lines X b c d e.
+### Extra push allowed by push --pr-text without a blocked text review
+- Location: tools/run_state.sh:1327
+- Why: `push --pr-text` only checks that the recorded push differs from HEAD, and agent_guard.sh lets the contributor pass `--pr-text` at any time, so a contributor gets one more push per run even when no pull request text review blocked, loosening the push-count rule. The merge gates still run on every head, so no unreviewed code reaches main. This came in with the merge of main (#224), not with this change's commit. Security Low, confidence 4.
+- Fix: Have the workflow write a run-state marker (for example `pr_text_blocked`) when the text review blocks, make `push --pr-text` refuse unless it is set, clear it after the push, and add expect cases in tools/tools_test.sh.
+
+### Replace mode opening closed folds has no test row
+- Location: carat/use_cases/arrange_view.rb:58
+- Why: replace mode now opens the closed folds holding the cursor, but only insert mode has a test row; R is unbound in normal mode and Mode::REPLACE cannot be entered, so it cannot be tested yet (quality advisory, tests beside behavior).
+- Fix: add the table row `zfjRX<Esc>` expecting [[0, 1, false]] and the lines `X b c d e` once R is implemented.
+
+### close_tab walks the tab page's slots twice
+- Location: carat/domain/buffer_list.rb:408
+- Why: close_tab collects the kept view windows' buffers (lines 407-412) and again walks the slots in drop_slot_folds (line 413), a duplication (quality advisory).
+- Fix: drop each kept view window's folds in the existing loop and call drop_slot_folds only from close_window.
+
+### Slot#clear forgets a kept hidden view window without dropping its folds
+- Location: carat/domain/slot.rb:102
+- Why: Slot#clear, also run by attach, forgets a kept hidden view window without drop_folds, so a plugin closing or replacing a hidden side window leaves its fold list tracked by the buffer (spec currency: windows, closing a window drops its folds; quality advisory).
+- Fix: drop the kept window's folds before clear forgets it (in BufferList or the caller), with a test like the :tabclose slot assertion.
+### The grep picker reads every listed file synchronously on the editor (sprint-20 review security Low (3), plugin.rb:186)
+
+- Location: `carat/plugins/finder/plugin.rb:186`
+- Why: In this change: the grep picker reads every listed file synchronously on the editor thread when it opens (up to MAX_FILES files of up to READ_LIMIT bytes each). Pressing <leader>fg in a very large or hostile repository can freeze the editor for a long time; it is a local denial of service that only the user can trigger.
+- Fix: Cap the total bytes read across files (stop when MAX_LINES fills or a byte budget is spent), read only what FILE_ROWS needs, or load in steps between keys so Esc stays responsive.
+
+### The new --pr-text push kind accepts any commit, as long as a recorded (sprint-20 review security Low (3), run_state.sh:1330)
+
+- Location: `tools/run_state.sh:1330`
+- Why: In this change: the new --pr-text push kind accepts any commit, as long as a recorded push other than HEAD exists; it does not check that the commit only rewrites pr.md. Because RECORDS_RE exempts all of openspec/ and docs/goals.md from a new review, this adds one more push after review whose records-path content nobody reviews (specs, or the goals that drive tier routing).
+- Fix: In push_branch --pr-text, require that git diff --name-only <pushed> HEAD lists only openspec/changes/archive/*-<change>/pr.md, and add a tools_test.sh expect case for a refused wider diff.
+
+### Docs drift (sprint-20 review quality, CLAUDE.md:41)
+
+- Location: `CLAUDE.md:41`
+- Why: docs drift: 'Push once, plus one per CI fix, review fix, moved main, text fix' reads as one push per review fix, moved main, and text fix, while run_state.sh push allows one of each of those three a run and one per CI fix
+- Fix: 'plus one per CI fix and one review-fix, moved-main, and text-fix push a run'
+
+### Unclear mode (sprint-20 review quality, contributor.md:83)
+
+- Location: `.claude/agents/contributor.md:83`
+- Why: unclear mode: body mode is written only for a red CI scan plus a terse '(--pr-text: text)', while the pull request text review's rewrite reaches the contributor through this mode and only the workflow prompt (deliver-change.js:1262) describes it
+- Fix: add one sentence for the text-review rewrite (claims only what the diff holds, pushed with --pr-text, not --ci-fix)
+
+### Comment drift (sprint-20 review quality, gates.sh:30)
+
+- Location: `tools/gates.sh:30`
+- Why: comment drift: the header says the findings gate compares headings 'at BASE', but gate_findings compares the merge-base fork point (line 517), and its comment line 505 overruns the wrap
+- Fix: name the fork point in the header and rewrap lines 504 to 509
+
+### Brittle snapshot (sprint-20 review quality, use_cases_toggle_reading.rb:88)
+
+- Location: `test/use_cases_toggle_reading.rb:88`
+- Why: brittle snapshot: the label interpolates raw highlight ids (test/use_cases_toggle_reading.rb.expected:4 prints [2, 5, 112]), so adding a highlight group churns an unrelated snapshot
+- Fix: print the span's group through Highlight.name_of instead of its numeric id
+
+### Gh pr list/view/edit --head BRANCH also match a fork's pull request of (sprint-20 sweep security Low (5), open_pr.sh:196)
+
+- Location: `tools/open_pr.sh:196`
+- Why: gh pr list/view/edit --head BRANCH also match a fork's pull request of the same branch name, so open-pr with PR_TOKEN can edit the fork's title and body instead of opening ours, or be blocked by it
+- Fix: list with --json number,isCrossRepository, keep only same-repository pull requests, and view or edit by number
+
+### Actions/checkout is pinned by the mutable tag v4 in the job that holds (sprint-20 sweep security Low (4), open-pr.yml:46)
+
+- Location: `.github/workflows/open-pr.yml:46`
+- Why: actions/checkout is pinned by the mutable tag v4 in the job that holds PR_TOKEN (also ci.yml, main.yml, scan.yml, actions/cache), so a moved tag runs foreign code beside the token
+- Fix: pin every action by full commit hash with the tag in a comment
+
+### Checkout keeps the default persist-credentials, leaving the read-only (sprint-20 sweep security Low (3), ci.yml:36)
+
+- Location: `.github/workflows/ci.yml:36`
+- Why: checkout keeps the default persist-credentials, leaving the read-only GITHUB_TOKEN in .git/config while later steps run the pull request's code (main.yml:34 likewise)
+- Fix: set persist-credentials: false, the scope step already gets GH_TOKEN through env
+
+### The project .caratrc is checked with lstat and then opened by path (sprint-20 sweep security Low (3), rc_config_gateway.rb:61)
+
+- Location: `carat/adapters/rc_config_gateway.rb:61`
+- Why: the project .caratrc is checked with lstat and then opened by path (DiskFiles#read follows links), so a link swapped in between escapes the link refusal
+- Fix: open untrusted files with O_NOFOLLOW and judge the opened descriptor's stat
+
+### The normal-mode count has no upper bound (sprint-20 sweep quality, command_grammar.rb:98)
+
+- Location: `carat/domain/command_grammar.rb:98`
+- Why: the normal-mode count has no upper bound: digit grows count*10 on every typed digit and take multiplies operator_count*count (line 186), so a long run of digits overflows the integer, while RegisterCount and SubstituteArgs cap ex counts at MAX_COUNT
+- Fix: cap the count as they do (stop growing past 1_000_000_000 and clamp the product in take), with a domain_grammar row for a 20-digit count
+
+### HEADER names 24 columns (sprint-20 sweep quality, run_state.sh:484)
+
+- Location: `tools/run_state.sh:484`
+- Why: HEADER names 24 columns (advisories_closed, advisories_left added) but the committed header rows of docs/metrics-feature.tsv:1 and docs/metrics-backlog.tsv:1 still name 22, and history appends rows only to existing files, so the files' header and their newest rows disagree
+- Fix: append the two column names to both header rows
+
+### Duplicates Options#tab_width (sprint-20 sweep quality, dispatcher.rb:114)
+
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: duplicates Options#tab_width (tabstop > 0 ? tabstop : 8), as do arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, repeat_last.rb:105, and adapters/frame_presenter.rb:236, and Options.width_problem already keeps tabstop at 1 or more, so the fallback is dead
+- Fix: call state.options.tab_width at each site
+
+### The clear_message inside the list_message? branch is redundant (sprint-20 sweep quality, handle_key.rb:237)
+
+- Location: `carat/use_cases/handle_key.rb:237`
+- Why: the clear_message inside the list_message? branch is redundant: line 240 clears the message unconditionally
+- Fix: keep only the early return for CR and Space in that branch
+
+### The magic numbers 40 and 44 stand for (sprint-20 sweep quality, handle_key.rb:391)
+
+- Location: `carat/use_cases/handle_key.rb:391`
+- Why: the magic numbers 40 and 44 stand for ( and ,
+- Fix: name them (a private_constant list of signature trigger codes) as the comment above describes them
+
+### Unsaved_buffer calls ControlText.caret with no require_relative of (sprint-20 sweep quality, messages.rb:21)
+
+- Location: `carat/domain/messages.rb:21`
+- Why: unsaved_buffer calls ControlText.caret with no require_relative of control_text, so it compiles only through carat.rb's order, unlike every other domain file, which requires what it names
+- Fix: add require_relative "control_text"
+
+### Bind_text accepts a key-sequence value without parsing it (sprint-20 sweep quality, keymap.rb:199)
+
+- Location: `carat/domain/keymap.rb:199`
+- Why: bind_text accepts a key-sequence value without parsing it, so a bad sequence in a configuration line is reported only when pressed (HandleKey 'Bad mapping', handle_key.rb:367), never as file:line at load as every other configuration problem is
+- Fix: parse the value with KeyNotation.parse in apply when it is not an action name and return its error
+
+### Each active change's iteration runs rm -rf on build/spec-preview (sprint-20 sweep quality, spec_validate.sh:25)
+
+- Location: `tools/spec_validate.sh:25`
+- Why: each active change's iteration runs rm -rf on build/spec-preview, so an earlier change's failed preview is deleted by the next one while its message says the preview is in build/spec-preview
+- Fix: preview each change under build/spec-preview/NAME
+
+### The generated header of default_config.rb (sprint-20 sweep quality, carat-gen-config.rb:32)
+
+- Location: `bin/carat-gen-config.rb:32`
+- Why: the generated header of default_config.rb (and registry_source.rb:57 for registry.rb) says to run spin run carat-gen-config, while CLAUDE.md and the map name make gen-config, the one way
+- Fix: write make gen-config in both headers and regenerate
+
+### Language? tests setting == ROOTED_SETTING twice in a row (sprint-20 sweep quality, config.rb:219)
+
+- Location: `carat/domain/config.rb:219`
+- Why: language? tests setting == ROOTED_SETTING twice in a row (lines 219 and 223)
+- Fix: one if block checking the word count and then the root
+
+### FloatLayer#close drops a float without dropping its folds. A zf in a (sprint-20 sweep quality, float_layer.rb:76)
+
+- Location: `carat/domain/float_layer.rb:76`
+- Why: FloatLayer#close drops a float without dropping its folds. A zf in a focused float (Operate#fold goes through state.window, which is the focused float) leaves a fold list the buffer keeps tracking and shifting after :q, float.close, or :tabclose. This breaks the windows spec rule that closing a window drops its folds
+- Fix: call window.drop_folds on the float's window before delete_at in close (BufferList#close_tab should do the same for the page's floats), and add an editor_folds row that runs zf in a float, closes it, and expects fold_lists to be empty
+
+### And carat/use_cases/repeat_last.rb (sprint-20 sweep quality, operate.rb:233)
+
+- Location: `carat/use_cases/operate.rb:233`
+- Why: and carat/use_cases/repeat_last.rb:117 duplication: each private clamp(state, row, col) restates EditorState#clamp_col (carat/domain/editor_state.rb:100)
+- Fix: delete both helpers and call state.clamp_col(row, col), as PutOverSelection and GlobalCommand already do
+
+### Carat/use_cases/arrange_view.rb (sprint-20 sweep quality, repeat_last.rb:105,)
+
+- Location: `carat/use_cases/repeat_last.rb:105,`
+- Why: carat/use_cases/arrange_view.rb:50, carat/use_cases/leave_insert.rb:71, carat/use_cases/insert_tab.rb:25, carat/use_cases/dispatcher.rb:114 duplication: each restates the fallback 'tabstop > 0 ? tabstop : 8', which Options#tab_width (carat/domain/options.rb:135) already provides and PutOverSelection uses
+- Fix: replace each with options.tab_width
+
+### Carat/use_cases/ex/buffer_command_handler.rb (sprint-20 sweep quality, tab_command_handler.rb:102,)
+
+- Location: `carat/use_cases/ex/tab_command_handler.rb:102,`
+- Why: carat/use_cases/ex/buffer_command_handler.rb:102, carat/use_cases/ex/history_command_handler.rb:61 duplication (shared logic belongs in the domain, architecture 5): three copies of the same ASCII-digits predicate digits?
+- Fix: keep one domain function (for example ExGrammar.digits? beside letter?) and call it from the three handlers
+
+### Carat/use_cases/ex/buffer_command_handler.rb (sprint-20 sweep quality, tab_command_handler.rb:45,)
+
+- Location: `carat/use_cases/ex/tab_command_handler.rb:45,`
+- Why: carat/use_cases/ex/buffer_command_handler.rb:79, carat/use_cases/ex/lsp_start_command_handler.rb:27, carat/use_cases/ex/lsp_restart_command_handler.rb:26, carat/domain/substitute_args.rb:89, carat/domain/register_count.rb:62 duplication: six places build the literal 'E488: Trailing characters: ...', while E16 and invalid_argument live in Domain::Messages
+- Fix: add Messages.trailing_characters(text) and call it from all six
+
+### Duplication (sprint-20 sweep quality, quit.rb:87)
+
+- Location: `carat/use_cases/files/quit.rb:87`
+- Why: duplication: beside_side_windows? restates BufferList#lone_file_window? (carat/domain/buffer_list.rb:491) plus a scratch check, and lone_file_window? reads only the TabPage it is given
+- Fix: move it to TabPage#lone_file_window? and use it from Quit (with !state.buffer.scratch?), DeleteBuffer, and BufferList#close_windows_of
+
+### Carat/domain/undo_tree.rb (sprint-20 sweep quality, buffer_list.rb:382,)
+
+- Location: `carat/domain/buffer_list.rb:382,`
+- Why: carat/domain/undo_tree.rb:111, carat/use_cases/ex/ex_table.rb:86, carat/domain/window.rb:182 public helpers used only inside their own class: drop_slot_folds, head_of, handler_at, and scroll_folded have no outside caller
+- Fix: move them under private (BufferList and UndoTree already have private sections) and drop scroll_folded from the area 11 map entry
+
+### Map drift (sprint-20 sweep quality, codebase-map.md:362)
+
+- Location: `docs/codebase-map.md:362`
+- Why: map drift: the area 11 Window entry leaves out open_cursor_folds (carat/domain/window.rb:117, added in #225 and called by ArrangeView and RepeatLast), and the Folds entry at line 394 leaves out folded?, which every fold path checks first
+- Fix: add both to their entries
+
+### Operate keeps per-call state in @notice (sprint-20 sweep quality, operate.rb:46)
+
+- Location: `carat/use_cases/operate.rb:46`
+- Why: Operate keeps per-call state in @notice: search_motion sets it and call resets it, so a use case built once in EditorAssembly carries a mutable result between private methods
+- Fix: return the search outcome with the motion (for example a small result value, or operand returning the failure Outcome) and drop the instance variable
+
+### Column_at puts the cursor on the line's first byte equal to the query's (sprint-20 sweep quality, grep.rb:137)
+
+- Location: `carat/plugins/finder/grep.rb:137`
+- Why: column_at puts the cursor on the line's first byte equal to the query's first byte, not on the start of the match Matcher scored (span_score tightens to a later span), so 'abc' over 'a = x; abc' opens at column 0, away from the hit; the file-finder spec encodes the same weak rule
+- Fix: answer the tightened span's start from Matcher (a span_start beside span_score), amend the spec's picking requirement, and add a test row where the first occurrence precedes the match
+
+### The file finder builds its empty lists with Grep.no_strings (sprint-20 sweep quality, plugin.rb:70)
+
+- Location: `carat/plugins/finder/plugin.rb:70`
+- Why: the file finder builds its empty lists with Grep.no_strings (lines 70, 196, 296, 350), so the path picker depends on the grep index for a typed-empty-array helper
+- Fix: move no_strings and no_ints to a neutral place in the finder (Matcher or a small helper module) or build them locally
+
+### The action descriptions of plugin.finder.next, previous, open_split, (sprint-20 sweep quality, plugin.rb:89)
+
+- Location: `carat/plugins/finder/plugin.rb:89`
+- Why: the action descriptions of plugin.finder.next, previous, open_split, open_vsplit, and open_tab still say 'file' though they now also move over and open the grep picker's line rows
+- Fix: say 'row' (the highlighted row) in the manifest and the matching docs/actions.md rows
+
+### The default scenario list, documented as every scenario when none is (sprint-20 sweep quality, run.sh:69)
+
+- Location: `bench/run.sh:69`
+- Why: the default scenario list, documented as every scenario when none is named, omits lh-float, lh-winbar, n, and palette from bench/keys.rb SCENARIOS (named in the Bench lines of map areas 5, 6, and 13), so make bench without SCENARIOS silently skips them; a second hand-kept list of names drifts
+- Fix: have bench/keys print its scenario names (a --list argument) and loop over that, removing the list from run.sh
+
+### Tree takes positional constructor arguments (sprint-20 sweep quality, tree.rb:23)
+
+- Location: `carat/plugins/explorer/tree.rb:23`
+- Why: Tree takes positional constructor arguments (root, show_hidden, ignore) while CLAUDE.md Coding conventions requires required keywords for behavior classes; test/lint.rb:1195 exempts carat/plugins/ from the constructor rule, which CLAUDE.md does not say
+- Fix: initialize(root:, show_hidden:, ignore:) with a keyword signature at its one call site (explorer/plugin.rb:488), or document the plugin exemption in CLAUDE.md
+
+### Cut_point and carat/domain/markdown_text.rb (sprint-20 sweep quality, process_runner.rb:155)
+
+- Location: `carat/drivers/process_runner.rb:155`
+- Why: cut_point and carat/domain/markdown_text.rb:366 (gather) each walk back over UTF-8 continuation bytes to cut text before a character, while Domain::Utf8 holds only the forward boundary
+- Fix: add one Utf8 helper (the largest offset at or below a limit that splits no character, at most three bytes back) and use it in both
+
+### The matcher.rb entry lists score, span_score, key, and index_of, but (sprint-20 sweep quality, codebase-map.md:569)
+
+- Location: `docs/codebase-map.md:569`
+- Why: the matcher.rb entry lists score, span_score, key, and index_of, but Matcher.lower is now called from grep.rb (lines 140, 142) as part of its surface
+- Fix: list lower in the map entry
+
+### FixedInPlace (sprint-20 sweep quality, deliver-change.js:1374)
+
+- Location: `.claude/workflows/deliver-change.js:1374`
+- Why: fixedInPlace (and awaiting) are never restored by seed, so a run resumed after an advisory was confirmed fixed in place, or stopped during the closing loop's re-review, hands every such advisory to the package step as open (handOver, line 876) and keeps closingFigures at 0 closed, N left (closeAdvisories returns at line 1426)
+- Fix: record each confirmed fix as a run-state note in confirmInPlace and rebuild fixedInPlace from those notes in seed, then recompute closingFigures after the resumed verify, with a tools_test.sh js case for the resume
+
+### And docs/metrics-backlog.tsv (sprint-20 sweep quality, metrics-feature.tsv:1)
+
+- Location: `docs/metrics-feature.tsv:1`
+- Why: and docs/metrics-backlog.tsv:1 the committed headers still hold 22 columns while tools/run_state.sh:484 HEADER and the rows written since closing-loop hold 24 (advisories_closed, advisories_left); history only writes HEADER to a new file (line 2164), so the lane histories drift from the header the code documents
+- Fix: append the two column names to both headers, or have history rewrite a shorter header line
+
+### Keymap#bind has no caller in carat/, bin/, test/, or bench/ yet is (sprint-20 sweep quality, keymap.rb:223)
+
+- Location: `carat/domain/keymap.rb:223`
+- Why: Keymap#bind has no caller in carat/, bin/, test/, or bench/ yet is named in docs/codebase-map.md area 5; dead code
+- Fix: remove bind and its map mention (bind_owned covers it)
+
+### Apply is public but only add_lines and add_checked call it, and the (sprint-20 sweep quality, keymap.rb:173)
+
+- Location: `carat/domain/keymap.rb:173`
+- Why: apply is public but only add_lines and add_checked call it, and the map's keymap line lists neither apply, bind_text, holder_of, leader_problem, nor no_actions
+- Fix: move apply under private and name the public helpers in docs/codebase-map.md area 5
+
+### The walk from root (sprint-20 sweep quality, keymap.rb:246)
+
+- Location: `carat/domain/keymap.rb:246`
+- Why: the walk from root(mode) along codes is written four times (holder_of, node_at, lookup, unbind), and lookup inserts an empty root for an unbound mode
+- Fix: have lookup and holder_of walk through node_at (which already answers an empty node) and keep one loop
+
+### Tabstop > 0 ? tabstop (sprint-20 sweep quality, dispatcher.rb:114)
+
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
+- Fix: call state.options.tab_width (or pass it) at each site
+
+### Step calls state.clear_message twice when a list message shows (sprint-20 sweep quality, handle_key.rb:237)
+
+- Location: `carat/use_cases/handle_key.rb:237`
+- Why: step calls state.clear_message twice when a list message shows (lines 237 and 240)
+- Fix: drop the first call and keep the early return for CR and Space
+
+### The signature trigger compares code with the bare numbers 40 and 44 (sprint-20 sweep quality, handle_key.rb:391)
+
+- Location: `carat/use_cases/handle_key.rb:391`
+- Why: the signature trigger compares code with the bare numbers 40 and 44
+- Fix: name them (a private SIGNATURE_TRIGGERS constant or Key constants for ( and ,)
+
+### Csi_key repeats ss3_key's mapping of the finals A, B, C, D, H, F, P, Q, (sprint-20 sweep quality, key_decoder.rb:148)
+
+- Location: `carat/adapters/key_decoder.rb:148`
+- Why: csi_key repeats ss3_key's mapping of the finals A, B, C, D, H, F, P, Q, R, S
+- Fix: have csi_key handle 126 through tilde_key and fall back to ss3_key(final) for the rest
+
+### Pump writes handle (sprint-20 sweep quality, input_controller.rb:134)
+
+- Location: `carat/adapters/input_controller.rb:134`
+- Why: pump writes handle(state, @decoder.feed(bytes)) twice around the start screen's dismissal
+- Fix: dismiss when showing, remember it, and return handle(...) || dismissed once
+
+### Accept_visual repeats accept's opening (sprint-20 sweep quality, command_grammar.rb:158)
+
+- Location: `carat/domain/command_grammar.rb:158`
+- Why: accept_visual repeats accept's opening (the want reset to :cancel, remember, and the :search branch to :prompt)
+- Fix: share one private prologue that both call before their mode-specific part
+
+### And carat/domain/text_objects.rb (sprint-20 sweep quality, runs.rb:18)
+
+- Location: `carat/domain/runs.rb:18`
+- Why: and carat/domain/text_objects.rb:86 name a character class cls, which the CLAUDE.md naming rule gives as its example of an unclear abbreviation (char_class, not cls)
+- Fix: rename to char_class
+
+### Match_at turns a RegexpError or ArgumentError from the engine into (sprint-20 sweep quality, search.rb:116)
+
+- Location: `carat/domain/search.rb:116`
+- Why: match_at turns a RegexpError or ArgumentError from the engine into budget.stop, so a pattern the engine rejects is reported as a search stopped by the budget
+- Fix: record the error on the hit (SearchHit.refused with the engine's message) instead of stopping the budget
+
+### The hints read only the editor keymap (sprint-20 sweep quality, show_key_hints.rb:63)
+
+- Location: `carat/use_cases/discovery/show_key_hints.rb:63`
+- Why: the hints read only the editor keymap (@keymap.node_at), while HandleKey#lookup (handle_key.rb:213) answers first from a scratch buffer's own keymap, so a prefix the buffer's keymap binds shows no hints or the editor keymap's children for the same keys
+- Fix: look the node up in state.buffer.keymap first when it holds the prefix, as lookup does, with an editor_key_hints row for a scratch-buffer prefix
+
+### Palette_add_plugin is a one-line private wrapper over @palette.add (sprint-20 sweep quality, open_palette.rb:72)
+
+- Location: `carat/use_cases/discovery/open_palette.rb:72`
+- Why: palette_add_plugin is a one-line private wrapper over @palette.add called from one place
+- Fix: inline it in add_plugin_actions
+
+### Duplication (sprint-20 sweep quality, repeat_last.rb:116)
+
+- Location: `carat/use_cases/repeat_last.rb:116`
+- Why: duplication: the private clamp repeats EditorState#clamp_col (editor_state.rb:100) line for line
+- Fix: call state.clamp_col(row, col) at :102, :107, :112 and drop clamp
+
+### Duplication (sprint-20 sweep quality, repeat_last.rb:105)
+
+- Location: `carat/use_cases/repeat_last.rb:105`
+- Why: duplication: re-derives the tab width (tabstop > 0 ? tabstop : 8) although Options#tab_width exists (options.rb:135), as do dispatcher.rb:114, leave_insert.rb:71, arrange_view.rb:50, insert_tab.rb:25
+- Fix: use state.options.tab_width in each
+
+### Dead code (sprint-20 sweep quality, undo_tree.rb:173)
+
+- Location: `carat/domain/undo_tree.rb:173`
+- Why: dead code: undo_seq has no caller anywhere (the comment at :185 says callers check it, but they use undo_path), and redo_seq (:179) is used only by test/domain_undo_tree.rb
+- Fix: remove undo_seq, reword the :185 comment, and drop it from the area 9 map line (or test redo_seq through head_of(current))
+
+### Duplication (sprint-20 sweep quality, history_command_handler.rb:61)
+
+- Location: `carat/use_cases/ex/history_command_handler.rb:61`
+- Why: duplication: digits? is defined again privately in buffer_command_handler.rb:102 and tab_command_handler.rb:102, and this public class method is used only in its own file
+- Fix: one shared helper (a protected ExHandler method or an ex concern) and remove the three copies
+
+### Consistency (sprint-20 sweep quality, history_command_handler.rb:74)
+
+- Location: `carat/use_cases/ex/history_command_handler.rb:74`
+- Why: consistency: the literal E474 message sits beside Domain::Messages.invalid_argument at :88 and repeats messages_command_handler.rb:27
+- Fix: add one E474 message to Domain::Messages and use it in both handlers
+
+### Dead requires (sprint-20 sweep quality, last_change.rb:2)
+
+- Location: `carat/domain/last_change.rb:2`
+- Why: dead requires: position (:2) and display_width (:5) are required but no Position or DisplayWidth is named in the file
+- Fix: drop both require_relative lines
+
+### Naming (sprint-20 sweep quality, last_change.rb:175)
+
+- Location: `carat/domain/last_change.rb:175`
+- Why: naming: the predicate resumed? has side effects (clears next_visual, starts a new mode.insert change, sets recording)
+- Fix: split it into a command that resumes after an arrow key and a plain predicate, or rename it to a command listed in BOOL_COMMANDS
+
+### Map drift (sprint-20 sweep quality, codebase-map.md:306)
+
+- Location: `docs/codebase-map.md:306`
+- Why: map drift: the LastChange method list omits unmeasure and split, which dispatcher.rb:117 and :103 call
+- Fix: add both to the area 9 line
+
+### Design (sprint-20 sweep quality, walk_history.rb:32)
+
+- Location: `carat/use_cases/history/walk_history.rb:32`
+- Why: design: per-call scratch counters @gone, @back, @empty_before live on the one shared WalkHistory instance, reset in start and read in finish, so a nested or reentrant walk would corrupt them
+- Fix: keep them in a small Struct record built in call and passed to step and finish
+
+### Map drift (sprint-20 sweep quality, codebase-map.md:331)
+
+- Location: `docs/codebase-map.md:331`
+- Why: map drift: the area 10 Flow says VisualModeHandler runs SwapVisualEnds and ExtendVisual and SelectionHandler runs one use case per operator, but SwapVisualEnds runs from SelectionHandler (selection_handler.rb:113), ExtendVisual from TextObjectHandler, and d, y, c, >, < from OperatorHandler (operator_handler.rb:44-48)
+- Fix: rewrite the Flow sentence and list text_object_handler and operator_handler as callers
+
+### Map drift (sprint-20 sweep quality, codebase-map.md:336)
+
+- Location: `docs/codebase-map.md:336`
+- Why: map drift: the Selection method list omits numbered_delete?, line_start, and as, which the visual use cases call
+- Fix: add them to the area 10 line
+
+### Duplication (sprint-20 sweep quality, selection_cut.rb:30)
+
+- Location: `carat/domain/selection_cut.rb:30`
+- Why: duplication: the block's top-left column, block.span(buffer.line(block.top), tabstop).from followed by a clamped move, is computed again in yank_selection.rb:39, shift_selection.rb:22, change_selection.rb:53, and put_over_selection.rb:39
+- Fix: one Block method (e.g. left_col(buffer, tabstop)) used by all five
+
+### Dead require (sprint-20 sweep quality, extend_visual.rb:6)
+
+- Location: `carat/use_cases/visual/extend_visual.rb:6`
+- Why: dead require: display_width is required but DisplayWidth is never named in the file
+- Fix: drop the require_relative line
+
+### Misleading flag (sprint-20 sweep quality, selection_handler.rb:81)
+
+- Location: `carat/use_cases/actions/selection_handler.rb:81`
+- Why: misleading flag: every variant is registered with repeat: true, including swap_ends, swap_corner, and yank_lines, which never change text; only the dispatcher's edit check (dispatcher.rb:142) keeps them out of the dot command, while action_handler.rb:15 documents repeat as a change the dot command repeats; also drop the historical 'as before' in the :66 comment
+- Fix: pass repeat per variant, false for the swaps and the yank
+
+### Untested behavior (sprint-20 sweep quality, yank_selection.rb:28)
+
+- Location: `carat/use_cases/visual/yank_selection.rb:28`
+- Why: untested behavior: the E354 refusal of a visual yank into a read-only register, and of a visual change (change_selection.rb:32), has no test (test/editor_registers.rb:136-140 cover normal yank, visual delete, and normal change), nor has the Not implemented outcome of a visual.* key outside a visual mode (selection_handler.rb:96)
+- Fix: add table rows to test/editor_visual.rb or test/editor_registers.rb
+
+### Duplication (sprint-20 sweep quality, show_hover.rb:76)
+
+- Location: `carat/use_cases/docs/show_hover.rb:76`
+- Why: duplication: the cursor-float placement (screen row, room below and above, up when below lacks rows, height clamp, FloatSpec row -(height+2) or 1) is copied line for line in carat/use_cases/definitions/open_definition_float.rb:32
+- Fix: let ShowHover open its float through the one placement (OpenDefinitionFloat renamed OpenCursorFloat, or a Domain::FloatWindow helper returning the spec) and drop the copy
+
+### Duplication (sprint-20 sweep quality, json_rpc_language_gateway.rb:1116)
+
+- Location: `carat/adapters/json_rpc_language_gateway.rb:1116`
+- Why: duplication: UTF-16 to UTF-8 conversion lives three times, utf16_offset (1116) and utf16_length (1162) here and column_of in carat/use_cases/definitions/visit_target.rb:204, each re-deriving the 0xF0 two-unit rule
+- Fix: one domain helper (Domain::Utf8 units_of and offset_of_units, or a Utf16 module) used by the gateway and VisitTarget, with its own table test
+
+### Public method used only inside the class (sprint-20 sweep quality, json_rpc_language_gateway.rb:281)
+
+- Location: `carat/adapters/json_rpc_language_gateway.rb:281`
+- Why: public method used only inside the class: listed(uri) is called only by diagnostics (275) and apply (1260)
+- Fix: move it below private
+
+### Misleading contract (sprint-20 sweep quality, process_runner.rb:71)
+
+- Location: `carat/drivers/process_runner.rb:71`
+- Why: misleading contract: write answers true after the writer thread has already stopped on a broken pipe (drain breaks silently at 243), so the gateway's crash-on-failed-write in deliver (json_rpc_language_gateway.rb:1482) fires only for a stopped handle and the outbox keeps growing until the reader's exit message arrives
+- Fix: have drain mark the handle closed when write_bytes fails (or document that a broken input is reported only through the exit message and drop the gateway comment)
+
+### Find_pair bounds the search by window.top + window.height buffer lines, (sprint-20 sweep quality, frame_presenter.rb:1203)
+
+- Location: `carat/adapters/frame_presenter.rb:1203`
+- Why: find_pair bounds the search by window.top + window.height buffer lines, which under a closed fold is not the range the window shows: a partner drawn below a fold is never matched and hidden folded rows are scanned
+- Fix: bound it by the last buffer row the window shows (the fold-aware bottom ArrangeView computes) and add a MatchParen row with a fold to test/adapters_frame_presenter.rb
+
+### Coupling (sprint-20 sweep quality, plugin.rb:70)
+
+- Location: `carat/plugins/finder/plugin.rb:70`
+- Why: coupling: the plugin builds its own typed empty lists through Grep.no_strings (70, 195, 296, 350), and Grep exposes the general helpers no_strings, no_ints, and utf8_size as public class methods of the content index
+- Fix: give the plugin its own private typed-empty helper (or one small Finder module both require) and make Grep's helpers private
+
+### Stale descriptions (sprint-20 sweep quality, plugin.rb:89)
+
+- Location: `carat/plugins/finder/plugin.rb:89`
+- Why: stale descriptions: plugin.finder.next, previous, open_split, open_vsplit, and open_tab say file, but the same actions move and open grep lines on <leader>fg
+- Fix: describe them as the highlighted row or match (and the rows in docs/actions.md)
+
+### Map drift (sprint-20 sweep quality, codebase-map.md:543)
+
+- Location: `docs/codebase-map.md:543`
+- Why: map drift: PluginApi::Paths lists normalize, join, dirname, basename, relative, inside? but not absolute (used by VisitTarget and GitSigns) or segments; line 549 PluginHost omits follow_prompt, flush, describe, action_names, reason; line 643 FakeProcesses omits script, which the git tests use
+- Fix: add the missing names to the three entries
