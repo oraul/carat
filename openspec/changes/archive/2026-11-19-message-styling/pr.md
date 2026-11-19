@@ -2,7 +2,7 @@ feat(screen): style the command line and the message row
 
 ## Summary
 
-Styles the command line and the message row with the Facet groups: the prompt and the pending keys are dim, an error draws a red glyph and a bold red code, and the hit-enter prompt is painted. This finishes parts 4 and 5 of the cursor and messages styling plan, and makes the squash body of the earlier pull request 223 true.
+Styles the command line and the message row with the Facet groups: the prompt and the pending keys are dim, an error draws a red glyph and a bold red code, and the hit-enter prompt is painted. This covers the command-line and error-message styling of parts 4 and 5 of the cursor and messages styling plan, and leaves the match count, the warning glyph, and the More pager to later changes, since no code produces them yet.
 
 ---
 
@@ -25,9 +25,10 @@ Styles the command line and the message row with the Facet groups: the prompt an
 - Run the benchmark review, pass with no blocking findings
 - Run the checker stages docs-lint, dev-build, test-build, test-run, diagnose, bench-budget, tools-test, and gates, all pass
 - Run make spec-validate after archiving, all 54 items pass
+- Run make gates and the pull request body gate after rewriting this text, both pass
 
 ---
 
 ## Notes
 
-The warning glyph, the More pager, and the match count have no producer yet, so their rows are themed but painted by no code; the multi-line message band, the diagnostic text, and ui-groups are left out as the brief says.
+The warning glyph, the More pager, and the match count have no producer yet, so their theme rows are changed or added but painted by no code, and the earlier pull request 223 stays only partly true until those land; the multi-line message band, the diagnostic text, and ui-groups are left out as the brief says.
