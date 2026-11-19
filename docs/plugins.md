@@ -113,6 +113,10 @@ A prompt puts the editor in command-line mode with the prompt's text in place of
 
 A scratch buffer has no path, shows its title on the status bar, has no line numbers, is never written (`:w` reports `E382`), is skipped by `:wa`, never counts as unsaved work, and leaves the buffer list when its window closes; `:q` in its window closes it like any window, and `:q` in the last file window beside it ends the editor, or closes that tab page when there are others. Opening a scratch buffer shown only in another tab page shows the same buffer in the current one. `open_file` over a modified buffer keeps that buffer hidden in the list, opening the file the window already shows leaves it as it is, and a side window that `open_file` gives a file loses its fixed width. Its keymap is consulted before the mode's keymap in every mode and falls through for keys it does not bind, so the cursor motions keep working in it.
 
+## The finder's grep
+
+`plugin.finder.grep`, on `<leader>fg`, is the file finder's picker over file contents, built on existing requests only (no API change): `list_files` for the files, `read_file` once per file when the picker opens (so at most the first 1000 lines of a file of at most 256 KiB, line endings already removed), `live_prompt` and floats for the picker, and `move_cursor` after the open to put the cursor on the picked line and the column of its first matched byte. Reading is synchronous, so the cost falls once when the picker opens, and each key searches the stored lines within caps (200 rows kept, 100,000 lines stored, lines cut at 400 bytes); streaming the read as a background task is left to the plugin task work after the Spinel bump.
+
 ## Events
 
 An `Event` carries its `name` (a string), the `buffer` and `window` ids, the `path`, the cursor `row` and `col`, a `detail`, and for `buffer_change` the rows `removed` and `inserted`. Events are delivered to every subscribed plugin in registration order, after the key that caused them:

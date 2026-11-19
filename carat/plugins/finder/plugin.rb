@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "matcher"
+require_relative "grep"
 
 module Carat
   module Plugins
@@ -17,6 +18,10 @@ module Carat
       # highlight and open it in a split, a vertical split, or as a tab;
       # Esc closes it. Each change closes the floats and opens them again,
       # as the command palette does.
+      # The grep picker (plugin.finder.grep) is the same picker over the
+      # lines of the files: Grep reads them once when it opens, each row
+      # is a line, Enter opens the file at its line and column, and no
+      # preview shows.
       class Plugin < Carat::PluginApi::Plugin
         NAME = "finder"
         PROMPT_ID = "find"
@@ -28,6 +33,9 @@ module Carat
         PREVIEW_COLUMNS = 100
         Z = 900
         OPEN = "plugin.finder.open"
+        GREP = "plugin.finder.grep"
+        GREP_TITLE = "Grep"
+        HINT = "Type to search the files' lines"
         KEYS = [
           "keymap.cmdline <C-n> plugin.finder.next",
           "keymap.cmdline <Down> plugin.finder.next",
@@ -42,6 +50,8 @@ module Carat
         # @rbs @host: Carat::PluginApi::Host?
         # @rbs @open: bool
         # @rbs @root: String
+        # @rbs @grep: bool
+        # @rbs @index: Grep
         # @rbs @paths: Array[String]
         # @rbs @matches: Array[Integer]
         # @rbs @selected: Integer
@@ -53,9 +63,11 @@ module Carat
         #: () -> void
         def initialize
           @host = nil
+          @grep = false
+          @index = Grep.new
           @open = false
           @root = ""
-          @paths = no_paths
+          @paths = Grep.no_strings
           @matches = []
           @selected = 0
           @list_float = 0
@@ -73,6 +85,7 @@ module Carat
             api_version: Carat::PluginApi::VERSION,
             actions: {
               "plugin.finder.open" => "Find a file of the project by a fuzzy match of its path",
+              "plugin.finder.grep" => "Find a line in the files of the project by a fuzzy match of its text, and open the file there",
               "plugin.finder.next" => "Highlight the next file in the finder",
               "plugin.finder.previous" => "Highlight the previous file in the finder",
               "plugin.finder.open_split" => "Open the highlighted file in a horizontal split",
@@ -80,7 +93,7 @@ module Carat
               "plugin.finder.open_tab" => "Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages"
             },
             commands: {},
-            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <C-p> plugin.finder.open"],
+            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <leader>fg plugin.finder.grep", "keymap.normal <C-p> plugin.finder.open"],
             events: ["resize"],
             options: ["plugin.finder.ignore .git build tmp"],
             option_types: { "ignore" => "list" },
@@ -112,7 +125,8 @@ module Carat
         def on_action(name, context)
           host = @host
           return if host.nil?
-          return open(host) if name == OPEN
+          return open(host, false) if name == OPEN
+          return open(host, true) if name == GREP
           return unless @open
           case name
           when "plugin.finder.next" then move(host, 1)
@@ -140,23 +154,19 @@ module Carat
           host = @host
           return if host.nil? || !@open || input.id != PROMPT_ID
           path = selected_path
+          line = selected_line
+          column = selected_column
           return if !input.cancelled && path.empty? && host.live_prompt(PROMPT_ID, PROMPT, input.text, KEYS).ok
           close(host)
           return if input.cancelled || path.empty?
-          open_path(host, path, :edit)
+          open_path(host, path, :edit, line, column)
         end
 
         private
 
-        #: () -> Array[String]
-        def no_paths
-          paths = [""]
-          paths.clear
-          paths
-        end
-
-        #: (Carat::PluginApi::Host) -> void
-        def open(host)
+        # Lists the files and opens the prompt; a grep also reads their text.
+        #: (Carat::PluginApi::Host, bool) -> void
+        def open(host, grep)
           return if @open
           root = host.working_directory.text
           listing = host.list_files(root, ignored(host))
@@ -172,6 +182,8 @@ module Carat
           host.message(listing.message, false) unless listing.message.empty?
           @root = root
           @paths = listing.lines
+          @grep = grep
+          @index.load(host, root, @paths) if grep
           @open = true
           filter("")
           refresh(host)
@@ -180,13 +192,14 @@ module Carat
         #: (Carat::PluginApi::Host) -> Array[String]
         def ignored(host)
           text = host.option("ignore").text
-          text.empty? ? no_paths : text.split("\n")
+          text.empty? ? Grep.no_strings : text.split("\n")
         end
 
         # Matches the query against every path, best first; every path in
         # listing order for an empty query.
         #: (String) -> void
         def filter(query)
+          return filter_lines(query) if @grep
           paths = @paths
           matches = []
           @selected = 0
@@ -216,6 +229,20 @@ module Carat
           @matches = matches
         end
 
+        # Searches the lines for the query: one row per kept line, best first.
+        #: (String) -> void
+        def filter_lines(query)
+          @index.search(query)
+          matches = []
+          i = 0
+          while i < @index.count
+            matches << i
+            i += 1
+          end
+          @matches = matches
+          @selected = 0
+        end
+
         #: (Carat::PluginApi::Host, Integer) -> void
         def move(host, step)
           last = @matches.length - 1
@@ -232,22 +259,41 @@ module Carat
         #: (Carat::PluginApi::Host, Symbol) -> void
         def pick(host, how)
           path = selected_path
+          line = selected_line
+          column = selected_column
           host.close_prompt
           close(host)
-          open_path(host, path, how) unless path.empty?
+          open_path(host, path, how, line, column) unless path.empty?
         end
 
         #: () -> String
         def selected_path
           return "" if @matches.empty?
+          return @index.path_at(@matches[@selected]) if @grep
           @paths[@matches[@selected]]
+        end
+
+        # The line of the highlighted row to open at, 0 for a file.
+        #: () -> Integer
+        def selected_line
+          return 0 if !@grep || @matches.empty?
+          @index.number_at(@matches[@selected])
+        end
+
+        # The column of the highlighted row to open at.
+        #: () -> Integer
+        def selected_column
+          return 0 if !@grep || @matches.empty?
+          @index.column_at(@matches[@selected])
         end
 
         #: (Carat::PluginApi::Host) -> void
         def close(host)
           close_floats(host)
           @open = false
-          @paths = no_paths
+          @grep = false
+          @index = Grep.new
+          @paths = Grep.no_strings
           @matches = []
           @selected = 0
         end
@@ -271,7 +317,7 @@ module Carat
           cols = @cols
           height = @rows - 6
           height = 1 if height < 1
-          preview = cols >= PREVIEW_COLUMNS
+          preview = !@grep && cols >= PREVIEW_COLUMNS
           box = host.float_frame(true)
           margin = box.margin
           frame = box.box_width(0)
@@ -279,7 +325,7 @@ module Carat
           width = room - frame
           width = (room - 2 * frame) / 2 if preview
           width = 1 if width < 1
-          title = "#{TITLE} #{@matches.length}/#{@paths.length}"
+          title = @grep ? "#{GREP_TITLE} #{@index.counts}" : "#{TITLE} #{@matches.length}/#{@paths.length}"
           shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
           @list_float = shown.ok ? shown.window : 0
           return unless preview && !@matches.empty?
@@ -301,10 +347,10 @@ module Carat
         # one marked.
         #: (Integer) -> Array[String]
         def list_lines(height)
-          lines = no_paths
+          lines = Grep.no_strings
           matches = @matches
           if matches.empty?
-            lines << EMPTY
+            lines << (@grep && @index.idle? ? HINT : EMPTY)
             return lines
           end
           top = @selected - height + 1
@@ -312,7 +358,7 @@ module Carat
           r = top
           while r < top + height && r < matches.length
             mark = r == @selected ? MARK : SPACE
-            lines << mark + @paths[matches[r]]
+            lines << mark + (@grep ? @index.row_text(matches[r]) : @paths[matches[r]])
             r += 1
           end
           lines
@@ -322,19 +368,21 @@ module Carat
         # editing window, a split of it, or as the tab the top row shows
         # (a buffer tab or a tab page, by option.gt); with no file window
         # a tab pick opens as Enter does, so no tab page is left without
-        # one. The path goes to the host as it is, never inside an ex
-        # command line.
-        #: (Carat::PluginApi::Host, String, Symbol) -> void
-        def open_path(host, path, how)
+        # one; a grep row then moves the cursor to its line (1-based, 0 for
+        # a file) and column. The path goes to the host as it is, never
+        # inside an ex command line.
+        #: (Carat::PluginApi::Host, String, Symbol, Integer, Integer) -> void
+        def open_path(host, path, how, line, column)
           target = host.editing_window.window
-          case how
-          when :tab
-            report(host, target == 0 ? host.open_file(target, path) : host.open_as_tab(path))
-          when :split, :vsplit
-            report(host, host.open_in_split(target, path, how == :vsplit))
-          else
-            report(host, host.open_file(target, path))
-          end
+          opened = case how
+                   when :tab then target == 0 ? host.open_file(target, path) : host.open_as_tab(path)
+                   when :split, :vsplit then host.open_in_split(target, path, how == :vsplit)
+                   else host.open_file(target, path)
+                   end
+          report(host, opened)
+          return unless opened.ok && line > 0
+          moved = host.move_cursor(line - 1, column)
+          host.message(moved.message, true) unless moved.ok
         end
 
         #: (Carat::PluginApi::Host, Carat::PluginApi::WindowResponse) -> void
