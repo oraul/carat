@@ -32,10 +32,10 @@ module Carat
 
         #: () -> void
         def initialize
-          @files = strings
+          @files = Grep.no_strings
           @file_of = ints
           @numbers = ints
-          @texts = strings
+          @texts = Grep.no_strings
           @hits = ints
           @query = ""
           @capped = false
@@ -63,15 +63,27 @@ module Carat
           @hits = hits
           @more = false
           return if query.empty?
-          keys = []
+          keys = ints
+          matched = 0
+          floor = -1
           i = 0
           while i < @texts.length
             score = Matcher.span_score(query, @texts[i], 0, @texts[i].bytesize)
-            keys << Matcher.key(score, @files[@file_of[i]].bytesize, i) if score >= 0
+            if score >= 0
+              matched += 1
+              key = Matcher.key(score, @files[@file_of[i]].bytesize, i)
+              if key > floor
+                keys << key
+                if keys.length >= MAX_ROWS * 4
+                  keys = best(keys)
+                  floor = keys[0]
+                end
+              end
+            end
             i += 1
           end
           keys.sort!
-          @more = keys.length > MAX_ROWS
+          @more = matched > MAX_ROWS
           k = keys.length - 1
           while k >= 0 && hits.length < MAX_ROWS
             hits << Matcher.index_of(keys[k])
@@ -161,6 +173,14 @@ module Carat
 
         # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
         # that starts none.
+        # An empty list the compiler types as strings.
+        #: () -> Array[String]
+        def self.no_strings
+          out = [""]
+          out.clear
+          out
+        end
+
         #: (Integer) -> Integer
         def self.utf8_size(b)
           return 1 if b < 0x80
@@ -172,13 +192,32 @@ module Carat
 
         private
 
+        # The MAX_ROWS largest keys, so a search keeps a bounded list.
+        #: (Array[Integer]) -> Array[Integer]
+        def best(keys)
+          keys.sort!
+          kept = ints
+          k = keys.length - MAX_ROWS
+          while k < keys.length
+            kept << keys[k]
+            k += 1
+          end
+          kept
+        end
+
         # The line's first MAX_BYTES bytes, ended before a character the
         # cut would split.
         #: (String) -> String
         def cut(line)
           return line if line.bytesize <= MAX_BYTES
+          lead = MAX_BYTES
+          back = 0
+          while back < 3 && lead > 0 && (line.getbyte(lead).to_i & 0xC0) == 0x80
+            lead -= 1
+            back += 1
+          end
           stop = MAX_BYTES
-          stop -= 1 while stop > 0 && (line.getbyte(stop).to_i & 0xC0) == 0x80
+          stop = lead if lead < MAX_BYTES && lead + Grep.utf8_size(line.getbyte(lead).to_i) > MAX_BYTES
           line.byteslice(0, stop).to_s
         end
 
@@ -211,13 +250,6 @@ module Carat
             i += 1
           end
           false
-        end
-
-        #: () -> Array[String]
-        def strings
-          out = [""]
-          out.clear
-          out
         end
 
         #: () -> Array[Integer]

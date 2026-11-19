@@ -166,9 +166,7 @@ module Carat
 
         #: () -> Array[String]
         def no_paths
-          paths = [""]
-          paths.clear
-          paths
+          Grep.no_strings
         end
 
         # Lists the files and opens the prompt; a grep also reads their text.

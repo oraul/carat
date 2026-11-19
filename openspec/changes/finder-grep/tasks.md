@@ -15,3 +15,6 @@
 - [x] 3.3 Mark the title capped when a file is cut at the line cap; test past 100,000 lines
 - [x] 3.4 Test the 1000-line file bound and the 400-byte cut
 - [x] 3.5 Remove Grep#more? and the repeated index reset in open; score lines without the file-name bonus
+- [x] 3.6 Keep one typed-empty strings helper (Grep.no_strings, used by Plugin#no_paths) and keep a bounded top-MAX_ROWS selection in the search
+- [x] 3.7 Bound the cut's walk back to three continuation bytes; tests for a line of continuation bytes and a C1 control row
+- [x] 3.8 Delta spec: the character-boundary cut, the wide-screen and bounds scenarios; proposal and map name Matcher.span_score

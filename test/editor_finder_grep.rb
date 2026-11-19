@@ -40,7 +40,7 @@ module EditorFinderGrepTest
     files
   end
 
-  # The bounds: a line with a valid multi-byte character beside an
+  # The bounds: a line of continuation bytes, a C1 control, a line with a valid multi-byte character beside an
   # invalid byte, a 500-byte line, a line the 400-byte cut falls inside a
   # character of, and 1200 lines of which the first 1000 are read.
   def self.bounded
@@ -48,6 +48,8 @@ module EditorFinderGrepTest
     files.move_to(ROOT)
     files.put("docs/guide.md", "guide\n")
     files.put("u8.txt", "café \xFF\n")
+    files.put("bad.txt", "z" + "\x80" * 450 + "\n")
+    files.put("c1.txt", "c\u009Bd\n")
     files.put("long.txt", "a" * 500 + "\n")
     files.put("wide.txt", "x" + "é" * 250 + "\n")
     text = +""
@@ -164,19 +166,25 @@ module EditorFinderGrepTest
       opened(input[0], input[1])
     end
 
-    # Scenario: The picker reads the finder's files once and within bounds
+    # Scenario: The picker reads the finder's files once and within bounds (the shown-safely rows of invalid bytes and C1 controls too)
     h = editor_on(bounded, "")
     h.type("<Space>fgcaf")
-    t.assert_equal("Grep 1/1004|> u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
+    t.assert_equal("Grep 1/1006|> u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
     h = editor_on(bounded, "")
     h.type("<Space>fgaaaa")
-    t.assert_equal("Grep 1/1004|> long.txt:1: " + "a" * 400, floats(h)[0].to_s, "a 500-byte line is cut at 400 bytes")
+    t.assert_equal("Grep 1/1006|> long.txt:1: " + "a" * 400, floats(h)[0].to_s, "a 500-byte line is cut at 400 bytes")
     h = editor_on(bounded, "")
     h.type("<Space>fgx")
-    t.assert_equal("Grep 1/1004|> wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
+    t.assert_equal("Grep 1/1006|> wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
+    h = editor_on(bounded, "")
+    h.type("<Space>fgz")
+    t.assert_equal("Grep 1/1006|> bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut to 400 question marks, not emptied")
+    h = editor_on(bounded, "")
+    h.type("<Space>fgcd")
+    t.assert_equal("Grep 1/1006|> c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space")
     h = editor_on(bounded, "")
     h.type("<Space>fghit")
-    t.assert_equal("Grep 200+/1004", h.state.tab.floats.at(0).spec.title.to_s, "only the first 1000 lines of a file are stored")
+    t.assert_equal("Grep 200+/1006", h.state.tab.floats.at(0).spec.title.to_s, "only the first 1000 lines of a file are stored")
     h = editor_on(huge, "")
     h.type("<Space>fgx")
     t.assert_equal("Grep 200+/100000+", h.state.tab.floats.at(0).spec.title.to_s, "the 100,000-line store cap is marked when it cuts a file")
