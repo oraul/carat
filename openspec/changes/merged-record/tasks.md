@@ -18,3 +18,4 @@
 - [x] 4.1 `tools/run_state.sh`: `review_due` collects `merge_unrecorded` itself; `sprint_state`, which `groom` and `sprint-row` also call, no longer computes `sprint_uncounted`.
 - [x] 4.2 `tools/run_state.sh`, `phase`: the recorded-merged refusal sits in the `merge:*` arm beside `merged_at`, since `squash_of_change` already checks it for the word `merged`; after the case only the write of an empty `merged` remains.
 - [x] 4.3 `tools/tools_test.sh`: "review-due names no merge phase that is not a commit hash" and "review-due names the waiting plan before a merge phase without its merged commit".
+- [x] 4.4 `tools/tools_test.sh`: the history-row case writes its run state before the row, since `init` refuses a name with a history row, so the case no longer passes with no run state to leave out.

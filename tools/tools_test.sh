@@ -1780,8 +1780,9 @@ rm build/pipeline/a6.json build/pipeline/sprint-1-records.json
 merge_only a6 not-a-commit
 expect "run_state: review-due names no merge phase that is not a commit hash" 1 "^not due: sprint-1 has 3 of 5" state review-due
 rm build/pipeline/a6.json
-{ mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics-backlog.tsv
+# a4's run state is written before its row, which init refuses after.
 merge_only a4 "$unrecorded"
+{ mrow a3 c3 small 300000 20 check:0,quality:1; mrow a4 c4 small 200000 10 check:1; mrow a5 c5 large 2000000 70 check:1,quality:1; } >> docs/metrics-backlog.tsv
 expect "run_state: review-due leaves out a merge phase without merged of a change with a history row" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]" state review-due
 rm build/pipeline/a4.json
 expect "run_state: review-due is due at the fifth merge with the combined diff" 0 "^due: sprint-1 has 5 changes merged [(]a1, a2, a3, a4, a5[)]; combined diff bbb222[.][.]origin/main; sweep: no$" state review-due
