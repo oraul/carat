@@ -104,6 +104,11 @@ let ciMinutes = null
 let ciWaitCalls = null
 const SIZES = ['small', 'medium', 'large']
 let estimate = ''
+// Critical routing (docs/goals.md, Critical changes): the rule letter a to e the
+// plan named, and whether a contributor start of this run escalated.
+let critical = ''
+let escalated = false
+let blockingQualityRounds = 0
 // Tool calls per agent start. CALL_CAPS holds a start's cap at a medium
 // estimate, from the history's calls per phase; CALL_SCALE scales it by the
 // estimate, rounded up, the medium figure applying while no estimate exists
@@ -133,18 +138,50 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
 // The tier is agent, the tier the model: line of the agent's file names, the
 // only place a tier is named (tools/tools_test.sh compares them), whichever
-// tier that is, or session, the session's model; the effort is low, or
+// tier that is, or session, the session's model; the effort is low, high, or
 // session, none passed. One kind moves at a time, kept only when the
 // first-pass rates and the rework do not get worse over the next runs; the
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/session', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 const calibrated = {}
+// The rule and path of a critical value: the plan's whole value ("b tools/x.sh"),
+// or the "critical LETTER PATH" the planner wrote in a queue item's parenthesis;
+// null for anything else (two paths, prose, a letter outside a to e).
+function criticalOf(text) {
+  const s = String(text || '').trim()
+  const m = /^([a-e]) ([A-Za-z0-9_./-]+)$/.exec(s) || /, critical ([a-e]) ([A-Za-z0-9_.\/-]+)\)/.exec(s)
+  return m ? { rule: m[1], path: m[2] } : null
+}
+// What a restart carries on of the routing: the rule, the escalation, and the
+// blocking quality rounds so far (metric.quality_blocked).
+function restoreRouting(st) {
+  critical = /^[a-e]$/.test(st['metric.critical'] || '') ? st['metric.critical'] : ''
+  escalated = st['metric.escalated'] === '1'
+  blockingQualityRounds = /^[0-9]+$/.test(st['metric.quality_blocked'] || '') ? Number(st['metric.quality_blocked']) : 0
+}
+// The rule letter that makes this run critical: the plan's, or e for a large
+// estimate. A critical run, and one that escalated, takes its contributor
+// starts on the session's model at the session's effort.
+function criticalRule() { return critical || (estimate === 'large' ? 'e' : '') }
 function calibrate(kind, opts) {
-  calibrated[kind] = CALIBRATION[kind]
-  const effort = CALIBRATION[kind].split('/')[1]
-  return effort === 'session' ? opts : Object.assign({}, opts, { effort })
+  const profile = kind === 'contributor' && (criticalRule() || escalated) ? 'session/session' : CALIBRATION[kind]
+  calibrated[kind] = profile
+  const effort = profile.split('/')[1]
+  const routed = effort === 'session' ? opts : Object.assign({}, opts, { effort })
+  // The contributor's agent file names the mid tier, so the session's model is
+  // asked for by name: inherit, the option that overrides that line.
+  return kind === 'contributor' && profile.startsWith('session/') ? Object.assign({}, routed, { model: 'inherit' }) : routed
+}
+// The first start that fails its work moves the later contributor starts of
+// the run to the session's model, noted in the run state (once, and never in a
+// critical run, which is there already).
+function escalate(why) {
+  if (escalated || criticalRule()) return
+  escalated = true
+  note(`contributor escalated to the session's model: ${why}`)
+  queue(`sh tools/run_state.sh note ${state.change} escalation "${why}"`, head)
 }
 // A restart carries on the profiles an earlier start recorded as
 // metric.calib.KIND, for the kinds this start has not used yet; a value
@@ -152,7 +189,7 @@ function calibrate(kind, opts) {
 function restoreCalibration(saved, used) {
   for (const key of Object.keys(saved)) {
     const m = /^metric\.calib\.([a-z]+)$/.exec(key)
-    if (m && !(m[1] in used) && /^(agent|session)\/(low|session)$/.test(saved[key])) used[m[1]] = saved[key]
+    if (m && !(m[1] in used) && /^(agent|session)\/(low|high|session)$/.test(saved[key])) used[m[1]] = saved[key]
   }
   return used
 }
@@ -216,7 +253,7 @@ const PACK = { type: 'object', properties: { pack: { type: 'string' } }, require
 const WORK = {
   type: 'object',
   properties: {
-    status: WORK_STATUS, head: HEAD, summary: { type: 'string' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
+    status: WORK_STATUS, head: HEAD, summary: { type: 'string' }, self_check: { type: 'string', enum: ['match', 'mismatch'], description: 'mismatch when the self-check found a test, document, or brief item still missing' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
     remaining: { ...LINES, description: 'with status partial: each task or step left, one line each' },
     pushed: { type: 'string', description: 'after a push: the full sha it recorded, sh tools/run_state.sh get <change> pushed' },
   },
@@ -288,6 +325,7 @@ const PLAN = {
     notes: { ...LINES, description: 'for the contributor: findings the change only writes to docs/findings/CHANGE.md, and bookkeeping' },
     files: LINES,
     estimate: { type: 'string', enum: SIZES, description: 'the size this change is estimated at' },
+    critical: { type: 'string', pattern: '^([a-e] [A-Za-z0-9_./-]+)?$', description: 'empty, or a rule letter a to e of docs/goals.md, Critical changes, then a space and the path that makes the change critical' },
     records: { type: 'string', enum: ['apply', 'skip'], description: 'skip when the brief excludes the planning records (history) from this change\'s package step' },
   },
   required: ['decisions', 'security_first', 'notes', 'files', 'estimate'],
@@ -526,8 +564,11 @@ function metricLine() {
   if (closingFigures.closed !== null) pairs.push(`advisories_closed=${closingFigures.closed}`, `advisories_left=${closingFigures.left}`)
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
   if (planned !== null) pairs.push(`planned=${planned}`)
+  if (criticalRule()) pairs.push(`critical=${criticalRule()}`)
+  if (escalated) pairs.push('escalated=1')
+  if (blockingQualityRounds > 0) pairs.push(`quality_blocked=${blockingQualityRounds}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|(agent|session)\/(low|session))$/.test(p))
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|[a-e]|(agent|session)\/(low|high|session))$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
@@ -563,6 +604,7 @@ function seed() {
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (/^[0-9]+$/.test(state['metric.ci_wait_calls'] || '')) ciWaitCalls = Number(state['metric.ci_wait_calls'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
+  restoreRouting(state)
   if (/^[0-9]+$/.test(state['metric.advisories_closed'] || '') && /^[0-9]+$/.test(state['metric.advisories_left'] || '')) { closingFigures.closed = Number(state['metric.advisories_closed']); closingFigures.left = Number(state['metric.advisories_left']); closingLoop = closingFigures.closed + closingFigures.left > 0 }
   // The notes in the order they were recorded. The advisories of every
   // quality review of the run, which its reviewers recorded as
@@ -870,7 +912,7 @@ const MERGE_MAIN = 'First run `sh tools/run_state.sh merge-main <change>` in the
 // The contributor's self-check before an implement or fix start returns
 // (its agent file's implement step 5): the mechanical findings a review
 // would otherwise block on.
-const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary.'
+const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary. Set self_check to mismatch when any of this is still not true as you return, else match.'
 
 // The rules card at the top of the contributor's agent file, word for word
 // (tools/tools_test.sh compares them): the mid tier forgets a rule of a long
@@ -889,6 +931,8 @@ async function contributor(mode, detail) {
       `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(capKind)}`,
       calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(capKind))
     state.pushed = keepPushed(mode, state.pushed, result)
+    if (!result) escalate('a start returned no result')
+    else if (result.self_check === 'mismatch') escalate('a self-check mismatch')
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') break
     if (step.next === 'stop') {
@@ -1279,6 +1323,7 @@ async function reviews() {
     reviewFindings.push(...q.advisory.map((a) => `quality advisory ${String(a).replace(/^[0-9a-f]{7,40} /, '')}`))
     confirmInPlace('quality', q.fixed_in_place)
     verdict('quality', !q.blocking.length)
+    if (q.blocking.length && ++blockingQualityRounds >= 2) escalate('a second blocking quality round')
     note(`quality at ${q.head}: ${q.blocking.length} blocking, ${q.advisory.length} advisory`)
     reviewed('quality', !q.blocking.length, q.head, { blocking: q.blocking.length, advisory: q.advisory.length })
     if (q.blocking.length) messages.push(`Blocking quality findings:\n- ${q.blocking.join('\n- ')}`)
@@ -1604,6 +1649,9 @@ if (!stopped && planSkipped(state, planLine)) {
   phase('Plan')
   const size = /estimated (small|medium|large)\b/.exec(planLine)
   if (size) estimate = size[1]
+  const queued = criticalOf(planLine)
+  if (queued) { critical = queued.rule; note(`critical by rule ${queued.rule}: ${queued.path}`) }
+  else if (/critical/.test(planLine)) note('plan: critical value not read')
   planned = 0
   note(`plan: skipped, ${planLine}`)
   phaseDone('plan', head)
@@ -1621,6 +1669,9 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
     // Stored with the figures, so budget and the history row keep it after
     // the queue item leaves the queue.
     if (SIZES.includes(p.estimate)) estimate = p.estimate
+    const rule = criticalOf(p.critical)
+    if (rule) { critical = rule.rule; note(`critical by rule ${rule.rule}: ${rule.path}`) }
+    else if (String(p.critical || '').trim()) note(`plan: critical value not read: ${String(p.critical).trim().slice(0, 80)}`)
     if (p.records === 'skip') excludeRecords('the planner')
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
     else phaseDone('plan', head)
