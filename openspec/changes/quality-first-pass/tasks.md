@@ -10,3 +10,4 @@
 
 - [x] 2.1 A first-pass miss is only a new blocking finding, not one the last review left blocking: `qualitySplit` in `deliver-change.js` and the agent file and README wording. Tested by "a first-pass miss is noted only for a new marked finding".
 - [x] 2.2 The marker is matched right after the location, case-insensitively; the split is a pure helper tested through `speed_js`; the agent file and README say unchanged since the commit the input names as the last quality review.
+- [x] 2.3 Review fixes: the prior-location filter of `qualitySplit` is tested alone (the prior finding is marked); the whole-branch input lists the last review's blocking findings; the duplicate marker case is folded; the proposal wording matches. Tested by "a first-pass miss is noted only for a new marked finding" and "the marker counts only right after the location".

@@ -905,8 +905,8 @@ function priorQuality() {
   if (since) return `${last} Review only \`git diff ${since} HEAD\`, the commits since that pass, and block only on what that diff introduces.`
   const listed = !blocked ? [] : qualityAt === commit && qualityBlocking.length ? qualityBlocking : null
   const files = blockedAt === commit ? blockedFiles : null
-  if (commit === head || !listed || !files) return `${last} Review the whole branch diff.`
-  const prior = listed.length ? ` Its blocking findings:\n- ${listed.join('\n- ')}\n` : ' '
+  const prior = listed && listed.length ? ` Its blocking findings:\n- ${listed.join('\n- ')}\n` : ' '
+  if (commit === head || !listed || !files) return `${last}${prior === ' ' ? ' ' : prior}Review the whole branch diff.`
   return `${last}${prior}Run \`sh tools/run_state.sh scope ${state.change} ${commit}${files.map((f) => ` ${f}`).join('')}\`: when it prints fix, review only \`git diff ${commit} HEAD\` against ${blocked ? 'those findings and ' : ''}the rules; otherwise review the whole branch diff.`
 }
 

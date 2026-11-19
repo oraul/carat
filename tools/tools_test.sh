@@ -4298,12 +4298,10 @@ expect "workflow: the continued security prompt leaves the last file alone on it
   js "$wf" "reviewMore continuedSecurity" '(l => [l.includes("- tools/x.sh"), l.includes("- .claude/workflows/y.js"), l.includes("Run it, every sub-task inline, and return the result.")])(continuedSecurity(reviewMore({ ran: true }, ["tools/x.sh", ".claude/workflows/y.js"])).split("\n"))'
 expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
   speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["abc1234 tools/x.sh:4 an advisory"])]'
-expect "workflow: a blocking quality finding on unchanged lines is noted as a first-pass miss" 0 '^\[true,false\]$' \
-  speed_js '[firstPassMiss("abc1234 tools/x.sh:12 first-pass miss: unquoted; fix: quote"), firstPassMiss("abc1234 tools/x.sh:13 unquoted; fix: quote")]'
 expect "workflow: a first-pass miss is noted only for a new marked finding, re-raises removed first" 0 '^\[1,1,"b.sh:2"\]$' \
-  speed_js '(() => { const s = qualitySplit(["a1 a.sh:1 First-pass miss: x", "a1 b.sh:2 first-pass miss: y", "a1 c.sh:3 plain", "a1 d.sh:4 not a first-pass miss"], ["a.sh:1 old"], ["a1 c.sh:3 first-pass miss: z"]); return [s.raised.length, s.missed.length, findingAt(s.missed[0])] })()'
-expect "workflow: the marker counts only right after the location, in any case" 0 '^\[true,true,false\]$' \
-  speed_js '[firstPassMiss("a1 x.sh:1 First-pass miss: y"), firstPassMiss("a1 x.sh:1 first-pass miss"), firstPassMiss("a1 x.sh:1 not a first-pass miss")]'
+  speed_js '(() => { const s = qualitySplit(["a1 a.sh:1 First-pass miss: x", "a1 b.sh:2 first-pass miss: y", "a1 c.sh:3 first-pass miss: plain", "a1 d.sh:4 not a first-pass miss"], ["a.sh:1 old"], ["a1 c.sh:3 first-pass miss: z"]); return [s.raised.length, s.missed.length, findingAt(s.missed[0])] })()'
+expect "workflow: the marker counts only right after the location, in any case" 0 '^\[true,true,false,false\]$' \
+  speed_js '[firstPassMiss("a1 x.sh:1 First-pass miss: y"), firstPassMiss("a1 x.sh:1 first-pass miss"), firstPassMiss("a1 x.sh:1 unquoted; fix: quote"), firstPassMiss("a1 x.sh:1 not a first-pass miss")]'
 expect "workflow: the quality handler notes first-pass misses" 0 '^1$' grep -c -F 'quality first-pass misses:' "$wf"
 expect "workflow: a re-rated security Medium at confidence 8 still blocks" 0 '^\[2,0\]$' \
   speed_js '[securityBlocking([{ severity: "Medium", confidence: 8, in_change: true, file: "tools/x.sh", line: 4 }, { severity: "High", confidence: 9, in_change: true }, { severity: "Low", confidence: 9, in_change: true }, { severity: "Medium", confidence: 7, in_change: true }, { severity: "High", confidence: 9, in_change: false }]).length, securityBlocking([]).length]'
