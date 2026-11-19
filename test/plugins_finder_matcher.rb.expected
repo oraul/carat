@@ -32,8 +32,8 @@ ok   a multi-byte run at a word start matches
 ok   a multi-byte character of another case is not folded
 ok   a multi-byte path does not match scattered bytes
 ok   the file name match ranks first
+ok   a word start after an underscore ranks above a middle byte
 ok   a word start in the file name ranks above a middle byte of it
-ok   a word start in the file name ranks above a later hit in the name
 ok   a segment start ranks above a middle in a directory
 ok   a substring ranks above initials
 ok   a substring in a directory ranks above initials in the name
@@ -42,7 +42,8 @@ ok   a tighter match ranks above a looser one
 ok   explorer in a file name ranks above the directory
 ok   explorer in a directory ranks above initials
 ok   explorer in a file name ranks above initials
-ok   every term counts toward the rank
+ok   the worst term decides the rank first
+ok   the sum of the terms breaks a tie of the worst term, before a shorter path
 ok   a shorter path breaks a tie
 ok   the listing order breaks a tie of equal paths
 ok   an empty text is blank
@@ -79,4 +80,4 @@ ok   every substring match scores above every initials match
 ok   an empty query scores 0
 ok   a key keeps its index
 ok   the file name starts after the last slash
-plugins_finder_matcher: 81 passed, 0 failed
+plugins_finder_matcher: 82 passed, 0 failed
