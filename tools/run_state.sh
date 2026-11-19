@@ -1017,9 +1017,10 @@ config_view() {
 # directory, tmp/ (the lanes, scouts, and toolchain links), and the run
 # states, stage logs, plans, and compile cache, which concurrent lanes and
 # the runner write; a linked worktree's whole git directory; the hooks; the
-# shared toolchain and Spinel's checkout; then "configuration" when the
-# repository configuration differs and the run state when it holds more
-# than the stage records the runner wrote (stage_record).
+# shared toolchain and Spinel's checkout; then the configuration file when
+# the repository configuration differs (config_view), and the run state
+# file when it differs from the one escape_mark noted with the stage
+# records the runner wrote since put in (stage_record).
 escaped_paths() {
   find "$top" \( -path "$top/.git" -type d -o -path "$top/tmp" -o -path "$top/build/pipeline" -o \
       -path "$top/build/stages" -o -path "$top/build/plan" -o -path "$top/build/spinel-cache" \) -prune -o \
