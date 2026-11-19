@@ -30,20 +30,14 @@ module AdaptersAssemblyTest
     t.assert_equal([["second"], []], [strangers(a.buffers, [["second", Carat::Domain::BufferList.new(tabs: a.tabs)]]), strangers(a.buffers, [["same", a.buffers]])], "strangers tells a second object from the shared one")
 
     # A holder without readers is read through the wiring ledger the
-    # assembly fills: a pair it never recorded is a stranger, a second
-    # record of a pair replaces its object in place, and each holder's
-    # recorded slots are its constructor's keywords, in their order.
+    # assembly fills: a pair it never recorded is a stranger, and a second
+    # record of a pair replaces its object in place. That each record's
+    # slot is a keyword of the holder's construction is lint's check.
     w = a.wiring
     probe = Carat::Adapters::WiringLedger.new
     probe.record("holder", "slot", a.tabs)
-    probe.record("holder", "other", a.tabs)
     probe.record("holder", "slot", a.buffers)
-    t.assert_equal([["unrecorded"], [], ["slot", "other"], []], [strangers(a.keymap, [["unrecorded", w.held("hide_key_hints", "keymap")]]), strangers(a.buffers, [["replaced", probe.held("holder", "slot")]]), probe.slots("holder"), probe.slots("nobody")], "the ledger answers no object for a pair it never recorded and replaces a recorded one in place")
-    t.assert_equal([
-      ["hints", "close_float"], ["palette", "open_float", "close_float"],
-      ["actions", "commands", "keymap", "plugins", "palette", "plugin_ui", "search_prompt"],
-      ["keymap", "input", "actions", "plugins", "hints", "open_float", "hide_key_hints"]
-    ], [w.slots("hide_key_hints"), w.slots("follow_palette"), w.slots("open_palette"), w.slots("show_key_hints")], "each discovery use case's recorded slots are its constructor's keywords")
+    t.assert_equal([["unrecorded"], []], [strangers(a.keymap, [["unrecorded", w.held("hide_key_hints", "keymap")]]), strangers(a.buffers, [["replaced", probe.held("holder", "slot")]])], "the ledger answers no object for a pair it never recorded and replaces a recorded one in place")
 
     # Each shared object is one instance, held by every collaborator that
     # needs it.

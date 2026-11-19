@@ -5,17 +5,14 @@ module Carat
     # The shared-instance test reads it in place of a public reader on the
     # holder, comparing each object with the shared one by identity. The
     # objects are of many classes, so only equal? is ever called on them.
-    # Written while the assembly is built, never on a key.
+    # Written while the assembly is built, never on a key; lint checks that
+    # each record's slot is a keyword the holder's construction passes.
     class WiringLedger
-      # @rbs @holders: Array[String]
-      # @rbs @slots: Array[String]
       # @rbs @objects: Array[untyped]
       # @rbs @index: Hash[String, Integer]
 
       #: () -> void
       def initialize
-        @holders = []
-        @slots = []
         @objects = []
         @index = {}
       end
@@ -27,9 +24,7 @@ module Carat
         key = "#{holder}.#{slot}"
         at = @index[key]
         if at.nil?
-          @index[key] = @holders.length
-          @holders << holder
-          @slots << slot
+          @index[key] = @objects.length
           @objects << object
         else
           @objects[at] = object
@@ -44,18 +39,6 @@ module Carat
         at = @index["#{holder}.#{slot}"]
         return nil if at.nil?
         @objects[at]
-      end
-
-      # The holder's slot names in the order they were recorded.
-      #: (String) -> Array[String]
-      def slots(holder)
-        out = []
-        i = 0
-        while i < @holders.length
-          out << @slots[i] if @holders[i] == holder
-          i += 1
-        end
-        out
       end
     end
   end
