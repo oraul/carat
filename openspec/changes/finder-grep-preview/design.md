@@ -24,3 +24,4 @@
 
 - A preview near a file's end ends at the last stored line, not at the file's true end, and a file past 1000 lines previews only its first 1000; the picker already searches no more.
 - A line shows cut at 400 bytes, as the row does.
+- The `grep` bench scenario runs at 200 columns, so it now builds and draws the preview float each key: at -O 0 its allocations per key rose from 644.6 to 842.6 and its time per key from 23.7 to 24.7 ms, mostly the second float's host copies and render, about 20 allocations being the preview's own lines. Recorded in the change's findings, not reduced here.
