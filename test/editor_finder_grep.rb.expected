@@ -23,5 +23,12 @@ ok   Ctrl-X opens a split at the line
 ok   Ctrl-V opens a vertical split at the line
 ok   Ctrl-T opens a tab page at the line
 ok   Ctrl-T opens a buffer tab at the line
+ok   a valid character beside an invalid byte stays whole
+ok   a 500-byte line is cut at 400 bytes
+ok   the cut falls back to a character boundary
+ok   only the first 1000 lines of a file are stored
+ok   the 100,000-line store cap is marked when it cuts a file
+ok   no preview float beside the grep list at 120 columns
+ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 26 passed, 0 failed
+editor_finder_grep: 33 passed, 0 failed

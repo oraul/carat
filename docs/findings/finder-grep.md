@@ -19,3 +19,13 @@
 - Location: carat/plugins/finder/grep.rb, FILE_ROWS
 - Why: read_file answers at most 1000 rows, so a match deeper in a long file is not found.
 - Fix: a read request with a start row, a plugin API minor bump, then read the file in pages.
+
+### Grep helper duplication with the plugin
+- Location: carat/plugins/finder/grep.rb (strings, ints), carat/plugins/finder/plugin.rb (no_paths)
+- Why: the typed-empty array helpers repeat across two classes of one plugin.
+- Fix: one shared helper per type in the plugin directory, used by both.
+
+### No bench scenario for the grep search
+- Location: bench/ scenarios, carat/plugins/finder/grep.rb search
+- Why: each key scores up to 100,000 lines and sorts every match to keep 200; the finder bench measures paths only.
+- Fix: add a grep scenario and its map Bench line, or keep a bounded top-200 selection instead of a full sort.

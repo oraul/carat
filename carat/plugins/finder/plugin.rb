@@ -190,7 +190,6 @@ module Carat
           @root = root
           @paths = listing.lines
           @grep = grep
-          @index = Grep.new
           @index.load(host, root, @paths) if grep
           @open = true
           filter("")
@@ -325,7 +324,7 @@ module Carat
           cols = @cols
           height = @rows - 6
           height = 1 if height < 1
-          preview = cols >= PREVIEW_COLUMNS
+          preview = !@grep && cols >= PREVIEW_COLUMNS
           box = host.float_frame(true)
           margin = box.margin
           frame = box.box_width(0)
@@ -336,7 +335,7 @@ module Carat
           title = @grep ? "#{GREP_TITLE} #{@index.counts}" : "#{TITLE} #{@matches.length}/#{@paths.length}"
           shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
           @list_float = shown.ok ? shown.window : 0
-          return unless preview && !@grep && !@matches.empty?
+          return unless preview && !@matches.empty?
           path = selected_path
           read = host.read_file(PluginApi::Paths.join(@root, path), height)
           lines = read.ok ? read.lines : [read.message]

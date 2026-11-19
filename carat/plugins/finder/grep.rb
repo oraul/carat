@@ -11,8 +11,8 @@ module Carat
       # small enough for that request; a file that cannot be read or holds
       # a NUL byte is skipped, and a line is cut at MAX_BYTES. Loading
       # stops at MAX_LINES stored lines. A search keeps the MAX_ROWS best
-      # lines, scored by Matcher over the line's bytes as it scores a path
-      # (every query byte in order, ASCII case ignored), ranked by score,
+      # lines, scored by Matcher over the line's bytes from its start, with no
+      # file-name bonus (every query byte in order, ASCII case ignored), ranked by score,
       # then a shorter file path, then listing order. Line text is
       # untrusted, so a row shown goes through safe.
       class Grep
@@ -42,16 +42,12 @@ module Carat
           @more = false
         end
 
-        # Reads every file of paths, relative to root, until MAX_LINES
-        # lines are stored.
+        # Reads every file of paths, relative to root, until a line does not
+        # fit in MAX_LINES stored lines.
         #: (Carat::PluginApi::Host, String, Array[String]) -> void
         def load(host, root, paths)
           p = 0
-          while p < paths.length
-            if @texts.length >= MAX_LINES
-              @capped = true
-              return
-            end
+          while p < paths.length && !@capped
             read = host.read_file(PluginApi::Paths.join(root, paths[p]), FILE_ROWS)
             add_file(paths[p], read.lines) if read.ok
             p += 1
@@ -70,7 +66,7 @@ module Carat
           keys = []
           i = 0
           while i < @texts.length
-            score = Matcher.score(query, @texts[i])
+            score = Matcher.span_score(query, @texts[i], 0, @texts[i].bytesize)
             keys << Matcher.key(score, @files[@file_of[i]].bytesize, i) if score >= 0
             i += 1
           end
@@ -93,12 +89,6 @@ module Carat
         #: () -> Integer
         def count
           @hits.length
-        end
-
-        # Whether more lines matched than rows were kept.
-        #: () -> bool
-        def more?
-          @more
         end
 
         # The "kept/stored" counts for the title, a "+" after a count that
@@ -142,29 +132,55 @@ module Carat
           text.byteslice(0, j).to_s.length
         end
 
-        # The text with each control byte or character shown as a space
-        # and each byte of invalid UTF-8 as "?", so the terminal gets no
-        # escape sequence from a file.
+        # The text with each control character shown as a space and each
+        # byte that forms no valid UTF-8 sequence as "?", so the terminal
+        # gets no escape sequence from a file and a valid character beside
+        # an invalid byte stays whole.
         #: (String) -> String
         def self.safe(text)
           out = +""
-          unless text.valid_encoding?
-            i = 0
-            while i < text.bytesize
-              b = text.getbyte(i).to_i
-              out << (b >= 0x80 ? "?" : (b < 0x20 || b == 0x7F ? " " : b.chr))
+          n = text.bytesize
+          i = 0
+          while i < n
+            b = text.getbyte(i).to_i
+            size = utf8_size(b)
+            if size == 1
+              out << (b < 0x20 || b == 0x7F ? " " : b.chr)
+              i += 1
+            elsif size > 1 && i + size <= n && text.byteslice(i, size).to_s.valid_encoding?
+              ch = text.byteslice(i, size).to_s
+              out << (ch.ord < 0xA0 ? " " : ch)
+              i += size
+            else
+              out << "?"
               i += 1
             end
-            return out
-          end
-          text.each_char do |ch|
-            code = ch.ord
-            out << (code < 0x20 || (code >= 0x7F && code < 0xA0) ? " " : ch)
           end
           out
         end
 
+        # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
+        # that starts none.
+        #: (Integer) -> Integer
+        def self.utf8_size(b)
+          return 1 if b < 0x80
+          return 2 if b >= 0xC2 && b <= 0xDF
+          return 3 if b >= 0xE0 && b <= 0xEF
+          return 4 if b >= 0xF0 && b <= 0xF4
+          0
+        end
+
         private
+
+        # The line's first MAX_BYTES bytes, ended before a character the
+        # cut would split.
+        #: (String) -> String
+        def cut(line)
+          return line if line.bytesize <= MAX_BYTES
+          stop = MAX_BYTES
+          stop -= 1 while stop > 0 && (line.getbyte(stop).to_i & 0xC0) == 0x80
+          line.byteslice(0, stop).to_s
+        end
 
         #: (String, Array[String]) -> void
         def add_file(path, lines)
@@ -172,12 +188,16 @@ module Carat
           index = @files.length
           @files << path
           i = 0
-          while i < lines.length && @texts.length < MAX_LINES
+          while i < lines.length
             line = lines[i]
             if line.bytesize > 0
+              if @texts.length >= MAX_LINES
+                @capped = true
+                return
+              end
               @file_of << index
               @numbers << i + 1
-              @texts << (line.bytesize > MAX_BYTES ? line.byteslice(0, MAX_BYTES).to_s : line)
+              @texts << cut(line)
             end
             i += 1
           end

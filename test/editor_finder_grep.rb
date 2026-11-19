@@ -40,9 +40,42 @@ module EditorFinderGrepTest
     files
   end
 
-  def self.editor_on(files, config)
+  # The bounds: a line with a valid multi-byte character beside an
+  # invalid byte, a 500-byte line, a line the 400-byte cut falls inside a
+  # character of, and 1200 lines of which the first 1000 are read.
+  def self.bounded
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    files.put("u8.txt", "café \xFF\n")
+    files.put("long.txt", "a" * 500 + "\n")
+    files.put("wide.txt", "x" + "é" * 250 + "\n")
+    text = +""
+    i = 1
+    while i <= 1200
+      text << (i <= 1000 ? "hit\n" : "miss\n")
+      i += 1
+    end
+    files.put("rows.txt", text)
+    files
+  end
+
+  # More lines than the store holds: guide.md and 100 files of 1000 lines.
+  def self.huge
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    i = 0
+    while i < 100
+      files.put("f#{i + 100}.txt", "x\n" * 1000)
+      i += 1
+    end
+    files
+  end
+
+  def self.editor_on(files, config, cols = 80)
     fixed = Carat::Doubles::FixedConfig.with(config.to_s)
-    h = Carat::Doubles::EditorHarness.new(files: files, config: fixed, rows: 24, cols: 80, plugins: [Carat::Plugins::Finder::Plugin.new])
+    h = Carat::Doubles::EditorHarness.new(files: files, config: fixed, rows: 24, cols: cols, plugins: [Carat::Plugins::Finder::Plugin.new])
     h.open("docs/guide.md")
     h
   end
@@ -130,6 +163,29 @@ module EditorFinderGrepTest
     ]) do |input|
       opened(input[0], input[1])
     end
+
+    # Scenario: The picker reads the finder's files once and within bounds
+    h = editor_on(bounded, "")
+    h.type("<Space>fgcaf")
+    t.assert_equal("Grep 1/1004|> u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
+    h = editor_on(bounded, "")
+    h.type("<Space>fgaaaa")
+    t.assert_equal("Grep 1/1004|> long.txt:1: " + "a" * 400, floats(h)[0].to_s, "a 500-byte line is cut at 400 bytes")
+    h = editor_on(bounded, "")
+    h.type("<Space>fgx")
+    t.assert_equal("Grep 1/1004|> wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
+    h = editor_on(bounded, "")
+    h.type("<Space>fghit")
+    t.assert_equal("Grep 200+/1004", h.state.tab.floats.at(0).spec.title.to_s, "only the first 1000 lines of a file are stored")
+    h = editor_on(huge, "")
+    h.type("<Space>fgx")
+    t.assert_equal("Grep 200+/100000+", h.state.tab.floats.at(0).spec.title.to_s, "the 100,000-line store cap is marked when it cuts a file")
+
+    # Scenario: The grep list uses the whole width of a wide screen
+    h = editor_on(disk, "", 120)
+    h.type("<Space>fghello")
+    t.assert_equal(1, h.state.tab.floats.count, "no preview float beside the grep list at 120 columns")
+    t.assert_equal(true, h.state.tab.floats.at(0).spec.width.to_i > 100, "the grep list is wider than half of 120 columns")
 
     # The file finder is unchanged beside it.
     h = editor_on(disk, "")
