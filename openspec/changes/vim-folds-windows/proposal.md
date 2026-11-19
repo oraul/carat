@@ -11,6 +11,6 @@ Two places disagree with Vim. Insert mode on a closed fold leaves the fold close
 ## Impact
 
 - Specs: folds, windows (added scenarios).
-- README.md: unchanged, no user-facing feature list names folds here.
+- README.md: the fold sentence names insert-mode opening and the close dropping a window's folds.
 - docs/compatibility.md: the folds paragraph names insert opening folds.
 - docs/architecture.md: unchanged, no layer or port changes.
