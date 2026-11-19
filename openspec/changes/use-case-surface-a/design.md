@@ -18,7 +18,7 @@ Non-goals: the other areas, the production reads, and the `call` signatures, whi
 
 ### The ledger
 
-`Adapters::WiringLedger` is a plain class in the adapters layer beside the assembly that fills it: parallel arrays of holder names and slot names (`Array[String]`), the objects in a pinned `Array[untyped]`, and an index from `"holder.slot"` to position (`Hash[String, Integer]`). `record(holder, slot, object)` appends, a second record of a pair replacing the first's object; `held(holder, slot)` answers the object or nil; `slots(holder)` answers the holder's slot names in recording order. The objects are of many classes, so the element is `untyped` and only `equal?` is called on it, in the test; the receiver of every `[]` is a typed array, which keeps the analysis free of the untyped-receiver cost of `docs/spinel-notes.md`. It is written only during `initialize`, once per editor, never on a key.
+`Adapters::WiringLedger` is a plain class in the adapters layer beside the assembly that fills it: the objects in a pinned `Array[untyped]` and an index from `"holder.slot"` to position (`Hash[String, Integer]`). `record(holder, slot, object)` appends, a second record of a pair replacing the first's object; `held(holder, slot)` answers the object or nil. The objects are of many classes, so the element is `untyped` and only `equal?` is called on it, in the test; the receiver of every `[]` is a typed array, which keeps the analysis free of the untyped-receiver cost of `docs/spinel-notes.md`. It is written only during `initialize`, once per editor, never on a key.
 
 `EditorAssembly` builds the ledger before anything else, keeps it in the `wiring` reader, and records each holder's shared objects on the lines right after the holder's construction, from the same instance variables the construction passed.
 
@@ -26,7 +26,7 @@ Alternatives considered: a `wire` helper returning its argument inside the keywo
 
 ### Keeping the ledger true
 
-A record written beside the construction could drift from it, so `lint`'s shared-holder rule now reads the assembly too: for each shared keyword a holder stores without a reader, the assembly must hold `@wiring.record("holder", "keyword", X)` where the holder's construction line passes `keyword: X`, and the assembly test must name `held("holder", "keyword")`. A missing record, a record of another object, and a record the test never checks each fail `make lint`. The guard also compares `slots(holder)` with the constructor's shared keywords, so a record of a slot that does not exist is caught at test time. A holder that keeps a reader is checked as before, so the areas parts b to d have not reached keep working.
+A record written beside the construction could drift from it, so `lint`'s shared-holder rule now reads the assembly too: for each shared keyword a holder stores without a reader, the assembly must hold `@wiring.record("holder", "keyword", X)` where the holder's construction line passes `keyword: X`, and the assembly test must name `held("holder", "keyword")`. Each record's slot must also be a keyword the holder's construction line passes, and one the holder stores as `@slot = slot`, so a record of a slot that does not exist, or a holder storing another keyword's object under a recorded name (`@open_float = close_float`), is caught. A missing record, a record of another object, a record of a slot the construction does not pass or the holder does not store under its own name, and a record the test never checks each fail `make lint`, so the guard keeps no hand-written list of each holder's keywords. A holder that keeps a reader is checked as before, so the areas parts b to d have not reached keep working.
 
 `READERLESS_DIRS` in `test/lint.rb` lists the directories whose use cases have no public reader (a private reader only where a concern needs one, after `private`); it starts with `carat/use_cases/discovery/` and each later part adds its area.
 
@@ -46,6 +46,7 @@ The discovery use cases change no line of behavior, so the checklist points reac
 ## Risks / Trade-offs
 
 - The ledger holds `untyped` objects: the guard can only compare identities, which is all it does.
+- The ledger records what the assembly passed, not what the holder kept; lint closes the gap textually, requiring `@slot = slot` for every recorded slot, so a holder that transforms an object before storing it would need a reader again.
 - Two ways to satisfy the guard live side by side until part d; the lint rule names which one a holder uses.
 - The measured figures (analysis time and rounds of both compile roots, the binary's size, and time per key) are compared with main's in the pull request.
 
