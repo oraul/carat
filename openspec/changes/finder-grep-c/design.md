@@ -7,7 +7,7 @@ At 290cd4a `Grep#search` (`carat/plugins/finder/grep.rb:63`) checks every stored
 **Goals:**
 - A bounded number of line checks per key, shown by a bench scenario over at least 148,091 lines.
 - Rows spread across files with the counts in the title.
-- No bidirectional format character reaches the terminal from a row.
+- No bidirectional format, zero-width, or separator character reaches the terminal from a row.
 
 **Non-Goals:**
 - Searching in the background or between keys (finder-streaming); a preview (finder-grep-preview).
@@ -19,8 +19,8 @@ At 290cd4a `Grep#search` (`carat/plugins/finder/grep.rb:63`) checks every stored
 - At about 0.3 microseconds a line (45 ms for about 148,000 lines), a fresh key costs about 9 ms and the worst narrowing about 18 ms.
 - The spread: the kept matches are cut into runs by file, each run sorted (at most 1000 keys, the run's best 200 kept, since a line ranked past 200 in its file is never shown), and the rows are filled round by round: round t takes the t-th best line of every file that has one, sorted by key, until 200 rows. Keys stay as `Matcher.key` builds them, so the order within a round and within a file (equal scores: the earlier line first) is the existing one. Packing the round into the key's high bits was rejected: a long query's score already uses the bits above the path and index rooms.
 - The title is `Grep F of M files, L of N lines`: F is the files the rows show (every matching file when there are at most 200, since the first round takes one line of each), M and L carry `+` while `@scanned` is short of the stored lines, N carries `+` when the store cap cut the tree, as before.
-- `safe` replaces U+202A to U+202E and U+2066 to U+2069 with a space in the multi-byte branch, by a private `format_control?`, as it does the C1 controls; exactly the code points the review named. `safe` and `utf8_size` become private instance methods.
-- The bench `grep` scenario opens the picker in its setup (` fg`, the load not timed) over `GREP_FILES = 150` files of 1000 lines of the generated Ruby text, then types `count` and five backspaces: one fresh scan, four narrowings, four rescans, and one empty text per ten keys. `make bench-budget` runs it once at its default 100 keys after the allocation check and prints its line, time per key included; no time budget fails it, since CI machines vary.
+- `safe` replaces U+202A to U+202E and U+2066 to U+2069, the review's code points, and, after the security review of this change, the marks U+061C, U+200E, and U+200F, the zero-width U+200B to U+200D and U+FEFF, and the separators U+2028 and U+2029 with a space in the multi-byte branch, by a private `format_control?`, as it does the C1 controls. `safe` and `utf8_size` become private instance methods.
+- The bench `grep` scenario opens the picker in its setup (` fg`, the load not timed) over `GREP_FILES = 150` files of 1000 lines of the generated Ruby text, then types `count` and five backspaces: one fresh scan, four narrowings, four rescans, and one empty text per ten keys. `make bench-budget` runs it through `bench/run.sh` after the allocation check, at its default 100 keys for the time and at 20 and 120 keys for its allocations, since a grep key takes milliseconds, and prints its line, time per key included; no time budget fails it, since CI machines vary. The scenario exits with an error unless the picker's title shows every generated line and the lines of `a.rb` stored, so a changed read limit or listing cannot time an empty index.
 
 ## Risks / Trade-offs
 

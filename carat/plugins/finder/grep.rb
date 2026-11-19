@@ -182,9 +182,9 @@ module Carat
 
         private
 
-        # The text with each control character and each bidirectional
-        # format character shown as a space and each byte that forms no
-        # valid UTF-8 sequence as "?", so the terminal gets no escape
+        # The text with each control character and each invisible format
+        # or separator character shown as a space and each byte that forms
+        # no valid UTF-8 sequence as "?", so the terminal gets no escape
         # sequence from a file, a row cannot reorder its text to show
         # another path or line, and a valid character beside an invalid
         # byte stays whole.
@@ -212,11 +212,15 @@ module Carat
           out
         end
 
-        # Whether the code point is a bidirectional embedding, override,
-        # or isolate character: U+202A to U+202E, U+2066 to U+2069.
+        # Whether the code point is an invisible format or separator
+        # character: a bidirectional embedding, override, isolate, or mark
+        # (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069), a
+        # zero-width character (U+200B to U+200D, U+FEFF), or the line or
+        # paragraph separator (U+2028, U+2029).
         #: (Integer) -> bool
         def format_control?(code)
-          (code >= 0x202A && code <= 0x202E) || (code >= 0x2066 && code <= 0x2069)
+          code == 0x061C || code == 0xFEFF || (code >= 0x200B && code <= 0x200F) ||
+            (code >= 0x2028 && code <= 0x202E) || (code >= 0x2066 && code <= 0x2069)
         end
 
         # The length of the UTF-8 sequence a lead byte starts, 0 for a byte

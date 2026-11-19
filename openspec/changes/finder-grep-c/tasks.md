@@ -8,3 +8,10 @@
 
 - [x] 2.1 Add the `grep` bench scenario to `bench/keys.rb` (150 files of 1000 lines) and print its time per key in `make bench-budget`; run `make bench-budget`
 - [x] 2.2 Update README.md, docs/plugins.md, docs/architecture.md section 10, and docs/codebase-map.md; make docs-lint
+
+## 3. Review fixes
+
+- [x] 3.1 Show U+061C, U+200B to U+200F, U+2028, U+2029, and U+FEFF as spaces in `Grep#safe` (security Low (5)); a test row per code point in `test/editor_finder_grep.rb`
+- [x] 3.2 Qualify the synced requirements The picker reads the finder's files once and within bounds and Typing lists the matching lines best first by the per-key bound in the delta spec, and the test comment of the 30,000-line check
+- [x] 3.3 Make the bench `grep` scenario exit unless the picker stored every generated line (`bench/keys.rb`)
+- [x] 3.4 Run the `grep` scenario of `make bench-budget` through `bench/run.sh`, its allocation runs at 20 and 120 keys

@@ -29,6 +29,15 @@ ok   U+2066 shows as a space
 ok   U+2067 shows as a space
 ok   U+2068 shows as a space
 ok   U+2069 shows as a space
+ok   U+061C shows as a space
+ok   U+200B shows as a space
+ok   U+200C shows as a space
+ok   U+200D shows as a space
+ok   U+200E shows as a space
+ok   U+200F shows as a space
+ok   U+2028 shows as a space
+ok   U+2029 shows as a space
+ok   U+FEFF shows as a space
 ok   Enter opens the file at the line
 ok   Enter opens at the first matched byte, counted in characters
 ok   Enter opens a line past the first
@@ -67,4 +76,4 @@ ok   a backspace starts again from the first line, within the budget
 ok   no preview float beside the grep list at 120 columns
 ok   the grep list is wider than half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 69 passed, 0 failed
+editor_finder_grep: 78 passed, 0 failed
