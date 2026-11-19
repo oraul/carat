@@ -40,6 +40,10 @@ The self-check of the implement mode and of the fix mode walks these points, eac
 - An existing helper searched first: grep `carat/` for one before writing a new one.
 - Comments, docs, and spec text match the code: a comment, a doc row, or a spec scenario the change made untrue is corrected in the same change.
 
+## Closing
+
+Mode `close-advisories` runs once a run, after the last review passed with no blocking finding and before the package step, given the advisories the run raised and left open. Fix each that lies in a file the change itself edits and needs no new behavior and no design change: wording, a comment, a doc or spec text, a missing test for behavior the change already has, a name, a small duplication. Each fix is a task of `tasks.md` marked done, its delta spec updated when specified behavior moves, and committed on its own. Leave every other advisory untouched; the package step writes it to `docs/findings/<change>.md`. Run the touched tests and `make gates`. Make no commit when none qualifies, and return the schema. The check and a quality review of the closing commit's lines follow, and a security review again unless the commit changed only records and no security finding was offered; advisories that review raises are recorded, never given to a second closing start.
+
 ## Self-review
 
 After the self-check, read the committed diff once as the quality reviewer would, with the instructions of `.claude/agents/quality-reviewer.md`: a bug, an untested behavior change, and a mismatch between code and text block. Fix what blocks in place; record the rest in the findings file.

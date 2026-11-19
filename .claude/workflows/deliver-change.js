@@ -79,6 +79,11 @@ let stopped = ''
 const usage = {}
 const firstPass = {}
 let rework = 0
+// The closing loop's figures (closing-loop): the advisories it offered that
+// the reviews confirmed fixed, and those left, null until the loop ran or
+// was skipped; recorded as metric lines beside, not in, the rework rounds.
+const closingFigures = { closed: null, left: null }
+let closingLoop = false
 // The fix rounds are counted across starts (rework, from the run state):
 // seededRework is what earlier starts spent, extra the rounds granted beyond
 // ROUNDS, lastStop the stop word the last start stored (rounds when it
@@ -114,7 +119,7 @@ let estimate = ''
 // start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
-const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, quality: 35, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10, run: 8 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
@@ -518,6 +523,7 @@ function metricLine() {
     .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`, `extra=${extra}`, `stop=${stopKind}`])
   if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
   if (Number.isInteger(ciWaitCalls)) pairs.push(`ci_wait_calls=${ciWaitCalls}`)
+  if (closingFigures.closed !== null) pairs.push(`advisories_closed=${closingFigures.closed}`, `advisories_left=${closingFigures.left}`)
   if (SIZES.includes(estimate)) pairs.push(`estimate=${estimate}`)
   if (planned !== null) pairs.push(`planned=${planned}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
@@ -557,6 +563,7 @@ function seed() {
   if (state['metric.ci_min']) ciMinutes = Number(state['metric.ci_min'])
   if (/^[0-9]+$/.test(state['metric.ci_wait_calls'] || '')) ciWaitCalls = Number(state['metric.ci_wait_calls'])
   if (SIZES.includes(state['metric.estimate'])) estimate = state['metric.estimate']
+  if (/^[0-9]+$/.test(state['metric.advisories_closed'] || '') && /^[0-9]+$/.test(state['metric.advisories_left'] || '')) { closingFigures.closed = Number(state['metric.advisories_closed']); closingFigures.left = Number(state['metric.advisories_left']); closingLoop = closingFigures.closed + closingFigures.left > 0 }
   // The notes in the order they were recorded. The advisories of every
   // quality review of the run, which its reviewers recorded as
   // quality-advisory notes at each commit; once pushed, the package step
@@ -664,8 +671,10 @@ function reviewed(kind, passed, commit, counts) {
 // gates read and only an unguarded start may write; every other line and
 // the figures wait for the closing start. The agent's own cost reaches the
 // next line.
-async function flush() {
-  if (!pending.some((l) => !CLOSABLE.test(l))) return true
+// force writes the metric line though only closable lines wait (the closing
+// loop's figures, held after a start that committed nothing).
+async function flush(force = false) {
+  if (!force && !pending.some((l) => !CLOSABLE.test(l))) return true
   const command = pending.splice(0).concat([metricLine()].filter(Boolean)).join(' && ')
   if (!command) return true
   const r = await measured('record', () => agent(
@@ -870,13 +879,15 @@ const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --sh
 
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
-  const key = mode === 'implement' || mode === 'fix' ? 'implement' : 'package'
+  // One kind names the start's phase figures, its cap line, and its cap.
+  const capKind = mode === 'close-advisories' ? 'closing' : mode
+  const key = mode === 'implement' || mode === 'fix' ? 'implement' : capKind === 'closing' ? 'closing' : 'package'
   let result = null
   let more = ''
   for (let count = 0; ; count++) {
     result = await measured(key, () => agent(
-      `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(mode)}`,
-      calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(mode))
+      `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(capKind)}`,
+      calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(capKind))
     state.pushed = keepPushed(mode, state.pushed, result)
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') break
@@ -1317,6 +1328,11 @@ let reviewFindings = []
 const offered = new Set()
 const fixedInPlace = new Set()
 let awaiting = { quality: [], security: [] }
+// The findings a round offers for a fix in place: those not offered before,
+// none while the closing loop runs (its advisories go to the findings file).
+function freshOffers(fixes) {
+  return fixes && !closingLoop ? reviewFindings.filter((f) => !offered.has(f)) : []
+}
 function inPlaceRound(blocked, count, used, limit) {
   if (!count) return 'none'
   if (blocked) return 'with'
@@ -1338,6 +1354,61 @@ function confirmInPlace(kind, listed) {
 function offer(list, awaited) {
   for (const f of list) offered.add(f)
   if (awaited) awaiting = { quality: list.filter((f) => f.startsWith('quality ')), security: list.filter((f) => f.startsWith('security ')) }
+}
+
+// The closing loop (closing-loop, the user's exception of 2026-11-19): once
+// a run, after the last review passed with nothing blocking and before the
+// package step, one contributor start (close-advisories) fixes the
+// advisories left open in the change's own files that need no new behavior;
+// the check and the reviews then run again at its commit, the quality
+// review scoped to the commits since its pass, the security review at once
+// when code changed (settleFrom: only a records-only commit stands on the
+// earlier passes). Advisories those reviews raise are recorded for
+// docs/findings/, never offered again (closingLoop stops the in-place
+// offers); a blocking finding goes through the normal fix rounds. It is
+// not a fix round: it adds nothing to rework. A run with no open advisory
+// skips it. tools/tools_test.sh runs these helpers.
+const openAdvisories = () => findings().filter((f) => !fixedInPlace.has(f))
+function closingTask(list) {
+  return `Close advisories, once in this run: each finding below that lies in a file this change edits and needs no new behavior and no design change (wording, a comment, a doc or spec text, a missing test for behavior the change already has, a name, a small duplication) is fixed now, each a task of the change's tasks.md marked done and committed, its delta spec updated when specified behavior moves. Leave every other; it stays recorded for docs/findings/${state.change}.md. Make no commit when none qualifies.\n- ${list.join('\n- ')}`
+}
+// The last review passes, then the one closing loop: the package step waits
+// for both.
+async function readyToPackage() {
+  return (await verify()) && (await closeAdvisories())
+}
+async function closeAdvisories() {
+  if (closingFigures.closed !== null) return true
+  const open = openAdvisories()
+  if (!open.length) {
+    closingFigures.closed = 0
+    closingFigures.left = 0
+    note('closing loop skipped: no open advisory')
+    return true
+  }
+  closingLoop = true
+  const from = settleFrom(ran, open)
+  const before = head
+  note(`closing loop: ${open.length} open advisory(ies) offered to one closing start, then the check and the reviews of its commit`)
+  offer(open, true)
+  phase('Implement')
+  if (!(await contributor('close-advisories', closingTask(open)))) return false
+  settleAt = settleAfter(from, before, head)
+  // Nothing committed: the offered findings were not touched, so no later
+  // review is asked to confirm them.
+  if (head === before) awaiting = { quality: [], security: [] }
+  // Held and flushed at once, so a run stopped during the re-review (and a
+  // resume before the push) has the loop recorded as run; the final figures
+  // follow it.
+  closingFigures.closed = 0
+  closingFigures.left = open.length
+  if (head !== before && !(await flush(true))) return false
+  const passed = head === before ? true : await verify()
+  closingFigures.closed = open.filter((f) => fixedInPlace.has(f)).length
+  closingFigures.left = open.length - closingFigures.closed
+  const recorded = await flush(true)
+  note(`closing loop: ${closingFigures.closed} closed, ${closingFigures.left} left for docs/findings/`)
+  return recorded && passed
 }
 
 async function rounds(fixes = true) {
@@ -1416,7 +1487,7 @@ async function rounds(fixes = true) {
       }
     }
     // Fix in place: the findings of this round's reviews, offered once.
-    const fresh = fixes ? reviewFindings.filter((f) => !offered.has(f)) : []
+    const fresh = freshOffers(fixes)
     reviewFindings = []
     const place = inPlaceRound(Boolean(blocked), fresh.length, rework, ROUNDS + extra)
     if (place === 'record') note(`fix in place: ${fresh.length} finding(s) left at the round limit, recorded for docs/findings/`)
@@ -1610,7 +1681,7 @@ if (!stopped && !state.merged) {
     else if (done) phaseDone('package', head)
   }
   if (step === 'package') {
-    if (await verify()) {
+    if (await readyToPackage()) {
       phase('Package')
       const plan = packagePlan(state, planned)
       const done = await contributor('package', `Non-blocking findings to append to docs/findings/${state.change}.md (mkdir -p docs/findings first, as a fresh checkout lacks it, then a shell append; never read docs/backlog.md):\n- ${handOver().join('\n- ') || 'none'}\n${plan}${settledTesting()}`)
