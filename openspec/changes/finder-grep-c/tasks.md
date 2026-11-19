@@ -6,5 +6,5 @@
 
 ## 2. Bench and docs
 
-- [ ] 2.1 Add the `grep` bench scenario to `bench/keys.rb` (150 files of 1000 lines) and print its time per key in `make bench-budget`; run `make bench-budget`
+- [x] 2.1 Add the `grep` bench scenario to `bench/keys.rb` (150 files of 1000 lines) and print its time per key in `make bench-budget`; run `make bench-budget`
 - [ ] 2.2 Update README.md, docs/architecture.md section 10, and docs/codebase-map.md

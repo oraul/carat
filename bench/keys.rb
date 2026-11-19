@@ -102,8 +102,10 @@ COLS = 200
 # the ruby plugin alone, "float", no plugin and a 60 by 15 bordered
 # float over the middle of the window, "finder", the finder alone over
 # FINDER_FILES files, which every key typed into it filters, or
-# "noguides", no plugin and the indent guides turned off; the palette
-# scenario opens the command palette with <F1> in its setup keys)
+# "noguides", no plugin and the indent guides turned off, or "grep", the
+# finder alone over GREP_FILES files of GREP_LINES lines of the generated
+# Ruby text, whose grep picker the setup keys open; the palette scenario
+# opens the command palette with <F1> in its setup keys)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -142,9 +144,12 @@ SCENARIOS = [
   ["G-ruby", "Ggg", 300, 100_000, "gg", "ruby", "ruby"],
   ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"],
   ["finder", "f<BS>", 2_000, 1_000, " ffd", "code", "finder"],
-  ["palette", "e<BS>", 2_000, 1_000, "NG<F1>", "code", "none"]
+  ["palette", "e<BS>", 2_000, 1_000, "NG<F1>", "code", "none"],
+  ["grep", "count<BS><BS><BS><BS><BS>", 100, 1_000, " fg", "code", "grep"]
 ]
 FINDER_FILES = 10_000
+GREP_FILES = 150
+GREP_LINES = 1_000
 
 # One block of the generated Ruby source, BLOCK lines with the block
 # number for {n}: a comment with a Todo, a module, a class, a constant in
@@ -239,11 +244,19 @@ def run(scenario, count, size)
   list = []
   list = Carat::Plugins::Registry.all if plugins == "explorer"
   list << Carat::Plugins::Ruby::Plugin.new if plugins == "ruby"
-  list << Carat::Plugins::Finder::Plugin.new if plugins == "finder"
+  list << Carat::Plugins::Finder::Plugin.new if plugins == "finder" || plugins == "grep"
   if plugins == "finder"
     f = 0
     while f < FINDER_FILES
       files.put("d#{f / 100}/f#{f}.rb", "x = #{f}\n")
+      f += 1
+    end
+  end
+  if plugins == "grep"
+    source = text_of(GREP_LINES, "ruby")
+    f = 0
+    while f < GREP_FILES
+      files.put("g#{f / 10}/g#{f}.rb", source)
       f += 1
     end
   end
