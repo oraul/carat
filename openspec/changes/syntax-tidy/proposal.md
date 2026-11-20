@@ -8,7 +8,7 @@ Sprint 23 item 1 of the backlog lane gathers syntax-highlighting debts. Its fix 
 
 - The Ruby tokenizer counts the nesting depth of a paired delimiter, and the brace depth in an interpolation, in full within a line. The depth is held to the field's largest value (7 pairs, 3 braces) only when the line's state is packed, in `Tokenizer#frame_bits`. The `LineState` header says so.
 - `Filetype.program_name` cuts the version digits and dots off a program name by bytes. `program_type` looks that name up, so it no longer mixes `length` with `getbyte`.
-- `Filetype.from_name` and `from_shebang` use `PluginApi::Paths.basename`, and `Filetype.base` is removed. `Buffer#name_start` is the path's byte size less its basename's. The three copies become one helper, and the root `/` now starts its name at byte 0, as `Paths.basename` keeps `/` whole.
+- `Filetype.from_name` and `from_shebang` use `PluginApi::Paths.basename`, and `Filetype.base` is removed. The two copies in `Filetype`, one of them cut by characters, become the one helper. `Buffer#name_start` keeps its byte index, which allocates nothing in the buffer tabs every frame, and follows `Paths.basename` on the root: `/` now starts its name at byte 0, since `Paths.basename` keeps `/` whole.
 - `docs/codebase-map.md` area 14 names `program_type` and `program_name`, and notes that the state packing clamps the depth.
 
 ## Capabilities
@@ -36,4 +36,4 @@ None.
 - docs/architecture.md: unchanged, its `Filetype` entry describes detection, which keeps its behavior, and no section names the Ruby state's depth field.
 - docs/codebase-map.md: area 14 (the `Filetype` and `LineState` entries).
 - docs/compatibility.md, docs/actions.md: unchanged, since no command or action changes.
-- Performance: the tokenizer drops two comparisons per bracket and adds two per packed frame. `Buffer#name_start` builds the basename string on each call (in the tab bar, once per tab per frame), as `icon_of` already does when a buffer is renamed.
+- Performance: the tokenizer drops two comparisons per bracket and adds two per packed frame. `Buffer#name_start` still allocates nothing.
