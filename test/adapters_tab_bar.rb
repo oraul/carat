@@ -124,9 +124,9 @@ module AdaptersTabBarTest
     # Scenario "The ascii icons give the ascii gem and separator": the gem marks the selected tab, ascii's * under option.icons ascii,
     # and the separator ends every tab in TabLine, ascii's |.
     t.table([
-      ["unicode", "unicode", "◆ • a.txt   │  • b.txt   │"],
-      ["nerd", "nerd", "◆ \u{F016} a.txt   │  \u{F016} b.txt   │"],
-      ["ascii", "ascii", "* . a.txt   |  . b.txt   |"]
+      ["gem and separator, unicode", "unicode", "◆ • a.txt   │  • b.txt   │"],
+      ["gem and separator, nerd", "nerd", "◆ \u{F016} a.txt   │  \u{F016} b.txt   │"],
+      ["gem and separator, ascii", "ascii", "* . a.txt   |  . b.txt   |"]
     ]) do |set|
       one = setup(["a.txt", "b.txt"], 0, 1)
       one.state.options.icons = set.to_s

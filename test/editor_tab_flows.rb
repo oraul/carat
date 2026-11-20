@@ -90,13 +90,35 @@ module EditorTabFlowsTest
   end
 
   # Row 0 squeezed, without the selected tab's gem and the tabs'
-  # separators when it is the tab row (they have their own tests).
+  # separators when it is the tab row (they have their own tests): only
+  # the cell at a tab's start that is a gem followed by a space, and a
+  # separator that follows a space, go, so a name or the modified mark
+  # keeps its own "|" and "*".
   def self.top_row(h)
     text = h.row(0)
-    if files(h).length > 1 || h.tab_count > 1
-      text = text.delete_prefix("*").gsub("|*", " ").delete("|")
-    end
+    text = strip_tab_cells(text) if files(h).length > 1 || h.tab_count > 1
     text.strip.squeeze(" ")
+  end
+
+  def self.strip_tab_cells(text)
+    chars = text.chars
+    out = ""
+    start = true
+    i = 0
+    while i < chars.length
+      c = chars[i]
+      after_space = i > 0 && chars[i - 1] == " "
+      if (c == "|" || c == "│") && after_space
+        start = true
+      elsif start && (c == "*" || c == "◆") && i + 1 < chars.length && chars[i + 1] == " "
+        start = false
+      else
+        out += c
+        start = false
+      end
+      i += 1
+    end
+    out
   end
 
   # What a step checks, as strings.

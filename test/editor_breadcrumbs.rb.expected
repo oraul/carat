@@ -27,6 +27,7 @@ ok   on the class line both windows on the buffer show the class
 ok   inside the method the current window shows the class and the method, the other its own cursor's
 ok   only the innermost symbol of the current window's winbar is in the accent, the path and the outer symbols stay quiet
 ok   outside every symbol the path only, with no new request
+ok   with symbols held but none spanning the cursor row the path is in the accent, the pad quiet
 ok   a window on another buffer shows its path only, under the buffer tabs
 ok   a server without document symbols is not asked and the winbar shows the path
 ok   a key before the answer moves the cursor at once, the winbar showing the path
@@ -46,4 +47,4 @@ ok   stop forgets the symbol request in flight
 ok   a restart drops the held symbols and the winbar shows the path
 ok   the restarted server is asked for the same text once it is ready
 ok   A restart keeps the new outline: the old server's late answer changes nothing
-editor_breadcrumbs: 48 passed, 0 failed
+editor_breadcrumbs: 49 passed, 0 failed

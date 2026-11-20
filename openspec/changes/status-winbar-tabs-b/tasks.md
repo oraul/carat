@@ -11,3 +11,10 @@
 ## 3. Docs
 
 - [x] 3.1 README.md, `docs/compatibility.md`, and `docs/codebase-map.md` describe the look
+
+## 4. Review advisories
+
+- [x] 4.1 Gem table rows labelled "gem and separator, ..." in `test/adapters_tab_bar.rb`
+- [x] 4.2 Group assertion for the winbar with symbols held and none spanning the cursor row in `test/editor_breadcrumbs.rb`
+- [x] 4.3 Winbar requirement of the breadcrumbs delta spec reworded so the current window's last name is the one exception
+- [x] 4.4 `top_row` of `test/editor_tab_flows.rb` strips only the gem and separator cells at tab boundaries

@@ -18,8 +18,8 @@ ok   nerd
 ok   unicode
 ok   ascii
 ok   the counts are plain
-ok   unicode
-ok   nerd
-ok   ascii
+ok   gem and separator, unicode
+ok   gem and separator, nerd
+ok   gem and separator, ascii
 ok   the gem is in the selected group, the separators in TabLine
 adapters_tab_bar: 24 passed, 0 failed

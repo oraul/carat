@@ -247,6 +247,7 @@ module EditorBreadcrumbsTest
     r.type("4j")
     r.wait
     t.assert_equal([" a.rb", 1], [cut(r, 0, 0, 20), r.symbols_sent], "outside every symbol the path only, with no new request")
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1)], "with symbols held but none spanning the cursor row the path is in the accent, the pad quiet")
     r.type(":e b.txt<CR>")
     t.assert_equal([" b.txt", " a.rb > Foo"], [cut(r, 1, 0, 20), cut(r, 1, 21, 19)], "a window on another buffer shows its path only, under the buffer tabs")
 
