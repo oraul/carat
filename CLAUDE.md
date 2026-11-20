@@ -231,7 +231,7 @@ Every command is a Makefile target and this list names them all; `make help` pri
 - Configuration: `make gen-config`, `config-current`. Authoring: `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, `new-plugin` (kinds in `docs/examples.md`).
 - Checks: `make check` runs `CHECK_STAGES` in order, `make stages` prints `FAST_STAGES`, which the checker runs before every push while CI runs the rest, and `make check-stage S=NAME` runs one; the Makefile records why CI leaves out two. `make docs-lint`, `tools-test`, `gates` (`tools/gates.sh static`).
 - `sh tools/run_state.sh COMMAND`: a change's run state, every command in the script's header: `check CHANGE` runs the stages detached, `push CHANGE` pushes after the pre-push gates, and `status` is `/status`.
-- `sh tools/open_pr.sh write CHANGE TITLE` writes the title and gated body as the archived change's `pr.md`, `wait CHANGE` records the pull request open-pr opens or updates on the push, and `message CHANGE SHA` prints the merger's squash message; the workflow's are `read`, `gate`, `rule`, `open`.
+- `sh tools/open_pr.sh write CHANGE TITLE` writes the title and gated body as the archived `pr.md`, `wait CHANGE` records the pull request open-pr opens or updates on the push, and `message CHANGE SHA` prints the merger's squash message; the workflow's are `read`, `gate`, `rule`, `open`.
 - OpenSpec: `make spec-list`, `spec-validate` (also each active change as its archive would leave the specs, in a copy), `spec-update`.
 
 ## Layout
