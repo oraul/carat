@@ -10,7 +10,7 @@
 
 ## 3. The grep figure
 
-- [x] 3.1 Run `grep`'s allocation runs at a tenth of the keys in `bench/run.sh`, drop the variables from `make bench-budget`, and add `grep` to `DEFAULT_SCENARIOS` of `tools/metrics.sh`; checked by `make bench-budget` and `make metrics` writing `allocs.grep`
+- [x] 3.1 Add `grep` to `DEFAULT_SCENARIOS` of `tools/metrics.sh` and run its allocation runs at 20 and 120 keys there; cases in `tools/tools_test.sh` (measure records the grep scenario by default), checked by `make metrics` writing `allocs.grep`
 
 ## 4. Docs
 
