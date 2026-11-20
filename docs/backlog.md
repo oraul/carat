@@ -1465,12 +1465,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: `receive` now crashes the server unless the result is a Hash, so the guards are dead and mislead; the long lines break the files' wrap; the test's wait is a no-op and the `10.times` fallback does the waiting; the architecture row disagrees with the port and the map.
 - Fix outline: read `result["serverInfo"]` and `result["capabilities"]` directly; rewrap both comment paragraphs; wait until `count_of` reaches 2 with a bounded helper and drop the no-op call; add `start(state)` to the row.
 
-## A check stage can still write the delivery clone by an absolute path
-
-- Where: `clone_make` in `tools/run_state.sh` (the symbolic links to `tmp/.toolchain` and `tmp/.spinel`), and the benchmark's `make metrics` and `make bench` in the delivery clone (`.claude/agents/benchmark.md`). Residual risk of `check-isolation`, reported again in its delivery review as security Medium (6) and Low (5) at `tools/run_state.sh` line 529, and by the periodic security review at cd87445 as Low (5) at the same line (the toolchain links the check clone shares). Raised again at bff9a02 (#96): the check clone links the writable toolchain, periodic security Low (4) at `tools/run_state.sh:529`; queue item `check-runner-safety`.
-- Why it matters: the check clone separates what a stage writes in its own directory, but a process of the same user can find the delivery clone (the toolchain links, the runner's working directory) and write its `.git`, `build/pipeline`, or the shared Spinel binaries the next check and the contributor run; the benchmark still runs branch code in the delivery clone. The origin gate, the guard's refusals, and the green line's url check are the second line.
-- Fix outline: run the stages and the benchmark under an operating-system sandbox (a user namespace or another user) with the delivery clone read-only and a private copy of the toolchain, or check the toolchain's hash before each check and run the benchmark in a check clone, each with a `tools/tools_test.sh` case. Queued in `check-runner-safety`.
-
 ## merge-gate-integrity's open quality advisories
 
 - Where: at e368486 on the unpushed commits: `tools/gates.sh` line 436 (the gated failures report under an empty or the `pr-body` gate), line 136 (a hosted origin judged by a denylist while `tools/agent_guard.sh` line 347 and `.claude/workflows/deliver-change.js` line 438 use other forms), line 41 (the origin gate's header line stops mid-phrase); `docs/codebase-map.md` line 50 (the `rules.sh` entry lost its separator). Quality advisories in `merge-gate-integrity`.
@@ -4663,12 +4657,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 - Why: `gh pr list --head` counts fork pull requests with the predictable head name while view and edit by branch resolve only the same-repository head, so any user can make the count wrong (open refused) or have the title and body edit target the wrong one with PR_TOKEN.
 - Fix: count only same-repository heads, resolve one number, pass it to view and edit; a tools_test case with a cross-repository stand-in.
 
-### The check clone shares a writable toolchain (security Low (5))
-
-- Location: tools/run_state.sh:571 (sprint-4 sweep, security Low (5)).
-- Why: the check clone symlinks tmp/.toolchain and tmp/.spinel of the delivery clone, so a stage running branch code can overwrite the spinel binaries, persisting into later checks and agent make runs.
-- Fix: make the toolchain read-only after install, or verify a checksum of tmp/.toolchain/bin before each stage.
-
 ### CI runs the branch's own scope script (security Low (6))
 
 - Location: .github/workflows/ci.yml:58 (sprint-4 sweep, security Low (6)).
@@ -5137,12 +5125,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Fix: add 'the Spinel warning check on the build targets with a stub toolchain (stub_make)' to the entry.
 
 ## Findings of the sprint-6 review and sweep
-
-### Security: the check clone links the toolchain back into the delivery clone (sprint-6 sweep, Medium (6))
-
-- Location: tools/run_state.sh:571 (sprint-6 sweep at 4958dc6bd923, security Medium (6); raised before as Low (5)). Queue item `check-runner-safety`.
-- Why: the check clone links tmp/.toolchain and tmp/.spinel back into the delivery clone, so a stage running branch code writes through the link (build/pipeline, .git, the toolchain binaries) and the clone isolates nothing.
-- Fix outline: give the clone its own read-only toolchain copy, or put the toolchain bin on PATH outside the clone, and run the read profile's make targets in the check clone too.
 
 ### A crash then :LspStart never asks the new server for the outline
 
@@ -8677,15 +8659,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: under 16 colors and NO_COLOR every fifth relative number looks like the others.
 - Fix: give it a bold attribute or a basic-index accent there.
 
-### The squash body of #223 claims styling its diff lacks
-- Location: the squash commit of cursor-and-messages (#223): its Summary and Changes bullets 4 to 6
-- Why: they claim command-line and message styling that the diff does not contain, so the history on main says something untrue.
-- Fix: make it true with the message-styling change, which delivers that styling.
-- Merged: ### Message styling claimed by 223 is not in its diff
-- Location: the squash body of pull request 223 (cursor-and-messages)
-- Why: it claims command-line and message styling that its diff does not contain
-- Fix: make it true with the message-styling change
-
 ### The pull request text review is skipped on a resume past the package phase
 - Location: .claude/workflows/deliver-change.js (prTextReview call after the package step)
 - Why: it runs only in the start that packages, so a resume after the push never reviews the text; no verdict of it is recorded
@@ -8719,28 +8692,19 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/plugins/finder/grep.rb, Grep#load
 - Why: a large tree makes the editor wait once at open (one read_file call per file, up to 100,000 stored lines); the user's nothing-waits rule is only met by bounding it.
 - Fix: stream the read as a background task once finder-streaming and plugin-tasks land after spinel-bump, searching what has arrived.
-### Grep column is the first query byte, not the tightened match start
-- Location: carat/plugins/finder/grep.rb, Grep#column_at
-- Why: Matcher tightens the match from its end, so the highlighted span can start later than the first occurrence of the query's first byte; the cursor then lands a little early on such lines.
-- Fix: expose the span start from Matcher.span_score (a second method, no extra allocation) and use it for the column.
 ### Grep files are searched only to their first 1000 lines
 - Location: carat/plugins/finder/grep.rb, FILE_ROWS
 - Why: read_file answers at most 1000 rows, so a match deeper in a long file is not found.
 - Fix: a read request with a start row, a plugin API minor bump, then read the file in pages.
+- Merged: ### A file longer than 1000 lines is searched in part with no mark
+- Location: carat/plugins/finder/grep.rb (FILE_ROWS, `load`), carat/use_cases/plugins/file_requests.rb (the `read_file` row limit)
+- Why: the user can search a long file and miss a line past its 1000th with nothing on the rows or the title saying the file was cut; docs/plugins.md now states the bound but the picker does not show it.
+- Fix: have `read_file` report that rows were dropped (a host request change with a minor version bump), then count the cut files in `Grep` and show a note on the title or the prompt's count.
 
 ### Grep helper duplication with the plugin
 - Location: carat/plugins/finder/grep.rb (strings, ints), carat/plugins/finder/plugin.rb (no_paths)
 - Why: the typed-empty array helpers repeat across two classes of one plugin.
 - Fix: one shared helper per type in the plugin directory, used by both.
-
-### No grep scenario in the bench
-- Location: bench/ (finder scenarios), carat/plugins/finder/grep.rb search
-- Why: the finder bench measures paths only, so the grep search cost per key is unmeasured; the search is now bounded in memory but still scores every stored line.
-- Fix: add a grep scenario to the bench and the map's Bench line.
-- Merged: ### No bench scenario for the grep search
-- Location: bench/ scenarios, carat/plugins/finder/grep.rb search
-- Why: each key scores up to 100,000 lines and sorts every match to keep 200; the finder bench measures paths only.
-- Fix: add a grep scenario and its map Bench line, or keep a bounded top-200 selection instead of a full sort.
 
 ### Findings file holds a fixed entry and a stale duplicate
 - Location: docs/findings/finder-grep.md, the entries Grep helper duplication with the plugin and No bench scenario for the grep search
@@ -8760,15 +8724,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `tools/open_pr.sh` (the body gate before the first push)
 - Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
 - Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
-
-### Mid-tier contributor returned a placeholder result
-- Location: the contributor's fix start for round 2's blocking finding (tools/tools_test.sh:4304 at 76a1d047c65f)
-- Why: the start returned no result ("placeholder") after committing its fix, so the workflow recorded the head as unknown and the run needed a resume; a trial breach of the schema-return rule by the mid-tier contributor (#219).
-- Fix: count it against the trial; keep the schema-checked return, and have the workflow resume from the lane branch head (git rev-parse) when a start returns a placeholder.
-- Merged: ### Contributor returned a placeholder instead of a result (mid-tier trial)
-- Location: the contributor's last fix start of this change (head 76a1d047c65f), workflow phase implement
-- Why: the contributor, on the mid tier as a trial (#219), returned the word placeholder instead of its schema result, so the workflow recorded the head as unknown and the run stopped; the fix had committed and its check stages passed, so only the return was lost.
-- Fix: count it against the trial; have the workflow reject a placeholder return and re-ask for the schema, reading the head from git when the branch moved.
 
 ### Quality handler note test only greps the literal text
 - Location: tools/tools_test.sh:4303
@@ -8934,18 +8889,20 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/use_cases/dispatcher.rb:114`
 - Why: duplicates Options#tab_width (tabstop > 0 ? tabstop : 8), as do arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, repeat_last.rb:105, and adapters/frame_presenter.rb:236, and Options.width_problem already keeps tabstop at 1 or more, so the fallback is dead
 - Fix: call state.options.tab_width at each site
+- Merged: ### Tabstop > 0 ? tabstop (sprint-20 sweep quality, dispatcher.rb:114)
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
+- Fix: call state.options.tab_width (or pass it) at each site
 
 ### The clear_message inside the list_message? branch is redundant (sprint-20 sweep quality, handle_key.rb:237)
 
 - Location: `carat/use_cases/handle_key.rb:237`
 - Why: the clear_message inside the list_message? branch is redundant: line 240 clears the message unconditionally
 - Fix: keep only the early return for CR and Space in that branch
-
-### The magic numbers 40 and 44 stand for (sprint-20 sweep quality, handle_key.rb:391)
-
-- Location: `carat/use_cases/handle_key.rb:391`
-- Why: the magic numbers 40 and 44 stand for ( and ,
-- Fix: name them (a private_constant list of signature trigger codes) as the comment above describes them
+- Merged: ### Step calls state.clear_message twice when a list message shows (sprint-20 sweep quality, handle_key.rb:237)
+- Location: `carat/use_cases/handle_key.rb:237`
+- Why: step calls state.clear_message twice when a list message shows (lines 237 and 240)
+- Fix: drop the first call and keep the early return for CR and Space
 
 ### Unsaved_buffer calls ControlText.caret with no require_relative of (sprint-20 sweep quality, messages.rb:21)
 
@@ -8988,12 +8945,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/use_cases/operate.rb:233`
 - Why: and carat/use_cases/repeat_last.rb:117 duplication: each private clamp(state, row, col) restates EditorState#clamp_col (carat/domain/editor_state.rb:100)
 - Fix: delete both helpers and call state.clamp_col(row, col), as PutOverSelection and GlobalCommand already do
-
-### Carat/use_cases/arrange_view.rb (sprint-20 sweep quality, repeat_last.rb:105,)
-
-- Location: `carat/use_cases/repeat_last.rb:105,`
-- Why: carat/use_cases/arrange_view.rb:50, carat/use_cases/leave_insert.rb:71, carat/use_cases/insert_tab.rb:25, carat/use_cases/dispatcher.rb:114 duplication: each restates the fallback 'tabstop > 0 ? tabstop : 8', which Options#tab_width (carat/domain/options.rb:135) already provides and PutOverSelection uses
-- Fix: replace each with options.tab_width
 
 ### Carat/use_cases/ex/buffer_command_handler.rb (sprint-20 sweep quality, tab_command_handler.rb:102,)
 
@@ -9042,12 +8993,20 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/plugins/finder/plugin.rb:70`
 - Why: the file finder builds its empty lists with Grep.no_strings (lines 70, 196, 296, 350), so the path picker depends on the grep index for a typed-empty-array helper
 - Fix: move no_strings and no_ints to a neutral place in the finder (Matcher or a small helper module) or build them locally
+- Merged: ### Coupling (sprint-20 sweep quality, plugin.rb:70)
+- Location: `carat/plugins/finder/plugin.rb:70`
+- Why: coupling: the plugin builds its own typed empty lists through Grep.no_strings (70, 195, 296, 350), and Grep exposes the general helpers no_strings, no_ints, and utf8_size as public class methods of the content index
+- Fix: give the plugin its own private typed-empty helper (or one small Finder module both require) and make Grep's helpers private
 
 ### The action descriptions of plugin.finder.next, previous, open_split, (sprint-20 sweep quality, plugin.rb:89)
 
 - Location: `carat/plugins/finder/plugin.rb:89`
 - Why: the action descriptions of plugin.finder.next, previous, open_split, open_vsplit, and open_tab still say 'file' though they now also move over and open the grep picker's line rows
 - Fix: say 'row' (the highlighted row) in the manifest and the matching docs/actions.md rows
+- Merged: ### Stale descriptions (sprint-20 sweep quality, plugin.rb:89)
+- Location: `carat/plugins/finder/plugin.rb:89`
+- Why: stale descriptions: plugin.finder.next, previous, open_split, open_vsplit, and open_tab say file, but the same actions move and open grep lines on <leader>fg
+- Fix: describe them as the highlighted row or match (and the rows in docs/actions.md)
 
 ### The default scenario list, documented as every scenario when none is (sprint-20 sweep quality, run.sh:69)
 
@@ -9103,23 +9062,15 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the walk from root(mode) along codes is written four times (holder_of, node_at, lookup, unbind), and lookup inserts an empty root for an unbound mode
 - Fix: have lookup and holder_of walk through node_at (which already answers an empty node) and keep one loop
 
-### Tabstop > 0 ? tabstop (sprint-20 sweep quality, dispatcher.rb:114)
-
-- Location: `carat/use_cases/dispatcher.rb:114`
-- Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
-- Fix: call state.options.tab_width (or pass it) at each site
-
-### Step calls state.clear_message twice when a list message shows (sprint-20 sweep quality, handle_key.rb:237)
-
-- Location: `carat/use_cases/handle_key.rb:237`
-- Why: step calls state.clear_message twice when a list message shows (lines 237 and 240)
-- Fix: drop the first call and keep the early return for CR and Space
-
 ### The signature trigger compares code with the bare numbers 40 and 44 (sprint-20 sweep quality, handle_key.rb:391)
 
 - Location: `carat/use_cases/handle_key.rb:391`
 - Why: the signature trigger compares code with the bare numbers 40 and 44
 - Fix: name them (a private SIGNATURE_TRIGGERS constant or Key constants for ( and ,)
+- Merged: ### The magic numbers 40 and 44 stand for (sprint-20 sweep quality, handle_key.rb:391)
+- Location: `carat/use_cases/handle_key.rb:391`
+- Why: the magic numbers 40 and 44 stand for ( and ,
+- Fix: name them (a private_constant list of signature trigger codes) as the comment above describes them
 
 ### Csi_key repeats ss3_key's mapping of the finals A, B, C, D, H, F, P, Q, (sprint-20 sweep quality, key_decoder.rb:148)
 
@@ -9174,6 +9125,10 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: `carat/use_cases/repeat_last.rb:105`
 - Why: duplication: re-derives the tab width (tabstop > 0 ? tabstop : 8) although Options#tab_width exists (options.rb:135), as do dispatcher.rb:114, leave_insert.rb:71, arrange_view.rb:50, insert_tab.rb:25
 - Fix: use state.options.tab_width in each
+- Merged: ### Carat/use_cases/arrange_view.rb (sprint-20 sweep quality, repeat_last.rb:105,)
+- Location: `carat/use_cases/repeat_last.rb:105,`
+- Why: carat/use_cases/arrange_view.rb:50, carat/use_cases/leave_insert.rb:71, carat/use_cases/insert_tab.rb:25, carat/use_cases/dispatcher.rb:114 duplication: each restates the fallback 'tabstop > 0 ? tabstop : 8', which Options#tab_width (carat/domain/options.rb:135) already provides and PutOverSelection uses
+- Fix: replace each with options.tab_width
 
 ### Dead code (sprint-20 sweep quality, undo_tree.rb:173)
 
@@ -9283,20 +9238,243 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: find_pair bounds the search by window.top + window.height buffer lines, which under a closed fold is not the range the window shows: a partner drawn below a fold is never matched and hidden folded rows are scanned
 - Fix: bound it by the last buffer row the window shows (the fold-aware bottom ArrangeView computes) and add a MatchParen row with a fold to test/adapters_frame_presenter.rb
 
-### Coupling (sprint-20 sweep quality, plugin.rb:70)
-
-- Location: `carat/plugins/finder/plugin.rb:70`
-- Why: coupling: the plugin builds its own typed empty lists through Grep.no_strings (70, 195, 296, 350), and Grep exposes the general helpers no_strings, no_ints, and utf8_size as public class methods of the content index
-- Fix: give the plugin its own private typed-empty helper (or one small Finder module both require) and make Grep's helpers private
-
-### Stale descriptions (sprint-20 sweep quality, plugin.rb:89)
-
-- Location: `carat/plugins/finder/plugin.rb:89`
-- Why: stale descriptions: plugin.finder.next, previous, open_split, open_vsplit, and open_tab say file, but the same actions move and open grep lines on <leader>fg
-- Fix: describe them as the highlighted row or match (and the rows in docs/actions.md)
-
 ### Map drift (sprint-20 sweep quality, codebase-map.md:543)
 
 - Location: `docs/codebase-map.md:543`
 - Why: map drift: PluginApi::Paths lists normalize, join, dirname, basename, relative, inside? but not absolute (used by VisitTarget and GitSigns) or segments; line 549 PluginHost omits follow_prompt, flush, describe, action_names, reason; line 643 FakeProcesses omits script, which the git tests use
 - Fix: add the missing names to the three entries
+
+### A check stage can forge its runner's job status files
+- Location: `tools/run_state.sh`, `check_stages` (`job_dir=${check_root%/repo}/jobs`), `stage_launch`, `stages_reap`
+- Why: the job files sit beside the clone (`../jobs/STAGE.status`), so a stage can write a passing status for itself or a stage still running before the runner reads it, and the runner records a pass it never saw; `escaped_paths` does not scan them, since the runner writes them during the check.
+- Fix: keep the job directory under the delivery clone's `build/stages/<change>/`, outside every path a stage is handed, or have each job report its status through a pipe the runner holds instead of a file.
+### Shared state a check stage can still write without failing the check
+- Location: `tools/run_state.sh`, `escaped_paths`: `build/pipeline` but the change's own run state (other changes' run states, `build/pipeline/compiled`), `build/stages`, `build/plan`, `build/spinel-cache`, and `tools/run_state.sh` itself
+- Why: concurrent lanes and the runner write these during a check, so they are not compared; a stage can forge another lane's run state, a compile record that makes a later check skip a compile stage, or a cache object, or edit the runner while it reads its own script.
+- Fix: run the stages under an operating-system sandbox (a separate user or a read-only bind of the delivery clone), or, without one, compare the compile records and the other run states by the writes the runners log.
+
+### The checker's own figures stay writable by a stage during a check
+- Location: tools/run_state.sh, state_view (security Low (6), narrowed)
+- Why: state_view now leaves out only the figures the checker's line writes (the names of the workflow's metricLine), so a measurement a stage forges fails the check; but a stage can still rewrite metric.first.*, metric.estimate, or another of those names in its change's run state by an absolute path, and they feed the first-pass rates, the budget, and the history rows. The list also has to follow metricLine: a new name there fails a rejoined check until it is added.
+- Fix: snapshot those metric lines at escape_mark and accept only the values the rejoining checker's metric command logs that it wrote, the log kept where a stage cannot write it.
+
+### Correction: an edit of tools/run_state.sh by a stage is listed by the scan
+- Location: docs/findings/check-runner-safety.md, the entry listing tools/run_state.sh among the paths a stage can write without failing the check (quality advisory)
+- Why: escaped_paths scans the delivery clone's tools/ (only tmp/, .git, and four build/ directories are pruned), so such an edit is listed; the narrower risk is an edit that changes the runner's behavior before the running shell reaches escaped_paths, since sh reads the script as it runs.
+- Fix: read that entry with this narrower risk; have the runner run from a copy of the script made before the stages start, so an edit of the delivery clone's copy cannot change the running check.
+
+### The run-state comparison now leaves out every figure but the measurements (security Low (5), residual widened)
+- Location: tools/run_state.sh `state_view`, the filter of the run-state comparison after a check.
+- Why: so the figures /deliver's usage and tokens write while a detached check runs leave a rejoined check passing, the comparison now leaves out every `metric.*` line but the measurements (`allocs.*`, `rounds.*`, `us.*`, `analysis_ms.*`); a stage can therefore forge, by an absolute path, not only the checker line's figures (first-pass rates, the estimate, rework) but `metric.total_tokens`, `metric.wall_min`, `metric.start.*`, `metric.weighted.*`, and `metric.counted`, which feed the token budget and the history rows, and the check passes.
+- Fix: as for the residual already recorded: at `escape_mark` snapshot the `metric.*` lines and accept a changed one only when a command the runner's caller ran (metric, usage, tokens) logged writing it, the log kept outside every path a stage can write.
+
+### Security: a lane check's scan leaves the main checkout and the common git directory's refs and info out (security Medium (7), still present at package)
+- Location: tools/run_state.sh:1039 escaped_paths (reported at :1025, :1026, and :1039 across the review passes, code unchanged since 8071a6b0ff9a)
+- Why: every delivery runs in a lane worktree, and the scan covers only the lane's own tree, its git directory, and the common directory's hooks/, config.worktree, and config; a stage that learns the main checkout's path from the build/pipeline link or from git rev-parse --git-common-dir can rewrite the main checkout's tools/agent_guard.sh, .claude/settings.json, or tools/gates.sh, or another lane's refs/heads/* or info/ in the common directory, and the check still passes. Merges the four passes' reports of this gap, including the one asking that it be recorded.
+- Fix: when git_dir differs from common_dir, also scan the main checkout's working tree (the parent of common_dir) with the same prunes, and scan common_dir/info and the other lanes' refs, or compare them with the writes the runners log, allowing for concurrent lanes and the main session.
+- Merged: ### A check in a lane does not scan the main checkout or the common directory's refs and info
+- Location: tools/run_state.sh, escaped_paths (security Medium (7))
+- Why: every delivery runs in a lane worktree, and escaped_paths scans only the lane's tree, its own git directory, and the common directory's hooks/, config.worktree, and config. A stage that learns the main checkout's path (the build/pipeline link, git rev-parse --git-common-dir) can rewrite its tools/agent_guard.sh, .claude/settings.json, or tools/gates.sh, or another lane's refs/heads/* or info/ in the common directory, and the check still passes.
+- Fix: when git_dir differs from common_dir, also scan the main checkout's working tree (the parent of common_dir) with the same prunes, and scan common_dir/info and the refs of other lanes, or compare them against the writes the runners log; mind concurrent lanes and the main session writing the main checkout.
+
+### Security: a stage's detached child can write after the escape scan (security Low (6), still present at package)
+- Location: tools/run_state.sh:738 stage_launch (reported at :731 and :738 across the review passes, code unchanged)
+- Why: stage_launch waits only for the stage's direct child and escaped_paths runs once, after the stages pass, so a stage that starts a setsid or nohup child sleeping past the scan can then write the shared toolchain, a hook, or a tracked file, and the next check or delivery runs on what it left. Merges the four passes' reports of this gap, including the one asking that it be recorded.
+- Fix: run each stage in its own session or process group and kill that group before escaped_paths runs, or repeat the scan of the shared toolchain and hooks at the start of each check from a mark kept since the last check ended.
+- Merged: ### A stage's detached child can write after the scan
+- Location: tools/run_state.sh:731, stage_launch, and escaped_paths (security Low (6))
+- Why: stage_launch waits only for the stage's direct child, and escaped_paths runs once, after the stages pass. A stage that starts a detached child (setsid or nohup) sleeping until the scan passed can then write the shared toolchain, a hook, or a tracked file, so the next check or delivery runs on what it left.
+- Fix: run each stage in its own session or process group and kill that group before escaped_paths runs, or repeat the scan of the shared toolchain and hooks at the start of each check from a mark kept since the last check's end.
+
+### Security: a stage can forge its own run state's metric lines during a check (security Low (6), still present at package)
+- Location: tools/run_state.sh:1007 state_view (reported at :1002, :1006, and :1007 across the review passes)
+- Why: state_view leaves every metric.* line out of the run-state comparison except the measurements (allocs, rounds, us, analysis_ms), wider than the earlier list that mirrored the checker's metricLine; a stage writing its own change's run state by an absolute path can forge metric.phase.*, first.*, calib.*, estimate, rework, planned, total_tokens, wall_min, start.*, weighted.*, or counted, which feed the first-pass rates, the token budget, and the history rows, and the check still passes. read_key takes only a line's first key and trusted_state drops multi-key lines, so no review.* or phase.* record can be planted this way. Merges the four passes' reports, including the Low (5) one on the narrower list and the one noting a finding listed as fixed in place is still present.
+- Fix: at escape_mark, snapshot the metric.* lines; after the stages, accept a changed or new metric.* value only when a command the runner's caller ran (metric, usage, tokens) logged writing it, the log kept where no stage can write (for example under build/pipeline beside the run state); any other metric.* difference fails the check.
+
+### Security: a stage can plant notes and closing phases in its own run state during a check (security Low (6), still present at package)
+- Location: tools/run_state.sh:1007 state_view with CLOSE_PHASES (reported at :1006 and :1007; the move of the list into CLOSE_PHASES matches the same lines and adds no injection)
+- Why: state_view leaves every note.* line and the closing phases (plan, implement, package, ci, merge, retro, report) out of the run-state comparison, so a stage writing its own run state by an absolute path can plant a forged note, or a closing phase at a real commit, and the check still passes: that can mislead the planner, make a resume skip a phase, or make an unclosed run look closed through phase.retro. trusted_state still keeps review.*, phase.check, and merged compared, the merger checks CI live, and the merge gate reads the review records. Merges both passes' reports.
+- Fix: while a check runs, have each caller command that writes a record (phase, note, metric, usage, tokens) log the key and value it wrote, somewhere no stage can write (for example beside the run state under build/pipeline with the runner's pid), and in state_unexpected accept a changed or new note.*, closing phase.*, or metric.* line only when that log names it.
+none
+
+None.
+
+none
+- Merged: ### A check stage can forge notes and closing phases in its own run state
+- Location: `tools/run_state.sh`, `state_view`.
+- Why: so that the close of a workflow that stops while its detached check runs leaves the rejoined check passing, the run-state comparison now also leaves out the notes (`note.*`) and the phases the close records (`phase.plan`, `implement`, `package`, `ci`, `merge`, `retro`, `report`), so a stage that writes its own change's run state by an absolute path during a check can plant such a note or phase and the check still passes; `phase.check`, `review.*`, `stage.*`, `merged`, and the measurements stay compared.
+- Fix: log each record a caller's command (`phase`, `note`, `metric`, `usage`, `tokens`) writes while a check runs, outside any path a stage can write, and accept a changed note, phase, or figure only when that log names it; any other difference fails the check like the other run-state differences.
+
+### Grep per-key cost is unbounded and has no bench scenario
+- Location: carat/plugins/finder/grep.rb (the per-key scan of every stored line, up to 400,000), bench/
+- Why: each key scans every stored line (about 45 ms per key on this repository) against the nothing-waits rule, and no bench scenario records time per key under make bench-budget; finder-grep-b delivered the matching and coverage part only.
+- Fix: bound the per-key work (a narrowing filter over the previous query's matches when the query extends it, a cap on lines scored with the capped note, a partial top-200 selection) and add a grep bench scenario on a tree of at least this repository's size.
+
+### Grep.safe passes bidi and zero-width format code points into rows
+- Location: carat/plugins/finder/grep.rb (Grep.safe, Grep.utf8_size, and the class comment wrap)
+- Why: U+202A to U+202E and U+2066 to U+2069 from untrusted files reach the rows, so a row can show another path or line; Grep.safe and Grep.utf8_size are public though used only inside Grep, and the class comment overruns the wrap. Not delivered by finder-grep-b.
+- Fix: replace those code points in Grep.safe, make Grep.safe and Grep.utf8_size private class methods, rewrap the class comment, with a test row per replaced code point.
+none
+
+### Grep rows still pass the other invisible format code points
+
+- Location: carat/plugins/finder/grep.rb:221 (`format_control?`), security Low (3)
+- Why: the word joiner and invisible operators U+2060 to U+2064, the deprecated format controls U+206A to U+206F, the interlinear annotation marks U+FFF9 to U+FFFB, the tag characters U+E0001 and U+E0020 to U+E007F, and U+180E pass from untrusted file text into grep rows, so a crafted file line could hide characters in a row; they cannot reorder runs or move the path:line prefix, since every bidi embedding, override, isolate, and mark is already replaced.
+- Fix: widen `format_control?` to every Unicode Cf code point a row can carry (add U+2060 to U+2064, U+206A to U+206F, U+FFF9 to U+FFFB, U+180E, and U+E0000 to U+E007F), and add one test row per added range in test/editor_finder_grep.rb.
+### Feature-lane quality first pass keeps failing after the checklist changes
+- Location: .claude/agents/contributor.md (the self-check before a done result)
+- Why: 7 of the last 11 feature rows record quality:0, finder-grep (#229) and finder-grep-b both 0 after contributor-checklist (#226); finder-grep-b's one rework round on an untested HIT_ROOM clamp cost 95,622 output tokens, 34% of its 281,571; overall 103/189 (finder-grep-b retro note 10).
+- Fix: have the contributor's own check find an untested behavior change before the review; accepted when at least 7 of the next 10 feature rows record quality:1.
+
+### Feature-lane check phase costs several times the backlog lane's
+- Location: .claude/agents/checker.md (the checker start's reading of stage logs)
+- Why: finder-grep-b spent 32,288 output tokens over 6 calls on two checks that both passed, about 16,000 per start; the feature lane's last 10 check phases run 4,693 to 153,640 (median about 28,900) against the backlog lane's 1,754 to 23,774 (median about 5,500); check first pass 179/189 (finder-grep-b retro note 11).
+- Fix: keep a check whose stages all pass under 8,000 output tokens per checker start over the next 5 rows of each lane, first-pass detection unchanged.
+
+### The quality first pass misses stale wording of a replaced behavior
+- Location: .claude/agents/quality-reviewer.md (finder-match-strict retro note 13)
+- Why: finder-match-strict's quality first pass listed no docs-currency advisory, then 3 later passes found 5 (the old 'fuzzy' or 'unchanged' wording in docs/plugins.md, docs/compatibility.md, docs/actions.md, docs/codebase-map.md, plugin.rb, README.md); quality first pass 106 of 194 overall; reviews 45,892 output tokens and 55 of 221 calls (25%); rework 2 of 3, round 2 docs-only.
+- Fix: when a change replaces a behavior, the first pass searches the tree for the replaced behavior's old wording and reports every stale mention at once; accepted when such a change shows no docs-currency advisory after its first quality pass.
+
+### An advisory-only round and the closing loop are two contributor starts for one kind of finding
+- Location: .claude/workflows/deliver-change.js (finder-match-strict retro note 14); merge into `advisory-findings-auto` (backlog queue Pool 20)
+- Why: after finder-match-strict's blocking fix, the fix-in-place round (3 docs advisories) and the closing loop (1 advisory closed, 1 left) each re-ran the check and the reviews (heads 752056e and 0409630) for 4 one-line doc edits; closing phases also in finder-grep (6,555/19), contributor-tier-routing (3,210/9), finder-grep-c (2,185/3), merged-record (1,194/2).
+- Fix: advisories left after the last blocking fix get at most one contributor start and one re-check; accepted when a run with no blocking finding after round 1 shows at most one advisory start in its phases.
+
+### The check-pass output budget line changed no decision
+- Location: tools/run_state.sh, the check-pass budget line (finder-match-strict retro note 15); merge into `check-pass-budget-flag` (backlog queue Pool 19)
+- Why: it printed over at 3 of 4 finder-match-strict check passes (256,092, 289,743, 307,646 of 200,000, notes 9, 10, 12) and the run went on unchanged; 8 of the last 9 medium feature rows exceed 200,000 output tokens (107,781 to 736,922) while 3 of 9 exceed the 1,200,000 total; this run 357,203 output, implement 185,448 (52%).
+- Fix: calibrate the in-run output budget so it fires on at most 2 of the last 10 medium rows of a lane, or drop the check-pass line in favor of the total-token budget.
+
+### The grep bench scenario now draws the preview float
+- Location: bench/keys.rb (the `grep` scenario, 200 columns) and tools/metrics.sh compare
+- Why: the scenario's terminal is wide, so every key now builds and draws the second float: at -O 0 `make bench-budget` read 644.6 allocations and 23.7 ms a key before and 842.6 allocations and 24.7 ms after (the preview's 18 lines, their host copies, and the float's render), so `metrics-compare` against a base recorded before this change reports more allocations for `grep`.
+- Fix: re-record the base metrics for `grep` after the merge, or cut the per-key cost of a float refresh (reuse the preview window while the highlighted row and its file stay the same, update its lines in place); accepted when the grep scenario's allocations per key fall back to 645 or under with the preview shown.
+
+### The grep preview ends at the last stored line, not the file's end
+- Location: carat/plugins/finder/grep.rb, `Grep#preview`
+- Why: the index keeps neither a file's length nor its empty lines and reads only the first 1000, so a window near a file's end stops at the last non-empty line within those 1000 and shows no line past them; the file finder's preview has no such limit when its file is short.
+- Fix: have `read_file` (or a new host answer) report the file's line count and keep it per file in `Grep`, so the window clamps at the true last line; accepted when a file of 1200 lines previews lines up to 1200 around a hit at 1195.
+
+### The file finder shows paths as the file lists them
+- Location: carat/plugins/finder/plugin.rb, `list_lines` and the file finder's preview title in `refresh`
+- Why: the grep rows and the grep preview's title show a path through `Grep#safe`, but the file finder's rows and preview title show the listed path as it is, so a file name with a control byte or a bidirectional override reaches the terminal there.
+- Fix: pass the file finder's row text and preview title through the same safe-text path (make it a public `Finder` helper shared with `Grep`); accepted when a test lists a file named with a tab and an escape and shows spaces in the list and the title.
+
+### File finder rows and preview title show the listed path unsanitized
+- Location: carat/plugins/finder/plugin.rb:333 (the preview title and the rows, through selected_path)
+- Why: the grep path now goes through Grep#safe, but the file finder still shows the listed path raw; in an untrusted repository a checked-in file name holding a bidirectional override (U+202E) or a zero-width character can make the finder show a different path than the one it opens. C0 controls are already shown as ^X by the frame presenter, so no escape sequence reaches the terminal. Security Low (confidence 5); the behavior predates this change.
+- Fix: move Grep#safe into a shared helper in carat/plugins/finder/ and apply it to the file finder's rows and preview title wherever selected_path is shown, keeping the raw path for open_path; add a test with a path holding U+202E and a control byte.
+## Findings of finder-grep-preview after its package step
+
+- security Low (5) carat/plugins/finder/plugin.rb:333 The file finder's preview title and rows still show the listed path without sanitizing it. A file name checked into an untrusted repository can contain U+202E or a zero-width character and make the finder display a different path from the one it opens. C0 control bytes are already shown as X by the frame presenter, so no escape sequence reaches t
+- quality advisory docs/findings/finder-grep-preview.md:35 duplication: the entries at lines 35, 40, and 45 repeat the entries at lines 1, 6, and 11 verbatim (the retro notes appended twice); fix: drop lines 35 to 48
+- quality advisory docs/findings/finder-grep-preview.md:31 duplication: the entry 'File finder rows and preview title show the listed path unsanitized' restates the entry at line 26 ('The file finder shows paths as the file lists them') with the same fix; fix: merge the two into one entry, keeping the security rating and the U+202E test outline
+
+### An advisory-only fix round counts as rework and reruns every stage and review
+
+- Location: tools/run_state.sh (metric.rework) and .claude/workflows/deliver-change.js (the in-place fix round)
+- Why: finder-grep-c (retro 5) had rework 2 of 3 with every first pass 1 (check, security, quality, bench, ci); its round 2 changed only README.md and docs prose and still reran every check stage and review. Near-same as the queued `rework-review-repeat` and `review-lite-docs`: merge into them.
+- Fix: count an advisory-only round apart from a blocking one and let a docs-only advisory fix stand on the previous head's check, security, and bench; accepted when a tools-test case shows a docs-only advisory fix leaving metric.rework unchanged.
+
+### A pull request's benchmark figure can compare different builds and sources
+
+- Location: tools/open_pr.sh (the Testing section) and the run state's us_per_key (no grep scenario figure recorded)
+- Why: the finder-grep-c body (retro 6) says 25.3 ms per key (dev budget build, bench-budget log) against about 45 ms before (release, the proposal's estimate), while its implement start measured 3.2 ms against main's 12.5 ms in release on the same scenario.
+- Fix: record the grep scenario figure in the run state and let the Testing section cite only recorded run-state or stage-log figures, any before figure main's at the same build and scenario; accepted when a body citing an unrecorded timing is refused.
+### review-due no longer bounds uncounted merges
+- Location: tools/run_state.sh:2235
+- Why: review-due no longer caps how many merged changes go uncounted (SPRINT_EXCEPTIONS removed in #236, which came in through the merge of main). A queue edited to mark items T0, pool, beyond the sprint, or outside the 3 can keep the sprint-end security review of the combined diff from ever becoming due. Each delivery still gets its own security review. Security, Low, confidence 4.
+- Fix: Bring back an upper bound so the sprint closes after at most sprint_size plus a fixed number of uncounted merges, whatever the queue text says. Add a tools_test.sh expect case where an uncounted run still trips the bound.
+- Merged: ### review-due uncounted merges unbounded in sprint_state
+- Location: tools/run_state.sh:2236
+- Why: Same gap as the entry above, seen again at 040963076f86: sprint_state counts only the names not classed t0, outside, beyond, or pool, and nothing bounds how many go uncounted. Security, Low, confidence 4.
+- Fix: Bring back an upper bound so the sprint closes after at most sprint_size plus a fixed number of uncounted merges, whatever the queue text says. Add a tools_test.sh expect case where an uncounted run still trips the bound.
+### README summary still says fuzzy file finder
+- Location: README.md:5
+- Why: The summary still calls the finder a fuzzy file finder, while the plugin's class comment and docs/actions.md now describe substring or initials matching. Quality, advisory, docs currency.
+- Fix: Say a file finder, as plugin.rb line 8 now does.
+### The agents' frontmatter hooks did not judge the workflow's tool calls
+- Location: .claude/agents/merger.md and .claude/agents/contributor.md frontmatter `hooks:` (PreToolUse, tools/agent_guard.sh); .claude/workflows/deliver-change.js agent starts
+- Why: the merger's merge calls of #234, #235, and #236 passed `expectedHeadSha` and, for #234 and #236, a one-paragraph `commit_message`; main's guard of that time refuses both (no `sha` key, a message other than pr.md's body), yet GitHub merged each, and in the merge-body-sections contributor start Bash commands holding `$` ran though the guard refuses `$` in any form. The allowlist, the merge-head check, and the squash message check are not in force for workflow-started agents, a security control the CLAUDE.md agents section relies on.
+- Fix: find why the harness does not apply agent frontmatter hooks to the workflow's agent starts (agentType starts in deliver-change.js); apply the guard through a mechanism the harness honors (for example project settings hooks keyed by agent, or a workflow-side check of each tool call), and add a check the workflow runs at each start that a refused probe command is refused, stopping the run when it is not.
+none
+
+### Two writers of the merged commit
+- Location: .claude/agents/merger.md:29
+- Why: merged now has two writers, the merger's set CHANGE merged in step 7 and the close's phase CHANGE merge, so there is no one clear way to record a merge.
+- Fix: in a follow-up, let the merge phase be the one writer and drop set merged from the merger's step 7 line (keeping lane-close and the branch cleanup), or state in the merger file that the close fills it when step 7 did not run.
+
+### An advisory-only round counts as rework and reruns every review (vim-folds-c retro 3, near-same to the pool's rework-review-repeat)
+- Location: .claude/workflows/deliver-change.js, the round settling after a quality-advisory fix; docs/queue-backlog.md Pool `rework-review-repeat`
+- Why: vim-folds-c recorded rework 1 with every first pass 1; the round fixing 2 quality advisories reran the check and both reviews, 30,104 plus 41,657 = 71,761 output (24.5% of 292,577), the second security pass finding 0; 6 of the last 20 lane rows record rework 1 or 2 with every gate first.
+- Fix: fold into `rework-review-repeat`; accepted when, over the next 3 runs whose only round fixes advisories without a behavior change, metric.rework stays 0 and that round's check plus reviews output is under half of the first pass's.
+
+### The merge phase spends output its work does not need on a green first CI (vim-folds-c retro 4, near-same to the pool's merge-output-cap)
+- Location: .claude/agents/merger.md and the merge phase of .claude/workflows/deliver-change.js; docs/queue-backlog.md Pool `merge-output-cap`
+- Why: vim-folds-c merge 32,655 output in 13 calls (11.2% of 292,577) with CI green in 9.6 min, 0 fixes, and 6 wait calls; the last 10 feature-lane merges have a median of 11,294 output (6,047 to 38,220).
+- Fix: fold into `merge-output-cap`; accepted when, over the next 3 runs with a green first CI and no fix, merge output stays under 12,000 and CI-wait calls at most 4.
+
+### The message row still shows the visual mode indicators the pill already shows
+- Location: carat/adapters/frame_presenter.rb, `paint_message`, the VISUAL, VISUAL_LINE, and VISUAL_BLOCK branches; openspec/specs/visual-mode/spec.md, the requirement of the message row's visual indicator
+- Why: the brief drops `-- INSERT --` because the status bar's pill shows the mode; `-- VISUAL --`, `-- VISUAL LINE --`, and `-- VISUAL BLOCK --` repeat the pill the same way and stay unstyled in `Normal`, so the row is inconsistent between insert and visual mode.
+- Fix: drop the three branches, change the visual-mode and screen-rendering requirements and the tests of editor_visual and adapters_frame_presenter (the keys of a pending count stay at the right edge), or paint them in `ModeMsg` if they are kept.
+
+### Nothing produces a warning or information level, a -- More -- pager, or a match count
+- Location: carat/domain/editor_state.rb, `show` (one bool, `message_error`); carat/adapters/frame_presenter.rb, `paint_message_text`
+- Why: the Facet message styling names a yellow warning icon, a bold blue `-- More --`, and a dim match count; message-styling themes `WarningMsg` and `MoreMsg` but no code paints them, and every non-error message is drawn as information.
+- Fix: give `EditorState#show` a level (error, warning, information) with a producer for the warning icon, add a pager that draws `-- More --` in `MoreMsg` for a listing taller than the screen, and paint the `search-count` text in `MsgDim` at the right edge of the row.
+### Closing-loop retro entries folded twice verbatim
+- Location: docs/backlog.md:8754 repeats :8709, and :8759 repeats :8714 (the closing-loop retro 10 and 11 entries).
+- Why: finder-grep's findings file held them twice, and groom merged near-same notes but not exact repeats, so the backlog carries duplicates.
+- Fix: list :8754 and :8759 as repeats in the next groom, and have groom drop an exact heading repeat within one fold.
+
+### Quality first-pass entries removed as fixed before their acceptance was met
+- Location: docs/backlog.md:6524 (origin/main :6524 "Quality fails its first pass on about half the runs", :8091 "The contributor returns work the quality review blocks on its first pass").
+- Why: the two entries are removed as fixed while their acceptance (7 or 8 first passes of the next 10) is unmet; the sprint-20 quality first pass is 1 of 7.
+- Fix: keep one merged entry open until the measure is met, or fold its acceptance into the calibration decision.
+
+### Folded headings follow the previous entry's Fix line with no blank line
+- Location: docs/backlog.md:8704, :8709, :8720.
+- Why: the defect groom-fold-format already tracks; the folded headings run into the previous entry.
+- Fix: groom-fold-format puts a blank line before each folded heading.
+
+none
+
+### Lint misreports a typed readerless keyword behind a parenthesized type
+- Location: test/lint.rb:941
+- Why: a keyword the signature does type, but behind a type holding a parenthesis before `) ->` (the self-test's `^(Integer) -> void` row), is reported as one the signature does not type, sending the reader to fix a signature that is correct.
+- Fix: word the message as a keyword lint cannot read from the one-line `#:` signature directly above `def initialize`, and say how to make the signature readable.
+
+### Lint passes a readerless holder whose initialize parameters span lines
+- Location: test/lint.rb:932
+- Why: a `def initialize` whose parameters span lines yields no keywords, so a readerless holder with such a def and a signature that `signature_keywords` cannot read still passes unchecked; none exists in `READERLESS_DIRS` today, so the check is silently vacuous for that shape.
+- Fix: report a readerless holder whose `def initialize(` line does not close its parameter list on that line, with a self-test row.
+
+## Findings of use-case-surface-a after its package step
+
+- quality advisory test/lint.rb:916 simplicity: holder_problems now takes six positional parameters, runs two mutually exclusive branches (readerless by signature, others by # @rbs line) and carries a 12-line comment; fix: split the branches into readerless_keyword_problems and rbs_keyword_problems called from holder_problems
+- quality advisory test/lint.rb:999 duplication: ledger_problem and ledger_slots each parse @wiring.record lines with their own marker, and the passed-keyword text check is written twice (holder_problems' slot check and ledger_problem's before/after loop); fix: one ledger_records(holder, assembly) returning slot and object pairs and one passes?(built, keyword, value) helper used by both
+- quality advisory test/lint.rb:1435 naming: the local wiring holds the assembly's source text, not the ledger, beside assembly holding its readers; fix: rename it assembly_text
+- quality advisory carat/adapters/wiring_ledger.rb:262 speculative generality: record's replace-on-second-record branch serves no caller, since the assembly records each pair once, and the probe self-check in test/adapters_assembly.rb:38 exists only to cover it; fix: drop the branch and the probe row, or have lint refuse a second record of a pair
+- quality advisory test/editor_key_hints.rb:27 duplication: empty_session repeats session but for the file's text, as does empty_session in test/editor_palette.rb:33; fix: give session the file text as a parameter, or one builder both helpers call
+- quality advisory test/lint.rb:514 rule gap: reader_problems refuses only attr_reader, so a public attr_accessor in a readerless directory, also a reader, passes; fix: match attr_accessor too, with a self-test row
+- quality advisory docs/architecture.md:278 docs accuracy: section 8 says the assembly keeps a reader or a WiringLedger record for each shared object, but it keeps a reader for every shared object and the ledger records what each readerless holder was handed; fix: keeping a reader for each, and recording in its WiringLedger what each readerless holder was handed
+
+### Findings append is not idempotent across starts
+
+- Location: `.claude/workflows/deliver-change.js` (the findings append a resume repeats), seen in the finder-grep-preview findings, line 35
+- Why: finder-grep-preview retro note 13: the file carries the retro notes twice (lines 35 to 48 repeat lines 1 to 11) and the security Low twice (lines 26 and 31), 14 of its 48 lines repeats, which cost the last quality round 2 advisories, both left (advisories_closed 0 of 2).
+- Fix: accepted when a tools-test case hands the same findings to the append twice, as a resume does, and each entry lands once.
+
+### An overrun note is written at every check pass
+
+- Location: `.claude/workflows/deliver-change.js` (the overrun note per check pass); near-same as the backlog queue's `check-pass-budget-flag`, merge into it
+- Why: finder-grep-preview retro note 14: 4 overrun notes in one run (notes 7, 8, 9, 12: 213,428, 336,889, 361,702, 409,157 output against medium's 200,000), each superseding the last, none changing a decision; finder-match-strict 3 of 4.
+- Fix: accepted when a run records at most one output overrun note and the planner's overrun input is unchanged.
+
+### Reviews spend a third of a run's tool calls for an eighth of its output
+
+- Location: `.claude/workflows/deliver-change.js` (the review rounds)
+- Why: finder-grep-preview retro note 15: 73 of 237 calls (30.8%) for 54,543 of 446,611 output (12.2%), the last round finding 0 blocking, 1 Low, 2 advisories; finder-grep 80 of 268 (29.9%), contributor-tier-routing 73 of 231 (31.6%), sprint-count-t0 59 of 225 (26.2%).
+- Fix: accepted when the reviews' share of tool calls over the next five lane rows falls below 20%, the security review still run on every pushed head.
