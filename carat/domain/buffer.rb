@@ -268,14 +268,14 @@ module Carat
         PluginApi::FileIcons.file_type(PluginApi::Paths.basename(path))
       end
 
-      # The byte where the last segment of the path starts, 0 without a
-      # path or a slash.
+      # The byte where the last segment of the path starts, the one
+      # PluginApi::Paths.basename cuts: 0 without a path or a slash, and
+      # for the root, whose name is "/" itself.
       #: () -> Integer
       def name_start
         current = path
         return 0 if current.nil?
-        slash = current.byterindex("/")
-        slash.nil? ? 0 : slash + 1
+        current.bytesize - PluginApi::Paths.basename(current).bytesize
       end
 
       # Sets the filetype and the syntax with it, as :set filetype does.

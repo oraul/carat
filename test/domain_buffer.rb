@@ -92,6 +92,8 @@ module DomainBufferTest
     icons = [renamed.icon, renamed.name_start]
     renamed.rename("Makefile")
     t.assert_equal([["ruby", 4], ["makefile", 0], "default"], [icons, [renamed.icon, renamed.name_start], D::Buffer.from_text("", nil).icon], "the icon name follows the file name, and the name starts after the last slash")
+    starts = ["\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA/a.rb", "\u65E5\u672C/caf\u00E9.rb", "dir/", "/"].map { |path| D::Buffer.from_text("x\n", path).name_start }
+    t.assert_equal([19, 7, 4, 0], starts, "the name starts at the byte Paths.basename cuts, after a multi-byte directory, and at 0 for the root")
     hostile = D::Buffer.from_text("a\xFFb\n", nil)
     hostile.insert(pos(0, 1), "\xC0\n\xAF")
     t.assert_equal(["a\xC0", "\xAF\xFFb"], hostile.lines, "text with illegal bytes and a newline is inserted by bytes")

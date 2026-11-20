@@ -22,9 +22,15 @@ ok   an unknown extension falls back to the shebang
 ok   a known name wins over the shebang
 ok   no path, a shebang
 ok   no path, no shebang
+ok   a versioned name
+ok   a bare name
+ok   a version after a multi-byte name
+ok   a multi-byte name with a dotted version
+ok   only digits
+ok   the empty name
 ok   a buffer of a.rb is ruby
 ok   renaming it to a.txt clears the filetype
 ok   a shebang names the filetype
 ok   assign_filetype sets both
 ok   an empty buffer has none
-domain_filetype: 29 passed, 0 failed
+domain_filetype: 35 passed, 0 failed
