@@ -17,7 +17,9 @@ name: open-pr
 # file this workflow runs is main's: the branch's commit is never checked
 # out or executed in the job that can read PR_TOKEN, and pr.md reaches it
 # only as data read with git show. The environment AI allows main alone
-# as a deployment ref, so a branch's own workflow cannot name it.
+# as a deployment ref, so a branch's own workflow cannot name it; the job
+# checks that rule before the token step runs, and pins every action by
+# its commit, so no tag moved later runs beside the token.
 on:
   workflow_run:
     workflows: [branch-push]
@@ -25,6 +27,8 @@ on:
 
 permissions:
   contents: read
+  # The environment's deployment rule, read by the rule step.
+  actions: read
 
 concurrency:
   group: open-pr-${{ github.event.workflow_run.head_branch }}
@@ -45,10 +49,18 @@ jobs:
       # repository is public, so the read step fetches without one, and
       # only the open step holds a token, PR_TOKEN, for gh.
       - name: Check out main
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
           persist-credentials: false
+
+      # The job's own token, not PR_TOKEN: the environment AI must admit
+      # the branch main alone, or every run stops here.
+      - name: Check the environment's deployment rule
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: sh tools/open_pr.sh rule
 
       # Every value from the push reaches the shell through files and the
       # environment, never written into a script. The script checks the
