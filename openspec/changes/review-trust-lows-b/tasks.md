@@ -2,11 +2,11 @@
 
 ## 1. Same-repository open
 
-- [x] 1.1 `tools/open_pr.sh open`: list with `isCrossRepository`, keep same-repository numbers, view and edit by number, read the created number; tests in `tools/tools_test.sh` ("open_pr: open skips a fork's pull request on the branch's name", "open_pr: open edits its own pull request by number beside a fork's", the existing open cases on the new stand-in)
+- [x] 1.1 `tools/open_pr.sh open`: list with `isCrossRepository`, keep same-repository numbers, view and edit by number, read the created number; tests in `tools/tools_test.sh` ("open_pr: open opens its own pull request beside a fork's on the branch's name", "open_pr: open edits its own pull request by number beside a fork's", the existing open cases on the new stand-in)
 
 ## 2. Environment rule
 
-- [x] 2.1 `tools/open_pr.sh rule` and its step in `.github/workflows/open-pr.yml` with `actions: read`; tests in `tools/tools_test.sh` ("open_pr: rule ..." cases, "repository: open-pr checks the environment rule before the token")
+- [x] 2.1 `tools/open_pr.sh rule` and its step in `.github/workflows/open-pr.yml` with `actions: read`; tests in `tools/tools_test.sh` ("open_pr: rule ..." cases, "repository: open-pr checks the environment rule with its own token before the read")
 
 ## 3. Pinned checkout
 
@@ -18,4 +18,4 @@
 
 ## 5. Docs
 
-- [ ] 5.1 README.md step 9, `docs/codebase-map.md` area 1, CLAUDE.md's `open_pr.sh` Commands line
+- [x] 5.1 README.md step 9, `docs/codebase-map.md` area 1, CLAUDE.md's `open_pr.sh` Commands line

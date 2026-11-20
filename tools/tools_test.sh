@@ -4255,7 +4255,7 @@ expect "repository: open-pr checks the environment rule with its own token befor
 # fork's pull request on the pushed commit ("pr-on-push security Low at
 # tools/open_pr.sh:118").
 expect "repository: the merger merges only a pull request of this repository and branch" 0 "^good$" \
-  sh -c 'grep "^1[.] Read the pull request once" "$1/../.claude/agents/merger.md" | grep -q -F "its head repository must be the input repository and its head branch the input branch" && echo good' _ "$here"
+  sh -c 'grep "^1[.] Read the pull request once" "$1/../.claude/agents/merger.md" | grep -q "its repository and branch the input.s; otherwise return .stale.[.]" && echo good' _ "$here"
 
 fresh docs
 echo new > tools/new.sh
