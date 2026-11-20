@@ -28,7 +28,7 @@ None.
 ## Out of scope
 
 - No `tools/rules.sh` edit; no file of the feature lane.
-- The XDG global configuration (`~/.config/git/config`), the common directory's `HEAD`, `packed-refs` beyond what the reference listing shows, and `objects/`: not in the queue item; the first two are recorded in `docs/findings/check-runner-safety-c.md`.
+- The XDG global configuration (`~/.config/git/config`) and the main checkout's `HEAD` (`COMMON/HEAD`), which the reference listing leaves out: not in the queue item, recorded in `docs/findings/check-runner-safety-c.md`. The common `objects/`, which every lane writes, stay unscanned.
 - A stage that deletes a file of the lane's git directory leaves no entry with a new status-change time once its directory's own entry is left out; such a deletion breaks only the lane itself.
 
 ## Impact
