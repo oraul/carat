@@ -212,7 +212,7 @@ module Carat
       def listchar_code(key, slot)
         text = listchars
         n = text.bytesize
-        at = Options.listchar_value(text, key)
+        at = listchar_value(text, key)
         return 0 if at < 0
         i = 0
         while at < n && text.getbyte(at) != 44
@@ -228,71 +228,6 @@ module Carat
           at += size
         end
         0
-      end
-
-      # The byte index where the characters of key's last item start in a
-      # listchars value, or -1 when no item names it.
-      #: (String, String) -> Integer
-      def self.listchar_value(text, key)
-        n = text.bytesize
-        found = -1
-        start = 0
-        while start < n
-          stop = start
-          stop += 1 while stop < n && text.getbyte(stop) != 44
-          colon = start
-          colon += 1 while colon < stop && text.getbyte(colon) != 58
-          found = colon + 1 if colon < stop && Options.key_at?(text, start, colon, key)
-          start = stop + 1
-        end
-        found
-      end
-
-      # Whether the bytes of text from start up to stop spell key.
-      #: (String, Integer, Integer, String) -> bool
-      def self.key_at?(text, start, stop, key)
-        return false if stop - start != key.bytesize
-        i = 0
-        while start + i < stop
-          return false if text.getbyte(start + i) != key.getbyte(i)
-          i += 1
-        end
-        true
-      end
-
-      # Whether a word reads as listchars: comma-separated items of tab
-      # with two or three characters, trail and nbsp with one, each
-      # character one a guide could be (one column wide, not a control);
-      # the empty word draws no mark.
-      #: (String) -> bool
-      def self.listchars?(word)
-        n = word.bytesize
-        start = 0
-        while start < n
-          stop = start
-          stop += 1 while stop < n && word.getbyte(stop) != 44
-          colon = start
-          colon += 1 while colon < stop && word.getbyte(colon) != 58
-          return false if colon >= stop
-          key = word.byteslice(start, colon - start).to_s
-          count = 0
-          at = colon + 1
-          while at < stop
-            size = Utf8.size_at(word, at, stop)
-            return false unless Options.guide_char?(word.byteslice(at, size).to_s)
-            count += 1
-            at += size
-          end
-          if key == "tab"
-            return false if count < 2 || count > 3
-          elsif key == "trail" || key == "nbsp"
-            return false if count != 1
-          else
-            return false
-          end
-          start = stop + 1
-        end
-        true
       end
 
       # Builds options from the option lines of a configuration, applied
@@ -351,7 +286,7 @@ module Carat
         when "indentguides" then self.indentguides = word == "true"
         when "list" then self.list = word == "true"
         when "listchars"
-          if Options.listchars?(word)
+          if listchars?(word)
             self.listchars = word
           else
             config.note(line, "#{line.key} takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide")
@@ -430,6 +365,74 @@ module Carat
         return word if known
         config.note(line, "unknown #{what} #{word}")
         ""
+      end
+
+      # The byte index where the characters of key's last item start in a
+      # listchars value, or -1 when no item names it.
+      #: (String, String) -> Integer
+      def listchar_value(text, key)
+        n = text.bytesize
+        found = -1
+        start = 0
+        while start < n
+          stop = item_stop(text, start)
+          colon = item_colon(text, start, stop)
+          found = colon + 1 if colon < stop && text.byteslice(start, colon - start).to_s == key
+          start = stop + 1
+        end
+        found
+      end
+
+      # Whether a word reads as listchars: comma-separated items of tab
+      # with two or three characters, trail and nbsp with one, each
+      # character one a guide could be (one column wide, not a control);
+      # the empty word draws no mark.
+      #: (String) -> bool
+      def listchars?(word)
+        n = word.bytesize
+        start = 0
+        while start < n
+          stop = item_stop(word, start)
+          colon = item_colon(word, start, stop)
+          return false if colon >= stop
+          key = word.byteslice(start, colon - start).to_s
+          count = 0
+          at = colon + 1
+          while at < stop
+            size = Utf8.size_at(word, at, stop)
+            return false unless Options.guide_char?(word.byteslice(at, size).to_s)
+            count += 1
+            at += size
+          end
+          if key == "tab"
+            return false if count < 2 || count > 3
+          elsif key == "trail" || key == "nbsp"
+            return false if count != 1
+          else
+            return false
+          end
+          start = stop + 1
+        end
+        true
+      end
+
+      # The byte index of the comma ending the listchars item that starts
+      # at start, or the text's end for the last item.
+      #: (String, Integer) -> Integer
+      def item_stop(text, start)
+        n = text.bytesize
+        stop = start
+        stop += 1 while stop < n && text.getbyte(stop) != 44
+        stop
+      end
+
+      # The byte index of the colon of the listchars item from start up to
+      # stop, or stop when the item has none.
+      #: (String, Integer, Integer) -> Integer
+      def item_colon(text, start, stop)
+        colon = start
+        colon += 1 while colon < stop && text.getbyte(colon) != 58
+        colon
       end
 
       #: (String, Integer) -> void
