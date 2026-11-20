@@ -9441,7 +9441,7 @@ none
 - Why: git also reads `${XDG_CONFIG_HOME:-$HOME/.config}/git/config` as global configuration (a hook path, an alias, a credential helper), and `refs_view` lists `for-each-ref`, which leaves out the common directory's `HEAD`, so a stage writing either by an absolute path still passes the check; the queue item named only `$HOME/.gitconfig` and the references.
 - Fix: `escape_scan` the XDG configuration file beside `$HOME/.gitconfig`, and add `git -C "$main_tree" symbolic-ref -q HEAD || git -C "$main_tree" rev-parse HEAD` to the compared views from a lane, each with a failing-stage case in `tools/tools_test.sh`.
 - Merged: ### Quality: this findings file's first entry is superseded by a later one
-- Location: docs/findings/check-runner-safety-c.md:1
+- Location: the removed findings file of check-runner-safety-c
 - Why: the first entry is superseded by the third (the same XDG gap, and its claim that the main checkout's HEAD is unchecked is stale since main_moved compares the commit), so the backlog receives a near-duplicate.
 - Fix: Let groom merge the first entry into the third, dropping the stale HEAD claim.
 
@@ -9526,7 +9526,7 @@ none
 
 ## Findings of grep-long-files after its package step
 
-- quality advisory docs/findings/grep-long-files.md:10 docs format: the planner's appended entry '### A records run's advisories...' follows the previous entry's Fix line with no blank line, because plan-apply appends build/plan/ change /backlog.md with a bare cat (tools/run_state.sh:1926); fix: insert the blank line, and have plan_apply print a separating newline before appending to a non-empty fin
+- quality advisory the removed findings file of grep-long-files docs format: the planner's appended entry '### A records run's advisories...' follows the previous entry's Fix line with no blank line, because plan-apply appends build/plan/ change /backlog.md with a bare cat (tools/run_state.sh:1926); fix: insert the blank line, and have plan_apply print a separating newline before appending to a non-empty fin
 
 ### Requests for a buffer outside the working directory are sent though it was never opened
 - Location: carat/adapters/json_rpc_language_gateway.rb `complete`, `send_hover`, `send_definition`, `send_signature`, and `send_symbols` (each checks only that the buffer has a path)
