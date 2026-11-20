@@ -129,6 +129,13 @@ module Carat
       # spaces.
       WIDTH_MAX = 9999
 
+      # The largest scroll or scrolloff, in lines, the largest timeoutlen,
+      # in milliseconds, and the most undo states a buffer keeps: far above
+      # any useful value, so a project file cannot ask for a huge one.
+      LINES_MAX = 9999
+      TIMEOUTLEN_MAX = 10_000
+      UNDOLEVELS_MAX = 10_000
+
       # The width a tab takes for display and block columns: tabstop, or 8
       # when tabstop is not positive.
       #: () -> Integer
@@ -184,8 +191,7 @@ module Carat
 
       # Builds options from the option lines of a configuration, applied
       # in order so a later line wins. An unknown option, a value of the
-      # wrong kind, a tabstop, shiftwidth, key hints wait, or slot size out
-      # of its range, or an unknown icon set,
+      # wrong kind, a number out of its range, or an unknown icon set,
       # theme, background, or mode is noted on the configuration and keeps
       # the value before it.
       #: (Config) -> Options
@@ -249,10 +255,18 @@ module Carat
         when "shiftwidth"
           value = bounded(config, line, 0, WIDTH_MAX)
           self.shiftwidth = value if value >= 0
-        when "scroll" then self.scroll = word.to_i
-        when "scrolloff" then self.scrolloff = word.to_i
-        when "timeoutlen" then self.timeoutlen = word.to_i
-        when "undolevels" then self.undolevels = word.to_i
+        when "scroll"
+          value = bounded(config, line, 0, LINES_MAX)
+          self.scroll = value if value >= 0
+        when "scrolloff"
+          value = bounded(config, line, 0, LINES_MAX)
+          self.scrolloff = value if value >= 0
+        when "timeoutlen"
+          value = bounded(config, line, 0, TIMEOUTLEN_MAX)
+          self.timeoutlen = value if value >= 0
+        when "undolevels"
+          value = bounded(config, line, 0, UNDOLEVELS_MAX)
+          self.undolevels = value if value >= 0
         when "keyhints.delay"
           value = bounded(config, line, 0, KEYHINTS_DELAY_MAX)
           self.keyhints_delay = value if value >= 0

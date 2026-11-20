@@ -41,7 +41,11 @@ module DomainOptionsConfigTest
       ["a zero tabstop", "option.tabstop 0\n", [VIM, [".caratrc:1: option.tabstop takes a number from 1 to 9999"]]],
       ["a huge shiftwidth", "option.shiftwidth 999999999\noption.shiftwidth 10000\n", [VIM, [".caratrc:1: option.shiftwidth takes a number from 0 to 9999", ".caratrc:2: option.shiftwidth takes a number from 0 to 9999"]]],
       ["the limits themselves", "option.tabstop 9999\noption.shiftwidth 9999\n", [[false, false, 9999, 9999, false, false, 0, 1000, 1000], []]],
-      ["the smallest values", "option.tabstop 1\noption.shiftwidth 0\n", [[false, false, 1, 0, false, false, 0, 1000, 1000], []]]
+      ["the smallest values", "option.tabstop 1\noption.shiftwidth 0\n", [[false, false, 1, 0, false, false, 0, 1000, 1000], []]],
+      # Scenarios: Numbers past the limits, The limits themselves.
+      ["numbers past the limits keep the values before them", "option.scrolloff 3\noption.scrolloff 999999999\noption.timeoutlen 10001\noption.undolevels 999999999\noption.undolevels 10001\n", [[false, false, 8, 8, false, false, 3, 1000, 1000], [".caratrc:2: option.scrolloff takes a number from 0 to 9999", ".caratrc:3: option.timeoutlen takes a number from 0 to 10000", ".caratrc:4: option.undolevels takes a number from 0 to 10000", ".caratrc:5: option.undolevels takes a number from 0 to 10000"]]],
+      ["the line, wait, and undo limits themselves", "option.scrolloff 9999\noption.timeoutlen 10000\noption.undolevels 10000\n", [[false, false, 8, 8, false, false, 9999, 10000, 10000], []]],
+      ["the smallest line, wait, and undo numbers", "option.scrolloff 0\noption.timeoutlen 0\noption.undolevels 0\n", [[false, false, 8, 8, false, false, 0, 0, 0], []]]
     ]) do |text|
       options_of(text.to_s)
     end
@@ -55,7 +59,9 @@ module DomainOptionsConfigTest
     t.table([
       ["scroll is 0 by default, half the window", "", [0, []]],
       ["scroll takes a number", "option.scroll 4\n", [4, []]],
-      ["scroll refuses a word", "option.scroll half\n", [0, [".caratrc:1: option.scroll takes a number"]]]
+      ["scroll refuses a word", "option.scroll half\n", [0, [".caratrc:1: option.scroll takes a number"]]],
+      ["scroll past the limit keeps the value before it", "option.scroll 4\noption.scroll 10000\n", [4, [".caratrc:2: option.scroll takes a number from 0 to 9999"]]],
+      ["scroll at the limit", "option.scroll 9999\n", [9999, []]]
     ]) do |text|
       config = D::Config.new
       config.read(".caratrc", text.to_s, false)

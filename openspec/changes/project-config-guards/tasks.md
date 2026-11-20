@@ -12,7 +12,7 @@
 ## 3. Options
 
 - [x] 3.1 `carat/domain/options.rb` `bounded` and `named` replace `width_problem`, `range_problem`, and the known-name branches (proved by the unchanged rows of `test/domain_options_config.rb`)
-- [ ] 3.2 `carat/domain/options.rb` bounds scroll, scrolloff, timeoutlen, undolevels (proved by "numbers past the limits" and "the limits themselves" in `test/domain_options_config.rb`)
+- [x] 3.2 `carat/domain/options.rb` bounds scroll, scrolloff, timeoutlen, undolevels (proved by "numbers past the limits" and "the limits themselves" in `test/domain_options_config.rb`)
 
 ## 4. Docs
 
