@@ -33,6 +33,11 @@ ok   an undo is a change with a higher version
 ok   a write sends didSave
 ok   a text buffer hides the slot and keeps the server
 ok   closing the buffer sends didClose
+ok   a file outside the working directory is never opened on the server: an absolute path
+ok   a file outside the working directory is never opened on the server: a relative path climbing out
+ok   a file under the working directory named with a .. segment is opened, changed, and saved
+ok   a save while the server starts is sent once it is ready, after didOpen
+ok   and only once
 ok   no textDocumentSync sends no change
 ok   sync kind 0 sends no change
 ok   sync kind 1 sends the whole text
@@ -88,5 +93,6 @@ ok   stop sends shutdown and exit and stops the child
 ok   a second stop stops nothing more
 ok   an idle tick with no server reads no configuration line: a line read after the first tick is not seen
 ok   a missing command leaves the slot empty
+ok   a missing command leaves the slot empty and later idle ticks start nothing: it is tried once
 ok   a text file starts nothing
-adapters_language_gateway: 91 passed, 0 failed
+adapters_language_gateway: 97 passed, 0 failed

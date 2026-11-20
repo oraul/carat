@@ -117,7 +117,7 @@ module AdaptersPathlessLanguageTest
       ["hover: K in a pathless buffer asks no hover", "ifoo<Esc>K|", "|true|false"],
       ["signature: an open paren in a pathless buffer asks no signature help", "ifoo(|", "|true|false"],
       ["diagnostics: a publish draws nothing on a pathless buffer", "ifoo<Esc>|publish", "|true|false"],
-      ["control: a pathless buffer written to a name is opened", "ifoo<Esc>:w c.rb<CR>|", "textDocument/didOpen|true|false"]
+      ["control: a pathless buffer written to a name is opened", "ifoo<Esc>:w c.rb<CR>|", "textDocument/didOpen,textDocument/didSave|true|false"]
     ]) do |input|
       parts = input.to_s.split("|", -1)
       pathless(parts[0].to_s, parts[1].to_s == "publish")

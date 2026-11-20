@@ -14,7 +14,8 @@ module Carat
       end
 
       # Queues bytes for the child's input and answers whether the child
-      # still takes input.
+      # still takes input: false once it was stopped or a write to it
+      # failed.
       # @rbs handle: Integer
       # @rbs bytes: String
       def write(handle, bytes)
@@ -23,7 +24,8 @@ module Carat
 
       # Closes the child's input once what was queued is written, ends
       # that child, and no other process, and reaps it when it ends,
-      # without waiting for it.
+      # waiting a moment at most: a child that has not ended by then is
+      # killed.
       #: (Integer) -> void
       def stop(handle)
         raise NotImplementedError, "ProcessPort#stop"

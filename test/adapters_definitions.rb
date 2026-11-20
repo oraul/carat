@@ -495,6 +495,12 @@ module AdaptersDefinitionsTest
     r = defining
     asked(r, "gd", [{ "uri" => uri("/project/b%2Erb"), "range" => { "start" => { "line" => 2, "character" => 2 } } }, { "uri" => uri("relative/x.rb"), "range" => { "start" => { "line" => 0, "character" => 0 } } }, { "uri" => uri("/project/a%00.rb"), "range" => { "start" => { "line" => 0, "character" => 0 } } }, { "uri" => uri("/project/b.rb"), "range" => { "start" => { "line" => -1, "character" => 0 } } }])
     t.assert_equal("b.rb 2:2", r.where, "escapes are decoded and relative, NUL, and negative targets are dropped")
+    # Scenario "A target with a dot segment is dropped".
+    ["/project/lib/../b.rb", "/project/lib/%2E%2E/b.rb", "/project/./b.rb", "/project/lib/.."].each do |path|
+      r = defining
+      asked(r, "gd", location(path, 1, 0))
+      t.assert_equal("a.rb 3:0", r.where, "A target with a dot segment is dropped: #{path}")
+    end
 
     # The target's tab: it shows and is the selected one wherever the
     # target lies, and an outside file already listed is shown, not

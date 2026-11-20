@@ -94,6 +94,21 @@ module DriversProcessRunnerTest
     sleep 0.2
     t.assert_equal("exit ", stop_cat(runner, queue), "and the runner starts and stops the next child")
 
+    # Scenario "A server ignoring its end of input and TERM is killed".
+    stubborn = runner.spawn(["sh", "-c", "trap '' TERM; exec sleep 30"])
+    sleep 0.2
+    runner.stop(stubborn)
+    t.assert_equal("#{stubborn} exit", ended(queue), "A server ignoring its end of input and TERM is killed: its output ends")
+
+    # Scenario "A server whose input broke takes no more input".
+    deaf = runner.spawn(["sh", "-c", "exec 0<&-; exec sleep 30"])
+    sleep 0.2
+    t.assert_equal(true, runner.write(deaf, "x"), "a write to a child that closed its input is queued")
+    sleep 0.3
+    t.assert_equal(false, runner.write(deaf, "x"), "A server whose input broke takes no more input: the next write answers false")
+    runner.stop(deaf)
+    t.assert_equal("#{deaf} exit", ended(queue), "and it still stops")
+
     t.assert_equal(0, runner.spawn(["carat-no-such-command"]), "a missing command does not start")
     t.assert_equal(0, runner.spawn([]), "no words start nothing")
     t.assert_equal(false, runner.write(9, "x"), "an unknown handle takes no input")
