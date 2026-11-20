@@ -14,10 +14,10 @@ module Carat
     # Process.detach reaps it (Spinel compiles no Process.wait(pid) or
     # WNOHANG); a child that has not ended STOP_SECONDS later, one that
     # ignores both its end of input and TERM, is killed, so it never
-    # outlives the editor. The constructor traps PIPE so a write to a child that
-    # ended answers EPIPE, which write_bytes rescues, instead of ending
-    # Carat at the default action: stop TERMs a child its writer may still
-    # be writing to. A handler, unlike IGNORE, resets to the default in
+    # outlives the editor. The constructor traps PIPE so a write to a
+    # child that ended answers EPIPE, which write_bytes rescues, instead
+    # of ending Carat at the default action: stop TERMs a child its
+    # writer may still be writing to. A handler, unlike IGNORE, resets to the default in
     # the spawned children, so their own writes to a closed pipe still end
     # them. capture runs a short command on the
     # editor thread instead: the same spawn without a shell, its output read
@@ -81,8 +81,10 @@ module Carat
       # Closes the child's input once its queue is written and ends the
       # child itself: TERM goes to its own pid, never a group, before the
       # detach reaps it, so the number cannot yet belong to another
-      # process; KILL follows only while the detach thread has not reaped
-      # it, STOP_SECONDS later. A closed handle is never signalled again.
+      # process. KILL follows when the detach thread has not reaped it
+      # STOP_SECONDS later; the one window left is the child ending, and
+      # its number being taken again, between that wait's end and the
+      # signal. A closed handle is never signalled again.
       #: (Integer) -> void
       def stop(handle)
         return unless open?(handle)
