@@ -27,7 +27,7 @@ module Carat
         while row <= selection.bottom
           line = buffer.line(row)
           span = selection.span(buffer, row, tabstop)
-          lines << line[0, span.from] + Domain::Operators.recase(line[span.from, span.to - span.from], how, command.char) + line[span.to, line.length - span.to]
+          lines << Domain::Operators.recase_row(line, span.from, span.to, how, command.char)
           row += 1
         end
         buffer.set_lines(top, selection.bottom + 1, lines)

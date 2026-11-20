@@ -140,6 +140,12 @@ module AdaptersAssemblyTest
     shared << "s" unless substitute.is_a?(Carat::UseCases::SubstituteCommandHandler) && substitute.substitute_lines.equal?(a.substitute_lines)
     shared << "&" unless repeat.is_a?(Carat::UseCases::SubstituteHandler) && repeat.substitute_lines.equal?(a.substitute_lines)
     t.assert_equal([], shared, "the substitute use case behind :s and &")
+    recaser = a.actions.find("operator.swap_case")
+    visual_recaser = a.actions.find("visual.toggle_case")
+    recase_shared = []
+    recase_shared << "operator" unless recaser.is_a?(Carat::UseCases::OperatorHandler) && recaser.recase_selection.equal?(a.recase_selection)
+    recase_shared << "visual" unless visual_recaser.is_a?(Carat::UseCases::SelectionHandler) && visual_recaser.recase_selection.equal?(a.recase_selection)
+    t.assert_equal([], recase_shared, "the case operators and the visual case keys share the one RecaseSelection")
     global_handler = a.commands.find("g")
     vglobal = a.commands.find("v")
     delete = a.commands.find("d")

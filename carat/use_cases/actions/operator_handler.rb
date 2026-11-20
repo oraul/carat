@@ -26,6 +26,8 @@ module Carat
       # @rbs @recase_selection: RecaseSelection
       # @rbs @variant: Symbol
 
+      attr_reader :recase_selection #: RecaseSelection
+
       #: (operate: Operate, delete_selection: DeleteSelection, yank_selection: YankSelection, change_selection: ChangeSelection, shift_selection: ShiftSelection, recase_selection: RecaseSelection, variant: Symbol) -> void
       def initialize(operate:, delete_selection:, yank_selection:, change_selection:, shift_selection:, recase_selection:, variant:)
         super(kind: :operator, repeat: true)

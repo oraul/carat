@@ -118,7 +118,7 @@ module EditorCaseOperatorsTest
       ["the visual modes: v~ over multibyte letters", ["ÉüB\n", [0, 0], "vll~"], [["éÜb"], [0, 0], :normal]],
       ["the visual modes: Vu over multibyte letters", ["ÀÉ\n", [0, 0], "Vu"], [["àé"], [0, 0], :normal]],
       ["the visual modes: <C-v>U over multibyte letters", ["éa\nüb\n", [0, 0], "<C-v>jlU"], [["ÉA", "ÜB"], [0, 0], :normal]],
-      ["the visual modes: v$gU on an empty line", ["\nab\n", [0, 0], "vgU"], [["", "ab"], [0, 0], :normal]],
+      ["the visual modes: vgU on an empty line", ["\nab\n", [0, 0], "vgU"], [["", "ab"], [0, 0], :normal]],
       # Dot repeats a case operator.
       ["dot repeats a case operator: gUiw then w and dot", ["ab cd ef\n", [0, 0], "gUiww."], [["AB CD ef"], [0, 3], :normal]],
       ["dot repeats a case operator: g~w from the start of the next word", ["ab cD ef\n", [0, 0], "g~ww."], [["AB Cd ef"], [0, 3], :normal]],

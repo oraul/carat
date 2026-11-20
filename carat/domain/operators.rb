@@ -248,6 +248,13 @@ module Carat
         changed.length == letter.length ? changed : letter
       end
 
+      # One row with the characters from first up to the exclusive last
+      # recased and the rest kept; char is what :replace fills with.
+      #: (String, Integer, Integer, Symbol, String) -> String
+      def self.recase_row(line, first, last, how, char)
+        line[0, first] + recase(line[first, last - first], how, char) + line[last, line.length - last]
+      end
+
       # The rows of a range with the case of its characters changed, in
       # one edit: how is :toggle, :lower, or :upper. A linewise range
       # changes whole lines, a charwise one is used normalized, from its
@@ -269,7 +276,7 @@ module Carat
             last = span.to.col if row == span.to.row && span.to.col < line.length
             first = last if first > last
           end
-          made = line[0, first] + recase(line[first, last - first], how, "") + line[last, line.length - last]
+          made = recase_row(line, first, last, how, "")
           changed = true if made != line
           lines << made
           row += 1

@@ -259,6 +259,7 @@ module Carat
       attr_reader :yank_selection #: UseCases::YankSelection
       attr_reader :change_selection #: UseCases::ChangeSelection
       attr_reader :put_over_selection #: UseCases::PutOverSelection
+      attr_reader :recase_selection #: UseCases::RecaseSelection
       attr_reader :probe_path #: UseCases::ProbePath
       attr_reader :open_file #: UseCases::OpenFile
       attr_reader :save_file #: UseCases::SaveFile
@@ -398,6 +399,7 @@ module Carat
         @yank_selection = UseCases::YankSelection.new(registers: @registers)
         @change_selection = UseCases::ChangeSelection.new(registers: @registers)
         @put_over_selection = UseCases::PutOverSelection.new(registers: @registers)
+        @recase_selection = UseCases::RecaseSelection.new
         @probe_path = UseCases::ProbePath.new(files: files)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
@@ -520,13 +522,13 @@ module Carat
         shift_selection = UseCases::ShiftSelection.new
         UseCases::MotionHandler.register(@actions, move: @move)
         UseCases::SearchHandler.register(@actions, jump_to_match: @jump_to_match)
-        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection, recase_selection: UseCases::RecaseSelection.new)
+        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection, recase_selection: @recase_selection)
         UseCases::EditHandler.register(@actions, operate: @operate, replace_chars: UseCases::ReplaceChars.new, toggle_case: UseCases::ToggleCase.new, put_register: @put_register, join_lines: UseCases::JoinLines.new)
         UseCases::TextObjectHandler.register(@actions, extend_visual: extend_visual)
         UseCases::InsertModeHandler.register(@actions)
         UseCases::NormalModeHandler.register(@actions, leave_insert: @leave_insert, cancel_command_line: @cancel_command_line)
         UseCases::VisualModeHandler.register(@actions, start_visual: start_visual, reselect_visual: reselect_visual)
-        UseCases::SelectionHandler.register(@actions, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, join_selection: UseCases::JoinSelection.new, recase_selection: UseCases::RecaseSelection.new, insert_at_selection: UseCases::InsertAtSelection.new, put_over_selection: @put_over_selection, swap_visual_ends: swap_visual_ends)
+        UseCases::SelectionHandler.register(@actions, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, join_selection: UseCases::JoinSelection.new, recase_selection: @recase_selection, insert_at_selection: UseCases::InsertAtSelection.new, put_over_selection: @put_over_selection, swap_visual_ends: swap_visual_ends)
         UseCases::CommandLineHandler.register(@actions, enter_command_line: @enter_command_line, execute_command_line: @execute_command_line, erase_command_line: erase_command_line, recall_history: @recall_history)
         UseCases::InsertTextHandler.register(@actions, break_line: @break_line, erase_character: @erase_character, insert_tab: @insert_tab)
         UseCases::MessageHandler.register(@actions)

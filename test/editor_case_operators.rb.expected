@@ -75,7 +75,7 @@ ok   the visual modes: vgU over multibyte letters
 ok   the visual modes: v~ over multibyte letters
 ok   the visual modes: Vu over multibyte letters
 ok   the visual modes: <C-v>U over multibyte letters
-ok   the visual modes: v$gU on an empty line
+ok   the visual modes: vgU on an empty line
 ok   dot repeats a case operator: gUiw then w and dot
 ok   dot repeats a case operator: g~w from the start of the next word
 ok   dot repeats a case operator: guu on the next line

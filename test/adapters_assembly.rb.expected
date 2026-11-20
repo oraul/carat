@@ -47,6 +47,7 @@ ok   the last substitute, in the substitute, the global, and the searches
 ok   the last search, in the searches and the substitute
 ok   the search history, in the searches and the substitute
 ok   the substitute use case behind :s and &
+ok   the case operators and the visual case keys share the one RecaseSelection
 ok   the global and delete use cases behind :g, :v, and :d
 ok   the command history
 ok   the search prompt
@@ -99,4 +100,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 101 passed, 0 failed
+adapters_assembly: 102 passed, 0 failed
