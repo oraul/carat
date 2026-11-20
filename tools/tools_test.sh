@@ -1200,6 +1200,15 @@ commit "chore: an edit of a file of the change"
 expect "run_state: moved compares a file named like a pathspec literally" 1 "^moved: the merge changed files of the change: tools/own[.]sh; the reviews run again" \
   env BASE=main sh "$here/run_state.sh" moved carry "$carry_odd"
 expect "run_state: moved leaves no record when a file of the change changed" 0 "^$" state get carry moved
+# A branch commit to an instruction record after the pass counts as a
+# file of the change, so no review is carried across it.
+git_q checkout -q -b chore/carry-goals "$carry_reviewed"
+mkdir -p docs && echo "goals edited" > docs/goals.md
+commit "docs: an instruction record edited after the pass"
+git_q merge -q --no-edit main
+expect "run_state: moved reruns the reviews when an instruction record changed after the pass" 1 "^moved: the merge changed files of the change: docs/goals[.]md; the reviews run again" \
+  env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed"
+expect "run_state: moved leaves no record when an instruction record changed after the pass" 0 "^$" state get carry moved
 # A failing git diff runs the reviews again and drops the record.
 git_q checkout -q chore/carry
 env BASE=main sh "$here/run_state.sh" moved carry "$carry_reviewed" > /dev/null

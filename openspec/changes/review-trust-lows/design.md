@@ -16,6 +16,7 @@
 - A second pattern, `INSTRUCTION_RECORDS_RE='docs/goals\.md$'`, subtracted from the settle, rather than removing `docs/goals.md` from `RECORDS_RE`: that list is `tools/rules.sh`, which the brief forbids editing here, and it also decides the stage scopes, which should still skip compiling for a goals edit.
 - The line is kept in both `tools/gates.sh` and `tools/run_state.sh` (each sources only `tools/rules.sh`), and a tools-test case compares the two, as the guard's `RISKY_CONFIG` copy is compared today.
 - `settled_round` adds the instruction records to the names it reports ("changed since COMMIT outside the records a pass settles across"), keeping the message's prefix the workflow and the tests read.
+- `moved_change` counts an instruction record as a file of the change, so the merge-main carry never lets a review stand across a branch commit to `docs/goals.md` after the pass; it and `reviewed_edits` share one filter, `outside_records`.
 - `reviewed_edits` lists an instruction record beside the files outside `RECORDS_RE`, so a package step that edited `docs/goals.md` after the security review restores it rather than reaching a push gate that refuses.
 
 ## Risks / Trade-offs

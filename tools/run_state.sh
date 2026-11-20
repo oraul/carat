@@ -167,7 +167,8 @@
 #                               from COMMIT, the reviewed commit, to HEAD and
 #                               HEAD matches BASE in every file the change
 #                               never touched (both outside the records-only
-#                               paths, names compared as text), so its reviews
+#                               paths, an instruction record counted as a
+#                               file, names compared as text), so its reviews
 #                               stand; else, or when a git diff fails, print
 #                               why and exit 1, no moved record left
 #   bench CHANGE                record the metrics stage's measurement and
@@ -463,6 +464,15 @@ TEST_ONLY="^(test/|$RECORDS_RE|\$)"
 # settled across (settled, reviewed-edits): the line of tools/gates.sh,
 # which settled_at reads, kept equal by tools/tools_test.sh.
 INSTRUCTION_RECORDS_RE='docs/goals\.md$'
+# outside_records: the paths on stdin, one a line, that no pass is settled
+# across: those outside the records-only paths (RECORDS_RE) and the
+# instruction records (INSTRUCTION_RECORDS_RE); blank lines dropped.
+outside_records() {
+  outside_in=$(cat)
+  printf '%s\n' "$outside_in" | grep -v -E -e "^($RECORDS_RE)" -e '^$'
+  printf '%s\n' "$outside_in" | grep -E "^($INSTRUCTION_RECORDS_RE)"
+  return 0
+}
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
@@ -2100,8 +2110,7 @@ reviewed_edits() {
   valid '[0-9a-f]{7,40}' "$at" && git rev-parse --verify -q --end-of-options "$at^{commit}" > /dev/null 2>&1 ||
     { echo "reviewed-edits: the security review's commit $at names no commit"; return 1; }
   changed=$({ git diff --no-renames --name-only --end-of-options "$at" -- && git ls-files --others --exclude-standard; } 2>/dev/null)
-  edited=$({ printf '%s\n' "$changed" | grep -v -E -e "^($RECORDS_RE)" -e '^$'; printf '%s\n' "$changed" | grep -E "^($INSTRUCTION_RECORDS_RE)"; } |
-    sort -u | tr '\n' ' ')
+  edited=$(printf '%s\n' "$changed" | outside_records | sort -u | tr '\n' ' ')
   if [ -n "$edited" ]; then
     echo "reviewed-edits: files changed since the security review at $at: ${edited% }; restore each with git restore --source=$at -- FILE and record the finding in docs/findings/$change.md instead"
     return 1
@@ -3649,7 +3658,8 @@ merge_main() {
 # its own; MOVED, COMMIT against HEAD. They stand only when no name of
 # MOVED is in REVIEWED or CURRENT and every name of CURRENT is in
 # REVIEWED, so HEAD matches the new main in every file the change never
-# touched, outside the records-only paths (RECORDS_RE) in both. Names are
+# touched, outside the records-only paths (RECORDS_RE) in both, an
+# instruction record (INSTRUCTION_RECORDS_RE) counted as a file. Names are
 # compared as text (grep -F -x), never handed to git as pathspecs. Only
 # that path records moved, "HEAD COMMIT" in full, which a carried review
 # needs (review); it is dropped first, so a refusal leaves none and the
@@ -3670,13 +3680,13 @@ moved_change() {
     echo "moved: git diff failed comparing $short_at, HEAD, and $base; the reviews run again at $short_head"
     exit 1
   }
-  files=$(printf '%s\n%s\n' "$reviewed" "$current" | grep -v -E -e "^($RECORDS_RE)" -e '^$' | sort -u)
+  files=$(printf '%s\n%s\n' "$reviewed" "$current" | outside_records | sort -u)
   changed=$( [ -z "$files" ] || printf '%s\n' "$moved_names" | grep -F -x -e "$files" | sort -u | tr '\n' ' ')
   if [ -n "$changed" ]; then
     echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
     exit 1
   fi
-  untouched=$(printf '%s\n' "$current" | grep -v -E -e "^($RECORDS_RE)" -e '^$' |
+  untouched=$(printf '%s\n' "$current" | outside_records |
     { if [ -n "$reviewed" ]; then grep -v -F -x -e "$reviewed"; else cat; fi; } | sort -u | tr '\n' ' ')
   if [ -n "$untouched" ]; then
     echo "moved: HEAD differs from $base in files the change never touched: ${untouched% }; the reviews run again at $short_head"
