@@ -32,3 +32,4 @@
 ## 6. Closing advisories
 
 - [x] 6.1 `test/lint.rb`: a readerless holder's keywords are checked once, by its `initialize` signature, and the `# @rbs` pass runs only for holders outside `READERLESS_DIRS`, so each keyword has one check and one message and the `checked` list goes (proved by the self-test "a readerless holder checks each keyword once, by its signature, and any other holder by its # @rbs line")
+- [x] 6.2 `test/lint.rb`: a readerless holder whose `def initialize` takes a keyword its one-line `#:` signature directly above does not type is reported, so a signature `signature_keywords` cannot read no longer passes the guard unchecked (proved by the self-test "a readerless holder reports a keyword of def initialize its one-line signature does not type")

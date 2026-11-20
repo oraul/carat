@@ -909,7 +909,8 @@ module LintTest
   # READERLESS_DIRS, per keyword whose # @rbs line types it shared that
   # it stores without a reader or a ledger record in the assembly's text
   # that matches its construction there, and, for a readerless holder,
-  # per keyword its initialize signature types shared that it does not store as
+  # per keyword of def initialize its one-line #: signature does not type
+  # and per keyword that signature types shared that it does not store as
   # @keyword = keyword or that has no matching ledger record, so each
   # keyword has one check and one message.
   def self.holder_problems(holder, text, shared, named, assembly, readerless)
@@ -934,6 +935,11 @@ module LintTest
     end
     if readerless
       typed = signature_keywords(text)
+      typed_names = []
+      typed.each { |pair| typed_names << Carat::Json.element(pair, 0).to_s }
+      keywords.each do |keyword|
+        problems << "#{holder} takes #{keyword}, which the one-line #: signature above its def initialize does not type" unless keyword.empty? || typed_names.include?(keyword)
+      end
       typed.each do |pair|
         keyword = Carat::Json.element(pair, 0).to_s
         type = Carat::Json.element(pair, 1).to_s
@@ -1586,6 +1592,15 @@ module LintTest
       holder_problems("follow", readerless + "    @open_float = open_float\n    @close_float = close_float\n", floats, float_named, wired, true),
       holder_problems("follow", readerless + "    @open_float = open_float\n    @close_float = close_float\n", floats, float_named, wired, false)
     ], "a readerless holder checks each keyword once, by its signature, and any other holder by its # @rbs line")
+    t.assert_equal([
+      ["follow takes open_float, which the one-line #: signature above its def initialize does not type"],
+      ["follow takes close_float, which the one-line #: signature above its def initialize does not type"],
+      []
+    ], [
+      holder_problems("follow", "class F\n  #: (open_float: OpenFloat) -> void\n\n  def initialize(open_float:)\n    @open_float = open_float\n", floats, float_named, wired, true),
+      holder_problems("follow", "class F\n  #: (open_float: ^(Integer) -> void, close_float: CloseFloat) -> void\n  def initialize(open_float:, close_float:)\n    @open_float = open_float\n    @close_float = close_float\n", floats, float_named, wired, true),
+      holder_problems("follow", "class F\n  #: () -> void\n  def initialize()\n", floats, float_named, wired, true)
+    ], "a readerless holder reports a keyword of def initialize its one-line signature does not type")
     t.assert_equal([["a use case of a readerless directory has no public reader (:tabs)"], true, false], [reader_problems(["class X\n", "attr_reader :tabs #: Domain::TabList\n", "def call(state)\n", "private\n", "attr_reader :kept #: Integer\n"]), readerless?("carat/use_cases/discovery/open_palette.rb"), readerless?("carat/use_cases/files/open_file.rb")], "the readerless directory rule")
     t.assert_equal([["clock", "ClockPort"], ["depth", "Integer"]], typed_readers("attr_reader :clock #: Ports::ClockPort\nattr_reader :a, :b #: Integer\nattr_reader :depth #: Integer\nattr_reader :plain\n"), "typed_readers reads one-name readers with a type")
     t.assert_equal(["", "only carat/doubles/ and carat/test_support.rb may require a test double", "only carat/doubles/ and carat/test_support.rb may require a test double", "", "", ""], [double_require_problem("carat/doubles/editor_harness.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("carat.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("bin/carat.rb", "carat/doubles/memory_files.rb"), double_require_problem("carat/test_support.rb", "carat/doubles/manual_signals.rb"), double_require_problem("carat/adapters/editor_assembly.rb", "carat/use_cases/move.rb"), double_require_problem("test/editor_normal.rb", "carat/doubles/fake_terminal.rb")], "the double require rule")
