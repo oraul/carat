@@ -8,7 +8,7 @@ A check, security, or quality pass no longer stays current across a later commit
 
 ## Changes
 
-- Add `INSTRUCTION_RECORDS_RE` (`docs/goals.md`) to `tools/gates.sh`, and make `settled_at` refuse a records-only diff that touches it, so the security, stages, passed, and records gates report a pass before such a commit as stale while backlog, findings, metrics, queue, and OpenSpec commits still keep it current.
+- Add `INSTRUCTION_RECORDS_RE` (`docs/goals.md`) to `tools/gates.sh`, and make `settled_at` refuse a records-only diff that touches it, so the security, stages, and passed gates report a pass before such a commit as stale while backlog, findings, metrics, queue, and OpenSpec commits still keep it current.
 - Change `tools/run_state.sh` to follow the same line through one shared filter, `outside_records`: `settled` no longer settles a round that changed `docs/goals.md`, `reviewed-edits` names it when it changed since the security review, and `moved` counts it as a file of the change, so no review is carried across a moved main past a branch commit to it.
 - Add tools-test cases for the stale security and stages gates after a goals commit, the current gate after backlog and findings commits, `settled` refusing a goals round, `reviewed-edits` naming it, `moved` rerunning the reviews, and the two scripts' lines staying equal.
 - Document in `README.md` and area 1 of `docs/codebase-map.md` that a pass stands after a records-only diff unless it touches `docs/goals.md`.

@@ -1,6 +1,6 @@
 ## Context
 
-`settled_at` in `tools/gates.sh` decides whether a pass recorded at a commit still holds at HEAD: every path changed since must match `RECORDS_RE` (`tools/rules.sh:69`), `docs/sprints.tsv` only by groom's one row. The security (`gate_security`), stages, passed, and records gates call it, and main's copy runs at the merge. `tools/run_state.sh` mirrors it in `settled_round` (review-lite, which the workflow uses to let a records-only fix round stand on earlier passes) and `reviewed_edits` (the package step's edit guard). `RECORDS_RE` also feeds `documentation` (CI's and the checker's scope) and `TEST_ONLY`.
+`settled_at` in `tools/gates.sh` decides whether a pass recorded at a commit still holds at HEAD: every path changed since must match `RECORDS_RE` (`tools/rules.sh:69`), `docs/sprints.tsv` only by groom's one row. The security (`gate_security`), stages, and passed gates call it, and main's copy runs at the merge. `tools/run_state.sh` mirrors it in `settled_round` (review-lite, which the workflow uses to let a records-only fix round stand on earlier passes) and `reviewed_edits` (the package step's edit guard). `RECORDS_RE` also feeds `documentation` (CI's and the checker's scope) and `TEST_ONLY`.
 
 ## Goals / Non-Goals
 
