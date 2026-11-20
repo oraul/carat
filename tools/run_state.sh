@@ -1558,9 +1558,8 @@ settled_round() {
     echo "unsettled: nothing changed since $since; run the full round"
     return 1
   fi
-  other=$(printf '%s\n' "$rest" | grep -v -E "^($RECORDS_RE)" | tr '\n' ' ')
+  other=$(printf '%s\n' "$rest" | outside_records | sort -u | tr '\n' ' ')
   printf '%s\n' "$rest" | grep -q -x -F docs/sprints.tsv && other="${other}docs/sprints.tsv "
-  other="$other$(printf '%s\n' "$rest" | grep -E "^($INSTRUCTION_RECORDS_RE)" | tr '\n' ' ')"
   if [ -n "$other" ]; then
     echo "unsettled: ${other% } changed since $since outside the records a pass settles across; run the full round"
     return 1
