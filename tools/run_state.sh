@@ -987,9 +987,10 @@ check_run() {
 # the runner's memory and compared with each file's status-change time,
 # which touch cannot set back, taken once a new second began so nothing
 # written before it counts; the main checkout when the delivery clone is a
-# lane (main_tree, empty otherwise); the repository configuration, its
-# references, and the staged entries of the delivery clone's index and the
-# main checkout's; the run state.
+# lane (main_tree, empty otherwise), its branch, HEAD, and state
+# (main_view); the repository configuration, the lanes' branches, and the
+# references; the staged entries of the delivery clone's index; the run
+# state.
 escape_mark() {
   escape_since=$(date '+%Y-%m-%d %H:%M:%S')
   while [ "$(date '+%Y-%m-%d %H:%M:%S')" = "$escape_since" ]; do pause; done
@@ -998,11 +999,18 @@ escape_mark() {
   common_dir=$(cd "$(git rev-parse --git-common-dir)" && pwd -P)
   main_tree=''
   [ "$(basename "$common_dir")" != .git ] || [ "${common_dir%/.git}" = "$top" ] || main_tree=${common_dir%/.git}
+  main_branch=''
+  escape_main_head=''
+  escape_main=''
+  if [ -n "$main_tree" ]; then
+    main_branch=$(git -C "$main_tree" symbolic-ref -q HEAD)
+    escape_main_head=$(git -C "$main_tree" rev-parse -q --verify HEAD)
+    escape_main=$(main_view)
+  fi
   escape_config=$(config_view)
+  escape_lanes=$(lane_branches)
   escape_refs=$(refs_view)
   escape_index=$(index_view "$top")
-  escape_main_index=''
-  [ -z "$main_tree" ] || escape_main_index=$(index_view "$main_tree")
   escape_state=$(state_view)
 }
 
@@ -1033,17 +1041,25 @@ config_view() {
     grep -v -E '^branch[.].*[.](remote|merge)='
 }
 
+# The branches checked out in a linked worktree other than the delivery
+# clone and the main checkout (the first one listed), which their own
+# lanes commit to and the merger deletes once it removed their worktree.
+lane_branches() {
+  git -C "$top" worktree list --porcelain 2> /dev/null |
+    OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++ } /^branch / && n > 1 && $2 != ENVIRON["OWN"] { print $2 }'
+}
+
 # The references of the common repository, name and object, less the
 # remote-tracking refs, which a fetch or push of any lane rewrites and the
-# next fetch restores, and the branches checked out in a linked worktree
-# other than the delivery clone and the main checkout (the first one
-# listed), which their own lanes commit to.
+# next fetch restores, the lanes' branches at escape_mark or now
+# (lane_branches), and from a lane the main checkout's branch, which the
+# merger fast-forwards (main_moved).
 refs_view() {
-  lanes=$(git -C "$top" worktree list --porcelain 2> /dev/null |
-    OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++ } /^branch / && n > 1 && $2 != ENVIRON["OWN"] { print $2 }')
   git -C "$top" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null |
-    LANES="$lanes" awk 'BEGIN { n = split(ENVIRON["LANES"], l, "\n"); for (i = 1; i <= n; i++) lane[l[i]] = 1 }
-      $1 !~ /^refs\/remotes\// && !($1 in lane)'
+    SKIP="$escape_lanes
+$(lane_branches)
+$main_branch" awk 'BEGIN { n = split(ENVIRON["SKIP"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "") skip[l[i]] = 1 }
+      $1 !~ /^refs\/remotes\// && !($1 in skip)'
 }
 
 # index_view DIR: the staged entries of DIR's index (mode, object, stage,
@@ -1053,29 +1069,59 @@ index_view() {
   GIT_OPTIONAL_LOCKS=0 git -C "$1" ls-files --stage -v 2> /dev/null
 }
 
-# tree_scan DIR: the files of the work tree DIR changed since escape_mark,
-# without following links, but its git directory, tmp/ (the lanes, scouts,
-# and toolchain links), and the run states, stage logs, plans, and compile
-# cache, which concurrent lanes and the runner write.
+# tree_scan DIR [TEST...]: the paths of the work tree DIR passing the find
+# TESTs changed since escape_mark, without following links, but its git
+# directory, tmp/ (the lanes, scouts, and toolchain links), and the run
+# states, stage logs, plans, and compile cache, which concurrent lanes and
+# the runner write.
 tree_scan() {
-  find "$1" \( -path "$1/.git" -type d -o -path "$1/tmp" -o -path "$1/build/pipeline" -o \
-      -path "$1/build/stages" -o -path "$1/build/plan" -o -path "$1/build/spinel-cache" \) -prune -o \
-    -newerct "$escape_since" -print 2> /dev/null
+  scan_dir=$1
+  shift
+  find "$scan_dir" \( -path "$scan_dir/.git" -type d -o -path "$scan_dir/tmp" -o -path "$scan_dir/build/pipeline" -o \
+      -path "$scan_dir/build/stages" -o -path "$scan_dir/build/plan" -o -path "$scan_dir/build/spinel-cache" \) -prune -o \
+    "$@" -newerct "$escape_since" -print 2> /dev/null
+}
+
+# The main checkout's files changed since escape_mark (tree_scan) that it
+# does not track, directories left out: the merger's fast-forward of its
+# branch changes only tracked files, which main_view compares.
+main_scan() {
+  { git -c core.quotePath=false -C "$main_tree" ls-files 2> /dev/null | MAIN="$main_tree" awk '{ print "T " ENVIRON["MAIN"] "/" $0 }'
+    tree_scan "$main_tree" ! -type d | sed 's/^/F /'; } |
+    awk '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
+}
+
+# What the main checkout holds against its HEAD, which the merger's
+# fast-forward leaves: its status (the index against HEAD, the work tree
+# against the index, the files it neither tracks nor ignores) and the
+# index entries a flag hides from it, read with no optional lock.
+main_view() {
+  GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" status --porcelain --untracked-files=all 2> /dev/null
+  GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" ls-files -v 2> /dev/null | grep -v '^H '
+}
+
+# True when the main checkout's HEAD names another commit than at
+# escape_mark and not its branch's remote-tracking ref, where the merger's
+# fast-forward takes it.
+main_moved() {
+  main_head=$(git -C "$main_tree" rev-parse -q --verify HEAD)
+  [ "$main_head" != "$escape_main_head" ] &&
+    [ "$main_head" != "$(git -C "$main_tree" rev-parse -q --verify "refs/remotes/origin/${main_branch#refs/heads/}")" ]
 }
 
 # The paths changed since escape_mark outside the clone, one per line: the
-# delivery clone's files and, from a lane, the main checkout's (tree_scan);
-# a linked worktree's git directory but its own entry and its index, which
-# any git status refreshes; the hooks, info/, and config.worktree of the
-# common directory; the user's git configuration; the shared toolchain and
-# Spinel's checkout; then the configuration file when the repository
-# configuration differs (config_view), the references when they differ
-# (refs_view), an index when its staged entries differ (index_view), and
-# the run state file when it holds records the runner did not write
-# (state_unexpected).
+# delivery clone's files (tree_scan); a linked worktree's git directory but
+# its own entry and its index, which any git status refreshes; the hooks,
+# info/, and config.worktree of the common directory; the user's git
+# configuration; the shared toolchain and Spinel's checkout; from a lane,
+# the main checkout's untracked files (main_scan), its state when it
+# differs (main_view), and its HEAD when it moved (main_moved); then the
+# configuration file when the repository configuration differs
+# (config_view), the references when they differ (refs_view), the index
+# when its staged entries differ (index_view), and the run state file when
+# it holds records the runner did not write (state_unexpected).
 escaped_paths() {
   tree_scan "$top"
-  [ -z "$main_tree" ] || tree_scan "$main_tree"
   [ "$git_dir" = "$common_dir" ] ||
     find -H "$git_dir" -mindepth 1 \( -path "$git_dir/index" -o -path "$git_dir/index.lock" \) -prune -o \
       -newerct "$escape_since" -print 2> /dev/null
@@ -1085,11 +1131,14 @@ escaped_paths() {
   [ -z "$HOME" ] || escape_scan "$HOME/.gitconfig"
   escape_scan "$top/tmp/.toolchain"
   escape_scan "$top/tmp/.spinel"
+  if [ -n "$main_tree" ]; then
+    main_scan
+    [ "$(main_view)" = "$escape_main" ] || echo "$main_tree: the main checkout's files or staged files changed"
+    ! main_moved || echo "$common_dir/HEAD: the main checkout moved"
+  fi
   [ "$(config_view)" = "$escape_config" ] || echo "$common_dir/config: the configuration changed"
   [ "$(refs_view)" = "$escape_refs" ] || echo "$common_dir/refs: the references changed"
   [ "$(index_view "$top")" = "$escape_index" ] || echo "$git_dir/index: the staged files changed"
-  [ -z "$main_tree" ] || [ "$(index_view "$main_tree")" = "$escape_main_index" ] ||
-    echo "$common_dir/index: the staged files changed"
   state_unexpected
 }
 

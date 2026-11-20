@@ -492,10 +492,14 @@ case "$REACH" in
   info) mkdir -p "$MAIN/.git/info" && : > "$MAIN/.git/info/forged" ;;
   ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
   gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+  main-untracked) : > "$MAIN/forged" ;;
+  main-reset) git -C "$MAIN" reset -q --hard "$(git -C "$TOP" rev-parse HEAD)" ;;
   concurrent)
     touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
-      git -C "$TOP" update-ref refs/remotes/origin/forged HEAD &&
-      git -C "$TOP" update-ref refs/heads/chore/other-lane HEAD~1 ;;
+      git -C "$TOP" update-ref refs/heads/chore/other-lane HEAD~1 &&
+      git -C "$MAIN" worktree remove --force "$TOP/../closed-lane" &&
+      git -C "$TOP" update-ref refs/remotes/origin/chore/isolated HEAD &&
+      git -C "$MAIN" merge -q --ff-only refs/remotes/origin/chore/isolated ;;
 esac
 EOF
 chmod +x "$work/bin/reach-make"
@@ -596,18 +600,26 @@ expect "run_state: the phase and note a stopped workflow's close writes during a
 close_phases=$(sed -n 's/^CLOSE_PHASES="\(.*\)"$/\1/p' "$here/run_state.sh")
 closable_phases=$(sed -n 's/^const CLOSABLE = .*phase \[a-z0-9-\]+ (\([a-z|]*\)) \[0-9a-f\]{7,40}|.*/\1/p' "$here/../.claude/workflows/deliver-change.js" | tr '|' ' ')
 expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE lines" 0 "^${close_phases:-none}$" printf '%s\n' "$closable_phases"
-# From a lane the scan also reads the main checkout (iso_top), the common
-# directory's info and references, both indexes' staged entries, and the
-# user's git configuration; an index refresh, a remote-tracking ref, and
-# another lane's branch written during the check leave it passing.
+# From a lane the scan also reads the main checkout (iso_top): its
+# untracked files, its state against its HEAD, and its HEAD; the common
+# directory's info and references; the lane's staged entries; and the
+# user's git configuration. An index refresh, a remote-tracking ref, a
+# lane's commit, the merger closing a lane and fast-forwarding the main
+# checkout's branch to its remote-tracking ref, all during the check,
+# leave it passing.
 lane_reach() {
   env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
     HOME="${REACH_HOME:-$HOME}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 }
-expect "run_state: a stage that writes the main checkout from a lane fails the check" 1 "^[|] $iso_top/README[.]md$" lane_reach main
+main_head=$(git -C "$iso_top" rev-parse HEAD)
+expect "run_state: a stage that writes a tracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main
 git -C "$iso_top" checkout -q README.md
-expect "run_state: a stage that stages into the main checkout's index from a lane fails the check" 1 "^[|] $iso_top/[.]git/index: the staged files changed$" lane_reach main-index
+expect "run_state: a stage that writes an untracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top/forged$" lane_reach main-untracked
+rm "$iso_top/forged"
+expect "run_state: a stage that stages into the main checkout's index from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main-index
 git -C "$iso_top" reset -q
+expect "run_state: a stage that moves the main checkout from a lane fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-reset
+git -C "$iso_top" reset -q --hard "$main_head"
 expect "run_state: a stage that stages into the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-index
 git_q reset -q
 expect "run_state: a stage that writes the common directory's info from a lane fails the check" 1 "^[|] $iso_top/[.]git/info/forged$" lane_reach info
@@ -619,11 +631,19 @@ REACH_HOME="$work/home"
 expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
 REACH_HOME=
 rm -r "$work/home"
+# The lane's commit the main checkout fast-forwards to adds a tracked file
+# outside the parts the scan leaves out.
+echo merged > merged.txt
+git_q add merged.txt
+git_q commit -q -m "chore: merged" -m "$TRAILER"
 git_q worktree add -q -b chore/other-lane "$work/other-lane"
-expect "run_state: a lane index refresh, a remote-tracking ref, and another lane's branch written during a check leave it passing" 0 "every stage passed" lane_reach concurrent
+git_q worktree add -q -b chore/closed-lane "$work/closed-lane"
+expect "run_state: a lane index refresh, a lane's commit, a merger's close and fast-forward during a check leave it passing" 0 "every stage passed" lane_reach concurrent
+expect "run_state: the fast-forward during the check moved the main checkout" 0 "^merged$" cat "$iso_top/merged.txt"
+git -C "$iso_top" reset -q --hard "$main_head"
 git_q worktree remove --force "$work/other-lane"
-git_q branch -q -D chore/other-lane
-git_q update-ref -d refs/remotes/origin/forged
+git_q branch -q -D chore/other-lane chore/closed-lane
+git_q update-ref -d refs/remotes/origin/chore/isolated
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"
