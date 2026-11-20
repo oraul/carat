@@ -26,6 +26,13 @@ A keymap line in the project file, in any mode, whose action writes the buffer o
 - **WHEN** the user file holds "keymap.normal Q quit.all" and the project file holds "keymap.normal ZZ none" and "keymap.normal K cursor.down"
 - **THEN** all three lines are kept and nothing is reported
 
+### Requirement: A project file cannot set the leader
+A `keymap.leader` line in the project file SHALL be reported as "keymap.leader is not read from a project file" and ignored, so the `<leader>` bindings of the defaults and the user file, `<leader>fs file.save` and `<leader>qw quit.write_all` among them, keep the leader the defaults or the user file set. The same line in the defaults or the user file SHALL be accepted.
+
+#### Scenario: A project leader leaves the leader bindings where they were
+- **WHEN** the user file holds "keymap.leader ," and the project file "keymap.leader d"
+- **THEN** ".caratrc:1: keymap.leader is not read from a project file" is reported and the leader stays ",", so `<leader>fs` and `<leader>qw` stay `,fs` and `,qw`
+
 ### Requirement: Line, wait, and undo numbers are bounded
 `option.scroll` and `option.scrolloff` SHALL take a number of lines from 0 to 9999, `option.timeoutlen` a number of milliseconds from 0 to 10000, and `option.undolevels` a number from 0 to 10000. A value outside its range SHALL be reported as `file:line: option.<name> takes a number from <low> to <high>` and leave the value before it.
 

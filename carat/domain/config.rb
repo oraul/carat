@@ -244,11 +244,17 @@ module Carat
       # and refused, because a replay types anything, :w with any path
       # included, so a project file could write any file the user can. So
       # is an action that writes, quits, or runs the command line, in any
-      # mode (PROJECT_REFUSED, COMMAND_LINE).
+      # mode (PROJECT_REFUSED, COMMAND_LINE), and a leader, which would
+      # move the defaults' and the user's <leader> write and quit
+      # bindings onto keys such as d.
       #: (RcLine) -> bool
       def binding?(line)
         words = line.words
-        return true if line.name == "leader" || line.name == "group" || words.length != 2
+        if line.name == "leader"
+          note(line, "keymap.leader is not read from a project file")
+          return false
+        end
+        return true if line.name == "group" || words.length != 2
         value = words[1].to_s
         return true if value == "none"
         unless RcParser.key?(value, 0, value.bytesize)

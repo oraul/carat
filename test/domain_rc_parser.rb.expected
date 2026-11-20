@@ -65,7 +65,7 @@ ok   an illegal byte in each scope
 ok   an untrusted file cannot set language commands
 ok   an untrusted file cannot trust a directory
 ok   a root command in the project file is refused
-ok   an untrusted file binds actions and none but no key sequence
+ok   an untrusted file binds actions and none but no key sequence or leader
 ok   a trusted file binds a key sequence
 ok   an untrusted file cannot bind file.save
 ok   an untrusted file cannot bind quit.all
