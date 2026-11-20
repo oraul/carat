@@ -939,6 +939,12 @@ echo "# a comment" >> tools/base.sh
 commit "chore: answer an advisory in code"
 expect "run_state: settled refuses a code change" 1 "^unsettled: tools/base.sh changed since $settle_at outside the records" state settled state "$settle_at"
 settle_at=$(git rev-parse --short=12 HEAD)
+echo "# goals" > docs/goals.md
+commit "docs: change the goals"
+expect "run_state: settled refuses an instruction record" 1 "^unsettled: docs/goals.md changed since $settle_at outside the records" state settled state "$settle_at"
+git_q rm -q docs/goals.md
+commit "docs: drop the goals"
+settle_at=$(git rev-parse --short=12 HEAD)
 [ ! -f docs/sprints.tsv ] || cp docs/sprints.tsv "$work/sprints.keep"
 printf 'sprint-0\t1\n' >> docs/sprints.tsv
 commit "docs: append a sprint row"
@@ -2849,6 +2855,9 @@ state review rev security pass "no finding" > /dev/null
 mkdir -p docs/findings openspec/changes/rev
 echo "### a finding" >> docs/findings/rev.md && echo "title" > openspec/changes/rev/pr.md && commit "docs: records"
 expect "run_state: reviewed-edits passes records-only edits" 0 "^reviewed-edits: none since the security review at [0-9a-f]*\$" state reviewed-edits rev
+echo "# goals" > docs/goals.md
+expect "run_state: reviewed-edits names an instruction record" 1 "^reviewed-edits: files changed since the security review at [0-9a-f]*: docs/goals[.]md; restore each" state reviewed-edits rev
+rm docs/goals.md
 echo advisory >> tools/base.sh && echo new > tools/new.sh
 expect "run_state: reviewed-edits refuses an edit of a reviewed file" 1 "^reviewed-edits: files changed since the security review at [0-9a-f]*: tools/base[.]sh tools/new[.]sh; restore each" state reviewed-edits rev
 commit "fix: an advisory"
@@ -3597,6 +3606,9 @@ expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
 expect "guard: the squash trailer is the gates' trailer" 0 "^same$" \
   sh -c '[ "$(grep "^SQUASH_TRAILER=" "$1/agent_guard.sh" | cut -d= -f2-)" = "$(grep "^TRAILER=" "$1/gates.sh" | cut -d= -f2-)" ] && echo same' _ "$here"
+# The settle's instruction records, kept in both scripts (review-trust-lows).
+expect "rules: the instruction records are the gates'" 0 "^same$" \
+  sh -c 'l=$(grep "^INSTRUCTION_RECORDS_RE=" "$1/gates.sh"); [ -n "$l" ] && [ "$l" = "$(grep "^INSTRUCTION_RECORDS_RE=" "$1/run_state.sh")" ] && echo same' _ "$here"
 # ci_scope reads it through documentation, in tools/rules.sh.
 expect "rules: the records-only list is named once" 0 "^tools/rules.sh,RECORDS_RE ci_scope gates run_state,\$" \
   sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q -E "RECORDS_RE|documentation \"[$]" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
@@ -4284,6 +4296,19 @@ echo "1. next" > docs/queue-backlog.md
 mrow b1 - small 1 1 - >> docs/metrics-backlog.tsv
 commit "docs: record the queue and the metrics"
 expect "gates: security passes after the planning records only" 0 "ok   security: pass" gates security
+mkdir -p docs/findings
+echo "## an entry" >> docs/backlog.md
+echo "### a finding" >> docs/findings/security.md
+commit "docs: record the backlog and a finding"
+expect "gates: security passes after the backlog and findings only" 0 "ok   security: pass" gates security
+# docs/goals.md is a record agents act on as instructions: a pass before an
+# edit of it is stale, although RECORDS_RE lists it (review-trust-lows).
+echo "# goals" > docs/goals.md
+commit "docs: change the goals"
+expect "gates: security refuses after an instruction record changed" 1 "code changed since" gates security
+git_q rm -q docs/goals.md
+commit "docs: drop the goals"
+expect "gates: security passes after the instruction record is restored" 0 "ok   security: pass" gates security
 # The records-only diff counts docs/sprints.tsv only by the one row groom
 # appends for the sprint the marker names (merge-record-check).
 groomed=$(state sprint-row "$reviewed")
@@ -4359,6 +4384,13 @@ commit "docs: archive and record the queue"
 expect "gates: passed refuses when HEAD is not the pushed head" 1 "is not the pushed head" gates passed
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: passed passes after the planning records" 0 "ok   passed" gates passed
+echo "# goals" > docs/goals.md
+commit "docs: change the goals"
+state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "gates: passed refuses a record before an instruction record changed" 1 "FAIL passed: check passed at [0-9a-f]+, but code changed since" gates passed
+git_q rm -q docs/goals.md
+commit "docs: drop the goals"
+state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 echo more >> tools/code.sh
 commit "fix: more code"
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -4397,6 +4429,12 @@ printf 'sprint-2\tb1\n' >> docs/sprints.tsv
 commit "docs: append a second sprint row"
 state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: stages refuses a second sprint row after the check" 1 "the check passed at [0-9a-f]+, but code changed since" gates stages
+git_q checkout -q HEAD~1 -- docs/sprints.tsv
+commit "docs: drop the second sprint row"
+expect "gates: stages passes after the second sprint row is dropped" 0 "ok   stages" gates stages
+echo "# goals" > docs/goals.md
+commit "docs: change the goals"
+expect "gates: stages refuses a check before an instruction record changed" 1 "the check passed at [0-9a-f]+, but code changed since" gates stages
 
 # The stages gate counts a stage only at the check the workflow recorded,
 # and the merge runs a copy of main's gates against the branch.

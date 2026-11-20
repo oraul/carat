@@ -156,7 +156,8 @@
 #                               to HEAD: ..." and exit 0 when COMMIT is an
 #                               ancestor, the tree clean, and every changed
 #                               path matches RECORDS_RE (docs/sprints.tsv
-#                               never), so an advisory-only round stands on
+#                               and INSTRUCTION_RECORDS_RE never), so an
+#                               advisory-only round stands on
 #                               COMMIT's check and security review;
 #                               "unsettled: ..." and exit 1 otherwise
 #   moved CHANGE COMMIT         after merge-main took in a moved main (BASE,
@@ -356,7 +357,8 @@
 #   reviewed-edits CHANGE       list the files changed since the commit
 #                               the security review passed at (commits,
 #                               working tree, untracked) outside the
-#                               records-only paths (RECORDS_RE) and exit 1
+#                               records-only paths (RECORDS_RE) or among
+#                               INSTRUCTION_RECORDS_RE and exit 1
 #                               when any is, or when no pass is recorded:
 #                               the package step edits no reviewed file
 #   pending                     the merged changes with no history row yet
@@ -457,6 +459,10 @@ CLOSE_PHASES="plan implement package ci merge retro report"
 # carried stage reads.
 TEST_STAGES="test-build test-run diagnose metrics docs-lint gates"
 TEST_ONLY="^(test/|$RECORDS_RE|\$)"
+# The records-only paths agents act on as instructions, which no pass is
+# settled across (settled, reviewed-edits): the line of tools/gates.sh,
+# which settled_at reads, kept equal by tools/tools_test.sh.
+INSTRUCTION_RECORDS_RE='docs/goals\.md$'
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
@@ -1523,7 +1529,9 @@ fix_scope() {
 # path changed from COMMIT to HEAD matches RECORDS_RE, the paths main's
 # merge gates settle a pass across (settled_at in tools/gates.sh), with
 # docs/sprints.tsv refused outright, since the gates take only groom's row
-# there; the tracked tree clean. Exit 1 names what keeps the full round.
+# there, and an instruction record (INSTRUCTION_RECORDS_RE) too, since the
+# gates settle no pass across it; the tracked tree clean. Exit 1 names what
+# keeps the full round.
 settled_round() {
   since=$(commit_at "$1") || exit 1
   now=$(git rev-parse --verify -q --short=12 HEAD) || die "settled: no HEAD"
@@ -1542,8 +1550,9 @@ settled_round() {
   fi
   other=$(printf '%s\n' "$rest" | grep -v -E "^($RECORDS_RE)" | tr '\n' ' ')
   printf '%s\n' "$rest" | grep -q -x -F docs/sprints.tsv && other="${other}docs/sprints.tsv "
+  other="$other$(printf '%s\n' "$rest" | grep -E "^($INSTRUCTION_RECORDS_RE)" | tr '\n' ' ')"
   if [ -n "$other" ]; then
-    echo "unsettled: ${other% } changed since $since outside the records; run the full round"
+    echo "unsettled: ${other% } changed since $since outside the records a pass settles across; run the full round"
     return 1
   fi
   echo "settled: only records changed from $since to $now: $(printf '%s\n' "$rest" | tr '\n' ' ' | sed 's/ $//')"
@@ -2075,7 +2084,9 @@ merge_unrecorded() {
 # The files the package step may not edit: those changed since the commit
 # of the security review's pass record, which the push gate settles at
 # HEAD, in commits, the working tree, or untracked, outside the
-# records-only paths (RECORDS_RE). Exit 1 names them, or the missing pass
+# records-only paths (RECORDS_RE) or among the instruction records
+# (INSTRUCTION_RECORDS_RE), which the push gate settles no pass across.
+# Exit 1 names them, or the missing pass
 # (package-advisory-edit); a reviewed file stays as reviewed and an
 # advisory not fixed in review goes to the findings file.
 reviewed_edits() {
@@ -2088,8 +2099,9 @@ reviewed_edits() {
   at=${at%% *}
   valid '[0-9a-f]{7,40}' "$at" && git rev-parse --verify -q --end-of-options "$at^{commit}" > /dev/null 2>&1 ||
     { echo "reviewed-edits: the security review's commit $at names no commit"; return 1; }
-  edited=$({ git diff --no-renames --name-only --end-of-options "$at" -- && git ls-files --others --exclude-standard; } 2>/dev/null |
-    grep -v -E -e "^($RECORDS_RE)" -e '^$' | sort -u | tr '\n' ' ')
+  changed=$({ git diff --no-renames --name-only --end-of-options "$at" -- && git ls-files --others --exclude-standard; } 2>/dev/null)
+  edited=$({ printf '%s\n' "$changed" | grep -v -E -e "^($RECORDS_RE)" -e '^$'; printf '%s\n' "$changed" | grep -E "^($INSTRUCTION_RECORDS_RE)"; } |
+    sort -u | tr '\n' ' ')
   if [ -n "$edited" ]; then
     echo "reviewed-edits: files changed since the security review at $at: ${edited% }; restore each with git restore --source=$at -- FILE and record the finding in docs/findings/$change.md instead"
     return 1
