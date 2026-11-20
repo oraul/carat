@@ -1105,13 +1105,13 @@ main_view() {
 # fast-forward takes it, read from origin itself (ls-remote): a stage can
 # write the remote-tracking ref, which refs_view leaves out, but not
 # origin, whose address config_view compares. An unreachable origin or a
-# detached main checkout counts as moved.
+# detached main checkout, whose empty branch names no ref, counts as moved.
 main_moved() {
   main_head=$(git -C "$main_tree" rev-parse -q --verify HEAD)
   [ "$main_head" != "$escape_main_head" ] || return 1
   origin_head=$(git -C "$main_tree" ls-remote origin "$main_branch" 2> /dev/null |
     REF="$main_branch" awk '$2 == ENVIRON["REF"] { print $1; exit }')
-  [ -z "$main_branch" ] || [ -z "$origin_head" ] || [ "$main_head" != "$origin_head" ]
+  [ -z "$origin_head" ] || [ "$main_head" != "$origin_head" ]
 }
 
 # The paths changed since escape_mark outside the clone, one per line: the

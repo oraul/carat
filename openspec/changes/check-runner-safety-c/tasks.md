@@ -12,6 +12,8 @@
 - [x] 2.3 Concurrent work leaves a lane check passing: a lane index refresh, another lane's commit, a lane's worktree removed with its branch kept, and the main checkout fast-forwarded to origin's commit. Tested by "a lane index refresh, a lane's commit, a merger's close and fast-forward during a check leave it passing" and "the fast-forward during the check moved the main checkout".
 - [x] 2.4 `tools/run_state.sh`, `main_moved`: a moved main checkout is accepted only at the commit `git ls-remote origin <branch>` names, never at the remote-tracking ref a stage can forge (security Medium (8)). Tested by "a stage that forges the main checkout's remote-tracking ref and fast-forwards it from a lane fails the check"; the concurrent case's origin holds the commit.
 - [x] 2.5 `tools/tools_test.sh`: the flagged index entries are tested, `main_view`'s by "a stage that hides a write to a tracked file of the main checkout behind an index flag from a lane fails the check" and `index_view`'s by "a stage that flags an entry of the lane's index fails the check".
+- [x] 2.6 `tools/tools_test.sh`: origin holds the main checkout's starting commit before the main-reset and main-forge cases, so they fail on the commit `main_moved` compares, not on an empty answer; both fail with that comparison dropped (quality review).
+- [x] 2.7 `tools/run_state.sh`, `main_moved`: the redundant empty-branch clause dropped, a detached main checkout's empty branch matching no ref of origin (quality advisory).
 
 ## 3. Documents and self-check
 
