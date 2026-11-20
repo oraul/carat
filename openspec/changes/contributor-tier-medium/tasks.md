@@ -12,3 +12,4 @@
 
 - [x] 3.1 One `PROFILE` pattern in `.claude/workflows/deliver-change.js`, used by restoreCalibration and the metric line, and read by tools-test's calibration check with sed as CLOSABLE is (quality advisory, duplication)
 - [x] 3.2 End the `contributor-tier-routing` trial line of `docs/goals.md` at this change by the user's decision of 2026-11-20, so the planner judges only the new trial (quality advisory, docs currency)
+- [x] 3.3 Split each metric pair once in the metric line's filter (`.claude/workflows/deliver-change.js`), testing its value against the word pattern or `PROFILE`, so the key pattern is spelled once (quality advisory, simplicity); proven by the tools-test metric line cases

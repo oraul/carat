@@ -600,7 +600,10 @@ function metricLine() {
   if (escalated) pairs.push('escalated=1')
   if (blockingQualityRounds > 0) pairs.push(`quality_blocked=${blockingQualityRounds}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|[a-e])$/.test(p) || /^[a-z0-9_.-]+=/.test(p) && PROFILE.test(p.replace(/^[a-z0-9_.-]+=/, '')))
+  const safe = pairs.filter((p) => {
+    const m = /^[a-z0-9_.-]+=(.*)$/.exec(p)
+    return m !== null && (/^([0-9./]+|small|medium|large|none|rounds|[a-e])$/.test(m[1]) || PROFILE.test(m[1]))
+  })
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
