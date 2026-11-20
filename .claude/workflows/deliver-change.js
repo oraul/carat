@@ -138,13 +138,13 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // TIER/EFFORT, set from the history's figures (docs/goals.md, Calibration).
 // The tier is agent, the tier the model: line of the agent's file names, the
 // only place a tier is named (tools/tools_test.sh compares them), whichever
-// tier that is, or session, the session's model; the effort is low, high, or
-// session, none passed. One kind moves at a time, kept only when the
+// tier that is, or session, the session's model; the effort is low, medium,
+// high, or session, none passed. One kind moves at a time, kept only when the
 // first-pass rates and the rework do not get worse over the next runs; the
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/medium', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 const calibrated = {}
 // The rule and path of a critical value: the plan's whole value ("b tools/x.sh"),
 // or the "critical LETTER PATH" the planner wrote in a queue item's parenthesis;
@@ -218,7 +218,7 @@ function finishCheck(v) {
 function restoreCalibration(saved, used) {
   for (const key of Object.keys(saved)) {
     const m = /^metric\.calib\.([a-z]+)$/.exec(key)
-    if (m && !(m[1] in used) && /^(agent|session)\/(low|high|session)$/.test(saved[key])) used[m[1]] = saved[key]
+    if (m && !(m[1] in used) && /^(agent|session)\/(low|medium|high|session)$/.test(saved[key])) used[m[1]] = saved[key]
   }
   return used
 }
@@ -597,7 +597,7 @@ function metricLine() {
   if (escalated) pairs.push('escalated=1')
   if (blockingQualityRounds > 0) pairs.push(`quality_blocked=${blockingQualityRounds}`)
   for (const k of Object.keys(calibrated)) pairs.push(`calib.${k}=${calibrated[k]}`)
-  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|[a-e]|(agent|session)\/(low|high|session))$/.test(p))
+  const safe = pairs.filter((p) => /^[a-z0-9_.-]+=([0-9./]+|small|medium|large|none|rounds|[a-e]|(agent|session)\/(low|medium|high|session))$/.test(p))
   return CHANGE.test(state.change || '') ? `sh tools/run_state.sh metric ${state.change} ${safe.join(' ')}` : ''
 }
 // A restart carries on the figures the run state holds.
