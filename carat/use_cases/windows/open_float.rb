@@ -13,7 +13,7 @@ module Carat
       FULL = "Too many floating windows"
       private_constant :FULL
 
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @tabs: Domain::TabList
 
       #: (tabs: Domain::TabList) -> void
       def initialize(tabs:)

@@ -140,4 +140,9 @@ ok   A file opened in a split retires the startup buffer
 ok   a file opened over it in its window takes its number, as before
 ok   an empty buffer of :tabnew stays: only the startup buffer leaves
 ok   Under tab pages the startup buffer stays
-editor_tabs: 142 passed, 0 failed
+ok   :tabclose returns to the tab page left on its last line
+ok   :tabonly keeps the current tab page on its last line
+ok   :tabn back to a tab page keeps its cursor on the last line
+ok   :tabnew and :tabclose over an empty buffer leave its one empty line
+ok   :tabclose of the tab page over an empty buffer keeps the other
+editor_tabs: 147 passed, 0 failed

@@ -13,8 +13,8 @@ module Carat
       ONLY_ONE = "Already only one tab page"
       private_constant :ONLY_ONE
 
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(buffers:, tabs:)

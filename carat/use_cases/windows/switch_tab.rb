@@ -9,7 +9,7 @@ module Carat
     # wrapping and counts, as <C-PageDown> and <C-PageUp> and the :tab
     # commands do, first and last, and the last accessed, as g<Tab> does.
     class SwitchTab
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @tabs: Domain::TabList
 
       #: (tabs: Domain::TabList) -> void
       def initialize(tabs:)

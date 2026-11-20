@@ -145,4 +145,10 @@ ok   :only keeps the current window with its buffer
 ok   :wa reports the nameless buffer and writes the others
 ok   the nameless buffer stays modified
 ok   :wqa does not quit while a buffer could not be written
-editor_windows: 147 passed, 0 failed
+ok   a split from the last line keeps the cursor on the last line in both windows
+ok   Ctrl-W c from the last line leaves the other window on the last line
+ok   Ctrl-W o keeps the current window on the last line
+ok   a split over an empty buffer shows its one empty line in both windows
+ok   :close over an empty buffer leaves it unmodified in the other window
+ok   :new and Ctrl-W o over an empty buffer keep the new empty window
+editor_windows: 153 passed, 0 failed

@@ -20,21 +20,15 @@ module EditorPaletteTest
 
   # A session on a.txt with the default configuration, the keys typed.
   def self.session(keys)
-    files = Carat::Doubles::MemoryFiles.new
-    files.put("a.txt", "one\ntwo\nthree\n")
-    h = Carat::Doubles::EditorHarness.default(files, 24, 80)
-    h.open("a.txt")
-    h.type(keys.to_s)
-    h
+    session_on("one\ntwo\nthree\n", keys)
   end
 
-  # A session on an empty e.txt with the default configuration, the keys
-  # typed.
-  def self.empty_session(keys)
+  # The same session with a.txt holding text.
+  def self.session_on(text, keys)
     files = Carat::Doubles::MemoryFiles.new
-    files.put("e.txt", "")
+    files.put("a.txt", text.to_s)
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
-    h.open("e.txt")
+    h.open("a.txt")
     h.type(keys.to_s)
     h
   end
@@ -253,7 +247,7 @@ module EditorPaletteTest
     t.assert_equal(h.assembly.actions.names[0], name_at(h, 0), "the first row is the first action registered")
     # Edge case: the palette over an empty buffer lists the same entries
     # and Esc leaves the buffer's one empty line as it was.
-    empty = empty_session("<Space>p")
+    empty = session_on("", "<Space>p")
     count = empty.state.tab.floats.count
     top = name_at(empty, 0)
     same = lines(empty).length == lines(h).length
