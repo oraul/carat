@@ -147,9 +147,9 @@ module AdaptersConfigGatewayTest
     swapped.link(USER)
     t.assert_equal([4, []], tabstop(swapped), "a user file read through a link is still read")
 
-    # Scenarios: A write or quit binding in the project file, A
-    # command-line binding in any mode, The user file binds a write, the
-    # project file unbinds one.
+    # Scenario: A write or quit binding in the project file.
+    # Scenario: A command-line binding in any mode.
+    # Scenario: The user file binds a write, the project file unbinds one.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.normal Q quit.all\n")
     files.put(PROJECT, "keymap.normal j file.save\nkeymap.insert x quit.write_all\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k cmdline.history_older\nkeymap.visual q window.quit\nkeymap.normal ZZ none\nkeymap.normal K cursor.down\nkeymap.normal ; mode.cmdline\n")

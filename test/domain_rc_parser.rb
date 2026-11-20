@@ -112,8 +112,9 @@ module DomainRcParserTest
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp.root / ./evil\n", false), "a root command in the project file is refused")
     t.assert_equal([["1 keymap|normal [\"x\", \"cursor.down\"]", "2 keymap|normal [\"y\", \"none\"]", "4 keymap|leader [\",\"]", "5 keymap|normal [\"z\"]"], [".caratrc:3: key sequences are not read from a project file"]], config_of("keymap.normal x cursor.down\nkeymap.normal y none\nkeymap.normal q :e<Space>.git/config<CR>\nkeymap.leader ,\nkeymap.normal z\n", false), "an untrusted file binds actions and none but no key sequence")
     t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
-    # Scenarios: A write or quit binding in the project file, A
-    # command-line binding in any mode: every refused action in turn.
+    # Scenario: A write or quit binding in the project file.
+    # Scenario: A command-line binding in any mode.
+    # Every refused action in turn.
     refused = "write, quit, and command-line actions are not bound from a project file"
     t.table([
       ["an untrusted file cannot bind file.save", "keymap.normal j file.save\n", [[], [".caratrc:1: #{refused}"]]],
