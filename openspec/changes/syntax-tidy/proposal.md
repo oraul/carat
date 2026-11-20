@@ -32,8 +32,8 @@ None.
 
 ## Impact
 
-- README.md: unchanged. Its highlighting paragraph names percent literals and nested interpolation without a depth, and that still holds.
-- docs/architecture.md: unchanged. Its `Filetype` entry describes detection, which keeps its behavior, and no section names the Ruby state's depth field.
+- README.md: unchanged, its highlighting paragraph names percent literals and nested interpolation without a depth, and that still holds.
+- docs/architecture.md: unchanged, its `Filetype` entry describes detection, which keeps its behavior, and no section names the Ruby state's depth field.
 - docs/codebase-map.md: area 14 (the `Filetype` and `LineState` entries).
 - docs/compatibility.md, docs/actions.md: unchanged, since no command or action changes.
 - Performance: the tokenizer drops two comparisons per bracket and adds two per packed frame. `Buffer#name_start` builds the basename string on each call (in the tab bar, once per tab per frame), as `icon_of` already does when a buffer is renamed.
