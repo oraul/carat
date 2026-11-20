@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 9
-    VERSION = "2.9"
+    MINOR = 10
+    VERSION = "2.10"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -656,7 +656,8 @@ module Carat
       # Returns a Response whose lines are the first rows lines of the
       # regular file at path, without line endings, read only when it
       # holds at most 256 KiB (API 2.5); failed with the file system's
-      # message, and for rows below 1 or above 1000.
+      # message, and for rows below 1 or above 262,144, as many lines as
+      # the 256 KiB can hold (above 1000 before API 2.10).
       # @rbs path: String
       # @rbs rows: Integer
       def read_file(path, rows)

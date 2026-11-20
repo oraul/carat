@@ -158,7 +158,7 @@ jobs:
 
       # The measurement of tools/metrics.sh from the three development
       # builds above: re-narrowing rounds and analysis milliseconds of both
-      # roots, allocations and time per key of eight scenarios. main.yml
+      # roots, allocations and time per key of nine scenarios. main.yml
       # saves main's in the Actions cache; a pull request compares itself
       # with the entry of its base commit, or the newest of main, on the
       # same kind of runner: more allocations or rounds fail, time more

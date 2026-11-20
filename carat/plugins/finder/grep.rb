@@ -6,11 +6,11 @@ module Carat
     module Finder
       # The content index of the finder's grep picker: the text of the
       # listed files, read once when the picker opens, and the search
-      # over it. Each file is read through the host's read_file, so only
-      # its first FILE_ROWS lines are searched, and only when the file is
-      # small enough for that request; a file that cannot be read or
-      # holds a NUL byte is skipped, and a line is cut at MAX_BYTES.
-      # Loading stops at MAX_LINES stored lines.
+      # over it. Each file is read whole through the host's read_file,
+      # FILE_ROWS being as many lines as the request's 256 KiB can hold,
+      # and only when the file is small enough for that request; a file
+      # that cannot be read or holds a NUL byte is skipped, and a line is
+      # cut at MAX_BYTES. Loading stops at MAX_LINES stored lines.
       #
       # The query is split at spaces into terms, and a line matches when
       # it holds every term as a substring, in any order, ASCII case
@@ -19,21 +19,24 @@ module Carat
       # more hits of the terms, then a shorter file path, then listing
       # order. The rows take each file's best line, in that rank order,
       # then each file's second line, and so on, up to MAX_ROWS. A search
-      # checks at most LINE_BUDGET lines from where it starts, and the
-      # counts mark the lines it left unchecked. Line text is untrusted,
-      # so a row or a preview line shown goes through safe. The preview of
-      # a row is built from the stored text, with no new file read.
+      # checks new lines within LINE_BUDGET, less the last search's matches
+      # it kept when it narrows them, which it checks again first, so a key
+      # makes at most twice LINE_BUDGET line checks; the counts mark the
+      # lines it left unchecked. Line text is untrusted, so a row or a
+      # preview line shown goes through safe. The preview of a row is built
+      # from the stored text, with no new file read.
       class Grep
         MAX_ROWS = 200
         MAX_LINES = 400_000
         MAX_BYTES = 400
-        FILE_ROWS = 1000
+        FILE_ROWS = 262_144
         HIT_ROOM = 255
         LINE_BUDGET = 30_000
 
         # @rbs @files: Array[String]
         # @rbs @file_of: Array[Integer]
         # @rbs @starts: Array[Integer]
+        # @rbs @ends: Array[Integer]
         # @rbs @numbers: Array[Integer]
         # @rbs @texts: Array[String]
         # @rbs @found: Array[Integer]
@@ -48,6 +51,7 @@ module Carat
           @files = Grep.no_strings
           @file_of = Grep.no_ints
           @starts = Grep.no_ints
+          @ends = Grep.no_ints
           @numbers = Grep.no_ints
           @texts = Grep.no_strings
           @found = Grep.no_ints
@@ -72,11 +76,13 @@ module Carat
 
         # Lists the matches of the query in at most MAX_ROWS rows, none
         # for a query with no term (empty, or only spaces). Checks at most
-        # LINE_BUDGET lines from where the search starts: a query whose
+        # LINE_BUDGET new lines from where the search starts: a query whose
         # every old term lies inside a new term holds only lines the last
-        # search matched, so it checks those again and continues where
-        # that search stopped, with the budget the kept matches leave; any
-        # other query starts at the first stored line.
+        # search matched, so it checks those again (at most LINE_BUDGET,
+        # since a search keeps no more) and continues where that search
+        # stopped, with the budget the kept matches leave, so a key makes
+        # at most twice LINE_BUDGET line checks; any other query starts at
+        # the first stored line.
         #: (String) -> void
         def search(query)
           terms = split_terms(query)
@@ -158,11 +164,12 @@ module Carat
         # The preview of the row's file from the stored text: height
         # lines, the row's line in the middle (line number minus height / 2
         # first), the window moved to start at line 1 near the top and to
-        # end at the file's last stored line near the end, and shorter
-        # when the file is. A line the store skipped for being empty shows
-        # as an empty line; the row's line starts with mark and every other
-        # line with other. Each line is safe and shows at most MAX_BYTES
-        # bytes, as stored; no file is read.
+        # end at the file's last line near the end (the last before the
+        # store cap when it cut the file), and shorter when the file is. A
+        # line the store skipped for being empty shows as an empty line,
+        # the empty lines at the file's end too; the row's line starts with
+        # mark and every other line with other. Each line is safe and shows
+        # at most MAX_BYTES bytes, as stored; no file is read.
         #: (Integer, Integer, String, String) -> Array[String]
         def preview(row, height, mark, other)
           at = @hits[row]
@@ -170,7 +177,7 @@ module Carat
           first = @starts[file]
           stop = file + 1 < @starts.length ? @starts[file + 1] : @texts.length
           wanted = @numbers[at]
-          last = @numbers[stop - 1]
+          last = @ends[file]
           top = wanted - height / 2
           top = last - height + 1 if top > last - height + 1
           top = 1 if top < 1
@@ -442,12 +449,14 @@ module Carat
           index = @files.length
           @files << path
           @starts << @texts.length
+          @ends << lines.length
           i = 0
           while i < lines.length
             line = lines[i]
             if line.bytesize > 0
               if @texts.length >= MAX_LINES
                 @capped = true
+                @ends[index] = i
                 return
               end
               @file_of << index

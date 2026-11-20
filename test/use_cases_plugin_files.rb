@@ -314,7 +314,9 @@ module UseCasesPluginFilesTest
       ["read_file answers the first rows", fs.host.read_file("/w/three.txt", 2), [true, "", ["one", "two"]]],
       ["read_file answers fewer rows of a short file", fs.host.read_file("/w/three.txt", 9), [true, "", ["one", "two", "three"]]],
       ["read_file refuses a directory", fs.host.read_file("/w/lib", 2), [false, "Is a directory", []]],
-      ["read_file refuses no rows", fs.host.read_file("/w/a.txt", 0), [false, "rows must be 1 to 1000", []]],
+      # read_file refuses more rows than the read limit holds
+      ["read_file refuses no rows", fs.host.read_file("/w/a.txt", 0), [false, "rows must be 1 to 262144", []]],
+      ["read_file refuses more rows than 256 KiB can hold", fs.host.read_file("/w/a.txt", 262_145), [false, "rows must be 1 to 262144", []]],
       ["read_file refuses a missing file", fs.host.read_file("/w/none.txt", 2).ok, false]
     ]) do |r|
       r.is_a?(Carat::PluginApi::Response) ? [r.ok, r.message, r.lines] : r
@@ -322,6 +324,15 @@ module UseCasesPluginFilesTest
     files.put("binary.bin", "a\n\x80b\n")
     r = fs.host.read_file("/w/binary.bin", 2)
     t.assert_equal([true, ["a", "\x80b"]], [r.ok, r.lines], "read_file reads a line that starts with a continuation byte")
+    long = +""
+    n = 1
+    while n <= 2000
+      long << "line #{n}\n"
+      n += 1
+    end
+    files.put("long.txt", long)
+    r = fs.host.read_file("/w/long.txt", 2000)
+    t.assert_equal([true, 2000, "line 1500", "line 2000"], [r.ok, r.lines.length, r.lines[1499].to_s, r.lines[1999].to_s], "read_file answers rows past the 1000th")
 
     # The live prompt and close_prompt (API 2.5).
     session = editor

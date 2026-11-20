@@ -300,10 +300,12 @@ mkdir -p "$work/metrics"
 cd "$work/metrics" || exit 1
 printf 'spinel-timing: phase=analysis ms=1000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=2\n' > carat.timing
 printf 'spinel-timing: phase=analysis ms=2000.0 x=1\nspinel-timing: phase=analysis_renarrow rounds=3\n' > runner.timing
+# The fake's allocations per key read BENCH_SMALL.BENCH_LARGE, 27.0 when
+# neither is set, so a case sees the keys a scenario's runs took.
 cat > "$work/bin/fake-bench" <<'EOF'
 #!/bin/sh
 for s in "$@"; do
-  echo "$s lines=10 keys=10 handle=  1.0us render=  2.0us total=   50.0us worst= 9.0us@1 bytes=1 gc= 0.00% gc_runs=0 retained=0 open=1.0us tokenized=0.00 allocs=27.0 alloc_bytes=1616"
+  echo "$s lines=10 keys=10 handle=  1.0us render=  2.0us total=   50.0us worst= 9.0us@1 bytes=1 gc= 0.00% gc_runs=0 retained=0 open=1.0us tokenized=0.00 allocs=${BENCH_SMALL:-27}.${BENCH_LARGE:-0} alloc_bytes=1616"
 done
 EOF
 chmod +x "$work/bin/fake-bench"
@@ -316,6 +318,8 @@ expect "metrics: measure writes the rounds of each root" 0 "^rounds[.]runner[[:s
 expect "metrics: measure writes the analysis time of each root" 0 "^analysis_ms[.]carat[[:space:]]1000[.]0$" cat base.tsv
 expect "metrics: measure refuses without the build reports" 1 "missing; make dev-build" \
   env CARAT_TIMING=gone.timing sh "$here/metrics.sh" measure x.tsv lh
+expect "metrics: measure records the grep scenario by default, its allocation runs at 20 and 120 keys" 0 "^allocs[.]grep[[:space:]]20[.]120$" measure default.tsv
+expect "metrics: measure runs the other default scenarios at the default keys" 0 "^allocs[.]open-ruby[[:space:]]27[.]0$" cat default.tsv
 # compare SED-EXPRESSION [VAR=VALUE...]: base.tsv against a copy edited by it.
 compare() {
   sed "$1" base.tsv > current.tsv

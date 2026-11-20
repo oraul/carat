@@ -386,7 +386,7 @@ bench-budget:
 	BENCH_BIN=$(BUDGET_BIN) sh bench/run.sh --budget lh $(ALLOC_BUDGET)
 	BENCH_BIN=$(BUDGET_BIN) BENCH_SMALL=20 BENCH_LARGE=120 sh bench/run.sh grep
 
-## metrics: measure the tree into build/metrics/current.tsv from the reports and the binary of dev-build, test-build, and bench-budget: the re-narrowing rounds and analysis milliseconds of both compile roots, and allocations and time per key of eight scenarios (or SCENARIOS="lh j")
+## metrics: measure the tree into build/metrics/current.tsv from the reports and the binary of dev-build, test-build, and bench-budget: the re-narrowing rounds and analysis milliseconds of both compile roots, and allocations and time per key of nine scenarios, grep's over 150,000 lines among them (or SCENARIOS="lh j")
 metrics:
 	sh tools/metrics.sh measure $(METRICS_OUT) $(SCENARIOS)
 
