@@ -12,7 +12,7 @@ Adds the Neovim case operators g~, gu, and gU in normal mode, over a motion, a t
 - Add Operators.recase_range and the recase row helpers, so a case operator writes no register, leaves the cursor at the start of the range, repeats with the dot command, and undoes in one step.
 - Change Operators.recase to map each letter by itself as Neovim does, so a multibyte letter such as the German sharp s or the Turkish dotted capital I matches Neovim for the new operators and for ~ and the visual ~ u U.
 - Change the visual case keys so a selection that changes nothing records no edit, while a visual r with a character still undoes in one step.
-- Register the three operators in OperatorHandler and the selection handler, and build the shared recase use case once in EditorAssembly.
+- Register the three operators in OperatorHandler, which gets the new RecaseSelection use case, add a recase_selection reader to the selection handler, and build the one shared RecaseSelection in EditorAssembly.
 - Add test/editor_case_operators.rb with table-driven rows per key, multibyte letters, dot repeat, undo, and the visual modes, and update the assembly and substitute snapshots.
 - Document the operators in docs/compatibility.md, docs/actions.md, the code map, the README operator list, and the CLAUDE.md wording for the visual modes, and add the Case operators requirement to the operators spec.
 
