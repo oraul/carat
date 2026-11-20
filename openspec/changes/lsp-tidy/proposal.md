@@ -10,7 +10,7 @@ This is Sprint 22 backlog item 2, split by the plan: it delivers 6 of the brief'
 
 - `JsonRpcLanguageGateway#path_of` answers "" for a URI whose decoded path holds a `.` or `..` segment, `%2E` escapes included, so such a definition target is dropped like a relative one.
 - The gateway opens a buffer on its server only when the buffer's path, made absolute against the working directory with its `.` and `..` segments resolved, lies under the working directory, the root the server is given as `rootUri`; a buffer outside it is never sent, so no `didOpen`, `didChange`, `didSave`, or `didClose` names it.
-- A save of a buffer whose server is still starting is kept until that server's first sync, which sends `didSave` after the buffer's `didOpen`; saves of buffers with no starting server are forgotten after each tick as before.
+- A save of a buffer whose server is still starting is kept until that server's first sync, which sends `didSave` after the buffer's `didOpen`; saves of buffers with no starting server are forgotten after each tick as before. A save in the tick a buffer is first opened on a running server now follows its `didOpen` too, so the pathless buffer written to a name is sent `didOpen` and `didSave` (`test/adapters_pathless_language.rb` updated).
 - `ProcessRunner#stop` waits up to `STOP_SECONDS` (0.5 s) for the child to end on TERM and then signals KILL to it, so a server that ignores its end of input and TERM does not outlive the editor.
 - The writer thread closes its outbox when a write fails, and `ProcessRunner#write` answers false for a closed outbox, so the gateway crashes the server instead of queueing bytes no one writes.
 - A test shows a command that cannot start is spawned once and not again at the next idle tick (`FakeProcesses#attempts` counts the refused spawns too).
@@ -36,7 +36,7 @@ None.
 ## Impact
 
 - carat/adapters/json_rpc_language_gateway.rb, carat/drivers/process_runner.rb, carat/ports/process_port.rb (the stop contract), carat/doubles/fake_processes.rb (`attempts`).
-- test/adapters_language_gateway.rb, test/adapters_definitions.rb, test/drivers_process_runner.rb.
+- test/adapters_language_gateway.rb, test/adapters_definitions.rb, test/drivers_process_runner.rb, test/adapters_pathless_language.rb (one expectation), and test/lint.rb (`post` joins `BOOL_COMMANDS`, a command answering whether the writer took the bytes).
 - README.md: unchanged, it names the language server features but not which files are synced, how a server is stopped, or how a target URI is decoded.
 - docs/architecture.md: section 8.4's language server paragraph gains the working-directory rule and the KILL after the stop's grace; no layer, port name, or rule changes.
 - docs/codebase-map.md: area 17's process runner and gateway entries name the new behavior; no file is added, moved, or removed.
