@@ -130,7 +130,7 @@ Files:
 - `carat/use_cases/outcome.rb`: `Outcome`; `success`, `failure`, `none` (shared), `from_print` (the lines `:p` showed, `printed`).
 - `carat/use_cases/concerns/reporting.rb`: `Reporting#report(state, outcome)`, the one place an outcome reaches the message row.
 
-Tests: `test/adapters_assembly.rb` (every holder of a shared object holds the one the assembly built, read through its reader or, for a holder of a readerless directory, through `WiringLedger#held`; each holder the assembly keeps reading its shared objects out or recorded in the ledger from the object its construction passes, and no public reader in a directory of `READERLESS_DIRS`, as `lint` checks), `test/editor_normal.rb`.
+Tests: `test/adapters_assembly.rb` (every holder of a shared object holds the one the assembly built, read through its reader or, for a holder of a readerless directory, through `WiringLedger#held`; each holder the assembly keeps reading its shared objects out or recorded in the ledger from the object its construction passes, and no public reader or accessor in a directory of `READERLESS_DIRS`, as `lint` checks), `test/editor_normal.rb`.
 
 Designs: `state-and-ports` (The records; Wiring; Constructors), `dependency-injection` (Outcomes and the Reporting concern; Constructors), `editor-foundation` (Entities; Use cases), `data-value-objects`, `struct-record-types`, `struct-keyword-init` (all Decisions).
 

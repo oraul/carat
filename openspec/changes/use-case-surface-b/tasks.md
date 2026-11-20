@@ -22,3 +22,8 @@
 
 - [x] 4.1 `docs/examples.md` and `docs/codebase-map.md` describe the readerless golden use case and the rule (proved by `make docs-lint` and `make lint`)
 - [x] 4.2 Measure analysis time and rounds of both compile roots, the binary's size, and time per key on main and on the branch for the pull request (`make metrics`)
+
+## 5. Review advisories
+
+- [x] 5.1 `docs/codebase-map.md`: the adapters area's Tests line says lint refuses no public reader or accessor in a directory of `READERLESS_DIRS` (proved by `make docs-lint`)
+- [x] 5.2 `test/lint.rb`: `ledger_records` splits each record's text once on the quote and comma, taking the slot and the object from the two parts (proved by the holder rule's self-tests and `test/adapters_assembly.rb`)

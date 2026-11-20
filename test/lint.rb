@@ -1042,8 +1042,8 @@ module LintTest
     assembly.to_s.each_line do |line|
       stripped = line.strip
       next unless stripped.start_with?(marker)
-      rest = stripped.sub(marker, "")
-      records << [rest.split("\"")[0].to_s, rest.split("\", ")[1].to_s.chomp(")")]
+      parts = stripped.sub(marker, "").split("\", ")
+      records << [parts[0].to_s, parts[1].to_s.chomp(")")]
     end
     records
   end
