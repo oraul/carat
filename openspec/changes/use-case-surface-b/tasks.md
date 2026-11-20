@@ -2,8 +2,8 @@
 
 ## 1. Edge-case tests first
 
-- [ ] 1.1 `test/editor_windows.rb`: a split, Ctrl-W c, and Ctrl-W o from the last line, and a split, `:close`, and `:new` with Ctrl-W o over an empty buffer (proved by the tests' labels)
-- [ ] 1.2 `test/editor_tabs.rb`: `:tabclose`, `:tabonly`, and `:tabn` back to a tab page left on its last line, and `:tabnew` with `:tabclose` and `:tabclose 1` over an empty buffer (proved by the tests' labels)
+- [x] 1.1 `test/editor_windows.rb`: a split, Ctrl-W c, and Ctrl-W o from the last line, and a split, `:close`, and `:new` with Ctrl-W o over an empty buffer (proved by the tests' labels)
+- [x] 1.2 `test/editor_tabs.rb`: `:tabclose`, `:tabonly`, and `:tabn` back to a tab page left on its last line, and `:tabnew` with `:tabclose` and `:tabclose 1` over an empty buffer (proved by the tests' labels)
 
 ## 2. Part a's late findings
 

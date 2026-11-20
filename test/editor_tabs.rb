@@ -27,6 +27,16 @@ module EditorTabsTest
     h
   end
 
+  # The same editor with "e.txt" holding text opened in its window, after
+  # typing keys.
+  def self.session_on(text, keys)
+    h = session("")
+    h.files.put("e.txt", text)
+    h.open("e.txt")
+    h.type(keys)
+    h
+  end
+
   # An editor started on no file, as `carat .` starts, with the project
   # configuration lines given and "alpha.txt" on disk, after typing keys.
   def self.started(project, keys)
@@ -302,6 +312,20 @@ module EditorTabsTest
     t.assert_equal([["", "alpha.txt"], 3], [h.buffer_paths, h.assembly.tabs.tab_count], "an empty buffer of :tabnew stays: only the startup buffer leaves")
     h = started("option.gt tabpages", ":tabe alpha.txt<CR>")
     t.assert_equal(["", "alpha.txt"], h.buffer_paths, "Under tab pages the startup buffer stays")
+
+    # Edge cases of the tab use cases, which move tab pages and windows
+    # and read no line's text, so CRLF, multi-byte text, and trailing
+    # blanks do not reach them: the last line and an empty buffer.
+    h = session("G:tabnew<CR>:tabclose<CR>")
+    t.assert_equal([1, [2, 0]], [h.tab_count, h.cursor], ":tabclose returns to the tab page left on its last line")
+    h = session("G:tabnew<CR>:tabfir<CR>:tabonly<CR>")
+    t.assert_equal([1, [2, 0], "a.txt"], [h.tab_count, h.cursor, current_path(h)], ":tabonly keeps the current tab page on its last line")
+    h = session("G:tabe b.txt<CR>:tabn 1<CR>")
+    t.assert_equal([1, [2, 0]], [h.tab_index, h.cursor], ":tabn back to a tab page keeps its cursor on the last line")
+    h = session_on("", ":tabnew<CR>:tabclose<CR>")
+    t.assert_equal([1, [""], "e.txt", [0, 0]], [h.tab_count, h.lines, current_path(h), h.cursor], ":tabnew and :tabclose over an empty buffer leave its one empty line")
+    h = session_on("", ":tabe a.txt<CR>:tabclose 1<CR>")
+    t.assert_equal([1, "a.txt", ["one", "two", "three"]], [h.tab_count, current_path(h), h.lines], ":tabclose of the tab page over an empty buffer keeps the other")
 
     t.finish
   end
