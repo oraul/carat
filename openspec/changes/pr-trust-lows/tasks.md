@@ -11,5 +11,5 @@
 
 ## 3. Documents and self-check
 
-- [ ] 3.1 CLAUDE.md's OpenSpec line, README.md's OpenSpec row, `docs/architecture.md` section 10, and `docs/codebase-map.md` area 1.
+- [x] 3.1 CLAUDE.md's OpenSpec line, README.md's OpenSpec row, `docs/architecture.md` section 10, and `docs/codebase-map.md` area 1.
 - [ ] 3.2 Self-check: `make tools-test`, `make gates`, `make docs-lint`, and `make spec-validate` pass.

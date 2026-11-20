@@ -34,7 +34,7 @@ None.
 
 ## Impact
 
-- CLAUDE.md: the OpenSpec line names `@fission-ai/openspec@2.1.1`, the only form the guard lets the contributor run, and the Makefile's `OPENSPEC_PACKAGE` as where it is pinned.
+- CLAUDE.md: the OpenSpec line names `@fission-ai/openspec@2.1.1`, the only form the guard lets the contributor run, as pinned; the file is at its 30 KiB budget, so where the pin lives (the Makefile's `OPENSPEC_PACKAGE`) is said by README.md, the code map, and the Makefile's comment instead.
 - README.md: the OpenSpec commands row says they run the pinned version.
 - docs/architecture.md: section 10's CI paragraph says the scope is the base's script.
 - docs/codebase-map.md: area 1's `tools/ci_scope.sh`, `tools/spec_validate.sh`, and `ci.yml` entries.
