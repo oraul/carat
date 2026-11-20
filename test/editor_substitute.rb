@@ -110,9 +110,11 @@ module EditorSubstituteTest
       ["undo a line break", ["a,b\n", [0, 0], ":s/,/\\r/<CR>u"], [[0, 0], "1 line less; before #1  0 seconds ago", "a,b"]],
       ["dot does not repeat it", ["ab\nab\n", [0, 0], "x:s/b/c/<CR>j."], [[1, 0], "", "c|b"]],
       ["n searches the pattern", ["abc b\n", [0, 0], ":s/b/x/<CR>n"], [[0, 4], "/b", "axc b"]],
-      # n and N take case from the options, not the flag (scenarios: n
-      # after the i flag matches case by the options, N after the I flag
-      # ignores case by the options).
+      # The search the substitute leaves; the row above proves the
+      # scenario: n repeats the pattern. n and N take case from the
+      # options, not the flag (scenarios:
+      # n after the i flag matches case by the options,
+      # N after the I flag ignores case by the options).
       ["n after the i flag matches case by the options", ["abc a A\n", [0, 0], ":s/A/x/i<CR>n"], [[0, 6], "/A", "xbc a A"]],
       ["N after the I flag ignores case by the options", ["a A b\n", [0, 0], ":set ic<CR>:s/a/x/I<CR>N"], [[0, 2], "search hit TOP, continuing at BOTTOM", "x A b"]],
       ["the search register holds it", ["ab\n", [0, 0], ":s/b/x/<CR>\"/P"], [[0, 0], "", "bax"]]

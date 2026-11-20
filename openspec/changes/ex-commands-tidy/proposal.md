@@ -33,7 +33,7 @@ None.
 
 ## Impact
 
-- README.md: unchanged, it lists `:normal` and `:s` without their refusals or flag details.
+- README.md: the substitute flags bullet says `i` and `I` set the case of that substitute alone and `c` and `l` keep nothing; the `:normal` stop is a detail of `docs/compatibility.md` it does not list.
 - docs/architecture.md: unchanged, no layer, port, or module changes; the behavior is in the specs.
 - docs/compatibility.md: the `:normal` row notes that E192 ends every `:normal` running.
 - docs/codebase-map.md: unchanged, no file is added, moved, or removed.

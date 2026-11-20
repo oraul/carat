@@ -107,7 +107,7 @@ The files load in order, and a later line wins: the built-in defaults (`config/d
 
 `:s/pattern/string/` replaces the first match on the cursor line, and `g` after it every match: `:%s/old/new/g` changes every line, `:2,5s/a/b/` lines 2 to 5, and `:` in a visual mode starts the command line with `'<,'>`, the selected lines. A range alone moves the cursor (`:12`, `:$`). The string takes `&` for the match, `\1` to `\9` for the pattern's `\(\)` groups, `~` for the last string, `\u \U \l \L \e` for case, and `\r` for a line break.
 
-- The flags `& e g i I n r p #` work as in Vim: `:%s/x//gn` counts the matches, `e` keeps quiet when there is none, and `&&` reuses the last flags.
+- The flags `& e g i I n r p #` work as in Vim: `:%s/x//gn` counts the matches, `e` keeps quiet when there is none, `i` and `I` set the case of that substitute alone, `n` then searching by the options, and `&&` reuses the last flags; `c` and `l` answer Not implemented and leave the last substitute as it was.
 - `:&`, `:s` alone, and `&` repeat the last substitute on the range or the cursor line, `3&` on three lines, and `g&` on every line with the last search pattern and flags.
 - A substitute is one undo step, its pattern becomes the last search for `n`, and like a search it can never hang Carat: one that would work too long changes nothing and reports `E363`.
 
