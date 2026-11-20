@@ -132,6 +132,38 @@ module DomainOptionsConfigTest
     end
     # The shipped configuration turns them on.
     t.assert_equal([true, "┊"], [options.indentguides, options.indentguides_char], "the shipped configuration turns the indent guides on, drawn in ┊")
+
+    # The whitespace marks' options: rows are [label, project lines, [list,
+    # listchars, the codes drawn for the tab's three marks, trail, and
+    # nbsp, problems]]. Scenario: A listchars value that does not read is
+    # refused (the rows from "an unknown key").
+    refused = ".caratrc:1: option.listchars takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide"
+    t.table([
+      ["the marks are off by default, with Neovim's listchars", "", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], []]],
+      ["the marks turned on", "option.list true\n", [true, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], []]],
+      ["a tab with a last mark", "option.listchars tab:<->\n", [false, "tab:<->", [60, 45, 62, 0, 0], []]],
+      ["a later item of a key wins", "option.listchars trail:a,nbsp:n,trail:b\n", [false, "trail:a,nbsp:n,trail:b", [0, 0, 0, 98, 110], []]],
+      ["an empty value draws no mark", "option.listchars \"\"\n", [false, "", [0, 0, 0, 0, 0], []]],
+      ["the ASCII marks: Neovim's for marks outside ASCII with the ascii icon set", "option.icons ascii\noption.listchars \"tab:→ ,trail:·,nbsp:␣\"\n", [false, "tab:→ ,trail:·,nbsp:␣", [62, 32, 0, 45, 43], []]],
+      ["an ASCII mark is kept with the ascii icon set", "option.icons ascii\noption.listchars tab:→x→,trail:~,nbsp:·\n", [false, "tab:→x→,trail:~,nbsp:·", [62, 120, 62, 126, 43], []]],
+      ["an unknown key is refused", "option.listchars eol:$\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["a tab of one character is refused", "option.listchars tab:>\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["a tab of four characters is refused", "option.listchars tab:<-->\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["a trail of two characters is refused", "option.listchars trail:ab\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["an empty nbsp is refused", "option.listchars nbsp:\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["an item without a colon is refused", "option.listchars tab\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["an empty item is refused", "option.listchars trail:-,,nbsp:+\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [refused]]],
+      ["a mark two columns wide is refused, the value before kept", "option.listchars trail:~\noption.listchars trail:日\n", [false, "trail:~", [0, 0, 0, 126, 0], [refused.sub(":1:", ":2:")]]],
+      ["list takes true or false", "option.list yes\n", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], [".caratrc:1: option.list takes true or false"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.list, read.listchars, [read.listchar_code("tab", 0), read.listchar_code("tab", 1), read.listchar_code("tab", 2), read.listchar_code("trail", 0), read.listchar_code("nbsp", 0)], config.report]
+    end
+    # Scenario: The shipped list options.
+    t.assert_equal([false, "tab:→ ,trail:·,nbsp:␣", [0x2192, 32, 0, 0xb7, 0x2423]], [options.list, options.listchars, [options.listchar_code("tab", 0), options.listchar_code("tab", 1), options.listchar_code("tab", 2), options.listchar_code("trail", 0), options.listchar_code("nbsp", 0)]], "The shipped list options: list off, Facet's marks")
+
     # The scope guide in ASCII: the cursor's block is drawn in the solid │,
     # | with the ascii icon set, whatever the guide character.
     ascii = D::Options.new

@@ -34,10 +34,12 @@ module Carat
     # border style of floats, Neovim's option (BorderStyle). jumptab is
     # "replace" when a jump takes the tab of the buffer it leaves, or
     # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
-    # the buffer tabs, or "tabpages", Vim's behavior. All but syntax_on
+    # the buffer tabs, or "tabpages", Vim's behavior. list draws the marks
+    # of listchars over the tabs, trailing spaces, and no-break spaces of
+    # file windows, Neovim's options and default. All but syntax_on
     # come from option lines of the configuration. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :list, :listchars, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -69,15 +71,18 @@ module Carat
       # @rbs @winborder: String
       # @rbs @jumptab: String
       # @rbs @gt: String
+      # @rbs @list: bool
+      # @rbs @listchars: String
 
       # Vim's defaults, the unicode icon set, the default theme painting its
       # own background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
       # the start screen on, with its animation; cursorline and the
-      # indent guides off, as in Neovim, which draws none.
+      # indent guides and the whitespace marks off, as in Neovim, which
+      # draws no guides.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES, list: false, listchars: LISTCHARS)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -86,10 +91,10 @@ module Carat
       KINDS = {
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
-        "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool",
+        "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool", "list" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
-        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string", "gt" => "string"
+        "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string", "gt" => "string", "listchars" => "string"
       }
 
       # The key hints' default wait in milliseconds and the longest one; 0
@@ -120,6 +125,16 @@ module Carat
       # The code point of the solid guide of the cursor's block, │, drawn
       # as GUIDE_ASCII with the ascii icon set.
       SCOPE_GUIDE = 0x2502
+
+      # Neovim's default listchars, and the marks drawn in place of one
+      # outside ASCII with the ascii icon set, Neovim's default characters:
+      # > and a blank for a tab (> for its last cell), - for a trailing
+      # space, + for a no-break space.
+      LISTCHARS = "tab:> ,trail:-,nbsp:+"
+      TAB_ASCII = 62
+      FILL_ASCII = 32
+      TRAIL_ASCII = 45
+      NBSP_ASCII = 43
 
       # The largest slot size, in columns or rows.
       SLOT_SIZE_MAX = 500
@@ -189,6 +204,97 @@ module Carat
         DisplayWidth.of(code) == 1
       end
 
+      # The code point of mark slot (0, 1, or 2; a tab's first, middle, and
+      # last) of a listchars key ("tab", "trail", or "nbsp"), the key's
+      # last item winning, or 0 when the key or the slot is not given; one
+      # outside ASCII is the key's ASCII mark with the ascii icon set.
+      #: (String, Integer) -> Integer
+      def listchar_code(key, slot)
+        text = listchars
+        n = text.bytesize
+        at = Options.listchar_value(text, key)
+        return 0 if at < 0
+        i = 0
+        while at < n && text.getbyte(at) != 44
+          size = Utf8.size_at(text, at, n)
+          if i == slot
+            code = Utf8.code_at(text, at, size)
+            return code unless code > 127 && icons == "ascii"
+            return TRAIL_ASCII if key == "trail"
+            return NBSP_ASCII if key == "nbsp"
+            return slot == 1 ? FILL_ASCII : TAB_ASCII
+          end
+          i += 1
+          at += size
+        end
+        0
+      end
+
+      # The byte index where the characters of key's last item start in a
+      # listchars value, or -1 when no item names it.
+      #: (String, String) -> Integer
+      def self.listchar_value(text, key)
+        n = text.bytesize
+        found = -1
+        start = 0
+        while start < n
+          stop = start
+          stop += 1 while stop < n && text.getbyte(stop) != 44
+          colon = start
+          colon += 1 while colon < stop && text.getbyte(colon) != 58
+          found = colon + 1 if colon < stop && Options.key_at?(text, start, colon, key)
+          start = stop + 1
+        end
+        found
+      end
+
+      # Whether the bytes of text from start up to stop spell key.
+      #: (String, Integer, Integer, String) -> bool
+      def self.key_at?(text, start, stop, key)
+        return false if stop - start != key.bytesize
+        i = 0
+        while start + i < stop
+          return false if text.getbyte(start + i) != key.getbyte(i)
+          i += 1
+        end
+        true
+      end
+
+      # Whether a word reads as listchars: comma-separated items of tab
+      # with two or three characters, trail and nbsp with one, each
+      # character one a guide could be (one column wide, not a control);
+      # the empty word draws no mark.
+      #: (String) -> bool
+      def self.listchars?(word)
+        n = word.bytesize
+        start = 0
+        while start < n
+          stop = start
+          stop += 1 while stop < n && word.getbyte(stop) != 44
+          colon = start
+          colon += 1 while colon < stop && word.getbyte(colon) != 58
+          return false if colon >= stop
+          key = word.byteslice(start, colon - start).to_s
+          count = 0
+          at = colon + 1
+          while at < stop
+            size = Utf8.size_at(word, at, stop)
+            return false unless Options.guide_char?(word.byteslice(at, size).to_s)
+            count += 1
+            at += size
+          end
+          if key == "tab"
+            return false if count < 2 || count > 3
+          elsif key == "trail" || key == "nbsp"
+            return false if count != 1
+          else
+            return false
+          end
+          start = stop + 1
+        end
+        true
+      end
+
       # Builds options from the option lines of a configuration, applied
       # in order so a later line wins. An unknown option, a value of the
       # wrong kind, a number out of its range, or an unknown icon set,
@@ -243,6 +349,13 @@ module Carat
         when "reducedmotion" then self.reducedmotion = word == "true"
         when "cursorline" then self.cursorline = word == "true"
         when "indentguides" then self.indentguides = word == "true"
+        when "list" then self.list = word == "true"
+        when "listchars"
+          if Options.listchars?(word)
+            self.listchars = word
+          else
+            config.note(line, "#{line.key} takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide")
+          end
         when "indentguides.char"
           if Options.guide_char?(word)
             self.indentguides_char = word
