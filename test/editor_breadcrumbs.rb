@@ -198,7 +198,7 @@ module EditorBreadcrumbsTest
     t.assert_equal([" b.txt              | a.rb", "bee                 |class Foo"], [r.row(1).rstrip, r.row(2).rstrip], "windows on different files name their own, under the buffer tabs")
     r = rig("", {})
     r.type("<C-w>v")
-    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, H::TAB_LINE, H::TAB_LINE_FILL], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1), r.frame.hl_at(0, 10), r.frame.hl_at(0, 22), r.frame.hl_at(0, 30)], "the current window's winbar is in TabLineSel, the other's in TabLine, the rest TabLineFill")
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, H::TAB_LINE, H::TAB_LINE_FILL], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1), r.frame.hl_at(0, 10), r.frame.hl_at(0, 22), r.frame.hl_at(0, 30)], "the current window's path with no symbol is the accent in TabLineSel, the other's in TabLine, the pad TabLine, the rest TabLineFill")
     r.type("<C-w>l")
     t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [r.frame.hl_at(0, 1), r.frame.hl_at(0, 22)], "the selected winbar follows the current window")
     r = rig("", {})
@@ -240,6 +240,9 @@ module EditorBreadcrumbsTest
     t.assert_equal([" a.rb > Foo", " a.rb > Foo"], [cut(r, 0, 0, 20), cut(r, 0, 21, 19)], "on the class line both windows on the buffer show the class")
     r.type("j")
     t.assert_equal([" a.rb > Foo > bar", " a.rb > Foo"], [cut(r, 0, 0, 20), cut(r, 0, 21, 19)], "inside the method the current window shows the class and the method, the other its own cursor's")
+    # " a.rb > Foo > bar": the path and the class quiet, only the innermost symbol in the accent, and the other window quiet throughout.
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE],
+      [r.frame.hl_at(0, 1), r.frame.hl_at(0, 7), r.frame.hl_at(0, 8), r.frame.hl_at(0, 11), r.frame.hl_at(0, 14), r.frame.hl_at(0, 16), r.frame.hl_at(0, 17), r.frame.hl_at(0, 22), r.frame.hl_at(0, 27)], "only the innermost symbol of the current window's winbar is in the accent, the path and the outer symbols stay quiet")
     r.type("4j")
     r.wait
     t.assert_equal([" a.rb", 1], [cut(r, 0, 0, 20), r.symbols_sent], "outside every symbol the path only, with no new request")

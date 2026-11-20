@@ -12,7 +12,7 @@ ok   always shows the winbar on one window
 ok   never hides the winbars of two windows
 ok   an unknown mode keeps auto
 ok   windows on different files name their own, under the buffer tabs
-ok   the current window's winbar is in TabLineSel, the other's in TabLine, the rest TabLineFill
+ok   the current window's path with no symbol is the accent in TabLineSel, the other's in TabLine, the pad TabLine, the rest TabLineFill
 ok   the selected winbar follows the current window
 ok   the mode is read from configuration lines, not :set
 ok   a split count counts text rows below the winbar
@@ -25,6 +25,7 @@ ok   the key that splits sends nothing
 ok   the next idle tick asks for the buffer's symbols
 ok   on the class line both windows on the buffer show the class
 ok   inside the method the current window shows the class and the method, the other its own cursor's
+ok   only the innermost symbol of the current window's winbar is in the accent, the path and the outer symbols stay quiet
 ok   outside every symbol the path only, with no new request
 ok   a window on another buffer shows its path only, under the buffer tabs
 ok   a server without document symbols is not asked and the winbar shows the path
@@ -45,4 +46,4 @@ ok   stop forgets the symbol request in flight
 ok   a restart drops the held symbols and the winbar shows the path
 ok   the restarted server is asked for the same text once it is ready
 ok   A restart keeps the new outline: the old server's late answer changes nothing
-editor_breadcrumbs: 47 passed, 0 failed
+editor_breadcrumbs: 48 passed, 0 failed

@@ -89,9 +89,19 @@ module EditorTabFlowsTest
     true
   end
 
+  # Row 0 squeezed, without the selected tab's gem and the tabs'
+  # separators when it is the tab row (they have their own tests).
+  def self.top_row(h)
+    text = h.row(0)
+    if files(h).length > 1 || h.tab_count > 1
+      text = text.delete_prefix("*").gsub("|*", " ").delete("|")
+    end
+    text.strip.squeeze(" ")
+  end
+
   # What a step checks, as strings.
   def self.observe(h)
-    [h.row(0).strip.squeeze(" "), name_of(h.buffer), files(h).join(","), h.window_count.to_s, h.tab_count.to_s, explorer_in?(h.state.tab).to_s, h.message, h.quit?.to_s]
+    [top_row(h), name_of(h.buffer), files(h).join(","), h.window_count.to_s, h.tab_count.to_s, explorer_in?(h.state.tab).to_s, h.message, h.quit?.to_s]
   end
 
   # Types each step and checks what it leaves, then that the flow ends
