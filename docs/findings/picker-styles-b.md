@@ -22,3 +22,8 @@
 - Location: carat/adapters/frame_presenter.rb:682 (paint_tokens on the float layer), carat/domain/themes.rb:657
 - Why: a syntax or file-icon span on a plugin float's selected row is painted as its group on the float layer, whose background is NormalFloat's when the group has none of its own, so an icon or Comment span breaks the PmenuSel bar and loses PmenuSel's REVERSE in 16 colors; the picker's icons on its selected row will show it. Not fixed in picker-styles-b: it changes painting, new behavior beyond a fix round.
 - Fix: on a menu's selected row give a token group without its own background the row's PmenuSel background (a selected-row layer or a background override in paint_tokens), with a test reading a Comment span's background on the selected row.
+
+### A token span on a float's selected row breaks the PmenuSel bar (still present at the package head)
+- Location: carat/adapters/frame_presenter.rb:682 (paint of a float's syntax and file-icon spans), carat/domain/themes.rb:657 (a float group without its own background takes NormalFloat's)
+- Why: a syntax or file-icon span on a float's selected row is painted as its group on the float layer, so an icon or Comment span leaves a NormalFloat hole in the PmenuSel bar and loses PmenuSel's REVERSE in 16 colors; the spec's drawn-as-tokens wording allows it, but the picker's icons on its selected row will show it; raised by the quality review twice in this run (the fix round's entry above and again at the head), merged here as one finding
+- Fix: on a menu's selected row give a token group without its own background the row's PmenuSel background (a selected-row layer or a background override in paint_tokens), with a test reading a Comment span's background on the selected row
