@@ -52,8 +52,9 @@ module Carat
 
       # Reads the file at path into the configuration under its label when
       # a file, not a directory, is there, or notes why it was refused. An
-      # untrusted file may not be a link, which could lead anywhere; the
-      # user file may, as dotfile managers link it.
+      # untrusted file may not be a link, which could lead anywhere, so it
+      # is also opened without following one, refusing a link swapped in
+      # after the stat; the user file may, as dotfile managers link it.
       #: (Domain::Config, String, String, bool) -> void
       def read_file(config, path, source, trusted)
         info = @files.stat(path)
@@ -65,7 +66,7 @@ module Carat
         end
         text = ""
         begin
-          text = @files.read(path, LIMIT)
+          text = trusted ? @files.read(path, LIMIT) : @files.read_no_link(path, LIMIT)
         rescue StandardError
           config.refuse(source, "cannot be read")
           return

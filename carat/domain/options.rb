@@ -129,6 +129,13 @@ module Carat
       # spaces.
       WIDTH_MAX = 9999
 
+      # The largest scroll or scrolloff, in lines, the largest timeoutlen,
+      # in milliseconds, and the most undo states a buffer keeps: far above
+      # any useful value, so a project file cannot ask for a huge one.
+      LINES_MAX = 9999
+      TIMEOUTLEN_MAX = 10_000
+      UNDOLEVELS_MAX = 10_000
+
       # The width a tab takes for display and block columns: tabstop, or 8
       # when tabstop is not positive.
       #: () -> Integer
@@ -184,8 +191,9 @@ module Carat
 
       # Builds options from the option lines of a configuration, applied
       # in order so a later line wins. An unknown option, a value of the
-      # wrong kind, an unknown icon set, theme, or background is noted on
-      # the configuration and keeps the value before it.
+      # wrong kind, a number out of its range, or an unknown icon set,
+      # theme, background, or mode is noted on the configuration and keeps
+      # the value before it.
       #: (Config) -> Options
       def self.from_config(config)
         options = Options.new
@@ -197,22 +205,6 @@ module Carat
           i += 1
         end
         options
-      end
-
-      # Why a width option's value cannot be set, "" when it lies from low
-      # to WIDTH_MAX.
-      #: (String, Integer, Integer) -> String
-      def self.width_problem(key, value, low)
-        return "" if value >= low && value <= WIDTH_MAX
-        "#{key} takes a number from #{low} to #{WIDTH_MAX}"
-      end
-
-      # Why a number option's value cannot be set, "" when it lies from 0
-      # to max.
-      #: (String, Integer, Integer) -> String
-      def self.range_problem(key, value, max)
-        return "" if value >= 0 && value <= max
-        "#{key} takes a number from 0 to #{max}"
       end
 
       # The size option of a slot's side (:left, :right, or :bottom).
@@ -258,83 +250,74 @@ module Carat
             config.note(line, "#{line.key} takes one character one column wide")
           end
         when "tabstop"
-          problem = Options.width_problem(line.key, word.to_i, 1)
-          if problem.empty?
-            self.tabstop = word.to_i
-          else
-            config.note(line, problem)
-          end
+          value = bounded(config, line, word, 1, WIDTH_MAX)
+          self.tabstop = value if value >= 0
         when "shiftwidth"
-          problem = Options.width_problem(line.key, word.to_i, 0)
-          if problem.empty?
-            self.shiftwidth = word.to_i
-          else
-            config.note(line, problem)
-          end
-        when "scroll" then self.scroll = word.to_i
-        when "scrolloff" then self.scrolloff = word.to_i
-        when "timeoutlen" then self.timeoutlen = word.to_i
+          value = bounded(config, line, word, 0, WIDTH_MAX)
+          self.shiftwidth = value if value >= 0
+        when "scroll"
+          value = bounded(config, line, word, 0, LINES_MAX)
+          self.scroll = value if value >= 0
+        when "scrolloff"
+          value = bounded(config, line, word, 0, LINES_MAX)
+          self.scrolloff = value if value >= 0
+        when "timeoutlen"
+          value = bounded(config, line, word, 0, TIMEOUTLEN_MAX)
+          self.timeoutlen = value if value >= 0
+        when "undolevels"
+          value = bounded(config, line, word, 0, UNDOLEVELS_MAX)
+          self.undolevels = value if value >= 0
         when "keyhints.delay"
-          problem = Options.range_problem(line.key, word.to_i, KEYHINTS_DELAY_MAX)
-          if problem.empty?
-            self.keyhints_delay = word.to_i
-          else
-            config.note(line, problem)
-          end
+          value = bounded(config, line, word, 0, KEYHINTS_DELAY_MAX)
+          self.keyhints_delay = value if value >= 0
         when "layout.left_width", "layout.right_width", "layout.panel_height"
-          problem = Options.range_problem(line.key, word.to_i, SLOT_SIZE_MAX)
-          if problem.empty?
-            set_slot_size(name, word.to_i)
-          else
-            config.note(line, problem)
-          end
-        when "undolevels" then self.undolevels = word.to_i
+          value = bounded(config, line, word, 0, SLOT_SIZE_MAX)
+          set_slot_size(name, value) if value >= 0
         when "icons"
-          if Icons.set?(word)
-            self.icons = word
-          else
-            config.note(line, "unknown icon set #{word}")
-          end
+          value = named(config, line, word, Icons.set?(word), "icon set")
+          self.icons = value unless value.empty?
         when "theme"
-          if Themes.known?(word)
-            self.theme = word
-          else
-            config.note(line, "unknown theme #{word}")
-          end
+          value = named(config, line, word, Themes.known?(word), "theme")
+          self.theme = value unless value.empty?
         when "background"
-          if Themes.background?(word)
-            self.background = word
-          else
-            config.note(line, "unknown background #{word}")
-          end
+          value = named(config, line, word, Themes.background?(word), "background")
+          self.background = value unless value.empty?
         when "breadcrumbs"
-          if BREADCRUMBS.include?(word)
-            self.breadcrumbs = word
-          else
-            config.note(line, "unknown breadcrumbs mode #{word}")
-          end
+          value = named(config, line, word, BREADCRUMBS.include?(word), "breadcrumbs mode")
+          self.breadcrumbs = value unless value.empty?
         when "jumptab"
-          if JUMPTABS.include?(word)
-            self.jumptab = word
-          else
-            config.note(line, "unknown jumptab mode #{word}")
-          end
+          value = named(config, line, word, JUMPTABS.include?(word), "jumptab mode")
+          self.jumptab = value unless value.empty?
         when "gt"
-          if GTS.include?(word)
-            self.gt = word
-          else
-            config.note(line, "unknown gt mode #{word}")
-          end
+          value = named(config, line, word, GTS.include?(word), "gt mode")
+          self.gt = value unless value.empty?
         when "winborder"
-          if BorderStyle.style?(word)
-            self.winborder = word
-          else
-            config.note(line, "unknown border style #{word}")
-          end
+          value = named(config, line, word, BorderStyle.style?(word), "border style")
+          self.winborder = value unless value.empty?
         end
       end
 
       private
+
+      # The word's number when it lies from low to high, else -1 with the
+      # range noted on the configuration; every low is 0 or 1, so -1 is
+      # never a value.
+      #: (Config, RcLine, String, Integer, Integer) -> Integer
+      def bounded(config, line, word, low, high)
+        value = word.to_i
+        return value if value >= low && value <= high
+        config.note(line, "#{line.key} takes a number from #{low} to #{high}")
+        -1
+      end
+
+      # The word when it is known, else "" with the word noted on the
+      # configuration as an unknown what.
+      #: (Config, RcLine, String, bool, String) -> String
+      def named(config, line, word, known, what)
+        return word if known
+        config.note(line, "unknown #{what} #{word}")
+        ""
+      end
 
       #: (String, Integer) -> void
       def set_slot_size(name, size)

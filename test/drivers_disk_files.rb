@@ -95,6 +95,14 @@ module DriversDiskFilesTest
     ]) do |name|
       read_of(files, "#{base}/#{name}")
     end
+    # Scenario: A link is refused by the open.
+    no_link = ""
+    begin
+      no_link = files.read_no_link("#{base}/link.txt", LIMIT)
+    rescue StandardError
+      no_link = "raised"
+    end
+    t.assert_equal(["hello\n", "raised", "hello\n"], [files.read_no_link("#{base}/reg.txt", LIMIT), no_link, files.read("#{base}/link.txt", LIMIT)], "a link is refused by the open")
     latin1 = files.read("#{base}/latin1.txt", LIMIT)
     t.assert_equal(["UTF-8", false, 5], [latin1.encoding.to_s, latin1.valid_encoding?, latin1.bytesize], "a bounded read gives UTF-8 bytes as they are")
 

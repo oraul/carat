@@ -16,10 +16,15 @@ ok   a zero tabstop
 ok   a huge shiftwidth
 ok   the limits themselves
 ok   the smallest values
+ok   numbers past the limits keep the values before them
+ok   the line, wait, and undo limits themselves
+ok   the smallest line, wait, and undo numbers
 ok   the shipped defaults set Carat's options cleanly
 ok   scroll is 0 by default, half the window
 ok   scroll takes a number
 ok   scroll refuses a word
+ok   scroll past the limit keeps the value before it
+ok   scroll at the limit
 ok   the shipped scroll is 0
 ok   the shipped search options
 ok   Neovim's search defaults
@@ -72,4 +77,4 @@ ok   buffers is stored
 ok   tabpages is stored after buffers
 ok   An unknown gt mode is refused and keeps the earlier value
 ok   the shipped configuration moves gt and gT between the buffer tabs
-domain_options_config: 74 passed, 0 failed
+domain_options_config: 79 passed, 0 failed
