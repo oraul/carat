@@ -15,3 +15,9 @@
 ## 4. Docs
 
 - [x] 4.1 Update README.md, docs/plugins.md, docs/codebase-map.md, the Makefile's help lines, and the comment of the CI metrics step; make docs-lint
+
+## 5. Review fixes
+
+- [x] 5.1 Say in docs/plugins.md that the grep picker relies on API 2.10's `read_file` rows, dropping the no-API-change clause
+- [x] 5.2 Rename the grep flag of `measure` in `tools/metrics.sh` to `with_grep`; the existing `measure records the grep scenario by default` case of `tools/tools_test.sh` holds
+- [x] 5.3 Write `FileRequests::MAX_ROWS` as `READ_LIMIT` so the two cannot drift; the existing read_file rows of `test/use_cases_plugin_files.rb` hold
