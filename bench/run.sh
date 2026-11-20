@@ -8,9 +8,7 @@
 # of the scenario cancelled out. When taskset exists the runs are pinned to
 # one core. The memory scenarios run with SPINEL_GC_MINOR=0, which makes
 # every collection full, so the live heap the benchmark reads after
-# GC.start is exact. The grep scenario's two runs take a tenth of SMALL
-# and LARGE keys (20 and 120 by default), since a grep key takes
-# milliseconds; both stay multiples of its ten-key cycle at the defaults.
+# GC.start is exact.
 #
 # Usage: bench/run.sh [SCENARIO...]       every scenario when none is named
 #        bench/run.sh --budget SCENARIO MAX
@@ -38,20 +36,14 @@ totals() {
 
 # Prints "objects bytes" per key for a scenario.
 per_key() {
-  small=$SMALL
-  large=$LARGE
-  if [ "$1" = grep ]; then
-    small=$((SMALL / 10))
-    large=$((LARGE / 10))
-  fi
-  SPINEL_ALLOC_REPORT="$REPORT" pin "$BIN" "$1" "$small" >/dev/null
+  SPINEL_ALLOC_REPORT="$REPORT" pin "$BIN" "$1" "$SMALL" >/dev/null
   set -- "$1" $(totals "$REPORT")
   small_n=$2
   small_b=$3
-  SPINEL_ALLOC_REPORT="$REPORT" pin "$BIN" "$1" "$large" >/dev/null
+  SPINEL_ALLOC_REPORT="$REPORT" pin "$BIN" "$1" "$LARGE" >/dev/null
   set -- "$1" $(totals "$REPORT")
   rm -f "$REPORT"
-  awk -v a="$small_n" -v b="$2" -v c="$small_b" -v d="$3" -v k="$((large - small))" \
+  awk -v a="$small_n" -v b="$2" -v c="$small_b" -v d="$3" -v k="$((LARGE - SMALL))" \
     'BEGIN { printf "%.1f %.0f\n", (b - a) / k, (d - c) / k }'
 }
 

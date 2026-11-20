@@ -11,7 +11,9 @@
 #          analysis_ms.runner from make test-build's, and allocs.S (objects
 #          per key) and us.S (microseconds per key, handling and rendering)
 #          for each scenario S, from bench/run.sh on make bench-budget's
-#          binary; the scenarios default to DEFAULT_SCENARIOS below
+#          binary, grep's allocation runs at 20 and 120 keys as make
+#          bench-budget runs them, since a grep key takes milliseconds; the
+#          scenarios default to DEFAULT_SCENARIOS below
 #        sh tools/metrics.sh compare BASE CURRENT
 #          print every name with both values; fail when an allocs.* or
 #          rounds.* value grew or was not measured; warn when a us.* or
@@ -49,9 +51,23 @@ measure() {
   for report in "$carat" "$runner"; do
     [ -f "$report" ] || die "$report is missing; make dev-build, test-build, and bench-budget write what this measures"
   done
-  # shellcheck disable=SC2086
-  lines=$(BENCH_BIN=${BENCH_BIN:-build/bench/keys-budget} ${BENCH_RUN:-sh bench/run.sh} $scenarios) ||
-    die "the benchmark failed for: $scenarios"
+  bin=${BENCH_BIN:-build/bench/keys-budget}
+  run=${BENCH_RUN:-sh bench/run.sh}
+  others=""
+  grep=""
+  for scenario in $scenarios; do
+    if [ "$scenario" = grep ]; then grep=grep; else others="$others $scenario"; fi
+  done
+  lines=""
+  if [ -n "$others" ]; then
+    # shellcheck disable=SC2086
+    lines=$(BENCH_BIN=$bin $run $others) || die "the benchmark failed for:$others"
+  fi
+  if [ -n "$grep" ]; then
+    more=$(BENCH_BIN=$bin BENCH_SMALL=20 BENCH_LARGE=120 $run grep) || die "the benchmark failed for: grep"
+    lines="$lines
+$more"
+  fi
   mkdir -p "$(dirname "$out")"
   {
     set -- $(sh "$here/analysis_budget.sh" --fields "$carat")
