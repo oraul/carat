@@ -4522,9 +4522,12 @@ calib=$(table CALIBRATION)
 profile_of() {
   printf '%s\n' "$calib" | sed -n "s/^$1://p"
 }
+# PROFILE: the workflow's one pattern of a profile, read as CLOSABLE is.
+profile_re=$(sed -n 's/^const PROFILE = \/\(.*\)\/$/\1/p' "$wf" | sed 's#\\/#/#g')
+expect "calibration: the workflow's PROFILE pattern reads as an anchored pattern" 0 '^\^[(]agent[|].+\$$' printf '%s\n' "$profile_re"
 missing=""
 for kind in resume planner areas scout contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
-  profile_of "$kind" | grep -q -E '^(agent|session)/(low|medium|high|session)$' || missing="$missing $kind"
+  profile_of "$kind" | grep -q -E "${profile_re:-^unread$}" || missing="$missing $kind"
 done
 expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missing:-none}"
 expect "calibration: every agent start takes its options from the table" 0 "^same$" \
@@ -4568,7 +4571,7 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
+  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
@@ -4807,7 +4810,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
 }
 close_back=$PWD
 fresh closes
