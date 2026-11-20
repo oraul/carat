@@ -13,7 +13,7 @@ Hardens the open-pr job, the one job that reads PR_TOKEN, so a fork's pull reque
 - Pin `actions/checkout` in `open-pr.yml` by its full commit sha, the tag v4.4.0 kept in a comment.
 - Change the merger's step 1 to read the pull request's head repository and head branch with its head commit and return stale unless they are the input's, so a fork's pull request the wait recorded is never merged, and say so in the comment and usage of `open_pr.sh wait`.
 - Add tests in `tools/tools_test.sh`, one per security heading, each failing before its fix: the merger's head repository and branch check, the rule refused for wider or missing policies and passed for main alone, the open step skipping a fork's pull request and editing ours by number, the workflow's step order and token, and every open-pr action pinned by a full sha.
-- Allow the `rule` command only in the open-pr workflow's profile in `tools/agent_guard.sh`, as `read`, `gate`, and `open` are.
+- Name `rule` beside `read`, `gate`, and `open` in the `tools/agent_guard.sh` comment as the open-pr workflow's alone, refused to every agent profile like them.
 - Document the change in README.md delivery step 9, the `tools/open_pr.sh` Commands line of CLAUDE.md, and area 1 of `docs/codebase-map.md`.
 - Record the plan's backlog entries in the change's findings file, the next backlog queue, and the metrics history row of the first part.
 
