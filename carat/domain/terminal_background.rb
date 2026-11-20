@@ -15,6 +15,8 @@ module Carat
       # that are held across reads or parsed; "rgba:" with four channels
       # of four digits and ST takes 31.
       LIMIT = 48
+      # The luma weights of red, green, and blue; alpha weighs nothing.
+      LUMA_WEIGHTS = [299, 587, 114, 0].freeze
       DARK = "dark"
       LIGHT = "light"
       UNKNOWN = ""
@@ -68,8 +70,6 @@ module Carat
         else
           return UNKNOWN
         end
-        # The luma weights of red, green, and blue; alpha weighs nothing.
-        weights = [299, 587, 114, 0]
         luma = 0
         n = 0
         while n < count
@@ -83,7 +83,7 @@ module Carat
             at += 1
           end
           return UNKNOWN if digits == 0 || digits > 4
-          luma += weights[n] * (value * 65_535 / (16**digits - 1))
+          luma += LUMA_WEIGHTS[n] * (value * 65_535 / (16**digits - 1))
           n += 1
           if n < count
             return UNKNOWN if at >= finish || reply.getbyte(at).to_i != SLASH

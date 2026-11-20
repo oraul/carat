@@ -1,4 +1,5 @@
 require_relative "../ports/terminal_port"
+require_relative "../domain/terminal_background"
 require_relative "manual_clock"
 
 module Carat
@@ -46,10 +47,10 @@ module Carat
         @colors
       end
 
-      # Returns "", an unknown background: the double is asked nothing.
+      # Returns an unknown background: the double is asked nothing.
       # @rbs skip
       def background
-        ""
+        Domain::TerminalBackground::UNKNOWN
       end
 
       #: (String) -> void

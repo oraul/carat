@@ -41,6 +41,9 @@ ok   A malformed reply, bytes that are not UTF-8: it ends the asking
 ok   A malformed reply cut short before a timeout: held
 ok   A malformed reply cut short before a timeout: the timeout drops it
 ok   A malformed reply cut short before a timeout: the next key arrives, the background unknown
+ok   A reply delayed past a timeout: its start is held
+ok   A reply delayed past a timeout: the timeout drops the held start
+ok   A reply delayed past a timeout: the rest arrives as keys, the background unknown
 ok   No reply: typed keys arrive
 ok   No reply: a read with nothing to read times out
 ok   No reply: a key sequence arrives
@@ -50,4 +53,4 @@ ok   No reply: the background stays unknown
 ok   No reply yet: a late answer is taken out
 ok   No reply yet: a late answer is still read
 ok   the double reports no background
-drivers_ansi_terminal: 52 passed, 0 failed
+drivers_ansi_terminal: 55 passed, 0 failed

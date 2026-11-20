@@ -71,9 +71,10 @@ module Carat
 
       # Returns the key bytes of one read, or nil on timeout, at the end
       # of input, or when the read held only the terminal's answer. The
-      # first read after enter sends the query first. While
-      # the answer is awaited a read that times out drops the held start
-      # of an answer, cut short.
+      # first read after enter sends the query first. While the answer is
+      # awaited, a read that times out drops the held start of an answer
+      # as cut short and ends the awaiting, so the rest of an answer
+      # delayed past the timeout arrives as keys.
       # @rbs timeout: Float
       def read_key(timeout)
         ask_background if @asking

@@ -132,6 +132,14 @@ module DriversAnsiTerminalTest
     t.assert_equal("nil", read(term), "A malformed reply cut short before a timeout: the timeout drops it")
     t.assert_equal(["j", ""], [send_and_read(term, keys[1], "j"), term.background], "A malformed reply cut short before a timeout: the next key arrives, the background unknown")
 
+    keys = IO.pipe
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
+    term.enter
+    t.assert_equal("nil", send_and_read(term, keys[1], "\e]11;rgb:ff"), "A reply delayed past a timeout: its start is held")
+    t.assert_equal("nil", read(term), "A reply delayed past a timeout: the timeout drops the held start")
+    t.assert_equal(["ff/ffff/ffff\e\\", ""], [send_and_read(term, keys[1], "ff/ffff/ffff\e\\"), term.background], "A reply delayed past a timeout: the rest arrives as keys, the background unknown")
+
     # No reply: every key arrives unchanged, a lone escape included.
     keys = IO.pipe
     screen = IO.pipe
