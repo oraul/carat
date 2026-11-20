@@ -297,6 +297,16 @@ module Carat
         @windows.set_float_lines(@name, window, lines, title)
       end
 
+      # Returns a Response.
+      # @rbs window: Integer
+      # @rbs selected: Integer
+      # @rbs spans: Array[Integer]
+      def style_float(window, selected, spans)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.style_float(@name, window, selected, spans)
+      end
+
       # Returns a FloatFrame.
       # @rbs border: bool
       def float_frame(border)

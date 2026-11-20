@@ -360,6 +360,10 @@ module DomainThemeTest
       ["names are case sensitive", "comment", -1]
     ]) { |name| H.token_id(name.to_s) }
     t.assert_equal([false, true, true, true, false], [H.token?(H::VISUAL), H.token?(H::COMMENT), H.token?(H::ERROR), H.token?(H::MARKUP_RAW_BLOCK), H.token?(H::COUNT)], "token? covers the syntax, file-icon, and markup ids only")
+    # Scenario: Other UI groups are refused (the predicate a float span is checked with).
+    t.assert_equal([true, true, true, false, false, false, false, false], [H.float_style?(H::COMMENT), H.float_style?(H::POPUP_MENU_SELECTED), H.float_style?(H::POPUP_MENU_MATCH), H.float_style?(H::VISUAL), H.float_style?(H::POPUP_MENU_MATCH_SELECTED), H.float_style?(H::NORMAL), H.float_style?(-1), H.float_style?(H::COUNT)], "float_style? admits the token groups, PmenuSel, and PmenuMatch only")
+    t.assert_equal([H::POPUP_MENU_SELECTED, H::POPUP_MENU_MATCH, H::COMMENT, -1, -1], [H.float_style_id("PmenuSel"), H.float_style_id("PmenuMatch"), H.float_style_id("Comment"), H.float_style_id("Visual"), H.float_style_id("PmenuMatchSel")], "float_style_id resolves PmenuSel, PmenuMatch, and the token groups only")
+    t.assert_equal([false, false], [H.token?(H::POPUP_MENU_SELECTED), H.token?(H::POPUP_MENU_MATCH)], "token? still refuses PmenuSel and PmenuMatch, so a tokenizer cannot paint them")
     t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(H::COUNT + 1)], "name_of")
 
     # The palettes and the backgrounds.

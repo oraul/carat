@@ -21,6 +21,9 @@ ok   Normal is not either
 ok   an unknown name
 ok   names are case sensitive
 ok   token? covers the syntax, file-icon, and markup ids only
+ok   float_style? admits the token groups, PmenuSel, and PmenuMatch only
+ok   float_style_id resolves PmenuSel, PmenuMatch, and the token groups only
+ok   token? still refuses PmenuSel and PmenuMatch, so a tokenizer cannot paint them
 ok   name_of
 ok   find, and carat-dark for an unknown name
 ok   known?
@@ -318,4 +321,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 320 passed, 0 failed
+domain_theme: 323 passed, 0 failed

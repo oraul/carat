@@ -188,6 +188,37 @@ module Carat
         id >= SYNTAX_FIRST && id < COUNT
       end
 
+      # The UI groups a plugin float's span may carry beside a token's.
+      FLOAT_GROUPS = [POPUP_MENU_SELECTED, POPUP_MENU_MATCH]
+      private_constant :FLOAT_GROUPS
+
+      # Whether id is a group a plugin float's span may carry: a token's
+      # group or one of FLOAT_GROUPS (PmenuSel, PmenuMatch); every other
+      # UI group is refused.
+      #: (Integer) -> bool
+      def self.float_style?(id)
+        return true if token?(id)
+        i = 0
+        while i < FLOAT_GROUPS.length
+          return true if FLOAT_GROUPS[i] == id
+          i += 1
+        end
+        false
+      end
+
+      # The id of the group a plugin float's span may carry with that
+      # name, as float_style? admits; -1 for any other name.
+      #: (String) -> Integer
+      def self.float_style_id(name)
+        i = 0
+        while i < FLOAT_GROUPS.length
+          id = FLOAT_GROUPS[i]
+          return id if name == NAMES[id]
+          i += 1
+        end
+        token_id(name)
+      end
+
       # The name of the group with that id, "" for none.
       #: (Integer) -> String
       def self.name_of(id)
