@@ -16,4 +16,4 @@
 
 ## 4. Docs
 
-- [ ] 4.1 `docs/architecture.md`, `README.md`, `docs/compatibility.md`, `docs/codebase-map.md` (proved by `make lint` and `make docs-lint`)
+- [x] 4.1 `docs/architecture.md`, `README.md`, `docs/compatibility.md`, `docs/codebase-map.md` (proved by `make lint` and `make docs-lint`)
