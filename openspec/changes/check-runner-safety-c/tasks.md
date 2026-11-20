@@ -9,7 +9,9 @@
 
 - [x] 2.1 `tools/run_state.sh`, `refs_view`, `lane_branches` (new): the common references compared, less the remote-tracking refs, the lanes' branches at the mark or the scan, and the main checkout's branch. Tested by "a stage that writes a reference of the common directory from a lane fails the check".
 - [x] 2.2 `tools/run_state.sh`, `index_view` (new), `escaped_paths`: the lane's git directory scanned without its index and its own entry; the delivery clone's staged entries compared. Tested by "a stage that stages into the lane's index fails the check".
-- [x] 2.3 Concurrent work leaves a lane check passing: a lane index refresh, another lane's commit, a lane's worktree removed with its branch kept, and the main checkout fast-forwarded to its remote-tracking ref. Tested by "a lane index refresh, a lane's commit, a merger's close and fast-forward during a check leave it passing" and "the fast-forward during the check moved the main checkout".
+- [x] 2.3 Concurrent work leaves a lane check passing: a lane index refresh, another lane's commit, a lane's worktree removed with its branch kept, and the main checkout fast-forwarded to origin's commit. Tested by "a lane index refresh, a lane's commit, a merger's close and fast-forward during a check leave it passing" and "the fast-forward during the check moved the main checkout".
+- [x] 2.4 `tools/run_state.sh`, `main_moved`: a moved main checkout is accepted only at the commit `git ls-remote origin <branch>` names, never at the remote-tracking ref a stage can forge (security Medium (8)). Tested by "a stage that forges the main checkout's remote-tracking ref and fast-forwards it from a lane fails the check"; the concurrent case's origin holds the commit.
+- [x] 2.5 `tools/tools_test.sh`: the flagged index entries are tested, `main_view`'s by "a stage that hides a write to a tracked file of the main checkout behind an index flag from a lane fails the check" and `index_view`'s by "a stage that flags an entry of the lane's index fails the check".
 
 ## 3. Documents and self-check
 
