@@ -3,12 +3,12 @@ require_relative "../ports/process_port"
 module Carat
   module Doubles
     # Child processes that are never started: a command starts only when a
-    # test installed it, so by default no language server runs; spawns,
-    # written bodies, and stops are recorded for a test to read. A capture
-    # answers the output a test scripted for the command, "" for an
-    # installed command with none, and nil for one not installed or one a
-    # test made time out, after which timed_out? is true until the next
-    # capture.
+    # test installed it, so by default no language server runs; spawns
+    # (the refused ones counted too), written bodies, and stops are
+    # recorded for a test to read. A capture answers the output a test
+    # scripted for the command, "" for an installed command with none,
+    # and nil for one not installed or one a test made time out, after
+    # which timed_out? is true until the next capture.
     class FakeProcesses < Ports::ProcessPort
       # @rbs @installed: Array[String]
       # @rbs @spawned: Array[String]
@@ -21,12 +21,16 @@ module Carat
       # @rbs @environments: Array[String]
       # @rbs @slow: Array[String]
       # @rbs @timed_out: bool
+      # @rbs @attempts: Integer
 
       attr_reader :spawned #: Array[String]
       attr_reader :bodies #: Array[String]
       attr_reader :stopped #: Array[Integer]
       attr_reader :captured #: Array[String]
       attr_reader :environments #: Array[String]
+      # Every spawn asked for, one refused for a command not installed
+      # included.
+      attr_reader :attempts #: Integer
 
       #: () -> void
       def initialize
@@ -41,6 +45,7 @@ module Carat
         @environments = []
         @slow = []
         @timed_out = false
+        @attempts = 0
       end
 
       # Gives the command, its words joined by spaces, the output a capture
@@ -78,6 +83,7 @@ module Carat
       # The handle of the last spawn, the number of spawns so far.
       # @rbs argv: Array[String]
       def spawn(argv)
+        @attempts += 1
         return 0 if argv.empty? || !@installed.include?(argv[0])
         @spawned << argv.join(" ")
         @spawned.length
