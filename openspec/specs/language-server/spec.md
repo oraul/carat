@@ -54,11 +54,15 @@ A language server runs the project's own code, so in a working directory under n
 - **THEN** "No language server for this buffer" is shown and nothing is started
 
 ### Requirement: The server is told about the documents
-Once the server has answered `initialize`, the editor SHALL send `textDocument/didOpen` for each buffer with a path whose file type is the server's, `textDocument/didChange` with a higher version at an idle tick after the buffer changed, `textDocument/didSave` after it was written, and `textDocument/didClose` when its buffer is closed or renamed.
+Once the server has answered `initialize`, the editor SHALL send `textDocument/didOpen` for each buffer with a path under the working directory whose file type is the server's, `textDocument/didChange` with a higher version at an idle tick after the buffer changed, `textDocument/didSave` after it was written, and `textDocument/didClose` when its buffer is closed or renamed. A buffer whose path, its `.` and `..` segments resolved, lies outside the working directory SHALL never be sent.
 
 #### Scenario: Open, change, save, close
 - **WHEN** `a.rb` is open with a server announcing sync kind 1 ready, `x` deletes a character, `:w` writes it, and `:bd` closes it, each followed by an idle tick
 - **THEN** the server received `didOpen` with version 1, `didChange` with the new text and version 2, `didSave`, and `didClose`, in that order
+
+#### Scenario: A file outside the working directory is never opened on the server
+- **WHEN** a server runs for `/project` and a Ruby file outside it, named by an absolute path or by a relative path climbing out with `..`, is opened and edited, each followed by an idle tick
+- **THEN** the server is sent nothing about that file, while a Ruby file under `/project` named with a `..` segment is opened on it
 
 ### Requirement: The slot shows the server's state
 The `lsp` slot SHALL show the server's name when ready, "starting" after it while it starts, "indexing" and the percent while a `$/progress` report runs, "stopped" after it was stopped, "crashed :LspRestart" after it ended on its own, and "untrusted :LspStart" while it waits for an explicit start in an untrusted directory. The name SHALL be the server's reported name, or the command's first word.
@@ -263,3 +267,24 @@ The editor SHALL settle whether a language names a server command, and the progr
 #### Scenario: An idle tick with no server reads no configuration line
 - **WHEN** a Ruby buffer waits for `:LspStart` in an untrusted directory, so no server runs, for one idle tick, and a configuration line naming another Ruby server command is read afterward
 - **THEN** the next idle tick still shows "ruby-lsp untrusted :LspStart" on the bar and starts nothing
+
+### Requirement: A save while the server starts is sent once it is ready
+A buffer written while its server starts SHALL be sent `textDocument/didSave` after its `didOpen` once the server is ready.
+
+#### Scenario: A save while the server starts is sent once it is ready
+- **WHEN** `a.rb` is opened, its server is started, `:w` writes it before the server answers `initialize`, and the server then answers
+- **THEN** the server receives `didOpen` and then `didSave` for `a.rb`
+
+### Requirement: A server that does not end when asked is killed
+A server process that has not ended half a second after the editor asked it to end, on quit, `:LspRestart`, `:LspStop`, or a crash, SHALL be killed, by signalling that process itself.
+
+#### Scenario: A server ignoring its end of input and TERM is killed
+- **WHEN** a server process ignores both the end of its input and TERM, and it is stopped
+- **THEN** its process ends
+
+### Requirement: A server whose input broke takes no more input
+Once writing to a server's input failed, the editor SHALL treat the server as taking no more input.
+
+#### Scenario: A server whose input broke takes no more input
+- **WHEN** a server process closes its input and a write to it fails
+- **THEN** the next write to it answers that it takes no input

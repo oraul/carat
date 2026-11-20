@@ -14,6 +14,9 @@ require_relative "../domain/completion_item"
 require_relative "../domain/mode"
 require_relative "../domain/fuzzy_match"
 require_relative "../domain/trusted_roots"
+require_relative "../domain/root_word"
+require_relative "../domain/path_policy"
+require_relative "../plugin_api"
 
 module Carat
   module Adapters
@@ -28,11 +31,13 @@ module Carat
     # since a server such as ruby-lsp runs the project's own code; in any
     # other directory the lsp slot reads untrusted until :LspStart. Once a
     # server answered initialize it is told about each buffer of its file
-    # type with a path: didOpen, didChange when the buffer's change
+    # type with a path under the working directory (inside_root?):
+    # didOpen, didChange when the buffer's change
     # counters moved (by the textDocumentSync kind its initialize result
     # announced: under 2 one ranged change from the lines last sent,
     # under 1 the whole text, under any other kind none), didSave after
-    # SaveFile wrote it, and didClose when the buffer is gone. Its output is untrusted: a body
+    # SaveFile wrote it (a save made while it started, after its
+    # didOpen), and didClose when the buffer is gone. Its output is untrusted: a body
     # that is not a JSON object is dropped, at most DRAIN_LIMIT messages are
     # read per tick, and the name and every diagnostic message are stripped
     # of control characters and capped (Domain::ControlText). A publish is
@@ -109,6 +114,7 @@ module Carat
       # @rbs @servers: Array[untyped]
       # @rbs @refused: Array[String]
       # @rbs @saves: Array[Integer]
+      # @rbs @root: String
       # @rbs @trust: Symbol
       # @rbs @languages: Array[String]
       # @rbs @heads: Array[String]
@@ -148,6 +154,7 @@ module Carat
         @servers = []
         @refused = []
         @saves = []
+        @root = ""
         @trust = :unknown
         @languages = [""]
         @languages.clear
@@ -180,7 +187,7 @@ module Carat
           sync(server) if server.running?
           i += 1
         end
-        @saves.clear
+        settle_saves
         complete(state)
         resolve
         send_hover(state)
@@ -795,8 +802,9 @@ module Carat
 
       # The absolute path of a file URI, percent escapes decoded; "" for
       # another scheme, a malformed escape or UTF-8 sequence, a byte not
-      # ASCII, a path not absolute, one holding a NUL, or one over
-      # PATH_LIMIT bytes.
+      # ASCII, a path not absolute, one holding a NUL or a . or ..
+      # segment (RootWord's rule, so no path reads as inside the project
+      # while it leaves it), or one over PATH_LIMIT bytes.
       #: (String) -> String
       def path_of(uri)
         prefix = "#{FILE_SCHEME}//"
@@ -833,7 +841,7 @@ module Carat
           out << [code].pack("U")
           i += 3 * size
         end
-        return "" unless out.start_with?("/") && out.bytesize <= PATH_LIMIT
+        return "" unless out.start_with?("/") && out.bytesize <= PATH_LIMIT && Domain::RootWord.root?(out)
         out
       end
 
@@ -1304,10 +1312,12 @@ module Carat
         value.is_a?(Integer) ? [value.to_i, 0].max : 0
       end
 
-      # Tells a running server about the buffers of its file type.
+      # Tells a running server about the buffers of its file type; the
+      # working directory is read at most once a sync (inside_root?).
       #: (Domain::LanguageServer) -> void
       def sync(server)
         server.tick = server.tick + 1
+        @root = ""
         i = 0
         while i < @buffers.count
           buffer = @buffers.buffer_at(i)
@@ -1321,20 +1331,63 @@ module Carat
         end
       end
 
+      # Tells the server about one buffer: didOpen at first sight, then
+      # didChange when it changed, and didSave after a write, the first
+      # sync included, so a save made while the server started follows
+      # its didOpen. A buffer outside the working directory is never
+      # opened, so no document notification names it; a request made in
+      # it still names its URI (recorded in docs/findings/lsp-tidy.md).
       #: (Domain::LanguageServer, Domain::Buffer) -> void
       def sync_buffer(server, buffer)
         path = buffer.path_text
         return if path.empty?
         uri = uri_of(path)
-        server.seen[uri] = server.tick
         version = server.versions[uri]
+        return if version.nil? && !inside_root?(path)
+        server.seen[uri] = server.tick
         if version.nil?
           remember(server, uri, buffer, 1)
           notify(server, "textDocument/didOpen", { "textDocument" => { "uri" => uri, "languageId" => server.language, "version" => 1, "text" => buffer.to_text } })
-          return
+        elsif server.changes[uri] != buffer.changes || server.closed[uri] != buffer.closed_count
+          send_change(server, uri, buffer, version.to_i)
         end
-        send_change(server, uri, buffer, version.to_i) if server.changes[uri] != buffer.changes || server.closed[uri] != buffer.closed_count
         notify(server, "textDocument/didSave", { "textDocument" => { "uri" => uri } }) if @saves.include?(buffer.id)
+      end
+
+      # Whether a buffer's path, made absolute against the working
+      # directory with its . and .. segments resolved, lies under the
+      # working directory: the root the server is given (rootUri), which
+      # is under a trusted root whenever a server started on its own.
+      # Read lexically: the definitions' project check also resolves
+      # links, which this one does not, to keep the idle tick off the
+      # disk. The working directory is read once a sync and kept in
+      # @root, since an unopened buffer is checked again at every tick.
+      #: (String) -> bool
+      def inside_root?(path)
+        @root = @files.cwd if @root.empty?
+        Domain::PathPolicy.inside?(@root, PluginApi::Paths.absolute(@root, path))
+      end
+
+      # Forgets the saves of the idle tick once the running servers were
+      # told: a save of a buffer whose server still starts is kept for
+      # that server's first sync; one of a buffer gone, or with no server
+      # or one that ended, is dropped.
+      #: () -> void
+      def settle_saves
+        i = @saves.length - 1
+        while i >= 0
+          @saves.delete_at(i) unless awaited?(@saves[i])
+          i -= 1
+        end
+      end
+
+      # Whether the buffer with the id has a server that still starts.
+      #: (Integer) -> bool
+      def awaited?(id)
+        buffer = @buffers.with_id(id)
+        return false if buffer.nil?
+        server = server_for(buffer.filetype)
+        !server.nil? && server.state == :starting
       end
 
       # Sends a changed buffer by the server's sync kind: the whole text

@@ -217,6 +217,7 @@ module LintTest
     "read_header" => "reads a frame's headers, answering whether they are complete",
     "refuse" => "refuses a server's stream, answering false for the caller",
     "write_bytes" => "writes to a child's input, answering whether it took them",
+    "post" => "queues bytes on a child's outbox, answering whether its writer still takes them",
     "tick" => "moves the start screen to the frame of the clock",
     "open_at" => "opens the closed fold at a row (zo), answering whether a fold holds the row",
     "close_at" => "closes the innermost open fold at a row (zc), answering whether a fold holds the row",

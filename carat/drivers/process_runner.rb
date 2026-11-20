@@ -9,12 +9,15 @@ module Carat
     # message queue, then "exit" at the end of the output or "overflow"
     # when the framer refuses it; and a writer that takes queued bytes
     # off an outbox, so a child that stops reading never blocks the editor
-    # thread. stop signals TERM to the child's own pid, then
+    # thread, and closes the outbox when a write fails, after which write
+    # answers false. stop signals TERM to the child's own pid, then
     # Process.detach reaps it (Spinel compiles no Process.wait(pid) or
-    # WNOHANG). The constructor traps PIPE so a write to a child that
-    # ended answers EPIPE, which write_bytes rescues, instead of ending
-    # Carat at the default action: stop TERMs a child its writer may still
-    # be writing to. A handler, unlike IGNORE, resets to the default in
+    # WNOHANG); a child that has not ended STOP_SECONDS later, one that
+    # ignores both its end of input and TERM, is killed, so it never
+    # outlives the editor. The constructor traps PIPE so a write to a
+    # child that ended answers EPIPE, which write_bytes rescues, instead
+    # of ending Carat at the default action: stop TERMs a child its
+    # writer may still be writing to. A handler, unlike IGNORE, resets to the default in
     # the spawned children, so their own writes to a closed pipe still end
     # them. capture runs a short command on the
     # editor thread instead: the same spawn without a shell, its output read
@@ -25,6 +28,8 @@ module Carat
       READ_SIZE = 65_536
       CAPTURE_LIMIT = 65_536
       CAPTURE_SECONDS = 2.0
+      # How long stop waits for a child to end on TERM before KILL.
+      STOP_SECONDS = 0.5
 
       # @rbs @messages: Ports::MessageQueuePort
       # @rbs @pids: Array[Integer]
@@ -70,22 +75,26 @@ module Carat
       # @rbs bytes: String
       def write(handle, bytes)
         return false unless open?(handle)
-        @outboxes[handle - 1].push(bytes)
-        true
+        post(@outboxes[handle - 1], bytes)
       end
 
       # Closes the child's input once its queue is written and ends the
       # child itself: TERM goes to its own pid, never a group, before the
       # detach reaps it, so the number cannot yet belong to another
-      # process; a closed handle is never signalled again.
+      # process. KILL follows when the detach thread has not reaped it
+      # STOP_SECONDS later and is still waiting just before the signal;
+      # the one window left is the child being reaped, and its number
+      # taken again, between that last look and the signal. A closed
+      # handle is never signalled again.
       #: (Integer) -> void
       def stop(handle)
         return unless open?(handle)
         pid = @pids[handle - 1]
         @open[handle - 1] = false
-        @outboxes[handle - 1].push(nil)
+        post(@outboxes[handle - 1], nil)
         terminate(pid)
-        Process.detach(pid)
+        waiter = Process.detach(pid)
+        kill(pid) if waiter.join(STOP_SECONDS).nil? && waiter.alive?
       end
 
       # @rbs argv: Array[String]
@@ -233,14 +242,28 @@ module Carat
         nil
       end
 
+      # Queues bytes, or the nil that ends the writer, on an outbox;
+      # false when the writer closed it after a failed write.
+      #: (untyped, String?) -> bool
+      def post(outbox, bytes)
+        return false if outbox.closed?
+        outbox.push(bytes)
+        true
+      rescue ClosedQueueError
+        false
+      end
+
       # The writer thread: writes the outbox until a nil or a broken pipe,
-      # then closes the child's input.
+      # then closes the child's input; a broken pipe closes the outbox
+      # too, so write answers false from then on.
       #: (IO, untyped) -> void
       def drain(input, outbox)
         while true
           bytes = outbox.pop
           break if bytes.nil?
-          break unless write_bytes(input, bytes)
+          next if write_bytes(input, bytes)
+          outbox.close
+          break
         end
         input.close
       end

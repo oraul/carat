@@ -11,6 +11,10 @@ ok   until it is stopped in turn
 ok   a stalled child takes more input than its pipe holds
 ok   stopping a child its writer is blocked on still ends it, and the runner survives the broken pipe
 ok   and the runner starts and stops the next child
+ok   A server ignoring its end of input and TERM is killed: its output ends
+ok   a write to a child that closed its input is queued
+ok   A server whose input broke takes no more input: the next write answers false
+ok   and it still stops
 ok   a missing command does not start
 ok   no words start nothing
 ok   an unknown handle takes no input
@@ -25,4 +29,4 @@ ok   capture of output over the limit keeps at most 64 KiB, cut before the chara
 ok   capture of long valid UTF-8 output answers valid UTF-8
 ok   sh starts
 ok   an oversized frame stops the reading
-drivers_process_runner: 27 passed, 0 failed
+drivers_process_runner: 31 passed, 0 failed

@@ -192,6 +192,24 @@ module AdaptersLanguageGatewayTest
     "#{label(h)}|#{h.processes.methods_sent.join(",")}|#{h.processes.stopped.join(",")}"
   end
 
+  # What a server announcing sync kind 1 is sent for a Ruby file opened
+  # by the path given, edited, and written, each followed by an idle
+  # tick: the methods joined, or "none".
+  def self.sent_for(path)
+    h = ready_with(init_with("1"))
+    h.files.put("/elsewhere/c.rb", "y = 2\n")
+    h.files.put("d.rb", "z = 3\n")
+    n = h.processes.bodies.length
+    h.type(":e #{path}<CR>")
+    h.wait
+    h.type("x")
+    h.wait
+    h.type(":w<CR>")
+    h.wait
+    sent = sent_since(h, n)
+    sent.empty? ? "none" : sent.join(",")
+  end
+
   def self.notify(h, method, params)
     h.messages.body(1, J.generate({ "jsonrpc" => "2.0", "method" => method, "params" => params }))
     h.wait
@@ -297,6 +315,28 @@ module AdaptersLanguageGatewayTest
     h.type(":e a.rb<CR>:bd<CR>")
     h.wait
     t.assert_equal(["textDocument/didClose"], sent_since(h, n), "closing the buffer sends didClose")
+
+    # Scenario "A file outside the working directory is never opened on
+    # the server": rows are [label, the path :e opens, what is sent].
+    t.table([
+      ["a file outside the working directory is never opened on the server: an absolute path", "/elsewhere/c.rb", "none"],
+      ["a file outside the working directory is never opened on the server: a relative path climbing out", "../elsewhere/c.rb", "none"],
+      ["a file under the working directory named with a .. segment is opened, changed, and saved", "lib/../d.rb", "textDocument/didOpen,textDocument/didChange,textDocument/didSave"]
+    ]) { |row| sent_for(row.to_s) }
+
+    # Scenario "A save while the server starts is sent once it is ready".
+    h = editor(true)
+    h.open("a.rb")
+    h.wait
+    h.type(":w<CR>")
+    h.wait
+    n = h.processes.bodies.length
+    h.messages.body(1, INIT)
+    h.wait
+    t.assert_equal(["initialized", "textDocument/didOpen", "textDocument/didSave"], sent_since(h, n), "a save while the server starts is sent once it is ready, after didOpen")
+    n = h.processes.bodies.length
+    h.wait
+    t.assert_equal([], sent_since(h, n), "and only once")
 
     # The announced sync kind. Scenario: The options object announces the
     # kind. Scenario: No sync kind sends no change. Rows are [label, the
@@ -473,6 +513,10 @@ module AdaptersLanguageGatewayTest
     h.wait
     h.wait
     t.assert_equal([[], ""], [h.processes.spawned, label(h)], "a missing command leaves the slot empty")
+    h.wait
+    # Scenario "A missing command leaves the slot empty": later idle
+    # ticks start nothing, the refused spawn is not tried again.
+    t.assert_equal(1, h.processes.attempts, "a missing command leaves the slot empty and later idle ticks start nothing: it is tried once")
     h = editor(true)
     h.open("b.txt")
     h.wait
