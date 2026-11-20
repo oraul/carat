@@ -1313,7 +1313,7 @@ module Carat
       end
 
       # Tells a running server about the buffers of its file type; the
-      # working directory is read at most once a tick (inside_root?).
+      # working directory is read at most once a sync (inside_root?).
       #: (Domain::LanguageServer) -> void
       def sync(server)
         server.tick = server.tick + 1
