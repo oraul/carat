@@ -12,3 +12,8 @@
 - Location: docs/queue-backlog.md:17 (groom-findings-refs, Pool 5) and :18 (records-bench-skip, Pool 6)
 - Why: the headings 'groom folds findings entries that still name the findings files it deletes (sprint-22-records retro note 4)' and 'A records-only change still runs the benchmark and rebuilds the lane (sprint-22-records retro note 3)' are not in their Backlog lists, so those deliveries are not handed them and leave them open.
 - Fix: add each heading to its item's Backlog list in the next plan.
+
+### The groom removed the Ruby nesting limit entry though the limits still stand
+- Location: docs/backlog.md:101 (the removed heading 'Ruby constructs nested deeper than the state encodes'); carat/plugins/ruby/line_state.rb:19 and :28-30
+- Why: line_state.rb still keeps MAX_HEREDOCS = 2, MAX_FRAMES = 2, MAX_TERMINATORS = 255 and its header still says a third frame or heredoc is dropped, so a still-open limit is dropped against none dropped.
+- Fix: re-add the entry narrowed to the third string frame, the third heredoc, and the 256th terminator, in the next records change.
