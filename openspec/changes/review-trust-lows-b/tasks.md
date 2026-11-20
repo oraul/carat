@@ -19,3 +19,9 @@
 ## 5. Docs
 
 - [x] 5.1 README.md step 9, `docs/codebase-map.md` area 1, CLAUDE.md's `open_pr.sh` Commands line
+
+## 6. Review fixes
+
+- [x] 6.1 `.claude/agents/merger.md` step 1 names the head commit, head repository, head branch, and title, and requires the head repository and head branch to be the input's; test "repository: the merger merges only a pull request of this repository and branch" matches both phrases
+- [x] 6.2 `tools/open_pr.sh open` reads the list once: one awk refuses a malformed line and prints the same-repository numbers, the count taken from its output; tests "open_pr: a list line without a number and repository flag is refused", "open_pr: a malformed list line after a same-repository one is refused"
+- [x] 6.3 CLAUDE.md's `open_pr.sh` Commands line keeps its wording and only adds `rule`
