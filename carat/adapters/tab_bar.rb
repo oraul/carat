@@ -9,11 +9,14 @@ require_relative "../domain/messages"
 module Carat
   module Adapters
     # Paints the top row of buffer tabs: one tab per listed file buffer in
-    # list order, a space, its file icon, a space, the last segment of its
-    # path or [No Name], a space, the modified icon or a space (one
-    # cell either way), and a space, the tab of the current window's
-    # buffer selected, its icon included; scratch and unlisted buffers get
-    # none. From two tab pages their numbers stand at the right end, " 1  2 ", the current
+    # list order, the gem GEM (ASCII_GEM under option.icons ascii) on the
+    # current window's buffer's tab and a space on the others, a space, its
+    # file icon, a space, the last segment of its path or [No Name], a
+    # space, the modified icon or a space (one cell either way), a space,
+    # and SEPARATOR (ASCII_SEPARATOR) in TabLine, the tab of the current
+    # window's buffer selected, its icon and gem included, so the gem and
+    # the bold carry the selection as well as the color; scratch and
+    # unlisted buffers get none. From two tab pages their numbers stand at the right end, " 1  2 ", the current
     # one selected, and the tabs use the columns before them. Tabs that do
     # not fit are counted, " <N " before the run shown and " N> " after
     # it; the run starts as early as keeping the current tab in it
@@ -21,6 +24,13 @@ module Carat
     # and every width is counted, so a row costs no object per frame.
     class TabBar
       MARK_CELLS = 1
+      GEM = "◆"
+      ASCII_GEM = "*"
+      SEPARATOR = "│"
+      ASCII_SEPARATOR = "|"
+      # The cells of a tab besides its icon, name, and mark: the gem or
+      # space, four spaces, and the separator.
+      FRAME_CELLS = 6
 
       attr_reader :buffers #: Domain::BufferList
 
@@ -117,6 +127,8 @@ module Carat
       #: (Domain::Frame, Integer, Integer, Domain::Buffer, bool, String) -> Integer
       def paint_tab(frame, x, limit, buffer, selected, set)
         hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+        ascii = set == "ascii"
+        x = frame.put_within(0, x, selected ? (ascii ? ASCII_GEM : GEM) : " ", hl, limit)
         x = frame.put_within(0, x, " ", hl, limit)
         x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), hl, limit)
         x = frame.put_within(0, x, " ", hl, limit)
@@ -128,7 +140,8 @@ module Carat
         end
         x = frame.put_within(0, x, " ", hl, limit)
         x = frame.put_within(0, x, buffer.modified? ? mark(set) : " ", hl, limit)
-        frame.put_within(0, x, " ", hl, limit)
+        x = frame.put_within(0, x, " ", hl, limit)
+        frame.put_within(0, x, ascii ? ASCII_SEPARATOR : SEPARATOR, Domain::Highlight::TAB_LINE, limit)
       end
 
       # The modified mark of the set, the ascii set's when the set's glyph
@@ -144,7 +157,7 @@ module Carat
       def tab_width(buffer, set)
         path = buffer.path
         name = path.nil? ? Domain::Messages::NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
-        Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + MARK_CELLS + 4
+        Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + MARK_CELLS + FRAME_CELLS
       end
 
       # The cells of the file tabs from list position from to position to.
