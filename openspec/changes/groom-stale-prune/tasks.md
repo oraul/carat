@@ -26,5 +26,5 @@
 
 ## 5. Closing advisories
 
-- [x] 5.1 `.claude/agents/planner.md` triage sentence: "by any proof (`closed`, `gone`, `stale`, `duplicate`), and add", its comma and proof list back
+- [x] 5.1 `.claude/agents/planner.md` triage sentence: "by any proof, and add", its comma back; the proofs stay those the same step lists, the file at its 8192-byte budget
 - [x] 5.2 A case for the plan's queue blocking stale: "run_state: groom refuses a stale entry the plan's queue still names" in `tools/tools_test.sh`
