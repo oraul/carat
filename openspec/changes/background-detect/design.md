@@ -6,9 +6,9 @@
 
 ## Decisions
 
-### Ask on enter, never wait
+### Ask at the first read, never wait
 
-`enter` writes `TerminalBackground::QUERY` and sets the awaiting flag; nothing reads there, so the first frame is drawn before any answer. The answer arrives as input bytes, so `read_key` takes it out while awaiting. Alternative: a blocking read with a short timeout at start, as some editors do; rejected, since the brief says never wait.
+`enter` only readies the query; the first `read_key` writes `TerminalBackground::QUERY` and sets the awaiting flag. `bin/carat.rb` calls `enter` before `STDIN.raw`, and the main loop draws the first frame before its first read, so the query goes out in raw mode, where the answer is neither echoed nor held for a line, and the first frame is drawn before any answer. Alternative: write the query in `enter`; rejected, since an answer arriving before raw mode would be echoed onto the screen. The answer arrives as input bytes, so `read_key` takes it out while awaiting. Alternative: a blocking read with a short timeout at start, as some editors do; rejected, since the brief says never wait.
 
 ### Taking the reply out of the input
 

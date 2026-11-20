@@ -5,7 +5,7 @@ On start the editor SHALL ask the terminal for its background color with the OSC
 
 #### Scenario: The first frame waits for no reply
 - **WHEN** the editor starts on a terminal that has not answered
-- **THEN** the query is written and the first frame follows at once, the background unknown
+- **THEN** the first frame is drawn at once and the query follows it, the background unknown
 
 #### Scenario: A dark reply
 - **WHEN** the terminal answers with a dark color between typed keys

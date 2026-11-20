@@ -7,7 +7,7 @@
 ## 2. The terminal
 
 - [x] 2.1 `carat/ports/terminal_port.rb` `background`, `carat/doubles/fake_terminal.rb` `background` (proved by `test/drivers_ansi_terminal.rb` "the double reports no background")
-- [x] 2.2 `carat/drivers/ansi_terminal.rb` writes the query on `enter` and takes the reply out in `read_key` (proved by `test/drivers_ansi_terminal.rb` "The first frame waits for no reply", "A dark reply", "A light reply", "A malformed reply", "No reply")
+- [x] 2.2 `carat/drivers/ansi_terminal.rb` sends the query at the first `read_key` after `enter` and takes the reply out of the reads (proved by `test/drivers_ansi_terminal.rb` "The first frame waits for no reply", "A dark reply", "A light reply", "A malformed reply", "No reply")
 
 ## 3. Docs
 

@@ -10,15 +10,17 @@ module Carat
     # flushed writes. Raw mode is entered by bin/carat.rb around the loop.
     # The color depth comes from COLORTERM and TERM and the wish for no
     # color from NO_COLOR, read once here: the drivers are the only place
-    # the environment is read. Entering asks the terminal for its
-    # background (OSC 11) and waits for no answer; the answer, untrusted
-    # input, arrives among the key bytes, and the reads take it out
-    # (Domain::TerminalBackground) until one has come.
+    # the environment is read. The first read after entering asks the
+    # terminal for its background (OSC 11), so the query goes out in raw
+    # mode after the first frame, and waits for no answer; the answer,
+    # untrusted input, arrives among the key bytes, and the reads take it
+    # out (Domain::TerminalBackground) until one has come.
     class AnsiTerminal < Ports::TerminalPort
       # @rbs @input: IO
       # @rbs @output: IO
       # @rbs @colors: Integer
       # @rbs @no_color: bool
+      # @rbs @asking: bool
       # @rbs @background: String
       # @rbs @awaiting: bool
       # @rbs @reply: String
@@ -29,6 +31,7 @@ module Carat
         @output = output
         @colors = Domain::ColorDepth.detect(environment("COLORTERM"), environment("TERM"))
         @no_color = !environment("NO_COLOR").empty?
+        @asking = false
         @background = Domain::TerminalBackground::UNKNOWN
         @awaiting = false
         @reply = ""
@@ -67,11 +70,13 @@ module Carat
       end
 
       # Returns the key bytes of one read, or nil on timeout, at the end
-      # of input, or when the read held only the terminal's answer. While
+      # of input, or when the read held only the terminal's answer. The
+      # first read after enter sends the query first. While
       # the answer is awaited a read that times out drops the held start
       # of an answer, cut short.
       # @rbs timeout: Float
       def read_key(timeout)
+        ask_background if @asking
         bytes = read_bytes(timeout)
         return bytes unless @awaiting
         if bytes.nil?
@@ -91,12 +96,11 @@ module Carat
         @output.flush
       end
 
-      # Asks for the background and returns without reading.
+      # Readies the query for the background, which the next read sends.
       #: () -> void
       def enter
-        @output.write(Domain::TerminalBackground::QUERY)
         @output.flush
-        @awaiting = true
+        @asking = true
       end
 
       #: () -> void
@@ -105,6 +109,14 @@ module Carat
       end
 
       private
+
+      # Sends the query and starts taking the answer out of the reads.
+      #: () -> void
+      def ask_background
+        @asking = false
+        @awaiting = true
+        write(Domain::TerminalBackground::QUERY)
+      end
 
       # The bytes of one read, nil on timeout or end of input.
       #: (Float) -> String?

@@ -203,7 +203,7 @@ Ports to the outside, the interfaces use cases depend on, are classes whose meth
 
 | Port | Methods | Driver | Test double |
 | --- | --- | --- | --- |
-| `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `no_color?`, `background`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM`, `TERM`, and `NO_COLOR` once for `colors` and `no_color?`, and asks OSC 11 on `enter` for `background` | `FakeTerminal` with scripted keys, captured output, 256 colors, `no_color=`, and `""` for `background` |
+| `TerminalPort` | `size`, `read_key(timeout)`, `write(bytes)`, `colors`, `no_color?`, `background`, `enter`, `leave` | `AnsiTerminal`, which reads `COLORTERM`, `TERM`, and `NO_COLOR` once for `colors` and `no_color?`, and asks OSC 11 at its first read for `background` | `FakeTerminal` with scripted keys, captured output, 256 colors, `no_color=`, and `""` for `background` |
 | `ClockPort` | `now`, `sleep(seconds)` | monotonic clock | manual clock |
 | `FilePort` | `read(path, limit)` (a regular file of at most `limit` bytes, opened without blocking), `write(path, text)`, `exist?`, `list(dir)`, `stat(path)` returning the `PathInfo` value (`PathInfo.missing` for nothing there), `real_path(path)` (every link resolved), `mkdir(path)`, `rename(from, to)`, `delete(path)` (a file or an empty directory), `cwd`, `home` (the user's home directory, `""` for none; `DiskFiles` reads `HOME`) | `DiskFiles` | `MemoryFiles` |
 | `ConfigPort` | `load` returning the `Domain::Config` of every configuration file in load order, each line carrying its file and line number | `RcConfigGateway` | `FixedConfig`, the shipped defaults with lines a test gives |

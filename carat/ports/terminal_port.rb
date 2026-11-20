@@ -41,7 +41,7 @@ module Carat
       end
 
       # Returns the background the terminal reported in answer to the query
-      # written on enter: Domain::TerminalBackground's DARK ("dark") or
+      # sent at start: Domain::TerminalBackground's DARK ("dark") or
       # LIGHT ("light"), or UNKNOWN ("") before an answer, with none, or
       # with a malformed one. Reading it never waits for the answer.
       # @rbs skip

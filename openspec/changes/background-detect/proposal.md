@@ -6,7 +6,7 @@ A light terminal starts on the dark theme, since Carat never learns the terminal
 
 ## What Changes
 
-- `AnsiTerminal#enter` writes the OSC 11 query (`ESC ] 11 ; ? ESC \`) and returns at once, so the first frame waits for no answer.
+- The first `AnsiTerminal#read_key` after `enter` writes the OSC 11 query (`ESC ] 11 ; ? ESC \`), so it goes out in raw mode after the first frame, which waits for no answer.
 - While the answer is awaited, `AnsiTerminal#read_key` takes the reply out of the bytes it reads, the reply held across reads only while it is shorter than a bound and dropped when a read times out, so no reply byte reaches the key stream; the bytes around it are the keys.
 - The new `Domain::TerminalBackground` finds where a reply ends and parses it, bounded: `rgb:` or `rgba:` with one to four hex digits per channel, light when the luminance is over half, anything else unknown.
 - `TerminalPort#background` reports `dark`, `light`, or `""` (unknown: no answer yet, none, or a malformed one); `FakeTerminal` answers `""`.

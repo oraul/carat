@@ -6,7 +6,8 @@ require_relative "../carat/testing"
 # the file is compiled on its own (make test-one).
 #
 # AnsiTerminal over two real pipes, one for the key bytes the terminal
-# sends and one for the screen: the OSC 11 query on enter, the answer
+# sends and one for the screen, each kept open, since a write to a pipe
+# whose reader closed ends the program: the OSC 11 query on enter, the answer
 # taken out of the key bytes, and the background it reports.
 module DriversAnsiTerminalTest
   B = Carat::Domain::TerminalBackground
@@ -45,8 +46,9 @@ module DriversAnsiTerminalTest
     dark = "\e]11;rgb:1e1e/1e1e/2e2e\e\\"
     light = "\e]11;rgb:ffff/ffff/ffff\a"
 
-    # The first frame waits for no reply: enter writes the query and reads
-    # nothing, a key typed before it is still the next read.
+    # The first frame waits for no reply: enter reads nothing and writes
+    # nothing, the first read after the frame sends the query, in raw
+    # mode, and a key typed before it is still that read.
     keys = IO.pipe
     screen = IO.pipe
     term = made(keys[0], screen[1])
@@ -54,9 +56,11 @@ module DriversAnsiTerminalTest
     keys[1].flush
     term.enter
     term.write("frame")
-    t.assert_equal(B::QUERY + "frame", screen_text(screen[0]), "The first frame waits for no reply: the query, then the frame")
-    t.assert_equal("", term.background, "The first frame waits for no reply: the background is unknown")
+    t.assert_equal("frame", screen_text(screen[0]), "The first frame waits for no reply: the frame is written first")
     t.assert_equal("j", read(term), "The first frame waits for no reply: enter read no key")
+    t.assert_equal(B::QUERY, screen_text(screen[0]), "The first frame waits for no reply: the first read sends the query")
+    t.assert_equal("", term.background, "The first frame waits for no reply: the background is unknown")
+    t.assert_equal(["nil", ""], [read(term), screen_text(screen[0])], "the query is sent once")
 
     # Before enter nothing is asked, so nothing is taken out.
     keys = IO.pipe
@@ -67,7 +71,8 @@ module DriversAnsiTerminalTest
 
     # A dark reply.
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("jk", send_and_read(term, keys[1], "j" + dark + "k"), "A dark reply: only the typed keys arrive")
     t.assert_equal("dark", term.background, "A dark reply: the background is dark")
@@ -76,20 +81,23 @@ module DriversAnsiTerminalTest
 
     # A light reply, whole and split across two reads.
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("nil", send_and_read(term, keys[1], light), "A light reply: a read of the answer alone has no keys")
     t.assert_equal("light", term.background, "A light reply: the background is light")
 
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("a", send_and_read(term, keys[1], "a\e]11;rgb:ff"), "A light reply split: the keys before it arrive, its start is held")
     t.assert_equal("x", send_and_read(term, keys[1], "ff/ffff/ffff\e\\x"), "A light reply split: the rest is taken out")
     t.assert_equal("light", term.background, "A light reply split: the background is light")
 
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("nil", send_and_read(term, keys[1], "\e]11;rgb:ffff/ffff/ffff\e"), "A light reply split inside ST: held")
     t.assert_equal("x", send_and_read(term, keys[1], "\\x"), "A light reply split inside ST: the backslash is taken out")
@@ -108,7 +116,8 @@ module DriversAnsiTerminalTest
     rows.each do |row|
       label = row[0].to_s
       keys = IO.pipe
-      term = made(keys[0], IO.pipe[1])
+      screen = IO.pipe
+      term = made(keys[0], screen[1])
       term.enter
       t.assert_equal(row[2].to_s, send_and_read(term, keys[1], row[1].to_s), "A malformed reply, #{label}: no reply byte arrives as a key")
       t.assert_equal("", term.background, "A malformed reply, #{label}: the background stays unknown")
@@ -116,7 +125,8 @@ module DriversAnsiTerminalTest
     end
 
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("nil", send_and_read(term, keys[1], "\e]11;rgb:ffff/"), "A malformed reply cut short before a timeout: held")
     t.assert_equal("nil", read(term), "A malformed reply cut short before a timeout: the timeout drops it")
@@ -124,7 +134,8 @@ module DriversAnsiTerminalTest
 
     # No reply: every key arrives unchanged, a lone escape included.
     keys = IO.pipe
-    term = made(keys[0], IO.pipe[1])
+    screen = IO.pipe
+    term = made(keys[0], screen[1])
     term.enter
     t.assert_equal("abc", send_and_read(term, keys[1], "abc"), "No reply: typed keys arrive")
     t.assert_equal("nil", read(term), "No reply: a read with nothing to read times out")
