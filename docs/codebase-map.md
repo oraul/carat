@@ -225,15 +225,15 @@ Bench: `lh`, `j`, `w`, `lh-utf8`, `j-utf8`, `long-ascii`, `long-utf8`, `n`.
 
 What: the operators over motions, text objects, and doubled forms, the standalone edits, and the registers they write and read.
 
-Flow: `OperatorHandler` (kind `:operator`, the five pending operators) and `EditHandler` (`x s S C D Y J p P r ~`) run `Operate#call` or a standalone use case; `Operate` resolves the range from `Motions.call` or `TextObjects.call`, runs `Operators.extract`, `delete`, `shift`, `recase`, or `join`, and writes `Registers#yank` or `Registers#delete` by Vim's rules; `PutRegister` reads `Registers#read` and calls `Operators.put` or `put_block`.
+Flow: `OperatorHandler` (kind `:operator`, the eight pending operators `d c y > < g~ gu gU`) and `EditHandler` (`x s S C D Y J p P r ~`) run `Operate#call` or a standalone use case; `Operate` resolves the range from `Motions.call` or `TextObjects.call`, runs `Operators.extract`, `delete`, `shift`, `recase_range`, or `join`, and writes `Registers#yank` or `Registers#delete` by Vim's rules; `PutRegister` reads `Registers#read` and calls `Operators.put` or `put_block`.
 
 Files:
 
-- `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `make_indent`.
-- `carat/domain/operator_kind.rb`: `OperatorKind`, the five operator action names.
+- `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `recase_letter`, `recase_range`, `make_indent`.
+- `carat/domain/operator_kind.rb`: `OperatorKind`, the eight operator action names.
 - `carat/domain/register_entry.rb`: `RegisterEntry` (charwise, linewise, or blockwise); `charwise`, `lines`, `block`, `linewise?`, `blockwise?`, `joined`.
 - `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`, `unnamed?` (a name standing for no register in particular).
-- `carat/use_cases/operate.rb`: `Operate#call`; refuses a read-only register with `E354`; `zf` makes a fold of the range, and a linewise range reaches over the closed folds at its ends.
+- `carat/use_cases/operate.rb`: `Operate#call`; refuses a read-only register with `E354`; `g~ gu gU` change the case of the range and write no register; `zf` makes a fold of the range, and a linewise range reaches over the closed folds at its ends.
 - `carat/use_cases/replace_chars.rb`: `ReplaceChars#call` (`r`).
 - `carat/use_cases/toggle_case.rb`: `ToggleCase#call` (`~`).
 - `carat/use_cases/put_register.rb`: `PutRegister#call` (`p`, `P`).
@@ -242,7 +242,7 @@ Files:
 - `carat/use_cases/actions/edit_handler.rb`: `EditHandler.register`, the standalone edits over a fixed operand.
 - `carat/use_cases/ex/register_command_handler.rb`: `RegisterCommandHandler` (`:registers`, `:display`); `line`.
 
-Tests: `test/domain_registers.rb`, `test/editor_operators.rb`, `test/editor_registers.rb`.
+Tests: `test/domain_registers.rb`, `test/editor_operators.rb`, `test/editor_registers.rb`, `test/editor_case_operators.rb`.
 
 Designs: `command-grammar` (Operators are functions over ranges), `undo-and-registers` (Registers), `visual-modes` (Registers get a kind), `use-case-boundaries` (The splits; Shared logic).
 
@@ -329,7 +329,7 @@ Bench: `undo`, `undo-line`, `dot-r`, `dot-dd`, `dot-ciw`.
 
 What: charwise, linewise, and blockwise selection, with every motion and text object and the operators on the selection.
 
-Flow: `VisualModeHandler` runs `StartVisual` (enter, switch, leave), `ReselectVisual` (`gv`), `SwapVisualEnds` (`o`, `O`), and `ExtendVisual` (text objects); the anchor and the last selection live on the `Window`, and `EditorState#selection` resolves them to a `Selection`. In a visual mode the five operators complete at once; `SelectionHandler` runs one use case per operator, which use `SelectionCut.call`, the `Operators` block functions, and `BlockInsert` (repeated by `LeaveInsert`).
+Flow: `VisualModeHandler` runs `StartVisual` (enter, switch, leave), `ReselectVisual` (`gv`), `SwapVisualEnds` (`o`, `O`), and `ExtendVisual` (text objects); the anchor and the last selection live on the `Window`, and `EditorState#selection` resolves them to a `Selection`. In a visual mode the eight operators complete at once; `SelectionHandler` runs one use case per operator, which use `SelectionCut.call`, the `Operators` block functions, and `BlockInsert` (repeated by `LeaveInsert`).
 
 Files:
 
