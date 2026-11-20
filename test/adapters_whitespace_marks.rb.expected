@@ -1,0 +1,16 @@
+ok   Marks with list on: the tab's first mark and blanks, ␣, two ·, a line of spaces all trailing, an empty line none
+ok   No marks with list off
+ok   A tab with a last mark: <--> over four cells, > alone on one
+ok   Marks move with the horizontal scroll: the tab's visible cells, then the trail of a plain line
+ok   A key left out draws no mark: the tab blank, the trailing space -
+ok   The ASCII marks: > and blanks, +, -- with no code point above 127
+ok   Multi-byte: a tab after é, a space before a no-break space is not trailing, U+202F marked
+ok   A tab's mark shows over an indent guide; spaces keep the guide
+ok   A plugin window draws no marks
+ok   A closed fold's row draws no marks; the row after it does
+ok   A row drawn in a plugin window draws its marks once the buffer is a file's
+ok   Marks under NO_COLOR
+ok   Turning list on repaints the rows drawn without marks
+ok   A new listchars repaints the rows
+ok   Switching to the ascii icon set repaints the marks
+adapters_whitespace_marks: 15 passed, 0 failed

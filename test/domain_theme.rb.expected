@@ -149,18 +149,22 @@ ok   The other palettes' guides keep 3:1: one_dark on the background at 24 bits
 ok   The other palettes' guides keep 3:1: one_dark on the background at 256 colors
 ok   The other palettes' guides keep 3:1: one_dark on the cursor line at 24 bits
 ok   The other palettes' guides keep 3:1: one_dark on the cursor line at 256 colors
+ok   The other palettes' whitespace marks keep 3:1: one_dark
 ok   The other palettes' guides keep 3:1: one_light on the background at 24 bits
 ok   The other palettes' guides keep 3:1: one_light on the background at 256 colors
 ok   The other palettes' guides keep 3:1: one_light on the cursor line at 24 bits
 ok   The other palettes' guides keep 3:1: one_light on the cursor line at 256 colors
+ok   The other palettes' whitespace marks keep 3:1: one_light
 ok   The other palettes' guides keep 3:1: dark_plus on the background at 24 bits
 ok   The other palettes' guides keep 3:1: dark_plus on the background at 256 colors
 ok   The other palettes' guides keep 3:1: dark_plus on the cursor line at 24 bits
 ok   The other palettes' guides keep 3:1: dark_plus on the cursor line at 256 colors
+ok   The other palettes' whitespace marks keep 3:1: dark_plus
 ok   The other palettes' guides keep 3:1: light_plus on the background at 24 bits
 ok   The other palettes' guides keep 3:1: light_plus on the background at 256 colors
 ok   The other palettes' guides keep 3:1: light_plus on the cursor line at 24 bits
 ok   The other palettes' guides keep 3:1: light_plus on the cursor line at 256 colors
+ok   The other palettes' whitespace marks keep 3:1: light_plus
 ok   The guides order below Comment: carat-dark on the background at 24 bits
 ok   The guides order below Comment: carat-dark on the background at 256 colors
 ok   The guides order below Comment: carat-dark on the cursor line at 24 bits
@@ -171,6 +175,12 @@ ok   The guides order below Comment: carat-light on the cursor line at 24 bits
 ok   The guides order below Comment: carat-light on the cursor line at 256 colors
 ok   The guide colors: carat-dark
 ok   The guide colors: carat-light
+ok   The whitespace marks take the guide color: carat-dark
+ok   The whitespace marks take the guide color: carat-light
+ok   The whitespace marks take the guide color: one_dark
+ok   The whitespace marks take the guide color: one_light
+ok   The whitespace marks take the guide color: dark_plus
+ok   The whitespace marks take the guide color: light_plus
 ok   The border colors: carat-dark
 ok   The border colors: carat-light
 ok   The border stays apart from the float: carat-dark on the float at 24 bits
@@ -321,4 +331,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 323 passed, 0 failed
+domain_theme: 333 passed, 0 failed
