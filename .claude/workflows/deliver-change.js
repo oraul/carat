@@ -1720,9 +1720,10 @@ function planSkipped(state, line) {
 // The planner prompt's line for a failing periodic security review that
 // plan-needed names first: the review run, whose show the planner reads,
 // since its pending list holds merged run states only and merged_since
-// clears the review at the merge of the next change planned after it,
-// or passed_since at a later passing periodic security review
-// (review-coverage, review-coverage-b); otherwise
+// clears the review at the merge of the next change whose plan-needed
+// read the review runs after the review was recorded, or passed_since at
+// a later passing whole-tree periodic security review (review-coverage,
+// review-coverage-b, periodic-clear-rules); otherwise
 // nothing. tools/tools_test.sh runs this helper.
 function planReview(line) {
   const m = /^needed: ((?:review|sprint)-[0-9][a-z0-9-]*) records a failing periodic security review at ([0-9a-f]{7,40}),/.exec(line || '')
