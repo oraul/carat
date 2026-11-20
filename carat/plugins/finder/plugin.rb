@@ -58,6 +58,8 @@ module Carat
         # @rbs @selected: Integer
         # @rbs @list_float: Integer
         # @rbs @preview_float: Integer
+        # @rbs @list_box: String
+        # @rbs @preview_box: String
         # @rbs @rows: Integer
         # @rbs @cols: Integer
 
@@ -73,6 +75,8 @@ module Carat
           @selected = 0
           @list_float = 0
           @preview_float = 0
+          @list_box = ""
+          @preview_box = ""
           @rows = 24
           @cols = 80
         end
@@ -307,14 +311,15 @@ module Carat
           @preview_float = 0
         end
 
-        # Opens the list float, and the preview beside it on a wide
+        # Shows the list float, and the preview beside it on a wide
         # screen, for the matches and the highlight, sized from the frame
         # the host answers for a bordered float: the host's margin from
         # each screen edge, the preview's box in the column after the
-        # list's, so the boxes share an edge under every border style.
+        # list's, so the boxes share an edge under every border style. A
+        # float whose box is unchanged is refilled in place, so typing and
+        # moving the highlight keep the floats the finder opened.
         #: (Carat::PluginApi::Host) -> void
         def refresh(host)
-          close_floats(host)
           cols = @cols
           height = @rows - 6
           height = 1 if height < 1
@@ -327,12 +332,38 @@ module Carat
           width = (room - 2 * frame) / 2 if preview
           width = 1 if width < 1
           title = @grep ? "#{GREP_TITLE} #{@index.counts}" : "#{TITLE} #{@matches.length}/#{@paths.length}"
-          shown = host.open_float(float_at(margin, height, width, title), list_lines(height))
-          @list_float = shown.ok ? shown.window : 0
-          return unless preview && !@matches.empty?
+          list = float_at(margin, height, width, title)
+          @list_float = show_float(host, @list_float, @list_box, list, list_lines(height))
+          @list_box = box_key(list)
+          unless preview && !@matches.empty?
+            host.close_float(@preview_float) if @preview_float != 0
+            @preview_float = 0
+            return
+          end
           preview_title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
-          previewed = host.open_float(float_at(margin + width + frame, height, room - width - 2 * frame, preview_title), preview_lines(host, height))
-          @preview_float = previewed.ok ? previewed.window : 0
+          shown = float_at(margin + width + frame, height, room - width - 2 * frame, preview_title)
+          @preview_float = show_float(host, @preview_float, @preview_box, shown, preview_lines(host, height))
+          @preview_box = box_key(shown)
+        end
+
+        # Refills the float with the id with the lines and the options'
+        # title when its box is the one it was shown at; otherwise, or
+        # when the refill fails, closes it and opens a float. Returns the
+        # id of the float showing the lines, 0 when the open failed.
+        #: (Carat::PluginApi::Host, Integer, String, PluginApi::FloatOptions, Array[String]) -> Integer
+        def show_float(host, id, box, options, lines)
+          if id != 0
+            return id if box == box_key(options) && host.set_float_lines(id, lines, options.title.to_s).ok
+            host.close_float(id)
+          end
+          opened = host.open_float(options, lines)
+          opened.ok ? opened.window : 0
+        end
+
+        # The column, height, and width of a float's box, as one string.
+        #: (PluginApi::FloatOptions) -> String
+        def box_key(options)
+          "#{options.col.to_i} #{options.height.to_i} #{options.width.to_i}"
         end
 
         # The highlighted file's preview rows: for a grep row the stored

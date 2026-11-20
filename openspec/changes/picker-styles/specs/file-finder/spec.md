@@ -4,7 +4,7 @@
 While the finder is open and its boxes keep their size, every key that changes the typed text or moves the highlight SHALL show the new rows and title in the same list float, and the new preview in the same preview float while a preview shows; the preview float SHALL close when no preview shows and open again when one does, and a resize that changes a box SHALL open that float again at its new box.
 
 #### Scenario: Typing keeps the list float
-- **WHEN** the finder is open on an 80-column screen and the user types `bet` and a backspace
+- **WHEN** the finder is open on an 80-column screen and the user types `bet` and three backspaces
 - **THEN** the tab page holds one float, the list float the finder opened with, titled `Files 3/3`
 
 #### Scenario: Moving the highlight keeps both floats

@@ -23,6 +23,13 @@ ok   Enter with no match keeps the finder open
 ok   Enter with no match on a wide screen still shows no preview
 ok   typing after Enter with no match filters again
 ok   A narrow screen shows no preview
+ok   Typing keeps the list float: one float, the one the finder opened with
+ok   the kept list float shows each key's title
+ok   Moving the highlight keeps both floats
+ok   the kept preview float shows the highlighted file
+ok   The preview closes and returns beside the list float the finder opened with
+ok   the returned preview shows the highlighted file
+ok   A resize opens the floats at the new size, the list as wide as on an 80-column screen
 ok   Enter opens the file
 ok   Ctrl-X opens it in a split
 ok   Ctrl-S opens it in a split too
@@ -48,4 +55,4 @@ ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
 ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
 ok   The finder boxes share an edge without a border: the host's frame closes the gap
-editor_finder: 50 passed, 0 failed
+editor_finder: 57 passed, 0 failed
