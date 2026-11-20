@@ -134,11 +134,10 @@ function securityLine(r, blocking, disputed) {
 function sweepLine(on, r) {
   if (!on) return 'not this sprint'
   if (!r || !r.ran) return 'did not run; run /sprint again'
-  const areas = (xs) => (Array.isArray(xs) ? xs : [])
   const counts = `security ${r.security.length} finding(s), ${r.security_blocking} blocking; quality ${r.quality_blocking.length} blocking`
   const left = [
-    areas(r.security_not_reviewed).length ? `security partial, not reviewed: ${areas(r.security_not_reviewed).join(', ')}` : '',
-    areas(r.quality_not_reviewed).length ? `quality partial, areas not reviewed: ${areas(r.quality_not_reviewed).join(', ')}` : '',
+    r.security_not_reviewed.length ? `security partial, not reviewed: ${r.security_not_reviewed.join(', ')}` : '',
+    r.quality_not_reviewed.length ? `quality partial, areas not reviewed: ${r.quality_not_reviewed.join(', ')}` : '',
   ].filter(Boolean)
   const unrecorded = r.recorded ? [] : ['its results were not recorded; run /sprint again']
   return [counts].concat(left, unrecorded).join('; ')
