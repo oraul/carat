@@ -261,6 +261,32 @@ module Carat
         PluginApi::Response.success("", 0)
       end
 
+      # Replaces the lines and the title of the plugin's float in place,
+      # its cursor, selection anchor, and scroll back at the start, as a
+      # reopened float has them; the window id, box, z order, and focus
+      # stay. A float switched to a buffer of the list, such as one of
+      # the plugin's scratch buffers, is refused: only the unlisted buffer
+      # the float was opened with is refilled.
+      #: (String, Integer, Array[String], String) -> PluginApi::Response
+      def set_float_lines(name, id, lines, title)
+        index = own_float_tab(name, id)
+        return PluginApi::Response.failure("No float #{id}") if index < 0
+        floats = @tabs.tab_at(index).floats
+        float = floats.at(floats.index_of(window_or_current(id)))
+        window = float.window
+        buffer = window.buffer
+        return PluginApi::Response.failure("No float #{id}") if @buffers.index_of(buffer) >= 0
+        replace_lines(buffer, lines)
+        shown = String.new(title)
+        buffer.title = shown
+        float.spec = float.spec.titled(shown)
+        window.cursor = Domain::Cursor.new(row: 0, col: 0)
+        window.anchor = Domain::Position.new(row: 0, col: 0)
+        window.top = 0
+        window.left = 0
+        PluginApi::Response.success("", 0)
+      end
+
       # The frame a float of the plugin would have, bordered or not, under
       # the current border style: its edge, padding, and margin cells.
       #: (String, bool) -> PluginApi::FloatFrame

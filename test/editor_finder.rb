@@ -106,6 +106,18 @@ module EditorFinderTest
     shown.empty? ? "" : shown[0].to_s.split("|")[0].to_s
   end
 
+  # The window id of each float of the current tab page.
+  def self.float_ids(h)
+    layer = h.state.tab.floats
+    out = []
+    i = 0
+    while i < layer.count
+      out << layer.at(i).id
+      i += 1
+    end
+    out
+  end
+
   def self.main
     t = Carat::Testing.new("editor_finder")
 
@@ -148,6 +160,44 @@ module EditorFinderTest
     ]) do |row|
       view(session(row[0], row[1]))
     end
+
+    # Scenario: Typing keeps the list float.
+    h = editor_on(disk, 80)
+    h.type("<Space>ff")
+    opened = float_ids(h)
+    h.type("bet")
+    typed = float_ids(h)
+    typed_title = first_title(h)
+    h.type("<BS><BS><BS>")
+    t.assert_equal([1, opened[0], opened[0], 1], [opened.length, typed[0], float_ids(h)[0], float_ids(h).length], "Typing keeps the list float: one float, the one the finder opened with")
+    t.assert_equal(["Files 1/3", "Files 3/3"], [typed_title, first_title(h)], "the kept list float shows each key's title")
+
+    # Scenario: Moving the highlight keeps both floats.
+    h = editor_on(disk, 120)
+    h.type("<Space>ff")
+    opened = float_ids(h)
+    h.type("<C-n>")
+    t.assert_equal([2, opened[0], opened[1]], [opened.length, float_ids(h)[0], float_ids(h)[1]], "Moving the highlight keeps both floats")
+    t.assert_equal("lib/alpha.rb|a = 1", floats(h)[1], "the kept preview float shows the highlighted file")
+
+    # Scenario: The preview closes and returns.
+    h = editor_on(disk, 120)
+    h.type("<Space>ff")
+    opened = float_ids(h)
+    h.type("zzz")
+    gone = float_ids(h)
+    h.type("<BS><BS><BS>")
+    back = float_ids(h)
+    t.assert_equal([1, opened[0], 2, opened[0]], [gone.length, gone[0], back.length, back[0]], "The preview closes and returns beside the list float the finder opened with")
+    t.assert_equal("docs/guide.md|guide", floats(h)[1], "the returned preview shows the highlighted file")
+
+    # Scenario: A resize opens the floats at the new size.
+    h = editor_on(disk, 120)
+    h.type("<Space>ff")
+    h.resize(24, 80)
+    narrow = editor_on(disk, 80)
+    narrow.type("<Space>ff")
+    t.assert_equal([1, boxes(narrow)], [h.state.tab.floats.count, boxes(h)], "A resize opens the floats at the new size, the list as wide as on an 80-column screen")
 
     # Rows are [label, keys, [mode, current path, window columns, tab
     # page, tab pages, floats]].

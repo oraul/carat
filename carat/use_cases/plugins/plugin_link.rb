@@ -287,6 +287,16 @@ module Carat
         @windows.move_float(@name, window, row, col)
       end
 
+      # Returns a Response.
+      # @rbs window: Integer
+      # @rbs lines: Array[String]
+      # @rbs title: String
+      def set_float_lines(window, lines, title)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.set_float_lines(@name, window, lines, title)
+      end
+
       # Returns a FloatFrame.
       # @rbs border: bool
       def float_frame(border)

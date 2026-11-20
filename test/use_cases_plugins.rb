@@ -192,22 +192,27 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.10"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.10"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.11"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.11"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
-    minor = Probe.new("probe", "2.11", [], ACTIONS, {}, [])
+    minor = Probe.new("probe", "2.12", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.11, the host has 2.10"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused")
+    t.assert_equal([false, "needs API 2.12, the host has 2.11"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused, as in A plugin written against 2.10 still loads")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.10"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.11"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
     t.assert_equal(true, host.enabled?("probe"), "the host's own version is accepted")
+    # Scenario: A plugin written against 2.10 still loads.
+    last = Probe.new("probe", "2.10", [], ACTIONS, {}, [])
+    rig = setup([last], "")
+    state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
+    t.assert_equal([true, "", "2.11"], [host.enabled?("probe"), host.reason("probe"), Carat::PluginApi::VERSION], "A plugin written against 2.10 still loads on the 2.11 host")
 
     foreign = Probe.new("probe", "2.0", [], { "plugin.other.go" => "Go" }, {}, [])
     rig = setup([foreign], "")
