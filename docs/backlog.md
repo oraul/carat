@@ -98,17 +98,15 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: a language server knows which names are locals, parameters, methods, and constants, which a line tokenizer can only guess (vim-ruby's heuristics for `/`, `%`, `?`, and `<<` misjudge unusual code).
 - Fix outline: once the language gateway exists, request `textDocument/semanticTokens/range` for the visible rows and paint them as a layer over the tokenizer's, invalidated by the same change records.
 
-## Ruby constructs nested deeper than the state encodes
-
-- Where: `Carat::Plugins::Ruby::LineState` in `carat/plugins/ruby/line_state.rb` keeps two string frames, two pending heredocs, a nesting depth of 7, and a brace depth of 3 at the end of a line; `Tokenizer#heredoc_line` ends an interpolation left open in a heredoc body line at the end of that line.
-- Why it matters: a third string opened through interpolation and left open across lines, a third heredoc on one line, or a 256th distinct heredoc terminator is highlighted less precisely on the following lines (never wrongly enough to raise).
-- Fix outline: when it matters, give the tokenizer a side table of states (an integer per distinct deep stack, interned like the terminators) and keep the integer as an index into it, so any depth fits in the same integer.
-
 ## G on a large file tokenizes every row above the end once
 
 - Where: `Carat::UseCases::HighlightView#advance` in `carat/use_cases/syntax/highlight_view.rb`.
 - Why it matters: the state of the last row depends on every row above it, so the first `G` on 100,000 lines of Ruby tokenizes all of them, about 68 ms in the benchmark (`make bench` scenario `G-ruby`); later jumps reuse the end states.
 - Fix outline: if it matters on larger files, start from a sync point as Vim's `syntax sync minlines` does (tokenize a few hundred rows above the window from state 0 and accept a wrong state in rare cases), or tokenize the rest of the file in the background between keys once the main loop has an idle tick.
+- Merged: ### G on a large file tokenizes every row above the end once
+- Location: `carat/use_cases/syntax/highlight_view.rb` (`advance`), `test/editor_syntax.rb` "G tokenizes every row above the end once"; split off from syntax-tidy.
+- Why: a jump to the end of a 100,000-line Ruby file tokenizes every row above it once, in one frame, to carry the exact state from the top; the specification "Only visible rows and the rows above them are tokenized" and the test that the last row keeps that state require it, so a faster jump is a behavior choice, not a bug fix.
+- Fix: ask the user to choose between a sync point a bounded number of rows above the window (Neovim's syntax sync, colors approximate until the frontier reaches it) and spreading the tokenizing over idle frames (exact colors, the far rows plain at first); then change the syntax-highlighting requirement, `HighlightView#advance`, and the G rows of `test/editor_syntax.rb` together.
 
 ## Opening 100,000 plain lines is slower than opening them highlighted
 
@@ -228,18 +226,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `tools/ci_scope.sh` (line 66, the unquoted `for path in $changed`, over `git diff --name-only`). Low (3) finding of the periodic security review at 6ea61b1, and Low (5) finding of the security review of `untrusted-config-limits`; queued in `pipeline-hardening`.
 - Why it matters: the loop splits names on spaces and expands glob characters, so a pull request whose changed paths contain them, such as `a.md .claude/x`, can make a change to code read as documentation only and CI skips `spin check`.
 - Fix outline: read `git diff --name-only -z` into a `while read` loop with `IFS` unset and `set -f`, quote `"$path"`, and add a `tools/tools_test.sh` case with a spaced path and one with a glob character.
-
-## Three copies of the byte basename
-
-- Where: `Filetype.from_name` in `carat/domain/filetype.rb` (line 30) and `Buffer#name_start` in `carat/domain/buffer.rb` (line 226 at 8d8832f; `FramePresenter#file_name`, once at `frame_presenter.rb` line 660, is gone) each copy the byte basename that `PluginApi::Paths.basename` (`carat/plugin_api.rb:315`) gives and `Domain::PathPolicy.last_name` reuses, while `Filetype.base` (line 68) still uses `rindex`; `hold`, `launch`, and `initialize_params` in `carat/adapters/json_rpc_language_gateway.rb` (lines 247, 261, and 274 at eb63fb4) call `File.basename` on a server's command or the working directory. Advisory of the periodic quality review at 6ea61b1, the gateway's of `lsp-diagnostics`' retrospective.
-- Why it matters: three copies of one byte walk drift apart, and the `rindex` copy groups a lead byte with what follows on a name that is not UTF-8.
-- Fix outline: call `PluginApi::Paths.basename` in all three places. Folded into `docs-index`.
-
-## Filetype.program_type mixes byte and character indexes
-
-- Where: `Filetype.program_type` in `carat/domain/filetype.rb` (line 75) starts at `program.length` (characters) and reads `getbyte(stop - 1)` and `program[0, stop]`. Advisory of the periodic quality review at 6ea61b1.
-- Why it matters: byte and character positions disagree on a non-ASCII program name; harmless today because no such name is in `PROGRAMS`.
-- Fix outline: use `bytesize` and `byteslice` throughout.
 
 ## code_of decodes UTF-8 inside DisplayWidth
 
@@ -929,6 +915,11 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Where: `LIMIT = COUNT * 2` in `carat/domain/highlight.rb` (line 107 at `cursor-shapes`), which doubles every theme array and `SgrTable` entry with it. Quality advisory of `cursor-shapes`.
 - Why it matters: a one-off layer: a second overlay such as ColorColumn or CursorColumn would have to multiply the space again.
 - Fix outline: when the next overlay arrives, generalize to `id = base + layer * COUNT` with a layer count, or record the limit in the design.
+- Merged: ### The cursor line doubles the highlight group-id space
+- Location: `carat/domain/highlight.rb` (`CURSOR_LINE_LAYER`, `FLOAT_LAYER`, `LIMIT`), `carat/domain/themes.rb` (`from_palette`), `carat/adapters/sgr_table.rb` (`from_theme`), `carat/domain/frame.rb` (`lift`); split off from syntax-tidy.
+- Why: every group id has a cursor-line and a float copy, so each theme array and the SGR table hold three times `COUNT` entries and each new layer multiplies the space again; no frame id reaches `LIMIT` today, so no test fails, and shrinking it is a design change of how frames carry layers.
+- Fix: carry the layer in the frame as its own small number beside the group id (or resolve only the groups a layer can reach), building the layered SGR sequences on demand, and keep `test/domain_theme.rb` and `test/adapters_screen_presenter.rb` rows on the layered colors.
+None
 
 ## A test helper's comment sits above the wrong method
 
@@ -4751,12 +4742,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 - Why: slice 1 holds area 1, about 10,000 lines, which one start cannot read; the sweep left areas 1, 13, 14, 15 unreviewed (covered 14/18).
 - Fix: weight slices by line count, or split area 1 in the map.
 
-### The sprint report misreads the sweep
-
-- Location: .claude/workflows/sprint-planning.js:179 (sprint-4 sweep, quality).
-- Why: the Sweep line says did not run whenever the security start did not run, though quality slices may have recorded, and never reports quality advisories or unreviewed areas.
-- Fix: report the sweep's security and quality separately.
-
 ### ListTree copies ProbePath and spells inside? another way
 
 - Location: carat/use_cases/files/list_tree.rb:67 and :98 (sprint-4 sweep, quality).
@@ -5783,35 +5768,17 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the requirement cuts before a character the limit would split, but no scenario names that and the test at test/drivers_process_runner.rb:62 names none.
 - Fix: add a scenario such as 'Long output is cut before a character' and label the driver test with it.
 
-### merged_since clears a periodic security finding on a merge planned before it
-
-- Location: tools/run_state.sh:1726
-- Why: security Low (4). merged_since clears a failing periodic security review on any later merge, including one whose delivery started before the review was recorded; a delivery planned (or plan-skipped) before a /review records a blocking finding merges afterwards, so plan-needed treats the finding as seen by a planner and later queue-head deliveries skip the security-first stop. A gap in the new trigger, not a regression.
-- Fix: count only a merge whose planner start came after the review was recorded, for example by storing the review run's name or time in the merged run's state when its planner or plan-needed saw it and having merged_since require that marker instead of commit ancestry alone, or keep the trigger until a planner start records that it read the review run.
-
 ### merged_since reads only the last metrics row's merged commit
 
 - Location: tools/run_state.sh:1729
 - Why: quality advisory. Metrics rows follow run-state order, not merge order, so a later merge in an earlier row is missed and the planner keeps running; the pending loop also adds a subprocess per state file.
 - Fix: since every commit on main is a squash merge, test that origin/main descends from COMMIT and differs from it.
 
-### No case for a passing periodic security review in plan-needed
-
-- Location: tools/tools_test.sh:1321
-- Why: quality advisory. No case shows that a passing periodic security review, or a partial one with blocking=0, leaves plan-needed not needed, the filter of tools/run_state.sh:1767-1770.
-- Fix: add a pass "... blocking=0" case expecting ^not needed.
-
 ### sprint_state picks an exception past the fifth counted row
 
 - Location: tools/run_state.sh:1502
 - Why: quality advisory. sprint_state picks the exception from every name merged since the last sprint while sprint_row (tools/run_state.sh:1599) now ends at the fifth counted row, so review-due names an exception (x1 in tools/tools_test.sh:1178) that the groomed row leaves out and that then spends the next sprint's one exemption, x2 counted.
 - Fix: pick sprint_exceptions only among the names before the SPRINT_SIZE-th counted one, so review-due, groom, and the row read the same window.
-
-### A resumed delivery clears a periodic security review unseen
-
-- Location: tools/run_state.sh:1723
-- Why: quality advisory. merged_since clears a failing periodic security review at any later merge on the premise that the merging change's planner saw it, but a delivery resumed past its plan phase (phase.plan or phase.implement recorded before the review) skips the planner and still clears it unseen; the review-coverage design names this risk.
-- Fix: clear only on a merged change whose run state records phase.plan after the review was recorded, or keep the record until a later periodic security review passes.
 
 ### plan_needed lists run states differently from pending_list
 
@@ -5824,16 +5791,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:1726
 - Why: quality advisory. Comment lines are left unwrapped beside wrapped ones (also tools/run_state.sh:1747), against the file's comment style.
 - Fix: rewrap both comments at the width of the surrounding lines.
-
-### merged_since decides planned after the review from commit ancestry, not from when the review was recorded
-- Location: tools/run_state.sh:1731 (security Low, confidence 4, review-coverage-b)
-- Why: when /review runs at the same time as a delivery, a planner that never saw a failing periodic security review can clear it: the review reads origin/main at X, another change merges to X', and a delivery started at X' runs its planner before the review is recorded; its phase.plan strictly descends from X, so its merge clears the review and the blocking finding never reaches the planner's security-first stop.
-- Fix: record in the delivery's run state which failing review run plan-needed handed to the planner (for example metric.plan_review=RUN at REVIEWED_COMMIT, written when planReview(planLine) is non-empty) and let merged_since clear a review only when a merged, planned change recorded that same run and commit; alternatively compare the review record's write time with the time phase.plan was written, not their commits.
-
-### passed_since lets a diff-only sprint security review supersede a failing whole-tree periodic security review
-- Location: tools/run_state.sh:1760 (security Medium, confidence 6, review-coverage-b)
-- Why: a /review whole-tree sweep fails at commit C with a blocking finding in untouched code; deliveries planned before C merge and close the sprint; the sprint-N combined-diff review passes at a later tip without reading the flagged file; passed_since then treats the failing review as superseded and plan-needed stops putting it in front of the planner's security-first stop although the finding was never fixed. REVIEW_RUNS ('^(review|sprint)-[0-9]') matches sprint-N, while the function's comment says whole-tree. Narrow path; the sprint-mode planner may still see the run in pending.
-- Fix: in passed_since accept only whole-tree records: skip any record whose summary begins with 'diff' (sprint-N runs, as sprint-planning.js line 162 writes them), or restrict the run names to review-* and sprint-N-sweep; add a tools_test case where a later 'pass COMMIT diff ... blocking=0' record leaves the failing review in force.
 
 ### planned_commits re-implements the run-state key parsing of read_key
 - Location: tools/run_state.sh:1752 (quality advisory, review-coverage-b)
@@ -5854,11 +5811,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: tools/run_state.sh:1798, .claude/workflows/deliver-change.js:977, README.md pipeline step 1 (quality advisory, review-coverage-b)
 - Why: the plan-needed line 'and no change merged since', the planReview comment ('no merge since'), and the README step ('failed with no change merged since whose planner ran after it') misstate or garble the rule now that a merge planned before the review does not count.
 - Fix: say 'no change planned after it has merged since' in all three.
-
-### passed_since lets a sprint-N diff pass supersede a whole-tree review contrary to its comment
-- Location: tools/run_state.sh:1763 (quality advisory, review-coverage-b)
-- Why: passed_since lists every REVIEW_RUNS run, so a sprint-N run's periodic-security pass, which reviewed only the sprint's combined diff, supersedes a failing whole-tree review, though its comment says a later whole-tree review supersedes it.
-- Fix: list only review-DATE runs there, or say in the comment and proposal that a sprint-diff pass counts.
 
 ### Review-run listing and reviewed-commit resolution are repeated
 - Location: tools/run_state.sh:1763 and tools/run_state.sh:1818 (quality advisory, review-coverage-b)
@@ -9500,11 +9452,6 @@ none
 - Location: carat/use_cases/ex/normal_command_handler.rb:39
 - Why: the E192 stop is held as @stopping on the one handler instance while the nesting it pairs with is EditorState#normal_depth, so one nesting state lives in two homes and a behavior class gains mutable state.
 - Fix: pin a normal_stopped bool member beside normal_depth in EditorState and read and clear it there.
-### The user's Sprint 23 feature order waits for the feature lane (vim-case-operators note 23)
-- Location: `docs/queue-feature.md`, Sprint 23 and Pool; `carat/plugin_api.rb`, `carat/plugins/finder/plugin.rb:316`, `carat/plugins/finder/grep.rb:148`, `carat/plugins/explorer/plugin.rb:15`.
-- Why: the user's decision of 2026-11-20 (finder and explorer design council) orders Sprint 23's features: (1) `picker-styles` (T2, small to medium, critical d carat/plugin_api.rb: host requests `style_float` and `set_float_lines` at the next plugin API minor, reusing the palette's style path, PmenuSel and PmenuMatch admitted, floats updated in place), (2) `finder-switch` (T2, small: `<C-g>` switches files and grep keeping the query, `<leader>fw`, `<leader>fr`, query history), (3) `finder-rows` (T2, medium, after picker-styles: selection band, PmenuMatch matches, paths cut from the left, grep rows text first, preview gutter); next `grep-finish` and `explorer-filter`; pool `finder-ranking`, `finder-layout`, `explorer-file-ops` (security review), `picker-speed`, `explorer-look` folded into `explorer-rows`; changes to `finder-path-safe` (sanitizer in plugin_api.rb for explorer names too), `explorer-rows`, `explorer-git`, `finder-streaming`, `finder-pickers`. The backlog lane writes no feature queue, so it was not placed by this plan.
-- Fix: the next feature plan or the sprint-22 planning places these items in the feature queue in the user's order; accepted when `docs/queue-feature.md` lists picker-styles, finder-switch, and finder-rows as Sprint 23's features.
-
 ### tools-test cannot exercise bench/run.sh
 - Location: tools/rules.sh:97 (TOOLS_RE), bench/run.sh
 - Why: a tools-test case that reads bench/run.sh fails the check that TOOLS_RE covers every path tools-test reads, so the benchmark runner's per-key arithmetic and its budget mode have no test; grep-long-files kept the grep key counts in tools/metrics.sh for that reason.
@@ -10005,3 +9952,64 @@ none
 - Fix: have make spec-validate pass OPENSPEC_CMD built from $(OPENSPEC_PACKAGE) so spec_validate.sh needs no literal, leaving only the guard and CLAUDE.md to mirror it
 - Also reported: sprint-22 sweep note 20 (tools/spec_validate.sh:18)
 
+
+none
+
+### history names the run state file as the lane file it appended to
+- Location: `tools/run_state.sh` `append_history`, the `echo "history: appended $change to $file"` line after `write_key row`.
+- Why: `write_key` assigns the global `file` to the run state's path, so the message reads `appended second to build/pipeline/second.json` instead of the lane history; a reader of the package step's output is pointed at the wrong file.
+- Fix: keep the lane file in its own variable (for example `lane_path`) or print the message before `write_key`, and add a tools-test case matching the lane file in the message.
+None
+
+### plan-needed names only the first failing review while merged_since clears every one before the planner's time
+- Location: tools/run_state.sh:3312 (plan_needed), with merged_since; quality advisory, pre-existing gap in the rule this change tightens
+- Why: plan_needed hands the planner only the first failing review, yet merged_since clears every failing review recorded before that planner's at.plan-needed, so a second failing review is cleared without the planner having been given it
+- Fix: name every failing review run in the needed line (and in planReview of .claude/workflows/deliver-change.js), or clear only the review that was named
+
+### A tokenizer's token length reaches the painter uncut
+- Location: carat/use_cases/plugins/plugin_syntax.rb `copied_tokens` and carat/adapters/frame_presenter.rb `paint_tokens`
+- Why: `copied_tokens` keeps any length of 1 or more, and `paint_tokens` adds it to the start column before cutting at the line's size, so a plugin token with a length near the integer limit makes that sum overflow if Spinel's integers are fixed width; `style_float` cuts its span lengths to `LONGEST_SPAN` for this reason, the tokenizer path does not.
+- Fix: cut the length in `copied_tokens` (or compare `from + length` as `length > size - from` in `paint_tokens`), with a test of a token whose length is 1 << 40.
+
+### The palette's PmenuExtra token may give an end column as its length
+- Location: carat/use_cases/discovery/follow_palette.rb `styles`, the `tokens << char_count(line, Domain::DisplayWidth.bytes_within(line, room + NAME_WIDTH))` line
+- Why: a `SyntaxLine` token is (start column, length, group), but this pushes the column where the name's column ends, so the run reaches past the name into the key column, which would then draw in PmenuExtra; no test reads a key cell's group.
+- Fix: push that end column less `from` as the length, and add a palette test reading a key cell's group.
+
+### A concurrent lane's benchmark log fails another lane's check
+- Location: `tools/run_state.sh` `escaped_paths` (`main_scan`) and `.claude/agents/benchmark.md` step 1
+- Why: the check of picker-styles-b at 70f84e685dbd passed every stage but was refused because `build/scratch-base-build.log` appeared in the main checkout during its window; the file was written by another lane's benchmark agent redirecting its `make -C tmp/.base` output there, not by any stage, so a parallel delivery turns a clean check into a failed round.
+- Fix: have the benchmark agent write its base logs under `tmp/.base/build/` (and the guard refuse a redirection into the main checkout's `build/`), or let `main_scan` skip ignored paths another lane's agent owns, with a tools test for each.
+- Merged: ### Check refused on another lane's scratch logs in the shared build directory
+- Location: tools/run_state.sh escaped_paths (main_scan of the main checkout's build/), check of picker-styles-b at 272ead28c383
+- Why: an agent of the concurrent lane metrics-header-fix redirected its make output to build/scratch-lane-build.log, scratch-lane-metrics.log, scratch-base-build.log, and scratch-base-measure.log in the main checkout while this check ran, so every passed stage was discarded as an escape though no stage wrote them, costing a fix round with no code to change.
+- Fix: have agents write scratch output under their own lane or the session scratchpad, never the main checkout's build/, or have escaped_paths ignore files whose writer is outside the check's process tree (for example by scanning only paths the stages can reach, or by refusing only with a stage's pid recorded).
+
+### A token span on a float's selected row leaves a NormalFloat hole in the PmenuSel bar
+- Location: carat/adapters/frame_presenter.rb:682 (paint_tokens on the float layer), carat/domain/themes.rb:657
+- Why: a syntax or file-icon span on a plugin float's selected row is painted as its group on the float layer, whose background is NormalFloat's when the group has none of its own, so an icon or Comment span breaks the PmenuSel bar and loses PmenuSel's REVERSE in 16 colors; the picker's icons on its selected row will show it. Not fixed in picker-styles-b: it changes painting, new behavior beyond a fix round.
+- Fix: on a menu's selected row give a token group without its own background the row's PmenuSel background (a selected-row layer or a background override in paint_tokens), with a test reading a Comment span's background on the selected row.
+- Merged: ### A token span on a float's selected row breaks the PmenuSel bar (still present at the package head)
+- Location: carat/adapters/frame_presenter.rb:682 (paint of a float's syntax and file-icon spans), carat/domain/themes.rb:657 (a float group without its own background takes NormalFloat's)
+- Why: a syntax or file-icon span on a float's selected row is painted as its group on the float layer, so an icon or Comment span leaves a NormalFloat hole in the PmenuSel bar and loses PmenuSel's REVERSE in 16 colors; the spec's drawn-as-tokens wording allows it, but the picker's icons on its selected row will show it; raised by the quality review twice in this run (the fix round's entry above and again at the head), merged here as one finding
+- Fix: on a menu's selected row give a token group without its own background the row's PmenuSel background (a selected-row layer or a background override in paint_tokens), with a test reading a Comment span's background on the selected row
+
+### A records-only change still runs the benchmark and rebuilds the lane (sprint-22-records retro note 3)
+- Location: the bench phase of `.claude/workflows/deliver-change.js` and the check's scoped metrics stage, `tools/run_state.sh`; seen in the sprint-22-records run state.
+- Why: a diff touching no file under carat/, bin/, test/, or bench/ ran the benchmark, which rebuilt the lane because the check scoped its metrics stage to 0s, hit its 10-call cap, and found all 22 keys equal: bench=5455/10 was 11.6 percent of 47025 output tokens and 11 percent of 90 calls; records rows bench 3547/6, 4147/6, 4721/14, 3513/5, 4548/5 over sprints 16 to 20, none with a regression; sprint-21-records ran none. T1 pipeline efficiency, for the backlog lane.
+- Fix: accepted when the next records run shows no bench phase and no lane build, while a code change still fails metrics-compare on a regression.
+
+### groom folds findings entries that still name the findings files it deletes (sprint-22-records retro note 4)
+- Location: `tools/run_state.sh` groom; seen at docs/backlog.md lines 9444, 9529, 9600 after sprint-22-records.
+- Why: one folded reference failed docs-lint and was edited by hand, two more drew the run's one quality advisory and rework round 1 (quality=1164/4); records rows rework 0, 2, 2, 1, 1, 2, 1 over sprints 16 to 22. T1 pipeline defect, for the backlog lane.
+- Fix: accepted when groom's output passes docs-lint and no folded entry names a removed findings file, so the next records run needs no hand edit and no rework round from this cause.
+
+### style_float checks a span's start column only from below (sprint-23 review security Low (3), disputed)
+- Location: carat/use_cases/plugins/window_requests.rb:397 (`style_refusal`) and carat/use_cases/plugins/plugin_syntax.rb `copied_tokens`; the painter at carat/adapters/frame_presenter.rb:790 and :1141.
+- Why: a plugin may pass a span start column near the integer maximum, which the reviewer feared the painter adds to a length and overflows in compiled code; the skeptic disputed it at 8769f46 (paint_tokens at frame_presenter.rb:1139 sums only under from < size, token_group at :790 only after col >= from), so it is kept as a disputed security Low.
+- Fix: refuse a start column above LONGEST_SPAN in style_refusal and in PluginSyntax#copied_tokens, so both span paths check the same bounds, with a test of a start column of 1 << 40.
+
+### Each float request resolves the same float three times (sprint-23 review quality)
+- Location: carat/use_cases/plugins/window_requests.rb:370 (`unlisted_float_tab`), :281 (`set_float_lines`), :308 (`style_float`).
+- Why: unlisted_float_tab resolves the float through float_in after own_float_tab already did, and both requests call float_in(index, id) again, three lookups per request; picker-styles-b's quality advisory (its run state note 2) raised the same copy.
+- Fix: one private helper returning the plugin's unlisted float or nil, used by both requests in place of unlisted_float_tab plus float_in, with the existing float tests unchanged.
