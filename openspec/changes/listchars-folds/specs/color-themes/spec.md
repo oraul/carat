@@ -3,7 +3,7 @@
 ## MODIFIED Requirements
 
 ### Requirement: Text groups meet WCAG AA contrast
-In every shipped palette, drawn with the theme's background, every group that carries text SHALL have a contrast ratio of at least 4.5:1, and every decoration group (`NonText`, `EndOfBuffer`, `WinSeparator`, `FloatBorder`, `Whitespace`, `SignColumn`, and the file-icon groups) at least 3:1, at 24-bit colors and at the 256 colors written. `TabLineFill`, `PmenuSbar`, and `PmenuThumb`, which carry no text, are exempt; the guides, `Whitespace` in `carat-dark` and `carat-light`, which takes the guides' color, and Carat's float borders have their own rules.
+In every shipped palette, drawn with the theme's background, every group that carries text SHALL have a contrast ratio of at least 4.5:1, and every decoration group (`NonText`, `EndOfBuffer`, `WinSeparator`, `FloatBorder`, `Whitespace`, `SignColumn`, the file-icon groups) at least 3:1, at 24-bit colors and the 256 written. `TabLineFill`, `PmenuSbar`, and `PmenuThumb` are exempt; the guides, Carat's `Whitespace`, and float borders have their own rules.
 
 #### Scenario: Every palette passes
 - **WHEN** the contrast of every group of `carat-dark`, `carat-light`, `one_dark`, `one_light`, `dark_plus`, and `light_plus` is measured

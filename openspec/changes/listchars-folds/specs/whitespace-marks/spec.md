@@ -7,7 +7,7 @@ Neovim's `list` and `listchars` options: marks over the tabs, trailing spaces, a
 ## ADDED Requirements
 
 ### Requirement: The list option shows whitespace marks
-With `option.list` on, every text row of a file window SHALL draw, in the `Whitespace` group, the `tab` mark over each cell a tab takes (its first character on the first cell, its second on the cells after, and its third, when given, on the last cell, which alone shows it on a one-cell tab), the `trail` mark over each space after the line's last other character, and the `nbsp` mark over each no-break space (U+00A0 or U+202F). With `option.list` off, the default in fresh options and in the shipped configuration, no mark SHALL be drawn and those cells show blanks as before.
+With `option.list` on, a file window's text rows SHALL draw in `Whitespace` the `tab` mark over a tab's cells (its first character first, its second after, its third, when given, on the last cell, alone on a one-cell tab), the `trail` mark over each space after the line's last other character, and the `nbsp` mark over each U+00A0 or U+202F. With `option.list` off, the default, no mark SHALL be drawn.
 
 #### Scenario: Marks with list on
 - **WHEN** `option.list true` is set with the shipped `listchars` and a file line reads a tab, `a`, a no-break space, `b`, and two spaces
@@ -26,7 +26,7 @@ With `option.list` on, every text row of a file window SHALL draw, in the `White
 - **THEN** only the visible cells of the tab and of the trailing spaces show their marks, at their scrolled columns
 
 ### Requirement: The listchars option names the marks
-`option.listchars` SHALL take comma-separated `key:chars` items, the keys `tab` (two or three characters), `trail` (one), and `nbsp` (one), each character one column wide and not a control; a key left out draws no mark, a later item of a key wins, and an empty value draws none. Fresh options SHALL hold Neovim's default `tab:> ,trail:-,nbsp:+`. Another value SHALL be reported as `file:line: option.listchars takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide`, the value before it kept.
+`option.listchars` SHALL take comma-separated items `tab:` with two or three characters, `trail:` and `nbsp:` with one, each one column wide and not a control; a key left out draws no mark, a later item of a key wins. Fresh options SHALL hold Neovim's `tab:> ,trail:-,nbsp:+`. Another value SHALL be reported as `file:line: option.listchars takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide`, the value before it kept.
 
 #### Scenario: The shipped list options
 - **WHEN** the shipped configuration is read
