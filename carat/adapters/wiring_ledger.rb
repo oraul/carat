@@ -6,7 +6,8 @@ module Carat
     # holder, comparing each object with the shared one by identity. The
     # objects are of many classes, so only equal? is ever called on them.
     # Written while the assembly is built, never on a key; lint checks that
-    # each record's slot is a keyword the holder's construction passes.
+    # each record is of the object the holder's construction passes for
+    # the record's slot.
     class WiringLedger
       # @rbs @objects: Array[untyped]
       # @rbs @index: Hash[String, Integer]
