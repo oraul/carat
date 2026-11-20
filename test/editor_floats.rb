@@ -76,6 +76,25 @@ module EditorFloatsTest
     out
   end
 
+  # The groups, without their layer, of the first count cells of the
+  # float's text row.
+  def self.float_groups(h, row, count)
+    window = h.state.tab.floats.at(0).window
+    out = []
+    c = 0
+    while c < count
+      out << D::Highlight.base(h.frame.hl_at(window.row + row - window.top, window.col + c))
+      c += 1
+    end
+    out
+  end
+
+  def self.ints(values)
+    out = []
+    values.each { |v| out << v.to_i }
+    out
+  end
+
   def self.rows(h, from, to)
     out = []
     r = from
@@ -257,6 +276,101 @@ module EditorFloatsTest
     switched = h.plugins.window_requests.set_float_lines("test", id, ["taken"], "theirs")
     t.assert_equal([true, false, "No float #{id}", "scratch", "notes"], [h.state.window.buffer.equal?(scratch), switched.ok, switched.message, scratch.lines.join("|"), scratch.title], "A float showing a scratch buffer is not refilled and the scratch buffer keeps its lines and title")
 
+    # Scenario: A row and spans styled.
+    hl = D::Highlight
+    sel = hl::POPUP_MENU_SELECTED
+    menu = hl::POPUP_MENU
+    match = hl::POPUP_MENU_MATCH
+    plain = hl::NORMAL_FLOAT
+    h = editor
+    id = open(h, options("editor", 2, 4, 3, 10, true, "", 50, false), ["alpha", "beta", "gamma"])
+    styled = h.plugins.window_requests.style_float("test", id, 1, ints([0, 0, 2, match, 1, 1, 2, match]))
+    h.redraw
+    h.redraw
+    t.assert_equal([true, [match, match, menu, menu], [sel, hl::POPUP_MENU_MATCH_SELECTED, hl::POPUP_MENU_MATCH_SELECTED, sel], [menu, menu, menu, menu]], [styled.ok, float_groups(h, 0, 4), float_groups(h, 1, 4), float_groups(h, 2, 4)], "A row and spans styled: the selected row in PmenuSel, the others in Pmenu, the span in PmenuMatch and on the selected row in PmenuMatchSel")
+    drawn = [float_groups(h, 0, 10), float_groups(h, 1, 10), float_groups(h, 2, 10)]
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal([shown, drawn], [h.screen, [float_groups(h, 0, 10), float_groups(h, 1, 10), float_groups(h, 2, 10)]], "the styled float equals a full repaint")
+
+    # Scenario: A restyle repaints.
+    count = h.state.tab.floats.at(0).style_count
+    h.plugins.window_requests.style_float("test", id, 1, ints([2, 1, 3, match]))
+    h.redraw
+    drawn = [float_groups(h, 0, 5), float_groups(h, 1, 5), float_groups(h, 2, 5)]
+    t.assert_equal([count + 1, [menu, menu, menu, menu, menu], [sel, sel, sel, sel, sel], [menu, match, match, match, menu]], [h.state.tab.floats.at(0).style_count, drawn[0], drawn[1], drawn[2]], "A restyle repaints: the old spans are gone and the new one is drawn, with the lines and the selected row unchanged")
+    h.resize(12, 40)
+    t.assert_equal(drawn, [float_groups(h, 0, 5), float_groups(h, 1, 5), float_groups(h, 2, 5)], "the restyled float equals a full repaint")
+
+    # Scenario: Spans without a selected row.
+    styled = h.plugins.window_requests.style_float("test", id, -1, ints([0, 0, 2, sel, 2, 0, 3, hl::COMMENT, 2, 2, 1, sel]))
+    h.redraw
+    t.assert_equal([true, [sel, sel, plain, plain], [plain, plain, plain, plain], [hl::COMMENT, hl::COMMENT, sel, plain]], [styled.ok, float_groups(h, 0, 4), float_groups(h, 1, 4), float_groups(h, 2, 4)], "Spans without a selected row: the rows stay in NormalFloat, the spans in PmenuSel and Comment, a later span over an earlier one")
+
+    # Scenario: Other UI groups are refused.
+    float = h.state.tab.floats.at(0)
+    count = float.style_count
+    t.table([
+      ["Visual is refused", hl::VISUAL, "No float group #{hl::VISUAL}"],
+      ["PmenuMatchSel is refused", hl::POPUP_MENU_MATCH_SELECTED, "No float group #{hl::POPUP_MENU_MATCH_SELECTED}"],
+      ["Normal is refused", hl::NORMAL, "No float group 0"],
+      ["MsgDim, the last UI group, is refused", hl::MESSAGE_DIM, "No float group #{hl::MESSAGE_DIM}"],
+      ["a negative id is refused", -1, "No float group -1"],
+      ["an id past the last group is refused", hl::COUNT, "No float group #{hl::COUNT}"]
+    ]) do |row|
+      h.plugins.window_requests.style_float("test", id, 0, ints([0, 0, 1, row.to_i])).message
+    end
+    h.redraw
+    t.assert_equal([count, -1, [sel, sel, plain, plain]], [float.style_count, float.selected, float_groups(h, 0, 4)], "Other UI groups are refused and the float keeps its previous style")
+
+    # Scenario: Bad rows and spans are refused.
+    t.cases([
+      ["a selected row past the lines", [3, 0, 0, 1, match], "No row 3"],
+      ["a selected row below -1", [-2, 0, 0, 1, match], "No row -2"],
+      ["a span row past the lines", [-1, 3, 0, 1, match], "No row 3"],
+      ["a negative span row", [-1, -1, 0, 1, match], "No row -1"],
+      ["a negative column", [-1, 0, -1, 2, match], "No span at column -1 length 2"],
+      ["a length of zero", [-1, 0, 0, 0, match], "No span at column 0 length 0"]
+    ]) do |row|
+      values = ints(row)
+      h.plugins.window_requests.style_float("test", id, values[0], values[1, 4]).message
+    end
+    five = h.plugins.window_requests.style_float("test", id, -1, ints([0, 0, 1, match, 0]))
+    t.assert_equal([false, "Spans are row, column, length, and group", count, -1], [five.ok, five.message, float.style_count, float.selected], "Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style")
+
+    # Scenario: An empty style clears it.
+    cleared = h.plugins.window_requests.style_float("test", id, -1, ints([]))
+    h.redraw
+    t.assert_equal([true, false, [plain, plain, plain], [plain, plain, plain]], [cleared.ok, float.window.buffer.styled?, float_groups(h, 0, 3), float_groups(h, 2, 3)], "An empty style clears it: every row in NormalFloat again")
+
+    # Scenario: A refill drops the style.
+    h.plugins.window_requests.style_float("test", id, 0, ints([1, 0, 2, match]))
+    h.redraw
+    styled_before = float_groups(h, 1, 2)
+    h.plugins.window_requests.set_float_lines("test", id, ["alpha", "beta", "gamma"], "")
+    h.redraw
+    t.assert_equal([[match, match], -1, false, [plain, plain], [plain, plain]], [styled_before, float.selected, float.window.buffer.styled?, float_groups(h, 0, 2), float_groups(h, 1, 2)], "A refill drops the style: the rows are drawn in NormalFloat with no span")
+
+    # A span counts code points, and one past the line's end is cut there.
+    h.plugins.window_requests.set_float_lines("test", id, ["äbc", "x"], "")
+    multi = h.plugins.window_requests.style_float("test", id, -1, ints([0, 1, 1, match, 1, 0, 1 << 40, match]))
+    h.redraw
+    t.assert_equal([true, [plain, match, plain, plain], [match, plain, plain]], [multi.ok, float_groups(h, 0, 4), float_groups(h, 1, 3)], "a span over a multi-byte line counts code points, and a span past the line's end is cut there")
+
+    # Scenario: Another plugin's float is not styled.
+    other = h.plugins.window_requests.style_float("other", id, 0, ints([]))
+    unknown = h.plugins.window_requests.style_float("test", 999, 0, ints([]))
+    layout = h.plugins.window_requests.style_float("test", 1, 0, ints([]))
+    t.assert_equal(["No float #{id}", "No float 999", "No float 1", -1], [other.message, unknown.message, layout.message, float.selected], "Another plugin's float is not styled, nor an unknown id or a layout window")
+    h = editor
+    h.plugins.window_requests.open_scratch("test", "notes", "left", 20, ["scratch"], nil)
+    scratch = h.assembly.buffers.scratch_for("test", "notes")
+    id = open(h, options("editor", 2, 4, 1, 10, true, "mine", 50, true), ["kept"])
+    current = h.plugins.window_requests.style_float("test", 0, 0, ints([0, 0, 1, match]))
+    h.assembly.buffers.load(scratch)
+    switched = h.plugins.window_requests.style_float("test", id, 0, ints([]))
+    t.assert_equal([true, "No float #{id}", false], [current.ok, switched.message, scratch.styled?], "the current float is styled with 0, and a float switched to a listed scratch buffer is not styled")
+
     # A float closed and replaced by another at the same box.
     h = editor
     open(h, options("editor", 2, 4, 2, 10, true, "one", 50, false), ["first", "rows"])
@@ -294,7 +408,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.11", API::VERSION, "the plugin API is 2.11")
+    t.assert_equal("2.12", API::VERSION, "the plugin API is 2.12")
 
     # Scenario: An offset out of range is refused.
     h = editor

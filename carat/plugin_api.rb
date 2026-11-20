@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 11
-    VERSION = "2.11"
+    MINOR = 12
+    VERSION = "2.12"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -765,6 +765,28 @@ module Carat
         raise NotImplementedError, "Host#set_float_lines"
       end
 
+      # Styles the plugin's float with the window id, 0 for the current
+      # window, and returns a Response (from 2.12), replacing the style
+      # it had: selected is the row drawn in PmenuSel, the other rows
+      # then drawn in Pmenu as a menu's, or -1 for none (NormalFloat);
+      # spans are flat quadruples of row, start column, length, and group
+      # id, in code point columns, drawn as tokenize's tokens are, a later
+      # span over an earlier one, a PmenuMatch span on the selected row in
+      # PmenuMatchSel. A span's group is a syntax, file-icon, or markup
+      # group, PmenuSel, or PmenuMatch, by its id from syntax_group. Fails
+      # with "No float N" as set_float_lines does, "No row N" for a
+      # selected row or a span row outside the float's lines, "Spans are
+      # row, column, length, and group" for a length not a multiple of
+      # four, "No span at column C length L" for a negative column or a
+      # length below 1, and "No float group N" for any other group; a
+      # failed request changes nothing. set_float_lines drops the style.
+      # @rbs window: Integer
+      # @rbs selected: Integer
+      # @rbs spans: Array[Integer]
+      def style_float(window, selected, spans)
+        raise NotImplementedError, "Host#style_float"
+      end
+
       # Returns a FloatFrame (from 2.6): the frame a float the plugin opens
       # with that border takes under the current border style, and the
       # margin the host keeps around every box.
@@ -854,9 +876,10 @@ module Carat
       # Returns a Response whose number is the id of the syntax highlight
       # group ("Comment", "String", ... "Todo", "Error") or the file-icon
       # group ("DevIconDefault", "DevIconRb", ... "DevIconLock", API 2.1)
-      # with that name, failed with "No highlight group named x" for any
-      # other name. A tokenizer resolves its groups once, in activate, and
-      # gives the ids in its tokens.
+      # with that name, or PmenuSel or PmenuMatch for style_float's spans
+      # (2.12), failed with "No highlight group named x" for any other
+      # name. A tokenizer resolves its groups once, in activate, and gives
+      # the ids in its tokens; a token in PmenuSel or PmenuMatch is dropped.
       # @rbs name: String
       def syntax_group(name)
         raise NotImplementedError, "Host#syntax_group"
