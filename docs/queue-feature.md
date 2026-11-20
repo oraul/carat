@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 22
 
-1. `vim-case-operators` (T2 user request, estimated medium, pushed back 4, reason: the user's Sprint 21 picks): g~, gu, gU with motions, text objects, and counts, the linewise g~~ guu gUU, and ~ u U in the 5 visual modes. Where: `carat/domain/operators.rb`, keymap lines in `config/default.caratrc`, `docs/compatibility.md`, `docs/actions.md`. Accepted when a table-driven test per key matches Neovim, multibyte letters included, `.` repeats it and one `u` undoes it, with compatibility and actions rows. Backlog: none.
-2. `background-detect` (T2 user request, estimated medium, pushed back 3, reason: the user's picks): a light terminal starts on the dark theme. Where: startup in `carat/drivers/ansi_terminal.rb`, the theme option in `config/default.caratrc`. Fix outline: ask OSC 11 at startup, choose carat-light on a light reply, never wait; the reply is untrusted input, parsed bounded. Accepted when tests with a dark, a light, a malformed, and no reply pick the theme, a configured theme wins, and the first frame waits for no reply. Backlog: none.
+1. `background-detect` (T2 user request, estimated medium, pushed back 3, reason: the user's picks): a light terminal starts on the dark theme. Where: startup in `carat/drivers/ansi_terminal.rb`, the theme option in `config/default.caratrc`. Fix outline: ask OSC 11 at startup, choose carat-light on a light reply, never wait; the reply is untrusted input, parsed bounded. Accepted when tests with a dark, a light, a malformed, and no reply pick the theme, a configured theme wins, and the first frame waits for no reply. Backlog: none.
 
 ## Pool
 
@@ -36,9 +35,13 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Sprint (T2 user request): 3 features, 3 backlog; Sprint 22's features are the user's order of 2026-11-19: grep-long-files (delivering), vim-case-operators, background-detect.
-- Estimate large (T2): finder rows 997,989 to 2,075,638, 4 of the last 5 over 1,200,000; of the last two rows 1 over budget, so no size up; critical d for the host request in `carat/plugin_api.rb`.
-- Split (T2): 3 acceptance checks plus `plugin.rb:394` in 2 map areas; grep-long-files keeps the long files, the preview's end, and the grep scenario's figure, the sanitizer and the pick line go to Pool 1 `finder-path-safe`.
-- Recorded (T1): sprint-21-records retro notes 8 and 9 (rework 2, advisories_left 4 for 2 distinct) go to the findings file while the backlog lane is another delivery's; note 8 is near `rework-review-repeat`.
-- Overrun (T1): sprint-21-records small, 983,348 total in 16 min, over 500,000.
-- Security first (T0): none; 0 High or Medium at confidence 8 or above in sprint-21-records (high=0 medium=0) or the pending runs.
+- Security first (T0): none; use-case-surface-b and grep-long-files security high=0 medium=0, no periodic finding pending, sprint-21 0 High or Medium at confidence 8.
+- Sprint (T2 user request): 3 features, 3 backlog; Sprint 22's features are the user's order of 2026-11-19: grep-long-files merged 026a6a0, vim-case-operators delivering (pushed back 4), background-detect next.
+- Already met (T2): vim-case-operators acceptance held at d7f5de8: `test/editor_case_operators.rb` 99 rows in 9 scenarios, compatibility and actions rows, bound in 5 modes.
+- Size (T2): estimated small, at most missing rows or docs; of the last two feature rows 1 over budget, so no size up.
+- No split (T2): 1 operator family in 1 map area, under the 3-part rule.
+- Critical (T2): none; no rule a to d path expected.
+- Overrun (T1): grep-long-files 480,424 output over the 416,666 large budget (note 5); check-runner-safety-c medium 1,768,447 total in 107 min over 1,200,000 (use-case-surface-b note 6).
+- Recorded (T1): grep-long-files retro 6, 7 and use-case-surface-b retro 3, 4 go to the findings file, the backlog queue being the backlog lane's; retro 5 (rework 1, every gate first) merged into retro 7's entry, near `rework-review-repeat`.
+- Dropped (T1): grep-long-files note 8, a late copy of its quality note 4.
+- Placed (T1): check-runner-safety-c retro 12 and 13 are placed by use-case-surface-b's plan (Pool 13, `check-pass-budget-flag` Pool 18).

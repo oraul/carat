@@ -30,7 +30,8 @@ module Carat
     # the position left in the window's jump list, as in Neovim. zf makes
     # a fold of the lines its range covers. A linewise range reaches over
     # the closed folds at its two ends, and a doubled operator counts a
-    # closed fold as one line, as Neovim's hasFolding adjustments do.
+    # closed fold as one line, as Neovim's hasFolding adjustments do. g~,
+    # gu, and gU change the case of the range and write no register.
     class Operate
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
@@ -73,6 +74,9 @@ module Carat
         when Domain::OperatorKind::YANK then yank(state, command, range)
         when Domain::OperatorKind::INDENT then shift(state, range, 1)
         when Domain::OperatorKind::DEDENT then shift(state, range, -1)
+        when Domain::OperatorKind::SWAP_CASE then recase(state, range, :toggle)
+        when Domain::OperatorKind::LOWERCASE then recase(state, range, :lower)
+        when Domain::OperatorKind::UPPERCASE then recase(state, range, :upper)
         end
         @notice
       end
@@ -227,6 +231,16 @@ module Carat
         buffer = state.buffer
         Domain::Operators.shift(buffer, range.from.row, range.to.row, amount, options.shiftwidth, options.tabstop, options.expandtab)
         state.cursor.move_to(range.from.row, buffer.first_nonblank(range.from.row))
+      end
+
+      # g~, gu, and gU: the characters of the range change case, with no
+      # register written, and the cursor goes to the start of the range as
+      # after a yank.
+      #: (Domain::EditorState, Domain::Range, Symbol) -> void
+      def recase(state, range, how)
+        Domain::Operators.recase_range(state.buffer, range, how)
+        from = range.kind == :linewise ? range.from : range.normalized.from
+        state.cursor.move_to(from.row, clamp(state, from.row, from.col))
       end
 
       #: (Domain::EditorState, Integer, Integer) -> Integer

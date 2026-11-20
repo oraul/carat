@@ -89,6 +89,9 @@ The operand is a motion from the table above, a text object from the table below
 | `y{motion}`, `[count]yy` | `operator.yank` | Copy into the register; the cursor goes to the start of the range | `editor_operators` |
 | `>{motion}`, `[count]>>` | `operator.indent` | Indent the lines by shiftwidth, leaving empty lines empty | `editor_operators` |
 | `<{motion}`, `[count]<<` | `operator.dedent` | Dedent the lines by shiftwidth, never below column 0 | `editor_operators` |
+| `g~{motion}`, `[count]g~~`, `g~g~` | `operator.swap_case` | Switch the case of every character of the range, writing no register; charwise leaves the cursor at the start, linewise where it was on the first line; a letter with no single-letter form stays | `editor_case_operators` |
+| `gu{motion}`, `[count]guu`, `gugu` | `operator.lowercase` | Lower the case of every character of the range, the cursor as for `g~` | `editor_case_operators` |
+| `gU{motion}`, `[count]gUU`, `gUgU` | `operator.uppercase` | Upper the case of every character of the range, the cursor as for `g~`; `ß` becomes `SS` as in Neovim | `editor_case_operators` |
 | `[count]x` | `operator.delete_char` | Delete count characters under and after the cursor, within the line | `editor_operators` |
 | `[count]s` | `operator.substitute_char` | Delete count characters and enter insert mode | `editor_operators` |
 | `[count]S` | `operator.substitute_line` | As `cc` | `editor_operators` |
@@ -103,7 +106,7 @@ The operand is a motion from the table above, a text object from the table below
 
 Exclusive motions follow Vim's two adjustments: an operator range ending in column 0 of a later line ends at the end of the previous line inclusively, and becomes linewise when it started at or before the first non-blank; `w` under an operator stops at the end of the line when the last word moved over ends there (`editor_operators`).
 
-Differences from Neovim: the `=`, `g~`, `gu`, `gU`, and `gq` operators and `X` are not implemented in normal mode (visual mode has `u U X`); `r<CR>` does not split the line and `r` with fewer characters left than its count does nothing silently where Neovim beeps; `tildeop` does not exist; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
+Differences from Neovim: the `=` and `gq` operators and `X` are not implemented in normal mode (visual mode has `u U X`); a letter changes by itself as Neovim's simple case mapping has it, with `ß` becoming `SS` under `gU` and `U` and `İ` becoming `i` when lowered, and a letter whose case form is several characters (a ligature) stays; `r<CR>` does not split the line and `r` with fewer characters left than its count does nothing silently where Neovim beeps; `tildeop` does not exist; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
 
 ## Text objects
 
@@ -200,7 +203,8 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 | `["x][count]p` | `visual.put` | Replace the selection with the register; the removed text goes to the unnamed register and to `"1` or `"-` as a delete | `editor_visual` |
 | `["x][count]P` | `visual.put_keep` | Replace the selection with the register, leaving every register unchanged | `editor_visual` |
 | `r{char}` | `visual.replace` | Replace every selected character, not the line breaks | `editor_visual` |
-| `~`, `u`, `U` | `visual.toggle_case`, `visual.lowercase`, `visual.uppercase` | Toggle, lower, or upper the case of the selection | `editor_visual` |
+| `~`, `u`, `U` | `visual.toggle_case`, `visual.lowercase`, `visual.uppercase` | Toggle, lower, or upper the case of the selection | `editor_visual`, `editor_case_operators` |
+| `g~`, `gu`, `gU` | `operator.swap_case`, `operator.lowercase`, `operator.uppercase` | As `~`, `u`, and `U`, on the selection at once; the dot command repeats them on as many characters or lines | `editor_case_operators` |
 | `["x]X`, `["x]D` | `visual.delete_lines`, `visual.delete_to_end` | Delete the selected lines; in a block `X` deletes the block and `D` to the end of every row | `editor_visual` |
 | `["x]Y` | `visual.yank_lines` | Yank the selected lines; in a block, the block | `editor_visual` |
 | `["x]C`, `["x]S`, `["x]R` | `visual.change_to_end`, `visual.change_lines` | Change the selected lines; in a block `C` changes to the end of every row | `editor_visual` |

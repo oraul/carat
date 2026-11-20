@@ -16,3 +16,7 @@
 - Location: the package step's advisory recording in `.claude/workflows/deliver-change.js`, the advisories_left count of the run state.
 - Why: sprint-21-records notes 5 and 6 at 934b93604302 repeat notes 3 and 4 at 528d21f2c165, so advisories_left is 4 for 2 distinct findings and docs/findings/ counts one defect twice; the quality review 2557/5 and the closing start 991/1 were spent on the repeats (sprint-21-records retro note 9).
 - Fix: match a later round's advisory to an earlier one by location and finding before recording; accepted when a records-only fix round's repeats are not re-recorded and advisories_left equals the distinct findings.
+
+## Findings of grep-long-files after its package step
+
+- quality advisory docs/findings/grep-long-files.md:10 docs format: the planner's appended entry '### A records run's advisories...' follows the previous entry's Fix line with no blank line, because plan-apply appends build/plan/ change /backlog.md with a bare cat (tools/run_state.sh:1926); fix: insert the blank line, and have plan_apply print a separating newline before appending to a non-empty fin

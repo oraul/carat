@@ -69,6 +69,7 @@ module EditorSubstituteTest
       ["the whole match", ["abc\n", [0, 0], ":s/b/[&]/<CR>"], [[0, 0], "", "a[b]c"]],
       ["groups", ["abc\n", [0, 0], ":s/\\(a\\)\\(b\\)/\\2\\1/<CR>"], [[0, 0], "", "bac"]],
       ["case", ["one two\n", [0, 0], ":s/\\w\\+/\\u&/g<CR>"], [[0, 0], "", "One Two"]],
+      ["case escape on a dotted capital I", ["İ\n", [0, 0], ":s/İ/\\L&/<CR>"], [[0, 0], "", "i"]],
       ["line breaks", ["a,b,c\n", [0, 0], ":s/,/\\r/g<CR>"], [[2, 0], "", "a|b|c"]],
       ["line breaks on several lines", ["a,b\nx\nc,d\n", [0, 0], ":%s/,/\\r/<CR>"], [[4, 0], "", "a|b|x|c|d"]],
       ["the previous string", ["a\nb\n", [0, 0], ":s/a/xy/<CR>j:s/b/~~/<CR>"], [[1, 0], "", "xy|xyxy"]],

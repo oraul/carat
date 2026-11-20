@@ -28,6 +28,8 @@ module Carat
       # @rbs @swap_visual_ends: SwapVisualEnds
       # @rbs @variant: Symbol
 
+      attr_reader :recase_selection #: RecaseSelection
+
       #: (delete_selection: DeleteSelection, yank_selection: YankSelection, change_selection: ChangeSelection, join_selection: JoinSelection, recase_selection: RecaseSelection, insert_at_selection: InsertAtSelection, put_over_selection: PutOverSelection, swap_visual_ends: SwapVisualEnds, variant: Symbol, kind: Symbol) -> void
       def initialize(delete_selection:, yank_selection:, change_selection:, join_selection:, recase_selection:, insert_at_selection:, put_over_selection:, swap_visual_ends:, variant:, kind:)
         super(kind: kind, repeat: true)
