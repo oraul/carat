@@ -8,12 +8,13 @@ This is a pipeline defect (security Medium) outside the roadmap of `docs/archite
 
 ## What Changes
 
-- `tools/run_state.sh`, `escaped_paths`, `tree_scan` (new): the delivery clone's scan becomes `tree_scan`, run also over the main checkout in a lane (the common directory's work tree), with the same parts left out (its `.git`, `tmp/` with the lanes, and the run states, stage logs, plans, and compile cache).
-- `tools/run_state.sh`, `escaped_paths`, `refs_view` (new): the common directory's references are compared by their listing (name and object), less the remote-tracking refs, which a fetch or push of any lane rewrites and the next fetch restores, and the branches checked out in another linked worktree, which their lanes commit to.
+- `tools/run_state.sh`, `escaped_paths`, `tree_scan` (new): the delivery clone's `find` becomes `tree_scan`, the same parts left out (its `.git`, `tmp/` with the lanes, and the run states, stage logs, plans, and compile cache).
+- `tools/run_state.sh`, `main_scan`, `main_view`, `main_moved` (new): from a lane the main checkout (the common directory's work tree) is checked: its untracked files changed during the check (`tree_scan`, directories and tracked files left out), its status against its HEAD and its flagged index entries, and its HEAD, which may move only to its branch's remote-tracking ref, so the merger's close of another lane (`git checkout main && git merge --ff-only origin/main`) leaves the check passing.
+- `tools/run_state.sh`, `refs_view`, `lane_branches` (new): the common directory's references are compared by their listing (name and object), less the remote-tracking refs, which a fetch or push of any lane rewrites and the next fetch restores, the branches checked out in another linked worktree at the mark or at the scan, which their lanes commit to and the merger deletes, and from a lane the main checkout's branch (`main_moved`).
 - `tools/run_state.sh`, `escaped_paths`: the common directory's `info/` and `$HOME/.gitconfig` are scanned like the hooks.
-- `tools/run_state.sh`, `escaped_paths`, `index_view` (new): the lane's git directory is scanned without its `index` (and `index.lock`) and without its own entry, and the index of the delivery clone, and in a lane the main checkout's, is compared by its staged entries (`git ls-files --stage -v`), so a stat refresh passes and a staged change fails.
-- `tools/run_state.sh`, `escape_mark`: notes the main checkout, the references, and the staged entries beside the configuration.
-- `tools/tools_test.sh`: a lane check fails for a stage writing the main checkout's file, staging into the main checkout's index or the lane's, writing the common `info/`, a common reference, or `$HOME/.gitconfig`; it passes with a lane index refresh, a remote-tracking ref, and another lane's branch written during it.
+- `tools/run_state.sh`, `escaped_paths`, `index_view` (new): the lane's git directory is scanned without its `index` (and `index.lock`) and without its own entry, and the delivery clone's index is compared by its staged entries (`git ls-files --stage -v`), so a stat refresh passes and a staged change fails.
+- `tools/run_state.sh`, `escape_mark`: notes the main checkout, its branch, HEAD, and state, the lanes' branches, the references, and the staged entries beside the configuration.
+- `tools/tools_test.sh`: a lane check fails for a stage writing a tracked or an untracked file of the main checkout, staging into its index or the lane's, moving its HEAD, writing the common `info/`, a common reference, or `$HOME/.gitconfig`; it passes with a lane index refresh, another lane's commit, a lane's worktree removed with its branch kept, and the main checkout's branch fast-forwarded to its remote-tracking ref during it.
 
 ## Capabilities
 
@@ -28,12 +29,12 @@ None.
 ## Out of scope
 
 - No `tools/rules.sh` edit; no file of the feature lane.
-- The XDG global configuration (`~/.config/git/config`) and the main checkout's `HEAD` (`COMMON/HEAD`), which the reference listing leaves out: not in the queue item, recorded in `docs/findings/check-runner-safety-c.md`. The common `objects/`, which every lane writes, stay unscanned.
+- The XDG global configuration (`~/.config/git/config`), and the main checkout's `HEAD` switched to another branch at the same commit (`main_moved` compares the commit only): not in the queue item, recorded in `docs/findings/check-runner-safety-c.md`. The common `objects/`, which every lane writes, stay unscanned, and so do the remote-tracking refs (Design, Risks).
 - A stage that deletes a file of the lane's git directory leaves no entry with a new status-change time once its directory's own entry is left out; such a deletion breaks only the lane itself.
 
 ## Impact
 
-- README.md: the checker paragraph names what the scan covers, now the main checkout, the common references and `info/`, and the global git configuration.
-- docs/codebase-map.md: area 1's `tools/run_state.sh` entry names `tree_scan`, `refs_view`, and `index_view`.
+- README.md: the checker paragraph names what the scan covers, now the main checkout, the common references, `info/`, and staged files, and the global git configuration, and what concurrent work leaves it passing.
+- docs/codebase-map.md: area 1's `tools/run_state.sh` entry names `tree_scan`, `main_scan`, `main_view`, `main_moved`, `refs_view`, `lane_branches`, and `index_view`.
 - CLAUDE.md: unchanged, it does not describe the check's scan, and no command, agent, or rule changes.
 - docs/architecture.md: unchanged, no layer, port, or module is touched.
