@@ -899,7 +899,7 @@ judge() {
       only_profiles contributor npx
       pkg=${2:-}
       case "$pkg" in -y|--yes) pkg=${3:-} ;; esac
-      case "$pkg" in @fission-ai/openspec@2.1.1) ;; *) refuse "npx of other than @fission-ai/openspec@2.1.1" ;; esac ;;
+      case "$pkg" in @fission-ai/openspec@2.1.1) ;; *) refuse "npx of other than the Makefile's OPENSPEC_PACKAGE" ;; esac ;;
     *) refuse "$1 is not a command of this profile" ;;
   esac
   i=0

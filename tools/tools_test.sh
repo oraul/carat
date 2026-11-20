@@ -3023,9 +3023,9 @@ expect "guard: contributor refuses a command in a make variable" 2 "a shell char
 expect "guard: contributor refuses npx of another package" 2 "npx of other than" guard contributor 'npx cowsay x'
 # OpenSpec only at the pinned version: a tag or the bare name runs whatever
 # the registry or npx's cache names, beside the push credentials.
-expect "guard: contributor refuses npx of OpenSpec at latest" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx -y @fission-ai/openspec@latest validate --all --strict --no-interactive'
-expect "guard: contributor refuses npx of OpenSpec unversioned" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx @fission-ai/openspec validate --all'
-expect "guard: contributor refuses npx of another OpenSpec version" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx --yes @fission-ai/openspec@2.1.0 list'
+expect "guard: contributor refuses npx of OpenSpec at latest" 2 "npx of other than the Makefile's OPENSPEC_PACKAGE[.] Each" guard contributor 'npx -y @fission-ai/openspec@latest validate --all --strict --no-interactive'
+expect "guard: contributor refuses npx of OpenSpec unversioned" 2 "npx of other than the Makefile's OPENSPEC_PACKAGE[.] Each" guard contributor 'npx @fission-ai/openspec validate --all'
+expect "guard: contributor refuses npx of another OpenSpec version" 2 "npx of other than the Makefile's OPENSPEC_PACKAGE[.] Each" guard contributor 'npx --yes @fission-ai/openspec@2.1.0 list'
 expect "guard: contributor refuses a script by a path" 2 "a command named by a path" guard contributor './tools/run_state.sh push c'
 expect "guard: contributor refuses a link" 2 "ln is not a command" guard contributor 'ln -s c.json build/x'
 expect "guard: contributor refuses a copy into .git" 2 "a write under .git" guard contributor 'cp x .git/hooks/pre-commit'
@@ -3681,6 +3681,10 @@ one_pin() {
   [ "$(pins | wc -l)" -eq 4 ] && [ "$(pins | sort -u | wc -l)" -eq 1 ] && pins | head -n 1
 }
 expect "spec_validate: the Makefile, the script, the guard, and CLAUDE.md pin one OpenSpec version" 0 "^@fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+$" one_pin
+# The guard names the version only in its case pattern, its refusal naming
+# OPENSPEC_PACKAGE, so a bump of the four pins leaves no stale version.
+guard_versions() { grep -o '@fission-ai/openspec@[0-9]' "$here/agent_guard.sh" | wc -l | tr -d ' '; }
+expect "spec_validate: the guard names the pinned version once" 0 "^1$" guard_versions
 
 # ---------------------------------------------------------------- gates.sh
 

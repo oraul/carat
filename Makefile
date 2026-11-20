@@ -135,7 +135,8 @@ GENERATED    := carat/domain/default_config.rb carat/plugins/registry.rb
 # OpenSpec at one exact version, never a tag the registry moves: it runs
 # beside the push credentials. tools/spec_validate.sh, the contributor's
 # npx case in tools/agent_guard.sh, and CLAUDE.md's OpenSpec line name the
-# same package, which a tools test case keeps equal; a bump edits all four.
+# same package, which tools test cases keep equal; a bump edits all four,
+# the guard's refusal naming OPENSPEC_PACKAGE rather than the version.
 OPENSPEC_PACKAGE := @fission-ai/openspec@2.1.1
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y $(OPENSPEC_PACKAGE)
 
