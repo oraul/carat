@@ -28,6 +28,17 @@ module EditorPaletteTest
     h
   end
 
+  # A session on an empty e.txt with the default configuration, the keys
+  # typed.
+  def self.empty_session(keys)
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("e.txt", "")
+    h = Carat::Doubles::EditorHarness.default(files, 24, 80)
+    h.open("e.txt")
+    h.type(keys.to_s)
+    h
+  end
+
   # A session on a.txt with the hello plugin and the project lines, the
   # keys typed.
   def self.plugin_session(project, keys)
@@ -223,6 +234,10 @@ module EditorPaletteTest
       ["segment starts win", "<Space>pws", [1, "cmdline", "Commands", "window.split"]],
       ["an ex command is found", "<Space>pnohl", [1, "cmdline", "Commands", ":nohlsearch"]],
       ["a leading colon is ignored", "<Space>p:nohl", [1, "cmdline", "Commands", ":nohlsearch"]],
+      # Edge cases: a text of colons alone is empty once they are dropped,
+      # so every entry shows; a trailing blank is matched like any character.
+      ["colons alone list every entry", "<Space>p::", [1, "cmdline", "Commands", "motion.repeat_find"]],
+      ["a trailing blank is part of the text, so nothing matches", "<Space>pwsp ", [1, "cmdline", "Commands", "No"]],
       ["nothing matches", "<Space>pzzzzqx", [1, "cmdline", "Commands", "No"]],
       ["backspace widens the list", "<Space>pzzzzqx<BS><BS><BS><BS><BS><BS>", [1, "cmdline", "Commands", "motion.repeat_find"]],
       ["Esc closes the palette", "<Space>psplit<Esc>", [0, "normal", "", ""]],
@@ -236,6 +251,14 @@ module EditorPaletteTest
     h = session("<Space>p")
     t.assert_equal(">", h.message_row[0, 1], "the prompt is >")
     t.assert_equal(h.assembly.actions.names[0], name_at(h, 0), "the first row is the first action registered")
+    # Edge case: the palette over an empty buffer lists the same entries
+    # and Esc leaves the buffer's one empty line as it was.
+    empty = empty_session("<Space>p")
+    count = empty.state.tab.floats.count
+    top = name_at(empty, 0)
+    same = lines(empty).length == lines(h).length
+    empty.type("<Esc>")
+    t.assert_equal([1, h.assembly.actions.names[0], true, 0, [""]], [count, top, same, empty.state.tab.floats.count, empty.lines], "the palette over an empty buffer lists every entry and Esc leaves the buffer empty")
     # Scenario: The label first, the key in caret notation on the right.
     # The description leads from cell 0, the name's 30-cell column
     # follows 42 cells before the row's end, and the key stands in the

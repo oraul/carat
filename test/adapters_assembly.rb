@@ -29,6 +29,16 @@ module AdaptersAssemblyTest
     # stranger, the same object is not.
     t.assert_equal([["second"], []], [strangers(a.buffers, [["second", Carat::Domain::BufferList.new(tabs: a.tabs)]]), strangers(a.buffers, [["same", a.buffers]])], "strangers tells a second object from the shared one")
 
+    # A holder without readers is read through the wiring ledger the
+    # assembly fills: a pair it never recorded is a stranger, and a second
+    # record of a pair replaces its object in place. That each record's
+    # slot is a keyword of the holder's construction is lint's check.
+    w = a.wiring
+    probe = Carat::Adapters::WiringLedger.new
+    probe.record("holder", "slot", a.tabs)
+    probe.record("holder", "slot", a.buffers)
+    t.assert_equal([["unrecorded"], []], [strangers(a.keymap, [["unrecorded", w.held("hide_key_hints", "keymap")]]), strangers(a.buffers, [["replaced", probe.held("holder", "slot")]])], "the ledger answers no object for a pair it never recorded and replaces a recorded one in place")
+
     # Each shared object is one instance, held by every collaborator that
     # needs it.
     t.assert_equal([], strangers(a.buffers, [
@@ -156,18 +166,18 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.open_float, [["show_signature", a.show_signature.open_float]]), "the open float use case, in the signature")
     t.assert_equal([], strangers(a.close_float, [["show_signature", a.show_signature.close_float], ["follow_signature", a.follow_signature.close_float]]), "the close float use case, in the signature")
     t.assert_equal([], strangers(a.close_float, [["show_hover", a.show_hover.close_float], ["follow_hover", a.follow_hover.close_float], ["pin_hover", a.pin_hover.close_float]]), "the close float use case, in the hover")
-    t.assert_equal([], strangers(a.key_hints, [["handle_key", a.handle_key.key_hints], ["show_key_hints", a.show_key_hints.hints], ["hide_key_hints", a.hide_key_hints.hints]]), "the key hints")
-    t.assert_equal([], strangers(a.palette, [["handle_key", a.handle_key.palette], ["execute_command_line", a.execute_command_line.palette], ["frame_presenter", a.frame_presenter.palette], ["open_palette", a.open_palette.palette], ["follow_palette", a.follow_palette.palette]]), "the command palette")
-    t.assert_equal([true, true, true, true], [a.handle_key.hide_key_hints.equal?(a.hide_key_hints), a.show_key_hints.hide_key_hints.equal?(a.hide_key_hints), a.handle_key.follow_palette.equal?(a.follow_palette), a.controller.show_key_hints.equal?(a.show_key_hints)], "the key handler and the key hints hold the one HideKeyHints, the key handler the one FollowPalette, the input controller the one ShowKeyHints")
-    t.assert_equal([], strangers(a.keymap, [["show_key_hints", a.show_key_hints.keymap], ["open_palette", a.open_palette.keymap]]), "the keymap, in the key hints and the palette")
-    t.assert_equal([], strangers(a.input, [["show_key_hints", a.show_key_hints.input]]), "the input state, in the key hints")
-    t.assert_equal([], strangers(a.plugins, [["show_key_hints", a.show_key_hints.plugins], ["open_palette", a.open_palette.plugins]]), "the plugin host, in the key hints and the palette")
-    t.assert_equal([], strangers(a.commands, [["open_palette", a.open_palette.commands]]), "the ex table, in the palette")
-    t.assert_equal([], strangers(a.plugin_ui, [["open_palette", a.open_palette.plugin_ui]]), "the plugin UI, in the palette")
-    t.assert_equal([], strangers(a.search_prompt, [["open_palette", a.open_palette.search_prompt]]), "the search prompt, in the palette")
-    t.assert_equal([], strangers(a.open_float, [["show_key_hints", a.show_key_hints.open_float], ["follow_palette", a.follow_palette.open_float]]), "the open float use case, in the key hints and the palette")
-    t.assert_equal([], strangers(a.close_float, [["hide_key_hints", a.hide_key_hints.close_float], ["follow_palette", a.follow_palette.close_float]]), "the close float use case, in the key hints and the palette")
-    t.assert_equal([], strangers(a.actions, [["show_key_hints", a.show_key_hints.actions], ["open_palette", a.open_palette.actions]]), "the action table, in the key hints and the palette")
+    t.assert_equal([], strangers(a.key_hints, [["handle_key", a.handle_key.key_hints], ["show_key_hints", w.held("show_key_hints", "hints")], ["hide_key_hints", w.held("hide_key_hints", "hints")]]), "the key hints")
+    t.assert_equal([], strangers(a.palette, [["handle_key", a.handle_key.palette], ["execute_command_line", a.execute_command_line.palette], ["frame_presenter", a.frame_presenter.palette], ["open_palette", w.held("open_palette", "palette")], ["follow_palette", w.held("follow_palette", "palette")]]), "the command palette")
+    t.assert_equal([true, true, true, true], [a.handle_key.hide_key_hints.equal?(a.hide_key_hints), w.held("show_key_hints", "hide_key_hints").equal?(a.hide_key_hints), a.handle_key.follow_palette.equal?(a.follow_palette), a.controller.show_key_hints.equal?(a.show_key_hints)], "the key handler and the key hints hold the one HideKeyHints, the key handler the one FollowPalette, the input controller the one ShowKeyHints")
+    t.assert_equal([], strangers(a.keymap, [["show_key_hints", w.held("show_key_hints", "keymap")], ["open_palette", w.held("open_palette", "keymap")]]), "the keymap, in the key hints and the palette")
+    t.assert_equal([], strangers(a.input, [["show_key_hints", w.held("show_key_hints", "input")]]), "the input state, in the key hints")
+    t.assert_equal([], strangers(a.plugins, [["show_key_hints", w.held("show_key_hints", "plugins")], ["open_palette", w.held("open_palette", "plugins")]]), "the plugin host, in the key hints and the palette")
+    t.assert_equal([], strangers(a.commands, [["open_palette", w.held("open_palette", "commands")]]), "the ex table, in the palette")
+    t.assert_equal([], strangers(a.plugin_ui, [["open_palette", w.held("open_palette", "plugin_ui")]]), "the plugin UI, in the palette")
+    t.assert_equal([], strangers(a.search_prompt, [["open_palette", w.held("open_palette", "search_prompt")]]), "the search prompt, in the palette")
+    t.assert_equal([], strangers(a.open_float, [["show_key_hints", w.held("show_key_hints", "open_float")], ["follow_palette", w.held("follow_palette", "open_float")]]), "the open float use case, in the key hints and the palette")
+    t.assert_equal([], strangers(a.close_float, [["hide_key_hints", w.held("hide_key_hints", "close_float")], ["follow_palette", w.held("follow_palette", "close_float")]]), "the close float use case, in the key hints and the palette")
+    t.assert_equal([], strangers(a.actions, [["show_key_hints", w.held("show_key_hints", "actions")], ["open_palette", w.held("open_palette", "actions")]]), "the action table, in the key hints and the palette")
     t.assert_equal([], strangers(a.actions, [["dispatcher", a.dispatcher.actions], ["handle_key", a.handle_key.actions], ["repeat_last", a.repeat_last.actions]]), "the action table")
     t.assert_equal([], strangers(a.dispatcher, [["handle_key", a.handle_key.dispatcher]]), "the dispatcher")
     t.assert_equal([], strangers(a.insert_text, [["handle_key", a.handle_key.insert_text], ["repeat_last", a.repeat_last.insert_text]]), "the insert text use case")

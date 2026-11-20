@@ -8,8 +8,8 @@ module Carat
     # handled, as does a binding resolved by timeoutlen. HandleKey calls
     # it only while the hints show.
     class HideKeyHints
-      attr_reader :hints #: Domain::KeyHints
-      attr_reader :close_float #: CloseFloat
+      # @rbs @hints: Domain::KeyHints
+      # @rbs @close_float: CloseFloat
 
       #: (hints: Domain::KeyHints, close_float: CloseFloat) -> void
       def initialize(hints:, close_float:)

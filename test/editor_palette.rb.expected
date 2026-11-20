@@ -4,12 +4,15 @@ ok   a fuzzy text picks the window split
 ok   segment starts win
 ok   an ex command is found
 ok   a leading colon is ignored
+ok   colons alone list every entry
+ok   a trailing blank is part of the text, so nothing matches
 ok   nothing matches
 ok   backspace widens the list
 ok   Esc closes the palette
 ok   Enter runs an action
 ok   the prompt is >
 ok   the first row is the first action registered
+ok   the palette over an empty buffer lists every entry and Esc leaves the buffer empty
 ok   The label first, the key in caret notation on the right: the description, the name, and the key
 ok   the palette shows its own key
 ok   A 29-character name is whole, a space after it
@@ -54,4 +57,4 @@ ok   the palette shows every row whole under winborder none at 80 by 24
 ok   Without an edge the palette uses the border columns, the screen less its margin and its padding
 ok   The palette is centered without a border: as many columns left of its box as right
 ok   The palette is centered again after a resize: centered at 120 columns and at 100
-editor_palette: 56 passed, 0 failed
+editor_palette: 59 passed, 0 failed

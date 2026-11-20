@@ -14,6 +14,11 @@ ok   the member and keyword name rule
 ok   the port table rows read the method spans of section 6
 ok   the port table rule
 ok   the shared holder rule
+ok   the shared holder rule takes a ledger record of the object the construction passes, read by the test, of a keyword the construction passes and the holder stores
+ok   a readerless holder stores each keyword its signature types shared under its own name, with a ledger record
+ok   a readerless holder checks each keyword once, by its signature, and any other holder by its # @rbs line
+ok   a readerless holder reports a keyword of def initialize its one-line signature does not type
+ok   the readerless directory rule
 ok   typed_readers reads one-name readers with a type
 ok   the double require rule
 ok   the production require graph names no double
@@ -37,4 +42,4 @@ ok   the untyped parameter rule
 ok   the shared list rule
 ok   no lint violations
 ok   every method and attribute has an inline RBS signature
-lint: 39 passed, 0 failed
+lint: 44 passed, 0 failed

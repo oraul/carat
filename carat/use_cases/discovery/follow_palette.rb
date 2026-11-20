@@ -43,9 +43,9 @@ module Carat
       EMPTY = "No match"
       private_constant :Z, :MAX_ROWS, :MAX_WIDTH, :NAME_WIDTH, :KEY_WIDTH, :LABEL_MIN, :CUT, :CUT_ASCII, :TITLE, :EMPTY
 
-      attr_reader :palette #: Domain::Palette
-      attr_reader :open_float #: OpenFloat
-      attr_reader :close_float #: CloseFloat
+      # @rbs @palette: Domain::Palette
+      # @rbs @open_float: OpenFloat
+      # @rbs @close_float: CloseFloat
 
       #: (palette: Domain::Palette, open_float: OpenFloat, close_float: CloseFloat) -> void
       def initialize(palette:, open_float:, close_float:)

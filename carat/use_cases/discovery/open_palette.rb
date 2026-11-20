@@ -23,13 +23,13 @@ module Carat
     # a search prompt that was open is closed. FollowPalette shows the
     # list after the key.
     class OpenPalette
-      attr_reader :actions #: ActionTable
-      attr_reader :commands #: ExTable
-      attr_reader :keymap #: Domain::Keymap
-      attr_reader :plugins #: PluginHost
-      attr_reader :palette #: Domain::Palette
-      attr_reader :plugin_ui #: Domain::PluginUi
-      attr_reader :search_prompt #: Domain::SearchPrompt
+      # @rbs @actions: ActionTable
+      # @rbs @commands: ExTable
+      # @rbs @keymap: Domain::Keymap
+      # @rbs @plugins: PluginHost
+      # @rbs @palette: Domain::Palette
+      # @rbs @plugin_ui: Domain::PluginUi
+      # @rbs @search_prompt: Domain::SearchPrompt
 
       #: (actions: ActionTable, commands: ExTable, keymap: Domain::Keymap, plugins: PluginHost, palette: Domain::Palette, plugin_ui: Domain::PluginUi, search_prompt: Domain::SearchPrompt) -> void
       def initialize(actions:, commands:, keymap:, plugins:, palette:, plugin_ui:, search_prompt:)

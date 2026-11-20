@@ -34,13 +34,13 @@ module Carat
       UNNAMED = "group"
       private_constant :Z, :GAP, :UNNAMED
 
-      attr_reader :keymap #: Domain::Keymap
-      attr_reader :input #: Domain::InputState
-      attr_reader :actions #: ActionTable
-      attr_reader :plugins #: PluginHost
-      attr_reader :hints #: Domain::KeyHints
-      attr_reader :open_float #: OpenFloat
-      attr_reader :hide_key_hints #: HideKeyHints
+      # @rbs @keymap: Domain::Keymap
+      # @rbs @input: Domain::InputState
+      # @rbs @actions: ActionTable
+      # @rbs @plugins: PluginHost
+      # @rbs @hints: Domain::KeyHints
+      # @rbs @open_float: OpenFloat
+      # @rbs @hide_key_hints: HideKeyHints
 
       #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, plugins: PluginHost, hints: Domain::KeyHints, open_float: OpenFloat, hide_key_hints: HideKeyHints) -> void
       def initialize(keymap:, input:, actions:, plugins:, hints:, open_float:, hide_key_hints:)
