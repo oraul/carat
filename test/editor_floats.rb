@@ -248,6 +248,15 @@ module EditorFloatsTest
     t.assert_equal([false, "No float #{id}", "No float 999", "No float 1"], [other.ok, other.message, unknown.message, layout.message], "Another plugin's float is not refilled, nor an unknown id or a layout window")
     t.assert_equal(["kept", "mine", "line 1"], [float.window.buffer.lines.join("|"), float.spec.title, h.state.buffer.line(0)], "the float keeps its lines and title and the layout window its text")
 
+    # Scenario: A float showing a scratch buffer is not refilled.
+    h = editor
+    h.plugins.window_requests.open_scratch("test", "notes", "left", 20, ["scratch"], nil)
+    scratch = h.assembly.buffers.scratch_for("test", "notes")
+    id = open(h, options("editor", 2, 4, 1, 10, true, "mine", 50, true), ["kept"])
+    h.assembly.buffers.load(scratch)
+    switched = h.plugins.window_requests.set_float_lines("test", id, ["taken"], "theirs")
+    t.assert_equal([true, false, "No float #{id}", "scratch", "notes"], [h.state.window.buffer.equal?(scratch), switched.ok, switched.message, scratch.lines.join("|"), scratch.title], "A float showing a scratch buffer is not refilled and the scratch buffer keeps its lines and title")
+
     # A float closed and replaced by another at the same box.
     h = editor
     open(h, options("editor", 2, 4, 2, 10, true, "one", 50, false), ["first", "rows"])

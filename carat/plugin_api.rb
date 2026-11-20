@@ -755,8 +755,9 @@ module Carat
       # for the current window, with the lines, and its title with the
       # title, and returns a Response (from 2.11); the window id, box, z
       # order, and focus stay, and the float's cursor goes back to its
-      # first line. Fails with "No float N" for another plugin's float or
-      # an unknown id.
+      # first line. Fails with "No float N" for another plugin's float, an
+      # unknown id, or a float switched to a listed buffer such as one of
+      # the plugin's scratch buffers.
       # @rbs window: Integer
       # @rbs lines: Array[String]
       # @rbs title: String

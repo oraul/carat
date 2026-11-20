@@ -12,3 +12,9 @@
 ## 3. Docs
 
 - [x] 3.1 `docs/plugins.md` (request row, version history, `api_version`, the finder's floats) and `docs/codebase-map.md` area 15 (proved by `make docs-lint` and `make lint`)
+
+## 4. Review fixes
+
+- [x] 4.1 `carat/use_cases/plugins/window_requests.rb` `set_float_lines` refuses with "No float N" a float switched to a listed buffer, such as one of the plugin's scratch buffers, and `docs/plugins.md` and `carat/plugin_api.rb` say so (proved by "A float showing a scratch buffer is not refilled" in `test/editor_floats.rb`)
+- [x] 4.2 `carat/plugins/finder/plugin.rb` closes the preview through one private `close_preview`, used by `refresh` and `close_floats` (proved by the unchanged rows of `test/editor_finder.rb`)
+- [x] 4.3 `docs/codebase-map.md` names `FloatSpec#titled` (proved by `make docs-lint`)
