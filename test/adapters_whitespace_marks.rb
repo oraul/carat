@@ -129,6 +129,14 @@ module AdaptersWhitespaceMarksTest
       s.window.folds.create(0, 1)
       s.window.folds.close_at(0)
       rows_of(draw(s), 2)
+    when "float"
+      s = state_for(["x"], 0, 0)
+      spec = D::FloatSpec.new(anchor: "editor", row: 2, col: 2, height: 2, width: 10, border: false, title: "", z: 50)
+      float = D::FloatWindow.new(window: D::Window.new(buffer: D::Buffer.new(lines: ["\tf  ", "g\u00a0h "], path: nil, line_ending: "\n")), spec: spec)
+      s.tab.floats.add(float, false)
+      rows = rows_of(draw(s), 4)
+      # The groups of the float's two rows.
+      [rows[5], rows[7]]
     when "after a plugin window"
       s = state_for(MIXED, 0, 0)
       s.window.buffer.owner = "explorer"
@@ -180,6 +188,7 @@ module AdaptersWhitespaceMarksTest
       ["Multi-byte: a tab after é, a space before a no-break space is not trailing, U+202F marked", "multibyte", ["?→   ␣·", " www ww", "a␣b", " w"]],
       ["A tab's mark shows over an indent guide; spaces keep the guide", "over a guide", ["→   x", "wwww", "|   y", ""]],
       ["A plugin window draws no marks", "plugin", ["    a b", ""]],
+      ["A float draws no marks", "float", ["", ""]],
       ["A closed fold's row draws no marks; the row after it does", "fold", ["+--  2 lines: x", "", "w··", " ww"]],
       ["A row drawn in a plugin window draws its marks once the buffer is a file's", "after a plugin window", ["→   a␣b··", "wwww w ww"]],
       ["Marks under NO_COLOR", "no color", ["→   a␣b··", "wwww w ww"]],
