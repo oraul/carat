@@ -16,6 +16,14 @@
 - [x] 3.1 Document the marks: `docs/compatibility.md` (a Whitespace marks section, the option rows, the `:set` paragraph), README.md, `docs/architecture.md` (`Options`, the option scope, `FramePresenter`), `docs/codebase-map.md` (area 13); `make docs-lint` passes
 - [x] 3.2 Run `make test-one` for each touched test, `make lint`, `make diagnose-one` on the new adapter, and `make gates`; all pass
 
+## 4. Review fixes
+
+- [x] 4.1 Share one item scanner (`item_stop`, `item_colon`) between `listchar_value` and `listchars?` in `carat/domain/options.rb`, compare the key with a byteslice in place of `key_at?`, and make the helpers private instance methods
+- [x] 4.2 Add a match and a selection case to `test/adapters_whitespace_marks.rb`, which prove the Over a guide row of `docs/compatibility.md`
+- [x] 4.3 Drop the assertion of `test/domain_theme.rb` that checked the test's own `GUIDES` and name the whitespace-marks contrast scenario in the comment above the `guide_low_contrast` assertions
+- [x] 4.4 Rewrap the class comment of `carat/adapters/whitespace_marks.rb` and the `cell_text` comment of `test/adapters_whitespace_marks.rb`
+- [x] 4.5 Label the shipped-defaults row of `test/domain_options_config.rb` by its behavior and run `make snapshots`
+
 ## Workflow follow-up
 
 - Archive with `openspec archive listchars-folds -y` in the package step.

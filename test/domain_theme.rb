@@ -482,7 +482,9 @@ module DomainThemeTest
     # Scenario: The other palettes' guides keep 3:1. IblIndent and
     # IblScope of one_dark, one_light, dark_plus, and light_plus keep 3:1
     # on the background and on the cursor line, at 24 bits and at 256
-    # colors.
+    # colors. Scenario: The other palettes' whitespace marks keep 3:1:
+    # guide_low_contrast checks every group of GUIDES, Whitespace among
+    # them.
     ["one_dark", "one_light", "dark_plus", "light_plus"].each do |name|
       theme = D::Themes.find(name, "theme")
       [0, H::CURSOR_LINE_LAYER].each do |layer|
@@ -490,9 +492,6 @@ module DomainThemeTest
         t.assert_equal([], guide_low_contrast(theme, false, layer), "The other palettes' guides keep 3:1: #{name} on #{where} at 24 bits")
         t.assert_equal([], guide_low_contrast(theme, true, layer), "The other palettes' guides keep 3:1: #{name} on #{where} at 256 colors")
       end
-      # Scenario: The other palettes' whitespace marks keep 3:1 (Whitespace
-      # is among the groups guide_low_contrast checks).
-      t.assert_true(GUIDES.include?(H::WHITESPACE), "The other palettes' whitespace marks keep 3:1: #{name}")
     end
 
     # Scenario: The guides order below Comment. In Carat's palettes

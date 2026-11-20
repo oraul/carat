@@ -162,7 +162,7 @@ module DomainOptionsConfigTest
       [read.list, read.listchars, [read.listchar_code("tab", 0), read.listchar_code("tab", 1), read.listchar_code("tab", 2), read.listchar_code("trail", 0), read.listchar_code("nbsp", 0)], config.report]
     end
     # Scenario: The shipped list options.
-    t.assert_equal([false, "tab:→ ,trail:·,nbsp:␣", [0x2192, 32, 0, 0xb7, 0x2423]], [options.list, options.listchars, [options.listchar_code("tab", 0), options.listchar_code("tab", 1), options.listchar_code("tab", 2), options.listchar_code("trail", 0), options.listchar_code("nbsp", 0)]], "The shipped list options: list off, Facet's marks")
+    t.assert_equal([false, "tab:→ ,trail:·,nbsp:␣", [0x2192, 32, 0, 0xb7, 0x2423]], [options.list, options.listchars, [options.listchar_code("tab", 0), options.listchar_code("tab", 1), options.listchar_code("tab", 2), options.listchar_code("trail", 0), options.listchar_code("nbsp", 0)]], "The shipped list options: list off, the marks → ·, and ␣")
 
     # The scope guide in ASCII: the cursor's block is drawn in the solid │,
     # | with the ascii icon set, whatever the guide character.

@@ -64,7 +64,7 @@ ok   an item without a colon is refused
 ok   an empty item is refused
 ok   a mark two columns wide is refused, the value before kept
 ok   list takes true or false
-ok   The shipped list options: list off, Facet's marks
+ok   The shipped list options: list off, the marks → ·, and ␣
 ok   the scope guide is │, | with the ascii icon set
 ok   keyhints.delay takes 0 to 10000 and keeps the earlier value otherwise
 ok   the slots keep the view's size by default
