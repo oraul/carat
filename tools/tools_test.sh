@@ -7,7 +7,7 @@
 # the records only the workflow writes, the history, the budget, and the
 # review areas), tools/agent_guard.sh (each profile's forms and refusals,
 # and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
-# paths, queue), tools/new.sh (every generator and its refusals),
+# paths, queue, histories), tools/new.sh (every generator and its refusals),
 # tools/spec_validate.sh (the archive preview, with a stub openspec),
 # tools/spinel_warnings.sh (the build targets on a stub toolchain), and
 # every gate of tools/gates.sh, each passing and refusing.
@@ -3545,6 +3545,12 @@ doclint() {
 
 docs clean
 expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
+docs histories
+printf 'a\tb\n1\t2\n\n3\t\n' > docs/metrics-feature.tsv
+expect "docs_lint: passes histories whose rows have their header's field count" 0 "ok   histories: 1 file" doclint
+printf '4\n5\t6\t7\n' >> docs/metrics-feature.tsv
+expect "docs_lint: refuses a history row whose field count differs from its header's and names it" 1 "docs/metrics-feature[.]tsv:5: 1 fields, the header 2" doclint
+expect "docs_lint: names a history row longer than its header" 1 "docs/metrics-feature[.]tsv:6: 3 fields, the header 2" doclint
 docs budget
 # Short lines: one line of 30 KB takes the content checks seconds.
 head -c 30721 /dev/zero | tr '\0' x | fold -w 64 >> CLAUDE.md

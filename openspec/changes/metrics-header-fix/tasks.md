@@ -14,7 +14,7 @@
 
 ## 4. docs-lint
 
-- [ ] 4.1 Add `check_histories` to `tools/docs_lint.sh`; proved by "docs_lint: passes histories whose rows have their header's field count" and "docs_lint: refuses a history row whose field count differs from its header's and names it" in `tools/tools_test.sh`, and by `make docs-lint` on this tree
+- [x] 4.1 Add `check_histories` to `tools/docs_lint.sh`; proved by "docs_lint: passes histories whose rows have their header's field count" and "docs_lint: refuses a history row whose field count differs from its header's and names it" in `tools/tools_test.sh`, and by `make docs-lint` on this tree
 
 ## 5. Docs
 

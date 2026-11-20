@@ -25,6 +25,8 @@
 #             parenthesis without T0, and that one a defect, unless a line
 #             of that section begins "The user-approved exception"; both
 #             files together within QUEUE_BUDGET
+#   histories every non-blank row of each lane history, docs/metrics-*.tsv,
+#             has as many tab-separated fields as its line 1, the header
 set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -218,9 +220,28 @@ $sprint"
   total=$((total + $(printf '%s\n' "$items" | grep -c .)))
 }
 
+# Each lane history's rows against its own header (metrics-header-fix):
+# closing-loop's two columns were appended under the 22-column header,
+# which history now refuses, and a row of another count is named here.
+check_histories() {
+  gate=histories
+  start=$failed
+  files=0
+  for f in docs/metrics-*.tsv; do
+    [ -f "$f" ] || continue
+    files=$((files + 1))
+    hits=$(awk -F'\t' -v f="$f" 'NR == 1 { n = NF; next }
+      NF && NF != n { print f ":" NR ": " NF " fields, the header " n }' "$f")
+    [ -z "$hits" ] || bad "a history row whose field count differs from its header's:
+$hits"
+  done
+  [ $failed -ne $start ] || ok "$files file(s)"
+}
+
 check_budgets
 check_content
 check_wraps
 check_paths
 check_queue
+check_histories
 [ "$failed" -eq 0 ]
