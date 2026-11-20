@@ -22,6 +22,7 @@ require_relative "../domain/start_screen"
 require_relative "../domain/notices"
 require_relative "painted_rows"
 require_relative "indent_guides"
+require_relative "whitespace_marks"
 require_relative "status_bar"
 require_relative "tab_bar"
 require_relative "winbar"
@@ -168,6 +169,8 @@ module Carat
       # @rbs @notice_from: Integer
       # @rbs @guides: IndentGuides
       # @rbs @guide_row: Integer
+      # @rbs @marks: WhitespaceMarks
+      # @rbs @mark_here: bool
       # @rbs @border: Array[Integer]
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
@@ -209,6 +212,8 @@ module Carat
         @back_rows = PaintedRows.new(rows: 1, slots: 1)
         @guides = IndentGuides.new
         @guide_row = -1
+        @marks = WhitespaceMarks.new
+        @mark_here = false
         @serial = 0
         @key = []
         @chrome = []
@@ -240,7 +245,7 @@ module Carat
         layout = tab.layout
         ids = layout.leaves
         ensure_slots(rows, ids.length)
-        build_key(rows, cols, tabline, tabstop, @guides.configure(options), options.relativenumber ? 1 : 0, layout, ids)
+        build_key(rows, cols, tabline, tabstop, @guides.configure(options), @marks.configure(options), options.relativenumber ? 1 : 0, layout, ids)
         unless same_ints?(@key, back.layout)
           @back_rows.invalidate
           copy_ints(@key, back.layout)
@@ -395,10 +400,10 @@ module Carat
       end
 
       # The geometry a frame is painted with: the size, the tab line, the
-      # tabstop, the indent guides' settings, whether numbers are relative,
-      # and every window's rectangle.
-      #: (Integer, Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
-      def build_key(rows, cols, tabline, tabstop, guides, relative, layout, ids)
+      # tabstop, the indent guides' and the whitespace marks' settings,
+      # whether numbers are relative, and every window's rectangle.
+      #: (Integer, Integer, Integer, Integer, Integer, Integer, Integer, Domain::Layout, Array[Integer]) -> void
+      def build_key(rows, cols, tabline, tabstop, guides, marks, relative, layout, ids)
         key = @key
         key.clear
         key << rows
@@ -406,6 +411,7 @@ module Carat
         key << tabline
         key << tabstop
         key << guides
+        key << marks
         key << relative
         i = 0
         while i < ids.length
@@ -834,6 +840,7 @@ module Carat
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
         count = buffer.line_count
         guided = @guides.on? && !buffer.scratch? && !folded
+        marked = @marks.on? && !buffer.scratch?
         if current && @pairing && !folded
           find_pair(buffer, window, tabstop)
         else
@@ -853,7 +860,6 @@ module Carat
           sign_group = Domain::Highlight::SIGN_COLUMN
           cur = -1
           layer = 0
-          guide = guided ? @guides.key(i) : 0
           @guide_row = guided && row < count ? i : -1
           @sel_from = -1
           @sel_to = -2
@@ -861,6 +867,9 @@ module Carat
           pair = row < count ? pair_key(row) : 0
           @pair_here = pair
           fold = folded && row < count ? folds.closed_at(row) : -1
+          @mark_here = marked && fold < 0 && row < count
+          # The row's guides and whether it draws marks, one repaint input.
+          guide = (guided ? @guides.key(i) : 0) * 2 + (@mark_here ? 1 : 0)
           if fold >= 0
             shown_last = folds.last_of(fold)
             line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
@@ -1035,7 +1044,8 @@ module Carat
       # One text row of a window, every cell written once: the tilde past
       # the end of the buffer, or the one-cell sign column (the glyph in its
       # sign's group, else a blank in SignColumn), the number, the text,
-      # and blanks between and after, then the token groups, then the
+      # and blanks between and after, then the token groups, the indent
+      # guides, the whitespace marks, the search matches, the pair, and the
       # selection.
       #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
       def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
@@ -1064,6 +1074,7 @@ module Carat
         paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
         paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
         @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
+        @marks.paint(frame, frame_row, x + gutter, decoded, text_width, left) if @mark_here
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_pair(frame, frame_row, x + gutter, decoded, text_width, left) if @pair_here > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0

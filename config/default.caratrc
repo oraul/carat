@@ -55,6 +55,12 @@ option.winborder rounded
 # option.icons ascii when the character is not ASCII.
 option.indentguides true
 option.indentguides.char ┊
+# Whitespace marks, Neovim's list and listchars: off, as in Neovim; on,
+# a tab shows its tab marks, a trailing space trail, a no-break space
+# nbsp, each drawn in Neovim's >, -, and + with option.icons ascii when
+# it is not ASCII.
+option.list false
+option.listchars "tab:→ ,trail:·,nbsp:␣"
 option.theme carat-dark
 option.background theme
 option.startscreen true

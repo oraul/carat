@@ -79,6 +79,7 @@ module Carat
       PANEL_CYAN = 42
       # The indent guides, apart from the text roles so they recede
       # behind the text: every guide, and the guide of the cursor's block.
+      # The whitespace marks of option.list take GUIDE too.
       GUIDE = 43
       GUIDE_SCOPE = 44
       # The float border, apart from the text roles so it frames a float
@@ -134,7 +135,7 @@ module Carat
         Highlight::DIFF_CHANGE, NONE, DIFF_CHANGE, 0, 0,
         Highlight::DIFF_DELETE, RED, DIFF_DELETE, 0, 0,
         Highlight::DIFF_TEXT, NONE, DIFF_TEXT, BOLD, BOLD,
-        Highlight::WHITESPACE, FAINT, NONE, 0, 0,
+        Highlight::WHITESPACE, GUIDE, NONE, 0, 0,
         Highlight::DIAGNOSTIC_ERROR, RED, NONE, 0, 0,
         Highlight::DIAGNOSTIC_WARN, YELLOW, NONE, 0, 0,
         Highlight::DIAGNOSTIC_INFO, BLUE, NONE, 0, 0,
