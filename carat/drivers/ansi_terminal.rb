@@ -1,6 +1,7 @@
 require "io/console"
 require_relative "../ports/terminal_port"
 require_relative "../domain/color_depth"
+require_relative "../domain/terminal_background"
 
 module Carat
   module Drivers
@@ -9,12 +10,20 @@ module Carat
     # flushed writes. Raw mode is entered by bin/carat.rb around the loop.
     # The color depth comes from COLORTERM and TERM and the wish for no
     # color from NO_COLOR, read once here: the drivers are the only place
-    # the environment is read.
+    # the environment is read. The first read after entering asks the
+    # terminal for its background (OSC 11), so the query goes out in raw
+    # mode after the first frame, and waits for no answer; the answer,
+    # untrusted input, arrives among the key bytes, and the reads take it
+    # out (Domain::TerminalBackground) until one has come.
     class AnsiTerminal < Ports::TerminalPort
       # @rbs @input: IO
       # @rbs @output: IO
       # @rbs @colors: Integer
       # @rbs @no_color: bool
+      # @rbs @asking: bool
+      # @rbs @background: String
+      # @rbs @awaiting: bool
+      # @rbs @reply: String
 
       #: (input: IO, output: IO) -> void
       def initialize(input:, output:)
@@ -22,6 +31,10 @@ module Carat
         @output = output
         @colors = Domain::ColorDepth.detect(environment("COLORTERM"), environment("TERM"))
         @no_color = !environment("NO_COLOR").empty?
+        @asking = false
+        @background = Domain::TerminalBackground::UNKNOWN
+        @awaiting = false
+        @reply = ""
       end
 
       # Returns true when NO_COLOR was set and not empty when the driver
@@ -37,6 +50,13 @@ module Carat
         @colors
       end
 
+      # Returns "dark" or "light" once the terminal answered the query
+      # with a color, "" before that, with no answer, or a malformed one.
+      # @rbs skip
+      def background
+        @background
+      end
+
       # Returns [rows, cols], falling back to 24 by 80 when the terminal
       # reports no size.
       # @rbs skip
@@ -49,9 +69,59 @@ module Carat
         [rows, cols]
       end
 
-      # Returns the bytes of one read, or nil on timeout or end of input.
+      # Returns the key bytes of one read, or nil on timeout, at the end
+      # of input, or when the read held only the terminal's answer. The
+      # first read after enter sends the query first. While the answer is
+      # awaited, a read that times out drops the held start of an answer
+      # as cut short and ends the awaiting, so the rest of an answer
+      # delayed past the timeout arrives as keys.
       # @rbs timeout: Float
       def read_key(timeout)
+        ask_background if @asking
+        bytes = read_bytes(timeout)
+        return bytes unless @awaiting
+        if bytes.nil?
+          finish_reply(Domain::TerminalBackground::UNKNOWN) unless @reply.empty?
+          return nil
+        end
+        data = @reply.empty? ? bytes : @reply + bytes
+        @reply = ""
+        keys = take_reply(data)
+        return nil if keys.empty?
+        keys
+      end
+
+      #: (String) -> void
+      def write(bytes)
+        @output.write(bytes)
+        @output.flush
+      end
+
+      # Readies the query for the background, which the next read sends.
+      #: () -> void
+      def enter
+        @output.flush
+        @asking = true
+      end
+
+      #: () -> void
+      def leave
+        @output.flush
+      end
+
+      private
+
+      # Sends the query and starts taking the answer out of the reads.
+      #: () -> void
+      def ask_background
+        @asking = false
+        @awaiting = true
+        write(Domain::TerminalBackground::QUERY)
+      end
+
+      # The bytes of one read, nil on timeout or end of input.
+      #: (Float) -> String?
+      def read_bytes(timeout)
         ready = IO.select([@input], nil, nil, timeout)
         return nil if ready.nil?
         begin
@@ -61,23 +131,30 @@ module Carat
         end
       end
 
+      # The bytes of data without the answer in them. An answer not yet
+      # ended is held for the next read; one found ends the awaiting.
+      #: (String) -> String
+      def take_reply(data)
+        start = data.byteindex(Domain::TerminalBackground::INTRODUCER)
+        return data if start.nil?
+        before = data.byteslice(0, start).to_s
+        rest = data.byteslice(start, data.bytesize - start).to_s
+        taken = Domain::TerminalBackground.reply_size(rest)
+        if taken == 0
+          @reply = rest
+          return before
+        end
+        finish_reply(Domain::TerminalBackground.parse(rest.byteslice(0, taken).to_s))
+        before + rest.byteslice(taken, rest.bytesize - taken).to_s
+      end
+
+      # Records the background an answer named and stops awaiting one.
       #: (String) -> void
-      def write(bytes)
-        @output.write(bytes)
-        @output.flush
+      def finish_reply(background)
+        @background = background
+        @awaiting = false
+        @reply = ""
       end
-
-      #: () -> void
-      def enter
-        @output.flush
-      end
-
-      #: () -> void
-      def leave
-        @output.flush
-      end
-
-      private
 
       # The value of an environment variable, "" when it is unset.
       #: (String) -> String
