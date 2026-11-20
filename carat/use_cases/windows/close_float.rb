@@ -9,7 +9,7 @@ module Carat
     # id in any tab page, failing for an unknown id. A focused float gives
     # the focus back to the window under it.
     class CloseFloat
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @tabs: Domain::TabList
 
       #: (tabs: Domain::TabList) -> void
       def initialize(tabs:)

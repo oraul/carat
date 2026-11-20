@@ -6,7 +6,8 @@ module Carat
     # holder, comparing each object with the shared one by identity. The
     # objects are of many classes, so only equal? is ever called on them.
     # Written while the assembly is built, never on a key; lint checks that
-    # each record's slot is a keyword the holder's construction passes.
+    # each record is of the object the holder's construction passes for
+    # the record's slot.
     class WiringLedger
       # @rbs @objects: Array[untyped]
       # @rbs @index: Hash[String, Integer]
@@ -17,18 +18,12 @@ module Carat
         @index = {}
       end
 
-      # Records the object handed to the holder's slot; a second record of
-      # the same pair replaces the object and keeps the pair's place.
+      # Records the object handed to the holder's slot. The assembly records
+      # each pair once; a later record of a pair would answer in its place.
       #: (String, String, untyped) -> void
       def record(holder, slot, object)
-        key = "#{holder}.#{slot}"
-        at = @index[key]
-        if at.nil?
-          @index[key] = @objects.length
-          @objects << object
-        else
-          @objects[at] = object
-        end
+        @index["#{holder}.#{slot}"] = @objects.length
+        @objects << object
         nil
       end
 

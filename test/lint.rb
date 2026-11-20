@@ -506,17 +506,17 @@ module LintTest
   # where a concern needs one, and the assembly test reads what they were
   # handed in the wiring ledger. Each part of the use-case surface change
   # adds its area.
-  READERLESS_DIRS = ["carat/use_cases/discovery/"]
+  READERLESS_DIRS = ["carat/use_cases/discovery/", "carat/use_cases/windows/"]
 
-  # The public attr_readers of a use case of a readerless directory, each
-  # as a problem; a reader after private is allowed.
+  # The public attr_readers and attr_accessors of a use case of a
+  # readerless directory, each as a problem; one after private is allowed.
   def self.reader_problems(lines)
     problems = []
     hidden = false
     lines.each do |line|
       stripped = line.to_s.strip
       hidden = true if stripped == "private"
-      next if hidden || !stripped.start_with?("attr_reader ")
+      next if hidden || !(stripped.start_with?("attr_reader ") || stripped.start_with?("attr_accessor "))
       problems << "a use case of a readerless directory has no public reader (#{stripped.split(" ")[1]})"
     end
     problems
@@ -902,30 +902,85 @@ module LintTest
     readers
   end
 
-  # One line per ledger record the assembly test's text never names, per
-  # ledger record of a slot the construction passes no keyword for or the
-  # holder does not store as @slot = slot, and per shared reader the test
-  # never names after the holder; then, for a holder outside
-  # READERLESS_DIRS, per keyword whose # @rbs line types it shared that
-  # it stores without a reader or a ledger record in the assembly's text
-  # that matches its construction there, and, for a readerless holder,
-  # per keyword of def initialize its one-line #: signature does not type
-  # and per keyword that signature types shared that it does not store as
-  # @keyword = keyword or that has no matching ledger record, so each
-  # keyword has one check and one message.
+  # One line per ledger record of an object the holder's construction
+  # does not pass for the record's slot, and per record of a slot the
+  # holder does not store as @slot = slot; then the problems of the
+  # keyword pass of the holder's kind; then one line per shared reader
+  # the assembly test never names after the holder.
   def self.holder_problems(holder, text, shared, named, assembly, readerless)
     problems = []
     built = construction(holder, assembly)
-    ledger_slots(holder, assembly).each do |slot|
-      if !built.include?("(#{slot}: ") && !built.include?(" #{slot}: ")
-        problems << "#{holder} has a ledger record of #{slot}, not a keyword its construction passes"
+    ledger_records(holder, assembly).each do |record|
+      slot = Carat::Json.element(record, 0).to_s
+      object = Carat::Json.element(record, 1).to_s
+      if !passes?(built, slot, object)
+        problems << "#{holder} has a ledger record of #{slot} as #{object}, which its construction does not pass"
       elsif !text.include?("@#{slot} = #{slot}\n")
         problems << "#{holder} has a ledger record of #{slot}, which it does not store as @#{slot} = #{slot}"
       end
     end
-    readers = typed_readers(text)
+    keyword_problems = readerless ? readerless_keyword_problems(holder, text, shared, named, assembly) : rbs_keyword_problems(holder, text, shared, named, assembly)
+    keyword_problems.each { |problem| problems << problem }
+    typed_readers(text).each do |pair|
+      reader = Carat::Json.element(pair, 0).to_s
+      type = Carat::Json.element(pair, 1).to_s
+      next unless shared.include?(type)
+      problems << "#{ASSEMBLY_TEST} never checks #{holder}.#{reader}, a shared #{type}" unless named.include?(".#{holder}.#{reader}")
+    end
+    problems
+  end
+
+  # The keyword pass of a holder under READERLESS_DIRS, read from its
+  # initialize signature alone: one line per keyword of def initialize
+  # the one-line #: signature does not type, and per keyword it types
+  # shared that the holder does not store as @keyword = keyword or that
+  # has no ledger record the assembly test reads.
+  def self.readerless_keyword_problems(holder, text, shared, named, assembly)
+    problems = []
+    typed = signature_keywords(text)
+    typed_names = []
+    typed.each { |pair| typed_names << Carat::Json.element(pair, 0).to_s }
+    initialize_keywords(text).each do |keyword|
+      problems << "#{holder} takes #{keyword}, which the one-line #: signature above its def initialize does not type" unless keyword.empty? || typed_names.include?(keyword)
+    end
+    typed.each do |pair|
+      keyword = Carat::Json.element(pair, 0).to_s
+      type = Carat::Json.element(pair, 1).to_s
+      next unless shared.include?(type)
+      if text.include?("@#{keyword} = #{keyword}\n")
+        problem = ledger_problem(holder, keyword, assembly, named)
+        problems << "#{holder} takes the shared #{type} #{keyword} #{problem}" unless problem.empty?
+      else
+        problems << "#{holder} takes the shared #{type} #{keyword}, which it does not store as @#{keyword} = #{keyword}"
+      end
+    end
+    problems
+  end
+
+  # The keyword pass of any other holder: one line per keyword of def
+  # initialize it stores as @keyword = keyword without a reader, whose
+  # # @rbs line types it shared, that has no ledger record the assembly
+  # test reads.
+  def self.rbs_keyword_problems(holder, text, shared, named, assembly)
+    problems = []
     reader_names = []
-    readers.each { |pair| reader_names << Carat::Json.element(pair, 0).to_s }
+    typed_readers(text).each { |pair| reader_names << Carat::Json.element(pair, 0).to_s }
+    initialize_keywords(text).each do |keyword|
+      next if reader_names.include?(keyword) || !text.include?("@#{keyword} = #{keyword}\n")
+      text.each_line do |line|
+        stripped = line.strip
+        next unless stripped.start_with?("# @rbs @#{keyword}: ")
+        type = stripped.split(": ")[1].to_s.strip.split("::").last.to_s
+        next unless shared.include?(type)
+        problem = ledger_problem(holder, keyword, assembly, named)
+        problems << "#{holder} stores the shared #{type} #{keyword} #{problem}" unless problem.empty?
+      end
+    end
+    problems
+  end
+
+  # The keywords of every def initialize line of a text, in order.
+  def self.initialize_keywords(text)
     keywords = []
     text.each_line do |line|
       stripped = line.strip
@@ -933,44 +988,7 @@ module LintTest
       inner = stripped[15, stripped.length - 15].split(")")[0].to_s
       inner.split(",").each { |param| keywords << param.split(":")[0].to_s.strip }
     end
-    if readerless
-      typed = signature_keywords(text)
-      typed_names = []
-      typed.each { |pair| typed_names << Carat::Json.element(pair, 0).to_s }
-      keywords.each do |keyword|
-        problems << "#{holder} takes #{keyword}, which the one-line #: signature above its def initialize does not type" unless keyword.empty? || typed_names.include?(keyword)
-      end
-      typed.each do |pair|
-        keyword = Carat::Json.element(pair, 0).to_s
-        type = Carat::Json.element(pair, 1).to_s
-        next unless shared.include?(type)
-        if text.include?("@#{keyword} = #{keyword}\n")
-          problem = ledger_problem(holder, keyword, assembly, named)
-          problems << "#{holder} takes the shared #{type} #{keyword} #{problem}" unless problem.empty?
-        else
-          problems << "#{holder} takes the shared #{type} #{keyword}, which it does not store as @#{keyword} = #{keyword}"
-        end
-      end
-    else
-      keywords.each do |keyword|
-        next if reader_names.include?(keyword) || !text.include?("@#{keyword} = #{keyword}\n")
-        text.each_line do |line|
-          stripped = line.strip
-          next unless stripped.start_with?("# @rbs @#{keyword}: ")
-          type = stripped.split(": ")[1].to_s.strip.split("::").last.to_s
-          next unless shared.include?(type)
-          problem = ledger_problem(holder, keyword, assembly, named)
-          problems << "#{holder} stores the shared #{type} #{keyword} #{problem}" unless problem.empty?
-        end
-      end
-    end
-    readers.each do |pair|
-      reader = Carat::Json.element(pair, 0).to_s
-      type = Carat::Json.element(pair, 1).to_s
-      next unless shared.include?(type)
-      problems << "#{ASSEMBLY_TEST} never checks #{holder}.#{reader}, a shared #{type}" unless named.include?(".#{holder}.#{reader}")
-    end
-    problems
+    keywords
   end
 
   # The keywords of the initialize signature of a text, each its name and
@@ -994,21 +1012,13 @@ module LintTest
   end
 
   # Why the holder's shared keyword is not covered by the wiring ledger:
-  # no record in the assembly's text, a record of another object than the
-  # holder's construction passes for the keyword, or a record the assembly
-  # test never reads; "" when it is covered.
+  # no record of it in the assembly's text, or a record the assembly test
+  # never reads; "" when it is covered. That the record is of the object
+  # the construction passes is the record check of holder_problems.
   def self.ledger_problem(holder, keyword, assembly, named)
-    marker = "@wiring.record(\"#{holder}\", \"#{keyword}\", "
-    recorded = ""
-    assembly.to_s.each_line do |line|
-      stripped = line.strip
-      recorded = stripped.sub(marker, "").chomp(")") if stripped.start_with?(marker)
-    end
-    return "without a reader or a ledger record" if recorded.empty?
-    built = construction(holder, assembly)
-    passed = false
-    ["(", " "].each { |before| [",", ")"].each { |after| passed = true if built.include?("#{before}#{keyword}: #{recorded}#{after}") } }
-    return "in a ledger record of #{recorded}, which its construction does not pass" unless passed
+    recorded = false
+    ledger_records(holder, assembly).each { |record| recorded = true if Carat::Json.element(record, 0).to_s == keyword }
+    return "without a reader or a ledger record" unless recorded
     return "in a ledger record #{ASSEMBLY_TEST} never reads with held(\"#{holder}\", \"#{keyword}\")" unless named.include?("held(\"#{holder}\", \"#{keyword}\")")
     ""
   end
@@ -1024,16 +1034,26 @@ module LintTest
     built
   end
 
-  # The slots of the holder's ledger records in the assembly's text, in
-  # their order.
-  def self.ledger_slots(holder, assembly)
+  # The holder's ledger records in the assembly's text, in their order,
+  # each its slot and the text of the object it records.
+  def self.ledger_records(holder, assembly)
     marker = "@wiring.record(\"#{holder}\", \""
-    slots = []
+    records = []
     assembly.to_s.each_line do |line|
       stripped = line.strip
-      slots << stripped.sub(marker, "").split("\"")[0].to_s if stripped.start_with?(marker)
+      next unless stripped.start_with?(marker)
+      parts = stripped.sub(marker, "").split("\", ")
+      records << [parts[0].to_s, parts[1].to_s.chomp(")")]
     end
-    slots
+    records
+  end
+
+  # Whether the construction line passes the value for the keyword, as
+  # its first or a later keyword, before a comma or the closing
+  # parenthesis.
+  def self.passes?(built, keyword, value)
+    ["(", " "].each { |before| [",", ")"].each { |after| return true if built.include?("#{before}#{keyword}: #{value}#{after}") } }
+    false
   end
 
   # Only the self-test uses this: the holder problems of its test holder,
@@ -1432,8 +1452,8 @@ module LintTest
 
     # Every holder the assembly keeps reads its shared objects out, and the
     # assembly test checks each one; the test calls the plugin host host.
-    wiring = File.read(ASSEMBLY).to_s
-    assembly = typed_readers(wiring)
+    assembly_text = File.read(ASSEMBLY).to_s
+    assembly = typed_readers(assembly_text)
     shared = []
     assembly.each { |pair| shared << Carat::Json.element(pair, 1).to_s }
     homes = {}
@@ -1445,7 +1465,7 @@ module LintTest
     assembly.each do |pair|
       home = homes[Carat::Json.element(pair, 1).to_s]
       next if home.nil?
-      holder_problems(Carat::Json.element(pair, 0).to_s, File.read(home.to_s).to_s, shared, named, wiring, readerless?(home.to_s)).each { |problem| violations << "#{home}: #{problem}" }
+      holder_problems(Carat::Json.element(pair, 0).to_s, File.read(home.to_s).to_s, shared, named, assembly_text, readerless?(home.to_s)).each { |problem| violations << "#{home}: #{problem}" }
     end
 
     # The code map covers every file of the five roots and names no missing one.
@@ -1551,20 +1571,22 @@ module LintTest
     t.assert_equal(["dispatcher stores the shared ActionTable actions without a reader or a ledger record", "test/adapters_assembly.rb never checks dispatcher.feed, a shared BufferFeed"], holder_problems("dispatcher", holder, shared, named, "", false), "the shared holder rule")
     built = "        @dispatcher = UseCases::Dispatcher.new(actions: @actions, clock: @clock, feed: @feed)\n"
     t.assert_equal([
-      ["dispatcher stores the shared ActionTable actions in a ledger record of @other, which its construction does not pass"],
+      ["dispatcher has a ledger record of actions as @other, which its construction does not pass"],
       ["dispatcher stores the shared ActionTable actions in a ledger record test/adapters_assembly.rb never reads with held(\"dispatcher\", \"actions\")"],
       [],
-      ["dispatcher has a ledger record of extra, not a keyword its construction passes"],
+      ["dispatcher has a ledger record of extra as @actions, which its construction does not pass"],
       ["dispatcher has a ledger record of clock, which it does not store as @clock = clock"],
-      ["extra", "clock"]
+      [["extra", "@a"], ["clock", "@c"]],
+      [true, true, false, false]
     ], [
-      ledger_problems_of(holder, shared, named, built + "        @wiring.record(\"dispatcher\", \"actions\", @other)\n"),
+      ledger_problems_of(holder, shared, named + " w.held(\"dispatcher\", \"actions\")", built + "        @wiring.record(\"dispatcher\", \"actions\", @other)\n"),
       ledger_problems_of(holder, shared, named, built + "        @wiring.record(\"dispatcher\", \"actions\", @actions)\n"),
       ledger_problems_of(holder, shared, named + " w.held(\"dispatcher\", \"actions\")", built + "        @wiring.record(\"dispatcher\", \"actions\", @actions)\n"),
       ledger_problems_of(holder, shared, named + " w.held(\"dispatcher\", \"actions\")", built + "        @wiring.record(\"dispatcher\", \"actions\", @actions)\n        @wiring.record(\"dispatcher\", \"extra\", @actions)\n"),
       ledger_problems_of(holder, shared, named + " w.held(\"dispatcher\", \"actions\")", built + "        @wiring.record(\"dispatcher\", \"actions\", @actions)\n        @wiring.record(\"dispatcher\", \"clock\", @clock)\n"),
-      ledger_slots("dispatcher", "        @wiring.record(\"dispatcher\", \"extra\", @a)\n        @wiring.record(\"other\", \"x\", @b)\n        @wiring.record(\"dispatcher\", \"clock\", @c)\n")
-    ], "the shared holder rule takes a ledger record of the object the construction passes, read by the test, of a keyword the construction passes and the holder stores")
+      ledger_records("dispatcher", "        @wiring.record(\"dispatcher\", \"extra\", @a)\n        @wiring.record(\"other\", \"x\", @b)\n        @wiring.record(\"dispatcher\", \"clock\", @c)\n"),
+      [passes?(built.strip, "actions", "@actions"), passes?(built.strip, "feed", "@feed"), passes?(built.strip, "clock", "@actions"), passes?(built.strip, "extra", "@actions")]
+    ], "the shared holder rule takes a ledger record of the object the construction passes for its slot, read by the test, of a keyword the holder stores")
     readerless = "class F\n  # @rbs @open_float: OpenFloat\n  # @rbs @close_float: Integer\n  #: (open_float: OpenFloat, close_float: CloseFloat, depth: Integer) -> void\n  def initialize(open_float:, close_float:, depth:)\n"
     floats = ["OpenFloat", "CloseFloat"]
     wired = "        @follow = UseCases::FollowPalette.new(open_float: @open_float, close_float: @close_float, depth: 2)\n"
@@ -1601,7 +1623,7 @@ module LintTest
       holder_problems("follow", "class F\n  #: (open_float: ^(Integer) -> void, close_float: CloseFloat) -> void\n  def initialize(open_float:, close_float:)\n    @open_float = open_float\n    @close_float = close_float\n", floats, float_named, wired, true),
       holder_problems("follow", "class F\n  #: () -> void\n  def initialize()\n", floats, float_named, wired, true)
     ], "a readerless holder reports a keyword of def initialize its one-line signature does not type")
-    t.assert_equal([["a use case of a readerless directory has no public reader (:tabs)"], true, false], [reader_problems(["class X\n", "attr_reader :tabs #: Domain::TabList\n", "def call(state)\n", "private\n", "attr_reader :kept #: Integer\n"]), readerless?("carat/use_cases/discovery/open_palette.rb"), readerless?("carat/use_cases/files/open_file.rb")], "the readerless directory rule")
+    t.assert_equal([["a use case of a readerless directory has no public reader (:tabs)", "a use case of a readerless directory has no public reader (:size)"], true, false], [reader_problems(["class X\n", "attr_reader :tabs #: Domain::TabList\n", "attr_accessor :size #: Integer\n", "attr_writer :depth #: Integer\n", "def call(state)\n", "private\n", "attr_reader :kept #: Integer\n", "attr_accessor :kept_size #: Integer\n"]), readerless?("carat/use_cases/discovery/open_palette.rb"), readerless?("carat/use_cases/files/open_file.rb")], "the readerless directory rule refuses a public reader or accessor")
     t.assert_equal([["clock", "ClockPort"], ["depth", "Integer"]], typed_readers("attr_reader :clock #: Ports::ClockPort\nattr_reader :a, :b #: Integer\nattr_reader :depth #: Integer\nattr_reader :plain\n"), "typed_readers reads one-name readers with a type")
     t.assert_equal(["", "only carat/doubles/ and carat/test_support.rb may require a test double", "only carat/doubles/ and carat/test_support.rb may require a test double", "", "", ""], [double_require_problem("carat/doubles/editor_harness.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("carat.rb", "carat/doubles/fake_terminal.rb"), double_require_problem("bin/carat.rb", "carat/doubles/memory_files.rb"), double_require_problem("carat/test_support.rb", "carat/doubles/manual_signals.rb"), double_require_problem("carat/adapters/editor_assembly.rb", "carat/use_cases/move.rb"), double_require_problem("test/editor_normal.rb", "carat/doubles/fake_terminal.rb")], "the double require rule")
     t.assert_equal(false, File.read("carat.rb").include?("doubles/"), "the production require graph names no double")

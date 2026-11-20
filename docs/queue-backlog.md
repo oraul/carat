@@ -18,25 +18,26 @@ The user-approved exception (2026-11-19, the Sprint 22 note): `check-runner-safe
 4. `merge-body-check` (T1 pipeline defect, estimated medium, critical b .claude/agents/merger.md): #234, #236 kept 0 of 4 headings; the merger reported a branch head as the squash commit.
 5. `check-runner-safety-bench` (T1 pipeline defect, security Medium (6), estimated medium, critical a .claude/agents/benchmark.md): branch code benched beside linked run states and toolchain (`benchmark.md:20`, `run_state.sh:3156`).
 6. `push-merge-guards` (T1 pipeline defect, estimated medium, critical b tools/run_state.sh): a garbled pushed head stopped finder-grep-preview; message-styling's branch deletion was refused.
-7. `use-case-surface-b`, `-c`, `-d` (T2 user request, estimated medium each): one area each, edge-case tests first, the last turns on lint's rule; b takes `wiring_ledger.rb:24` and use-case-surface-a late findings 22 to 28.
+7. `use-case-surface-c`, `-d` (T2 user request, estimated medium each): one area each of the readers b leaves (274 less area 11's 20), edge-case tests first, the last turns on lint's rule. Accepted as b.
 8. `check-runner-safety-b` (T1 defect, Lows (6) to (3), estimated medium): `run_state.sh:280`, `:439`, `:530`, `:536`, 3 Low (6) headings, CLOSE_PHASES copied at `agent_guard.sh:133`.
 9. `pr-trust-lows-b` (T1 defect, Lows, estimated medium): "## A security review after a quality-only fix reads the whole branch again" to "### Restrict the open-pr edit path to same-repository pull requests (security Low, confidence 4)"; `open_pr.sh:196`, `run_state.sh:1330`.
 10. `render-tidy` (T6 with security Low (5), estimated large, pushed back 3, reason: backlog-pick ranks areas 1, 17, 12 first): "### Bracketed paste is never enabled (sprint-14 sweep security Low (5))" to "## DisplayWidth.of_char has no caller".
 11. `review-lite-docs` (T1 pipeline, user request, estimated small): `gates.sh:119`, `rules.sh:78` edit first; "### A settled records-only round can remove security entries unseen (sprint-19 review security Low (5))".
 12. `file-access-color` (T3 security Lows (3), estimated medium, pushed back 2): `disk_files.rb:33`, `rc_config_gateway.rb:59`, `editor_assembly.rb:489`.
-13. `contributor-checklist-b` (T1 user request, estimated small): a finding seen 3 times becomes a check; message-styling retro 7, rule 10 skipped twice.
+13. `contributor-checklist-b` (T1 user request, estimated small): a finding seen 3 times becomes a check; message-styling retro 7, rule 10 skipped twice; check-runner-safety-c retro 12: each mechanism fails a test reverted alone (quality first 0, rework 2 of 3).
 14. `test-one-alone`, `bench-scenarios` (T4, estimated small each); `glyph-audit` (T2 user request, estimated small).
 15. `lsp-tidy-b` ("### MakePath and the project .caratrc check follow a link swapped after the probe (sprint-14 sweep security Low (3), Low (3))" to "## The language server client has loose ends"), `render-tidy-b`, `explorer-tidy` (T6, estimated medium each).
 16. `vim-compat-fixes` (T6 bugs, estimated medium): `command_grammar.rb:98`, `text_objects.rb:356`, `motions.rb:550`, `vim_pattern.rb:134`.
 17. `rework-review-repeat` (T1, estimated medium): an advisory-only round counts as rework and reruns every review; use-case-surface-a rework 2, every gate first; sprint-21-records rework 2 of 3 (retro 8). Accepted when such a run records rework 0.
-18. T1 defects, estimated medium each: `ci-trust-gaps-b` (`ci.yml:36`), `ci-trust-gaps-c`, `toolchain-clean-scope`, `check-clone-toolchain`, `periodic-clear-rules`, `review-scope-pins`, `sprint-security-b`, `backlog-throughput-b`, `check-pass-budget-flag`.
+18. T1 defects, estimated medium each: `ci-trust-gaps-b` (`ci.yml:36`), `ci-trust-gaps-c`, `toolchain-clean-scope`, `check-clone-toolchain`, `periodic-clear-rules`, `review-scope-pins`, `sprint-security-b`, `backlog-throughput-b`, `check-pass-budget-flag` (retro 13: 2 overrun notes in one run).
 19. T1, estimated small each: `round-limit-resume`, `open-pr-retry`, `stage-clean`, `tools-test-identity`, `records-plan-apply`, `bench-skip-no-code`, `moved-review-diff`, `advisory-findings-auto`, `merge-output-cap`, `scout-prune-step`, `doc-budget-room`, `groom-fold-format`, `merge-main-queue-conflict`, `main-fixed-no-rework`, `resume-no-op`, `package-no-fix`, `planner-delivery-scope`, `size-up-comparable`, `pr-text-counts`, `pr-text-first-gate`, `diagnose-one-agrees`, `budget-line-totals`, `advisory-repeat-guard` (retro 9: advisories_left 4 for 2 distinct), `tier-price-mid`, `bench-timing-confirm`, `lane-head-record-cost` (`deliver-change.js:999`), `check-head-pin`, `stale-wording-first-pass`, `filter-writers-first-pass`.
 20. `motions-search-tidy-b` (T4, estimated medium), `plugin-host-tidy`, `input-bytes-tidy`, `frame-presenter-tidy`, `motions-search-tidy-c` (T6, estimated medium each).
 
 ## Decisions
 
-- Security first (T0): no unfixed periodic finding at confidence 8; `check-runner-safety-c` fixes the Medium (7) and Medium (6) at `run_state.sh:1036`, `:1039`, run first by the Sprint 22 exception line, out of Pool 1.
-- Size (T1): `check-runner-safety-c` estimated medium: 2 parts in `escaped_paths`, under the 3-part split; 5 of the last 6 backlog medium rows over 1,200,000 (check-runner-safety 2,423,012, 135 min), the last two not both over (use-case-surface-a 413,851, large), so no size up.
-- Sprint (T1): 3 features, 3 backlog unchanged; `use-case-surface-b` (Pool 7) next in the lane by the exception line.
-- Placed (T1): sprint-21-records retro 8 (rework 2 of 3, 2 starts with no commit) into `rework-review-repeat` Pool 17; retro 9 (advisories_left 4 for 2 distinct) into `advisory-repeat-guard` Pool 19.
-- Critical (T1): `check-runner-safety-c` rule a tools/run_state.sh, security Medium (7); the brief edits no tools/rules.sh.
+- Security first (T0): none; check-runner-safety-c records 0 periodic findings and sprint-21 0 High or Medium at confidence 8.
+- Delivered (T1): `check-runner-safety-c` merged 8a99bdd, medium, rework 2, 1,768,447 total in 107 min, over 1,200,000 (overrun notes 9, 10).
+- Next (T2 user request): `use-case-surface-b` out of Pool 7 by the Sprint 22 exception line, map area 11 (`carat/use_cases/windows/`, 20 readers in 17 files, 0 of the 5 production reads), with `wiring_ledger.rb:24` and use-case-surface-a findings 22 to 28.
+- Size (T2): `use-case-surface-b` estimated large: the last two backlog rows over budget (check-runner-safety-c 1,768,447 over 1.2M, sprint-21-records 983,348 over 500k), one size up from medium; critical e carat/use_cases/.
+- Split (T2 user request): 2 parts the user's line bundles (area 11, the ledger and lint tidy of findings 22 to 28, part a's files); on a stop findings 22 to 28 go to the pool as `use-case-surface-tidy`.
+- Placed (T1): check-runner-safety-c retro 12 (quality first 0, rework 2 of 3) into Pool 13; retro 13 (2 overrun notes) into `check-pass-budget-flag` Pool 18.

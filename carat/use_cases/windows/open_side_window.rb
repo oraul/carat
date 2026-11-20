@@ -18,8 +18,8 @@ module Carat
     # tab list, fixed along its edge. E36 when the layout cannot hold it.
     # This is how a plugin's scratch window opens.
     class OpenSideWindow
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(buffers:, tabs:)

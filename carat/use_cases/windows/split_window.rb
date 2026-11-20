@@ -13,9 +13,9 @@ module Carat
     # cannot give both windows their minimum size reports E36. Every new
     # window gets its id from the tab list.
     class SplitWindow
-      attr_reader :open_file #: OpenFile
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @open_file: OpenFile
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (open_file: OpenFile, buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(open_file:, buffers:, tabs:)

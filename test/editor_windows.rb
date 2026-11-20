@@ -57,6 +57,23 @@ module EditorWindowsTest
     out
   end
 
+  # The same editor with "e.txt" holding text opened in its window, after
+  # typing keys.
+  def self.session_on(text, keys)
+    h = editor(24, 80)
+    h.files.put("e.txt", text)
+    h.open("e.txt")
+    h.type(keys)
+    h
+  end
+
+  # Each window's cursor [row, col] in layout order.
+  def self.cursors(h)
+    out = []
+    h.windows.each { |w| out << [Carat::Json.element(w, 5), Carat::Json.element(w, 6)] }
+    out
+  end
+
   # A 24 by 80 editor after typing keys in which each "|" lets more
   # than timeoutlen pass with no key, as a person pausing would.
   def self.slow_session(keys)
@@ -332,6 +349,22 @@ module EditorWindowsTest
     t.assert_equal([true, false], [h.assembly.buffers.buffer_at(1).modified?, h.quit?], "the nameless buffer stays modified")
     h.type(":wqa<CR>")
     t.assert_equal([false, "✖ E141: No file name for buffer 2"], [h.quit?, h.message_row], ":wqa does not quit while a buffer could not be written")
+
+    # Edge cases of the window use cases, which move windows and cursors
+    # and read no line's text, so CRLF, multi-byte text, and trailing
+    # blanks do not reach them: the last line and an empty buffer.
+    h = session("G<C-w>s")
+    t.assert_equal([2, [[2, 0], [2, 0]]], [h.window_count, cursors(h)], "a split from the last line keeps the cursor on the last line in both windows")
+    h = session("G<C-w>s<C-w>c")
+    t.assert_equal([1, [[2, 0]]], [h.window_count, cursors(h)], "Ctrl-W c from the last line leaves the other window on the last line")
+    h = session("<C-w>sG<C-w>o")
+    t.assert_equal([1, [[2, 0]]], [h.window_count, cursors(h)], "Ctrl-W o keeps the current window on the last line")
+    h = session_on("", "<C-w>v")
+    t.assert_equal([2, [""], [[0, 0], [0, 0]]], [h.window_count, h.lines, cursors(h)], "a split over an empty buffer shows its one empty line in both windows")
+    h.type(":close<CR>")
+    t.assert_equal([1, [""], "e.txt", false], [h.window_count, h.lines, h.buffer.path, h.buffer.modified?], ":close over an empty buffer leaves it unmodified in the other window")
+    h = session_on("", ":new<CR><C-w>o")
+    t.assert_equal([1, [""], ""], [h.window_count, h.lines, h.message], ":new and Ctrl-W o over an empty buffer keep the new empty window")
 
     t.finish
   end

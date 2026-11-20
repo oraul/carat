@@ -15,9 +15,9 @@ module Carat
     # file already listed leaves no extra [No Name] behind; it is listed
     # when the window still shows it, as after a failed open.
     class OpenTab
-      attr_reader :open_file #: OpenFile
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @open_file: OpenFile
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (open_file: OpenFile, buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(open_file:, buffers:, tabs:)
