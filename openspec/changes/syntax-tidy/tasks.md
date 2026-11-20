@@ -11,5 +11,5 @@
 
 ## 3. Docs and records
 
-- [ ] 3.1 `docs/codebase-map.md` area 14 names `program_type`, `program_name`, and the clamp at packing (proved by `make lint` and `make docs-lint`)
-- [ ] 3.2 `docs/findings/syntax-tidy.md` records the two split-off headings (proved by `make gates`)
+- [x] 3.1 `docs/codebase-map.md` area 14 names `program_type`, `program_name`, and the clamp at packing (proved by `make lint` and `make docs-lint`)
+- [x] 3.2 `docs/findings/syntax-tidy.md` records the two split-off headings (proved by `make gates`)
