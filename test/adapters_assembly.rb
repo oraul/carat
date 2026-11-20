@@ -30,14 +30,11 @@ module AdaptersAssemblyTest
     t.assert_equal([["second"], []], [strangers(a.buffers, [["second", Carat::Domain::BufferList.new(tabs: a.tabs)]]), strangers(a.buffers, [["same", a.buffers]])], "strangers tells a second object from the shared one")
 
     # A holder without readers is read through the wiring ledger the
-    # assembly fills: a pair it never recorded is a stranger, and a second
-    # record of a pair replaces its object in place. That each record's
-    # slot is a keyword of the holder's construction is lint's check.
+    # assembly fills: a pair it never recorded is a stranger. That each
+    # record is of the object the holder's construction passes is lint's
+    # check.
     w = a.wiring
-    probe = Carat::Adapters::WiringLedger.new
-    probe.record("holder", "slot", a.tabs)
-    probe.record("holder", "slot", a.buffers)
-    t.assert_equal([["unrecorded"], []], [strangers(a.keymap, [["unrecorded", w.held("hide_key_hints", "keymap")]]), strangers(a.buffers, [["replaced", probe.held("holder", "slot")]])], "the ledger answers no object for a pair it never recorded and replaces a recorded one in place")
+    t.assert_equal(["unrecorded"], strangers(a.keymap, [["unrecorded", w.held("hide_key_hints", "keymap")]]), "the ledger answers no object for a pair it never recorded")
 
     # Each shared object is one instance, held by every collaborator that
     # needs it.

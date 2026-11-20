@@ -7,11 +7,11 @@
 
 ## 2. Part a's late findings
 
-- [ ] 2.1 Finding 25: `WiringLedger#record` drops the replace branch and `test/adapters_assembly.rb` the probe row (proved by "the ledger answers no object for a pair it never recorded")
-- [ ] 2.2 Findings 22 to 24: `holder_problems` calls `readerless_keyword_problems` or `rbs_keyword_problems`; `ledger_records` and `passes?` replace `ledger_slots` and the two passed-object checks; `wiring` is `assembly_text` (proved by the holder rule's self-tests)
-- [ ] 2.3 Finding 27: `reader_problems` refuses a public `attr_accessor` (proved by the self-test "the readerless directory rule")
-- [ ] 2.4 Finding 26: `session` takes the file's text in `test/editor_key_hints.rb` and `test/editor_palette.rb`, `empty_session` goes (proved by the tests' labels)
-- [ ] 2.5 Finding 28: `docs/architecture.md` section 8's composition root sentence (proved by `make docs-lint`)
+- [x] 2.1 Finding 25: `WiringLedger#record` drops the replace branch and `test/adapters_assembly.rb` the probe row (proved by "the ledger answers no object for a pair it never recorded")
+- [x] 2.2 Findings 22 to 24: `holder_problems` calls `readerless_keyword_problems` or `rbs_keyword_problems`; `ledger_records` and `passes?` replace `ledger_slots` and the two passed-object checks; `wiring` is `assembly_text` (proved by the holder rule's self-tests)
+- [x] 2.3 Finding 27: `reader_problems` refuses a public `attr_accessor` (proved by the self-test "the readerless directory rule")
+- [x] 2.4 Finding 26: `session` and the empty-buffer case call one `session_on` builder that takes the file's text in `test/editor_key_hints.rb` and `test/editor_palette.rb`, and `empty_session` goes (proved by the tests' labels)
+- [x] 2.5 Finding 28: `docs/architecture.md` section 8's composition root sentence (proved by `make docs-lint`)
 
 ## 3. The windows area without readers
 

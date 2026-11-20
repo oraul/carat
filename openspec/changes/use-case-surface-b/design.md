@@ -28,7 +28,7 @@ Non-goals: the other areas and the `call` signatures (parts c and d).
 
 ### The two key-hints and palette helpers (finding 26)
 
-Each file's `session(keys)` becomes `session(text, keys)` with the file's text, the callers passing the text they used, and `empty_session` goes.
+Each file gains one builder, `session_on`, taking the file's text before `session`'s parameters; `session` calls it with the three-line text its many callers expect, the empty-buffer case calls it with an empty text, and `empty_session` goes. Giving `session` itself the text was the other option, rejected since it would change every one of its callers (29 in the palette test) for one empty-buffer case.
 
 ### Accessors (finding 27)
 

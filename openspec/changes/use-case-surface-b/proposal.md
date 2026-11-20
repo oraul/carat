@@ -14,7 +14,7 @@ This is part b of 4 of the user-requested use-case-surface tidy-up: one area, `c
 - Finding 23: one `ledger_records(holder, assembly)` reads a holder's `@wiring.record` lines as slot and object pairs, and one `passes?(built, keyword, value)` checks that the construction passes the object for the keyword; a record whose slot the construction does not pass and a record of another object than it passes are now one check with one message, in the record loop, and `ledger_problem` only asks for a record the test reads.
 - Finding 24: the local `wiring` of the holder pass is renamed `assembly_text`.
 - Finding 25 (listed as `carat/adapters/wiring_ledger.rb:262`, the branch at :24 to :31, the same item as the queue's `wiring_ledger.rb:24`): `WiringLedger#record` drops its replace-on-second-record branch, which no caller used, and the guard drops the probe row that covered it, keeping the check that a pair never recorded is a stranger.
-- Finding 26: `test/editor_key_hints.rb` and `test/editor_palette.rb` give `session` the file's text as a parameter and drop `empty_session`.
+- Finding 26: in `test/editor_key_hints.rb` and `test/editor_palette.rb`, `session` and the empty-buffer case call one `session_on` builder that takes the file's text, and `empty_session` goes.
 - Finding 27: `reader_problems` refuses a public `attr_accessor` in a readerless directory as it does an `attr_reader`, with a self-test row.
 - Finding 28: `docs/architecture.md` section 8 says the assembly keeps a reader for each shared object and records in its `WiringLedger` what each readerless holder was handed.
 - Docs: `docs/examples.md` (the golden `SplitWindow` is now readerless), `docs/codebase-map.md` (area 4's guard and the lint entry's rule wording).

@@ -1,5 +1,5 @@
 ok   strangers tells a second object from the shared one
-ok   the ledger answers no object for a pair it never recorded and replaces a recorded one in place
+ok   the ledger answers no object for a pair it never recorded
 ok   the buffer list
 ok   the completion menu
 ok   the key handler holds the one ShowCompletion, over the source the harness gave
