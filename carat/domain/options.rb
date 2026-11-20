@@ -250,28 +250,28 @@ module Carat
             config.note(line, "#{line.key} takes one character one column wide")
           end
         when "tabstop"
-          value = bounded(config, line, 1, WIDTH_MAX)
+          value = bounded(config, line, word, 1, WIDTH_MAX)
           self.tabstop = value if value >= 0
         when "shiftwidth"
-          value = bounded(config, line, 0, WIDTH_MAX)
+          value = bounded(config, line, word, 0, WIDTH_MAX)
           self.shiftwidth = value if value >= 0
         when "scroll"
-          value = bounded(config, line, 0, LINES_MAX)
+          value = bounded(config, line, word, 0, LINES_MAX)
           self.scroll = value if value >= 0
         when "scrolloff"
-          value = bounded(config, line, 0, LINES_MAX)
+          value = bounded(config, line, word, 0, LINES_MAX)
           self.scrolloff = value if value >= 0
         when "timeoutlen"
-          value = bounded(config, line, 0, TIMEOUTLEN_MAX)
+          value = bounded(config, line, word, 0, TIMEOUTLEN_MAX)
           self.timeoutlen = value if value >= 0
         when "undolevels"
-          value = bounded(config, line, 0, UNDOLEVELS_MAX)
+          value = bounded(config, line, word, 0, UNDOLEVELS_MAX)
           self.undolevels = value if value >= 0
         when "keyhints.delay"
-          value = bounded(config, line, 0, KEYHINTS_DELAY_MAX)
+          value = bounded(config, line, word, 0, KEYHINTS_DELAY_MAX)
           self.keyhints_delay = value if value >= 0
         when "layout.left_width", "layout.right_width", "layout.panel_height"
-          value = bounded(config, line, 0, SLOT_SIZE_MAX)
+          value = bounded(config, line, word, 0, SLOT_SIZE_MAX)
           set_slot_size(name, value) if value >= 0
         when "icons"
           value = named(config, line, word, Icons.set?(word), "icon set")
@@ -299,12 +299,12 @@ module Carat
 
       private
 
-      # The line's number when it lies from low to high, else -1 with the
+      # The word's number when it lies from low to high, else -1 with the
       # range noted on the configuration; every low is 0 or 1, so -1 is
       # never a value.
-      #: (Config, RcLine, Integer, Integer) -> Integer
-      def bounded(config, line, low, high)
-        value = line.words[0].to_s.to_i
+      #: (Config, RcLine, String, Integer, Integer) -> Integer
+      def bounded(config, line, word, low, high)
+        value = word.to_i
         return value if value >= low && value <= high
         config.note(line, "#{line.key} takes a number from #{low} to #{high}")
         -1
