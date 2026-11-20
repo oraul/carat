@@ -37,7 +37,7 @@ Nothing in Carat shows where a tab, a trailing blank, or a no-break space sits: 
 - Tests: `test/adapters_whitespace_marks.rb` (new), `test/domain_options_config.rb`, `test/domain_theme.rb`, `test/editor_syntax.rb`, `test/runner/run_all.rb`.
 - `docs/compatibility.md` (a Whitespace marks section, the option rows, the `:set` paragraph), `docs/codebase-map.md` (area 13: the new file and test).
 - README.md: changed, the option list names `list` and `listchars`.
-- docs/architecture.md: changed, `Options`, the `.caratrc` option scope, and section 8.2's `FramePresenter` name the marks.
+- docs/architecture.md: changed, `Options` and the `.caratrc` option scope name `list` and `listchars`; section 8.2's `FramePresenter` entry is left as it is, since the file is at its size budget, and the code map places `WhitespaceMarks` beside `IndentGuides`.
 
 ## Assumptions
 
