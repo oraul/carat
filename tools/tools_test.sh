@@ -486,6 +486,16 @@ case "$REACH" in
   config-worktree) : > "$TOP/.git/config.worktree" ;;
   slow) sleep "${SLOW:-0}" ;;
   touch) touch "$TOP/build/plan/tracked" && sleep "${SLOW:-0}" ;;
+  main) echo forged >> "$MAIN/README.md" ;;
+  main-index) git -C "$MAIN" update-index --chmod=+x README.md ;;
+  lane-index) git -C "$TOP" update-index --chmod=+x README.md ;;
+  info) mkdir -p "$MAIN/.git/info" && : > "$MAIN/.git/info/forged" ;;
+  ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
+  gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+  concurrent)
+    touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
+      git -C "$TOP" update-ref refs/remotes/origin/forged HEAD &&
+      git -C "$TOP" update-ref refs/heads/chore/other-lane HEAD~1 ;;
 esac
 EOF
 chmod +x "$work/bin/reach-make"
@@ -586,6 +596,34 @@ expect "run_state: the phase and note a stopped workflow's close writes during a
 close_phases=$(sed -n 's/^CLOSE_PHASES="\(.*\)"$/\1/p' "$here/run_state.sh")
 closable_phases=$(sed -n 's/^const CLOSABLE = .*phase \[a-z0-9-\]+ (\([a-z|]*\)) \[0-9a-f\]{7,40}|.*/\1/p' "$here/../.claude/workflows/deliver-change.js" | tr '|' ' ')
 expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE lines" 0 "^${close_phases:-none}$" printf '%s\n' "$closable_phases"
+# From a lane the scan also reads the main checkout (iso_top), the common
+# directory's info and references, both indexes' staged entries, and the
+# user's git configuration; an index refresh, a remote-tracking ref, and
+# another lane's branch written during the check leave it passing.
+lane_reach() {
+  env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
+    HOME="${REACH_HOME:-$HOME}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+expect "run_state: a stage that writes the main checkout from a lane fails the check" 1 "^[|] $iso_top/README[.]md$" lane_reach main
+git -C "$iso_top" checkout -q README.md
+expect "run_state: a stage that stages into the main checkout's index from a lane fails the check" 1 "^[|] $iso_top/[.]git/index: the staged files changed$" lane_reach main-index
+git -C "$iso_top" reset -q
+expect "run_state: a stage that stages into the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-index
+git_q reset -q
+expect "run_state: a stage that writes the common directory's info from a lane fails the check" 1 "^[|] $iso_top/[.]git/info/forged$" lane_reach info
+rm "$iso_top/.git/info/forged"
+expect "run_state: a stage that writes a reference of the common directory from a lane fails the check" 1 "^[|] $iso_top/[.]git/refs: the references changed$" lane_reach ref
+git_q update-ref -d refs/heads/forged
+mkdir -p "$work/home"
+REACH_HOME="$work/home"
+expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
+REACH_HOME=
+rm -r "$work/home"
+git_q worktree add -q -b chore/other-lane "$work/other-lane"
+expect "run_state: a lane index refresh, a remote-tracking ref, and another lane's branch written during a check leave it passing" 0 "every stage passed" lane_reach concurrent
+git_q worktree remove --force "$work/other-lane"
+git_q branch -q -D chore/other-lane
+git_q update-ref -d refs/remotes/origin/forged
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"
