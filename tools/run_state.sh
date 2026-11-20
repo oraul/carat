@@ -2401,13 +2401,22 @@ late_findings() {
 # pushes no commit of records after its package step. A run gets its row
 # once: none when BASE's history holds it, or when its run state records
 # the branch a package step appended it on (row), since the run states are
-# the clone's and the history file is each branch's.
+# the clone's and the history file is each branch's. A lane file absent or
+# empty gets HEADER first; one whose line 1 is not HEADER exactly, as both
+# kept the 22-column header after closing-loop added two columns
+# (metrics-header-fix), stops the command before any row is written: the
+# change that alters HEADER rewrites line 1 and pads the older rows.
 append_history() {
   unmerged_list | while read -r name merged; do
     echo "history: $name records merged $merged, no commit on main; not appended"
   done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
+  for lane_file in $metrics_files; do
+    [ -s "$lane_file" ] || continue
+    [ "$(sed -n 1p "$lane_file")" = "$HEADER" ] ||
+      die "history: $lane_file's line 1 differs from HEADER; rewrite it to HEADER and pad each older row with - for the columns it lacks; nothing appended"
+  done
   # The lane whose rows a delivery's package step appends, the change's
   # own; a sprint's records change, or no change, appends every lane's.
   only=""
@@ -2433,7 +2442,7 @@ append_history() {
       continue
     fi
     file=$metrics_prefix-$lane_now.tsv
-    [ -f "$file" ] || printf '%s\n' "$HEADER" > "$file"
+    [ -s "$file" ] || printf '%s\n' "$HEADER" > "$file"
     history_row >> "$file"
     write_key row "$branch_now"
     echo "history: appended $change to $file"

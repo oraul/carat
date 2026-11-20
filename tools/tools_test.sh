@@ -1573,6 +1573,31 @@ expect "run_state: a change merged on BASE after the branch point is the newest 
 expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^based$" \
   sh -c "env BASE=nothing sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
 
+# A lane file whose line 1 is not HEADER: history appends no row under it,
+# as closing-loop's two columns were appended under the 22-column header
+# (metrics-header-fix); an empty lane file gets the header first.
+fresh headers
+state init first chore/first > /dev/null
+state set first merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+: > docs/metrics-backlog.tsv
+expect "run_state: history writes the header into an empty lane file" 0 "appended first" state history
+expect "run_state: the header written ends with HEADER's last column" 0 "^advisories_left$" awk -F'\t' 'NR == 1 { print $NF }' docs/metrics-backlog.tsv
+expect "run_state: the row under the header has its field count" 0 "^ok$" awk -F'\t' 'NR == 1 { n = NF } NR == 2 { print (NF == n && n == 24) ? "ok" : NF " " n }' docs/metrics-backlog.tsv
+full=$(head -1 docs/metrics-backlog.tsv)
+state init second chore/second > /dev/null
+state set second merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+cut -f 1-22 docs/metrics-backlog.tsv > short.tsv
+cp short.tsv docs/metrics-backlog.tsv
+expect "run_state: history refuses a lane file whose header is short of HEADER" 1 "docs/metrics-backlog[.]tsv's line 1 differs from HEADER" state history
+expect "run_state: history appends no row under a header short of HEADER" 0 "^$" cmp docs/metrics-backlog.tsv short.tsv
+{ printf '%s\r\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
+expect "run_state: history refuses a header ending in a carriage return" 1 "line 1 differs from HEADER" state history
+printf '%s\n' "$full" > docs/metrics-feature.tsv
+{ printf '%s\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
+expect "run_state: history checks the other lane's header too" 1 "docs/metrics-feature[.]tsv's line 1 differs from HEADER" sh -c "printf 'change\tdate\n' > docs/metrics-feature.tsv; sh '$here/run_state.sh' history"
+printf '%s\n' "$full" > docs/metrics-feature.tsv
+expect "run_state: history appends under a header equal to HEADER" 0 "appended second" state history
+
 # A run state whose first passes the workflow stored only in part: the
 # stage, review, and ci lines hold each gate's last result, not its first,
 # so the history leaves a gate without a stored verdict out.

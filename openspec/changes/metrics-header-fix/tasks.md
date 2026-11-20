@@ -6,7 +6,7 @@
 
 ## 2. Row writer
 
-- [ ] 2.1 Make `append_history` in `tools/run_state.sh` refuse a non-empty lane file whose line 1 differs from `HEADER`, before any append, and write `HEADER` into an absent or empty one; proved by "run_state: history refuses a lane file whose header is short of HEADER", "run_state: history appends no row under a header short of HEADER", "run_state: history refuses a header ending in a carriage return", "run_state: history writes the header into an empty lane file", and "run_state: the row under the header has its field count" in `tools/tools_test.sh`
+- [x] 2.1 Make `append_history` in `tools/run_state.sh` refuse a non-empty lane file whose line 1 differs from `HEADER`, before any append, and write `HEADER` into an absent or empty one; proved by "run_state: history refuses a lane file whose header is short of HEADER", "run_state: history appends no row under a header short of HEADER", "run_state: history refuses a header ending in a carriage return", "run_state: history writes the header into an empty lane file", and "run_state: the row under the header has its field count" in `tools/tools_test.sh`
 
 ## 3. Histories
 
