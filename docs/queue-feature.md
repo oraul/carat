@@ -37,11 +37,11 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 - Security first (T0): none; use-case-surface-b and grep-long-files security high=0 medium=0, no periodic finding pending, sprint-21 0 High or Medium at confidence 8.
 - Sprint (T2 user request): 3 features, 3 backlog; Sprint 22's features are the user's order of 2026-11-19: grep-long-files merged 026a6a0, vim-case-operators delivering (pushed back 4), background-detect next.
-- Already met (T2): vim-case-operators' acceptance holds at d7f5de8: `test/editor_case_operators.rb` has 99 rows under its 9 scenario labels (multibyte 12, dot 10, undo 8, visual 12), compatibility rows `:92`-`:94`, `:207`, actions rows `:64`-`:66`, `:113`-`:115`, bound in 5 modes since #9 and #16.
-- Size (T2): estimated small, at most missing rows or docs; of the last two feature rows 1 over budget (message-styling 1,470,193 over 1,200,000; grep-long-files 2,109,024 under 2,500,000), so no size up.
+- Already met (T2): vim-case-operators acceptance held at d7f5de8: `test/editor_case_operators.rb` 99 rows in 9 scenarios, compatibility and actions rows, bound in 5 modes.
+- Size (T2): estimated small, at most missing rows or docs; of the last two feature rows 1 over budget, so no size up.
 - No split (T2): 1 operator family in 1 map area, under the 3-part rule.
-- Critical (T2): none; no rule a to d path expected (`carat/domain/buffer.rb`, `carat/plugin_api.rb`, `tools/rules.sh` untouched).
+- Critical (T2): none; no rule a to d path expected.
 - Overrun (T1): grep-long-files 480,424 output over the 416,666 large budget (note 5); check-runner-safety-c medium 1,768,447 total in 107 min over 1,200,000 (use-case-surface-b note 6).
 - Recorded (T1): grep-long-files retro 6, 7 and use-case-surface-b retro 3, 4 go to the findings file, the backlog queue being the backlog lane's; retro 5 (rework 1, every gate first) merged into retro 7's entry, near `rework-review-repeat`.
-- Dropped (T1): grep-long-files note 8, a late copy of its quality note 4 (`tools/run_state.sh:1926`), handled with the quality notes.
+- Dropped (T1): grep-long-files note 8, a late copy of its quality note 4.
 - Placed (T1): check-runner-safety-c retro 12 and 13 are placed by use-case-surface-b's plan (Pool 13, `check-pass-budget-flag` Pool 18).
