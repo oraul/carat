@@ -11,3 +11,7 @@
 ## 3. Docs
 
 - [x] 3.1 `docs/codebase-map.md` lists `NO_NAME` (proved by `make docs-lint`)
+
+## 4. Review advisories
+
+- [x] 4.1 Tests build the no-name rows from `Messages::NO_NAME`, assert the status bar groups once outside the theme loop, and the comment is narrowed; `NO_NAME` moved before `E16` and the module comment widened (proved by `test/adapters_status_bar.rb` and `test/adapters_tab_bar.rb`)

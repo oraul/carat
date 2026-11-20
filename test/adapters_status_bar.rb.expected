@@ -11,10 +11,8 @@ ok   the lsp slot after the plugins' segments
 ok   the position and Top
 ok   a percentage
 ok   Bot
-ok   the status bar shows the one no-name constant
-ok   carat-dark: the pill, the file, and the fill groups
+ok   the pill, the file, and the fill groups
 ok   carat-dark: the pill stands out from the bar and both are readable
-ok   carat-light: the pill, the file, and the fill groups
 ok   carat-light: the pill stands out from the bar and both are readable
 ok   option.icons ascii: the modified icon is an asterisk
 ok   an lsp state without a server name shows nothing
@@ -68,4 +66,4 @@ ok   plain done cells in StatusLine
 ok   an ascii bar reads #### and ------ with the done cells in StatusLineLspReady
 ok   a narrow bar drops the progress (35) before the branch (40)
 ok   clearing ends the progress once
-adapters_status_bar: 70 passed, 0 failed
+adapters_status_bar: 68 passed, 0 failed

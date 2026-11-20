@@ -1,13 +1,13 @@
 module Carat
   module Domain
-    # The editor's messages that more than one use case or handler shows,
-    # in Vim's wording: a constant for fixed text, a function for text
-    # with a value in it.
+    # The editor's text that more than one use case, handler, or adapter
+    # shows, in Vim's wording: a constant for fixed text, a function for
+    # text with a value in it.
     module Messages
-      E16 = "E16: Invalid range"
       # The one name of a buffer with no path or title, which the status
       # bar, the winbar, the buffer tabs, and :ls show.
       NO_NAME = "[No Name]"
+      E16 = "E16: Invalid range"
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
       E444 = "E444: Cannot close last window"

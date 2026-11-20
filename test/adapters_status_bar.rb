@@ -156,7 +156,7 @@ module AdaptersStatusBarTest
     t.table([
       ["the mode and the file", "plain", pad(" NORMAL  a.txt ", right, 60)],
       ["the modified icon after the file", "modified", pad(" NORMAL  a.txt ● ", right, 60)],
-      ["an unnamed buffer", "unnamed", pad(" NORMAL  [No Name] ", right, 60)],
+      ["an unnamed buffer", "unnamed", pad(" NORMAL  " + D::Messages::NO_NAME + " ", right, 60)],
       ["a scratch title", "scratch", pad(" NORMAL  list ", right, 60)],
       ["the file type", "ruby", pad(" NORMAL  a.rb ", " ruby " + right, 60)],
       ["the git branch", "branch", pad(" NORMAL  a.txt  ± main ", right, 60)],
@@ -169,17 +169,15 @@ module AdaptersStatusBarTest
       ["Bot", "cursor at the bottom", pad(" NORMAL  a.txt ", " utf-8  100:1  Bot ", 60)]
     ]) { |name| paint(scenario(name), 60).row_text(0) }
 
-    # One no-name word: the bar, the winbar, and the tabs read
-    # Domain::Messages::NO_NAME.
-    t.assert_equal(pad(" NORMAL  " + D::Messages::NO_NAME + " ", right, 60), paint(scenario("unnamed"), 60).row_text(0), "the status bar shows the one no-name constant")
-
     # Scenario: frame rows show the status bar in carat-dark, carat-light,
     # and option.icons ascii: the pill in its mode's group, the file and the
     # fill in StatusLine, each theme's pill and bar readable.
+    # paint takes no theme, so the groups are asserted once; each theme
+    # only checks its colors.
+    f = paint(scenario("modified"), 60)
+    t.assert_equal([H::STATUS_MODE_NORMAL, H::STATUS_MODE_NORMAL, H::STATUS, H::STATUS], [f.cell(0, 1).hl, f.cell(0, 6).hl, f.cell(0, 9).hl, f.cell(0, 30).hl], "the pill, the file, and the fill groups")
     ["carat-dark", "carat-light"].each do |name|
       theme = D::Themes.find(name, "theme")
-      f = paint(scenario("modified"), 60)
-      t.assert_equal([H::STATUS_MODE_NORMAL, H::STATUS_MODE_NORMAL, H::STATUS, H::STATUS], [f.cell(0, 1).hl, f.cell(0, 6).hl, f.cell(0, 9).hl, f.cell(0, 30).hl], "#{name}: the pill, the file, and the fill groups")
       t.assert_true(theme.bg(H::STATUS_MODE_NORMAL) != theme.bg(H::STATUS) && theme.fg(H::STATUS_MODE_NORMAL) != theme.bg(H::STATUS_MODE_NORMAL) && theme.fg(H::STATUS) != theme.bg(H::STATUS), "#{name}: the pill stands out from the bar and both are readable")
     end
     ascii = scenario("modified")
