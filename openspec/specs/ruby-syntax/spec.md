@@ -65,7 +65,7 @@ Numbers in every form (decimal, hexadecimal, octal, binary, with underscores, wi
 - **THEN** `\t` is SpecialChar and the rest of the string String
 
 ### Requirement: Interpolation is code inside the string
-`#{` in a double-quoted string, a backtick string, an interpolating percent literal, a regular expression, or an interpolating heredoc SHALL open code highlighted as code until its matching `}`, with braces inside it counted and strings inside it highlighted as strings with their own interpolation, also across lines.
+`#{` in a double-quoted string, a backtick string, an interpolating percent literal, a regular expression, or an interpolating heredoc SHALL open code highlighted as code until its matching `}`, with braces inside it counted to any depth within a line and strings inside it highlighted as strings with their own interpolation, also across lines.
 
 #### Scenario: Nested interpolation
 - **WHEN** a line reads `"a #{b("c #{d}")} e"`
@@ -75,8 +75,12 @@ Numbers in every form (decimal, hexadecimal, octal, binary, with underscores, wi
 - **WHEN** lines read `"a #{`, `  x }`, `b"`
 - **THEN** `x` is not highlighted, `}` is Delimiter, and `b"` is String
 
+#### Scenario: Braces nested deep in interpolation
+- **WHEN** a line reads `"#{[{a: {b: {c: {d: 1}}}}]}!"`, four braces deep inside the interpolation
+- **THEN** only the `}` after `]` closes the interpolation and is Delimiter, and `!"` is String
+
 ### Requirement: Percent literals take any delimiter
-`%w`, `%W`, `%i`, `%I`, `%q`, `%Q`, `%r`, `%s`, `%x`, and `%` SHALL open a literal with any punctuation delimiter, counting nested `()`, `[]`, `{}`, and `<>` pairs, interpolating for `%W %I %Q %r %x %` and not for the others, which also span lines; `%i` and `%s` literals are Constant.
+`%w`, `%W`, `%i`, `%I`, `%q`, `%Q`, `%r`, `%s`, `%x`, and `%` SHALL open a literal with any punctuation delimiter, counting nested `()`, `[]`, `{}`, and `<>` pairs to any depth within a line, interpolating for `%W %I %Q %r %x %` and not for the others, which also span lines; `%i` and `%s` literals are Constant.
 
 #### Scenario: Words with brackets
 - **WHEN** a line reads `%w[a [b] c].size`
@@ -85,6 +89,10 @@ Numbers in every form (decimal, hexadecimal, octal, binary, with underscores, wi
 #### Scenario: Another delimiter
 - **WHEN** a line reads `%q|a b| + x`
 - **THEN** `%q|a b|` is String and `x` is not highlighted
+
+#### Scenario: Nesting deeper than the state holds
+- **WHEN** a line reads `%w(a ((((((((b)))))))) c) + 1`, eight pairs deep inside the literal
+- **THEN** `%w(a ((((((((b)))))))) c)` is String and `1` is Number
 
 ### Requirement: Heredocs are carried across lines
 `<<ID`, `<<-ID`, and `<<~ID`, with the identifier bare or in single, double, or back quotes, SHALL start a heredoc whose body begins on the next line and ends at a line holding only the identifier (indented for `-` and `~`); several on one line SHALL follow each other. The bodies SHALL be String, with interpolation and escapes unless the identifier is single-quoted, and the opener and terminator Delimiter.
@@ -114,3 +122,10 @@ The state at the end of a line SHALL be a non-negative integer that encodes the 
 #### Scenario: Deep nesting
 - **WHEN** a line opens three nested strings through interpolation and does not close them
 - **THEN** the tokenizer returns a state and the next line is tokenized without an error
+
+### Requirement: A nesting deeper than the state holds is clamped at the end of the line
+At the end of a line the state SHALL hold the nesting depth of paired delimiters up to seven pairs and the brace depth in an interpolation up to three braces, a deeper one held to that most, so the following lines are highlighted less precisely and never raise.
+
+#### Scenario: A depth past seven is held to seven across lines
+- **WHEN** lines read `%w(((((((((a` and `))))))) b) + 1`, the first ending eight pairs deep
+- **THEN** the second line's literal closes at the `)` after `b`, seven pairs later, and `1` is Number
