@@ -8,7 +8,8 @@ ok   a refused plugin is not activated
 ok   a newer minor version is refused, as in A plugin written against 2.10 still loads
 ok   an older major version is refused
 ok   the host's own version is accepted
-ok   A plugin written against 2.10 still loads on the 2.11 host
+ok   A plugin written against 2.10 still loads on the 2.12 host
+ok   A plugin written against 2.11 still loads on the 2.12 host
 ok   a broken manifest rule disables the plugin
 ok   a disabled entry registers without activating
 ok   an action of a disabled plugin says so
@@ -113,4 +114,4 @@ ok   reads, stats, and icons too
 ok   the plugin has a float in each tab page, beside another plugin's
 ok   a disabled plugin's segment is dropped when it is disabled
 ok   a disabled plugin's floats are closed in every tab page and another plugin's float stays
-use_cases_plugins: 115 passed, 0 failed
+use_cases_plugins: 116 passed, 0 failed

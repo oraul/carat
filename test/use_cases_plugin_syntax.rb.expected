@@ -1,5 +1,5 @@
 ok   a tokenizer is not activated before a buffer of its filetype is highlighted
-ok   syntax_group answers syntax and file-icon groups by name and refuses others
+ok   syntax_group answers syntax and file-icon groups by name and refuses others; The popup menu groups resolve: PmenuSel and PmenuMatch answer their ids and Visual is refused
 ok   the first registered plugin declaring a syntax tokenizes it
 ok   the entries hold the declared filetypes
 ok   the end state is returned

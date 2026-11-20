@@ -44,6 +44,29 @@ ok   Refilled with no lines, the float shows one empty line
 ok   Another plugin's float is not refilled, nor an unknown id or a layout window
 ok   the float keeps its lines and title and the layout window its text
 ok   A float showing a scratch buffer is not refilled and the scratch buffer keeps its lines and title
+ok   A row and spans styled: the selected row in PmenuSel, the others in Pmenu, the span in PmenuMatch and on the selected row in PmenuMatchSel
+ok   the styled float equals a full repaint
+ok   A restyle repaints: the old spans are gone and the new one is drawn, with the lines and the selected row unchanged
+ok   the restyled float equals a full repaint
+ok   Spans without a selected row: the rows stay in NormalFloat, the spans in PmenuSel and Comment, a later span over an earlier one
+ok   Visual is refused
+ok   PmenuMatchSel is refused
+ok   Normal is refused
+ok   MsgDim, the last UI group, is refused
+ok   a negative id is refused
+ok   an id past the last group is refused
+ok   Other UI groups are refused and the float keeps its previous style
+ok   a selected row past the lines
+ok   a selected row below -1
+ok   a span row past the lines
+ok   a negative span row
+ok   a negative column
+ok   a length of zero
+ok   Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style
+ok   An empty style clears it: every row in NormalFloat again
+ok   A refill drops the style: the rows are drawn in NormalFloat with no span
+ok   Another plugin's float is not styled, nor an unknown id or a layout window
+ok   the current float is styled with 0, and a float switched to a listed scratch buffer is not styled
 ok   a float reopened at the same box shows its own text and equals a full repaint
 ok   a float loads a file and goes to its last line
 ok   lines deleted in the layout window pull the float's cursor onto the last line
@@ -52,7 +75,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.11
+ok   the plugin API is 2.12
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
@@ -74,4 +97,4 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 76 passed, 0 failed
+editor_floats: 99 passed, 0 failed
