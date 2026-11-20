@@ -9,12 +9,13 @@
 # is kept for reading.
 #
 # Usage: sh tools/spec_validate.sh (from the top of the work tree)
-# Environment: OPENSPEC_CMD, the command to run (npx of
-# @fission-ai/openspec@latest when unset; the tools test sets a stub).
+# Environment: OPENSPEC_CMD, the command to run (npx of OpenSpec at the
+# exact version OPENSPEC_PACKAGE of the Makefile pins when unset, never a
+# tag the registry moves; the tools test sets a stub).
 set -u
 
 export OPENSPEC_TELEMETRY=0
-openspec=${OPENSPEC_CMD:-npx -y @fission-ai/openspec@latest}
+openspec=${OPENSPEC_CMD:-npx -y @fission-ai/openspec@2.1.1}
 preview=$(pwd)/build/spec-preview
 failed=0
 

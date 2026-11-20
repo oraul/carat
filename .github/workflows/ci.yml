@@ -41,7 +41,10 @@ jobs:
       # The job always runs and reports, so a required check on it passes;
       # tools/ci_scope.sh says whether the checks below are needed. They are
       # skipped when only documentation no test reads changed, also since
-      # the pull request's last head whose spin check passed.
+      # the pull request's last head whose spin check passed. The script and
+      # the rules it sources are the base's, read from the merge commit's
+      # first parent, so a pull request never decides by its own scope
+      # script or documentation rules whether the checks that test them run.
       - name: Scope
         id: scope
         env:
@@ -51,7 +54,11 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           GH_TOKEN: ${{ github.token }}
-        run: sh tools/ci_scope.sh
+        run: |
+          mkdir -p "$RUNNER_TEMP/base-tools"
+          git show HEAD^1:tools/ci_scope.sh > "$RUNNER_TEMP/base-tools/ci_scope.sh"
+          git show HEAD^1:tools/rules.sh > "$RUNNER_TEMP/base-tools/rules.sh"
+          sh "$RUNNER_TEMP/base-tools/ci_scope.sh"
 
       - name: Resolve the Spinel commit
         id: spinel
