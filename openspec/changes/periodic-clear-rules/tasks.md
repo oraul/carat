@@ -17,4 +17,4 @@
 ## 4. Docs
 
 - [x] 4.1 Update the run state header and the comments of `merged_since`, `passed_since`, and `plan_needed` in `tools/run_state.sh`, the comment above `planReview` in `.claude/workflows/deliver-change.js`, the README pipeline step 1, and the map's `tools/run_state.sh` entry; checked by `make docs-lint` and `make gates`
-- [ ] 4.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
+- [x] 4.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`

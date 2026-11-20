@@ -21,3 +21,4 @@ Goals: a failing review is cleared only by a delivery whose planner read the run
 
 - A failing review recorded before this change but cleared by an old merge stays cleared (ancestry); a new one needs a delivery planned after it. The next delivery's planner clears a standing one, at the cost of one planner start.
 - Two record times in the same second count as not later, which may run the planner once more; fail closed.
+- `at.plan-needed` stays in the records `state_view` compares while a detached check runs, so branch code cannot forge a planner's time unseen; a workflow that died without its close (no `phase.plan` on disk) and resumes onto a check still running may see that check report the record, and the check runs again.
