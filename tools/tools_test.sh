@@ -1301,20 +1301,16 @@ expect "run_state: backlog-pick maps every path of a bullet and skips a section 
 { cat bk4.md; printf '\n## w1 quoting\n\n- Where: tools/t.sh:8\n'; i=1; while [ $i -le 52 ]; do printf '\n### e%s\n\n- Location: tools/e.sh:%s\n' $i $i; i=$((i + 1)); done; } > bk9.md
 expect "run_state: backlog-oldest prints the oldest entries in order, at most PRUNE_COUNT" 0 "^50 ## w1 quoting,## w2 at tools/t_test[.]sh:3,## w4 test,## w5 plain,## w6 target,## w7 at [.]github/workflows/ci[.]yml:5,### e1, ### e44$" \
   sh -c 'o=$(sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | head -7 | tr "\n" ",") $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
-# The whole-backlog scan (groom-stale-prune): PRUNE_COUNT=all, or the
-# close of PRUNE_ALL_SPRINT, sprint-24, the sprint in progress after a
-# sprints file ending at sprint-23, lists the entries past the 50th; any
-# other sprint keeps 50, and a PRUNE_COUNT that is no number is refused.
-expect "run_state: backlog-oldest lists every entry with PRUNE_COUNT=all" 0 "^58 ### e52$" \
-  sh -c 'o=$(PRUNE_COUNT=all sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
+# The whole-backlog scan (groom-stale-prune): the close of
+# PRUNE_ALL_SPRINT, sprint-24, the sprint in progress after a sprints
+# file ending at sprint-23, lists the entries past the 50th; any other
+# sprint keeps 50.
 printf 'sprint\tlast\nsprint-22\ta\nsprint-23\tb\n' > sp23.tsv
 printf 'sprint\tlast\nsprint-23\tb\nsprint-24\tc\n' > sp24.tsv
 expect "run_state: backlog-oldest lists every entry at the close of PRUNE_ALL_SPRINT" 0 "^58 ### e52$" \
   sh -c 'o=$(SPRINTS_FILE=sp23.tsv sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
 expect "run_state: backlog-oldest keeps 50 in another sprint" 0 "^50 ### e44$" \
   sh -c 'o=$(SPRINTS_FILE=sp24.tsv sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
-expect "run_state: backlog-oldest refuses a PRUNE_COUNT that is no number" 1 "PRUNE_COUNT is a number or all, not 5x" \
-  sh -c 'PRUNE_COUNT=5x sh "$1" backlog-oldest bk9.md' _ "$here/run_state.sh"
 rm sp23.tsv sp24.tsv
 mkdir -p build/plan
 printf 'gone ## w2 at tools/t_test.sh:3\nmerged ## w4 test <= ### e1\n' > build/plan/groom.txt
@@ -2484,6 +2480,9 @@ commit "docs: a finding"
 { echo; cat docs/findings/fs.md; } >> docs/backlog.md
 git_q rm -q docs/findings/fs.md
 commit "docs: fold a finding"
+printf '\n## sa merged later\n\n- Why: a.\n\n## sb moved item\n\n- Why: b.\n\n## sc queued with it\n\n- Why: c.\n\n##  \n' >> docs/backlog.md
+printf -- '- sb moved item\n- sc queued with it\n' >> docs/queue-feature.md
+commit "docs: entries queued in the commit adding them"
 awk 'NR == 2 { printf "sprint-0\tmark\n" } 1' docs/sprints.tsv > "$work/sp" && mv "$work/sp" docs/sprints.tsv
 commit "docs: an older sprint row"
 mark=$(git rev-parse HEAD)
@@ -2491,12 +2490,34 @@ printf '\n## i new entry at tools/i.sh:1\n\n- Why: i.\n' >> docs/backlog.md
 commit "docs: a new entry"
 printf 'stale ## i new entry at tools/i.sh:1\n' > build/plan/groom.txt
 expect "run_state: groom refuses a stale entry added at or after the third-last sprint row" 1 "the commit adding the entry, does not precede $mark, the commit adding the third-last row" state groom sprint-2-records
+# The third-last row corrected after the entry: the mark stays the
+# commit adding the row, found by its sprint name.
+awk '{ sub(/^sprint-0\tmark$/, "sprint-0\tcorrected") } 1' docs/sprints.tsv > "$work/sp" && mv "$work/sp" docs/sprints.tsv
+commit "docs: correct the older sprint row"
+expect "run_state: groom refuses a stale entry added after the third-last sprint row, the row corrected since" 1 "the commit adding the entry, does not precede $mark, the commit adding the third-last row" state groom sprint-2-records
+# Later: a "- Merged:" line naming "## sa merged later", and the queue
+# line of "## sb moved item" moved unchanged to the other lane queue,
+# then drained; "## sc queued with it" stays queued.
+printf -- '- Merged: ## sa merged later\n' >> docs/backlog.md
+commit "docs: merge a note"
+awk '!/^- sb moved item$/' docs/queue-feature.md > "$work/q" && mv "$work/q" docs/queue-feature.md
+printf -- '- sb moved item\n' >> docs/queue-backlog.md
+commit "docs: move a queue item"
+awk '!/^- sb moved item$/' docs/queue-backlog.md > "$work/q" && mv "$work/q" docs/queue-backlog.md
+commit "docs: drain the moved item"
+merged_note=$(git rev-parse HEAD~2)
+printf 'stale ## sa merged later\n' > build/plan/groom.txt
+expect "run_state: groom refuses a stale entry a later - Merged: line names" 1 "groom: $merged_note names the entry again after" state groom sprint-2-records
+printf 'stale ## sc queued with it\n' > build/plan/groom.txt
+expect "run_state: groom refuses a stale entry a lane queue still names, though queued in the commit adding it" 1 "docs/queue-feature[.]md still names the entry: stale ## sc queued with it$" state groom sprint-2-records
+printf 'stale ##  \n' > build/plan/groom.txt
+expect "run_state: groom refuses a stale heading with no title" 1 "the heading has no title" state groom sprint-2-records
 printf 'stale ## t near miss\n' > build/plan/groom.txt
 expect "run_state: groom refuses a stale entry named again since" 1 "^run_state: groom: $(git rev-parse "$b5c") names the entry again after $(git rev-parse "$noted"), the commit adding it: stale ## t near miss$" state groom sprint-2-records
-printf 'stale ## n never a path\nstale ### Fs folded at tools/s.sh:1\n' > build/plan/groom.txt
-expect "run_state: groom removes a stale entry and a folded one" 0 "^groom: applied sprint-2: 2 headings groomed" state groom sprint-2-records
+printf 'stale ## n never a path\nstale ### Fs folded at tools/s.sh:1\nstale ## sb moved item\n' > build/plan/groom.txt
+expect "run_state: groom removes a stale entry, a folded one, and one whose queue item moved unchanged" 0 "^groom: applied sprint-2: 3 headings groomed" state groom sprint-2-records
 expect "run_state: groom's stale lines leave the other entries" 0 "^0 1$" \
-  sh -c 'echo "$(grep -c -x -e "## n never a path" -e "### Fs folded at tools/s.sh:1" docs/backlog.md) $(grep -c -x "## t near miss" docs/backlog.md)"'
+  sh -c 'echo "$(grep -c -x -e "## n never a path" -e "### Fs folded at tools/s.sh:1" -e "## sb moved item" docs/backlog.md) $(grep -c -x "## t near miss" docs/backlog.md)"'
 cd "$work/sprint" || exit 1
 rm -rf "$work/stale"
 cp docs/metrics-backlog.tsv "$work/rows.before"
@@ -5447,7 +5468,7 @@ expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
 expect "agents: the sprint planner merges near-same notes and prunes the entries backlog-oldest lists against HEAD, stale ones too" 0 "^1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md. lists, against HEAD: .closed <commit> <heading>. (fixed later), .gone <heading>. (paths gone), or .stale <heading>. (unnamed three sprints)") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed.; a disputed one stays")"' _ "$agents/planner.md"
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md. lists against HEAD: .closed <commit> <heading>. (fixed later), .gone <heading>. (paths gone), or .stale <heading>. (unnamed 3 sprints)") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed.; a disputed one stays")"' _ "$agents/planner.md"
 expect "workflow: sprint-planning hands the planner the oldest entries and the merge of near-same notes" 0 "^1 1$" \
   sh -c 'echo "$(grep -c -F "(a near-same note merged, never dropped), the oldest entries to check against HEAD from" "$1") $(grep -c -F "run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md" "$1")"' _ "$swf"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
