@@ -9,6 +9,9 @@ ok   a project file cannot bind a key sequence, which could write any file
 ok   without a home directory the user file is skipped
 ok   a directory named .caratrc is skipped
 ok   a file that cannot be read is reported and skipped
+ok   a project file swapped for a link after the check is not read
+ok   a user file read through a link is still read
+ok   a project file cannot bind a write, a quit, or the command line
 ok   a linked project file is refused
 ok   a project file linked to /dev/zero is refused
 ok   a FIFO project file is refused and the user file loads
@@ -19,4 +22,4 @@ ok   a linked user file is read
 ok   illegal bytes and a huge tabstop are lines of their files
 ok   the files are found under the home and working directories the port names
 ok   the editor applies the files and shows the first problem with the count of the others
-adapters_config_gateway: 21 passed, 0 failed
+adapters_config_gateway: 24 passed, 0 failed

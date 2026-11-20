@@ -67,6 +67,16 @@ ok   an untrusted file cannot trust a directory
 ok   a root command in the project file is refused
 ok   an untrusted file binds actions and none but no key sequence
 ok   a trusted file binds a key sequence
+ok   an untrusted file cannot bind file.save
+ok   an untrusted file cannot bind quit.all
+ok   an untrusted file cannot bind quit.write_all
+ok   an untrusted file cannot bind window.quit
+ok   an untrusted file cannot bind cmdline.execute
+ok   an untrusted file cannot bind cmdline.backspace
+ok   an untrusted file cannot bind cmdline.history_older
+ok   an untrusted file cannot bind cmdline.history_newer
+ok   a trusted file binds a write and the command line
+ok   an untrusted file opens the command line and unbinds a quit
 ok   an untrusted file sets anything else
 ok   the last line of a key wins and the defaults are the shipped lines
 ok   a key no line sets has no last line
@@ -89,4 +99,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 91 passed, 0 failed
+domain_rc_parser: 101 passed, 0 failed

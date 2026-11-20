@@ -112,6 +112,23 @@ module DomainRcParserTest
     t.assert_equal([[], [".caratrc:1: language commands are not read from a project file"]], config_of("language.ruby.lsp.root / ./evil\n", false), "a root command in the project file is refused")
     t.assert_equal([["1 keymap|normal [\"x\", \"cursor.down\"]", "2 keymap|normal [\"y\", \"none\"]", "4 keymap|leader [\",\"]", "5 keymap|normal [\"z\"]"], [".caratrc:3: key sequences are not read from a project file"]], config_of("keymap.normal x cursor.down\nkeymap.normal y none\nkeymap.normal q :e<Space>.git/config<CR>\nkeymap.leader ,\nkeymap.normal z\n", false), "an untrusted file binds actions and none but no key sequence")
     t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
+    # Scenarios: A write or quit binding in the project file, A
+    # command-line binding in any mode: every refused action in turn.
+    refused = "write, quit, and command-line actions are not bound from a project file"
+    t.table([
+      ["an untrusted file cannot bind file.save", "keymap.normal j file.save\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind quit.all", "keymap.normal j quit.all\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind quit.write_all", "keymap.insert j quit.write_all\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind window.quit", "keymap.visual j window.quit\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.execute", "keymap.cmdline <Space> cmdline.execute\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.backspace", "keymap.operator_pending j cmdline.backspace\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.history_older", "keymap.normal k cmdline.history_older\n", [[], [".caratrc:1: #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.history_newer", "keymap.visual_block k cmdline.history_newer\n", [[], [".caratrc:1: #{refused}"]]]
+    ]) do |text|
+      config_of(text.to_s, false)
+    end
+    t.assert_equal([["1 keymap|normal [\"j\", \"file.save\"]", "2 keymap|cmdline [\"<Space>\", \"cmdline.execute\"]", "3 keymap|normal [\"k\", \"mode.cmdline\"]"], []], config_of("keymap.normal j file.save\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k mode.cmdline\n", true), "a trusted file binds a write and the command line")
+    t.assert_equal([["1 keymap|normal [\"k\", \"mode.cmdline\"]", "2 keymap|normal [\"ZZ\", \"none\"]"], []], config_of("keymap.normal k mode.cmdline\nkeymap.normal ZZ none\n", false), "an untrusted file opens the command line and unbinds a quit")
     t.assert_equal([["1 option|tabstop [\"3\"]"], []], config_of("option.tabstop 3\n", false), "an untrusted file sets anything else")
 
     # Several files: load order, the last line, notes, and the order of

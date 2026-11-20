@@ -175,6 +175,23 @@ module UseCasesActionsTest
     t.assert_equal([], wrong, "every registered action handler returns an Outcome")
     t.assert_true(names.length >= 100, "the table holds every core action")
 
+    # The actions a project file may not bind are registered names, so a
+    # rename cannot leave the refusal stale, and the command-line prefix
+    # names some.
+    stale = []
+    i = 0
+    while i < D::Config::PROJECT_REFUSED.length
+      stale << D::Config::PROJECT_REFUSED[i] unless names.include?(D::Config::PROJECT_REFUSED[i])
+      i += 1
+    end
+    command_line = 0
+    i = 0
+    while i < names.length
+      command_line += 1 if names[i].start_with?(D::Config::COMMAND_LINE)
+      i += 1
+    end
+    t.assert_equal([[], 4], [stale, command_line], "the actions a project file may not bind are registered")
+
     # Every core action is described in 1 to 32 characters for the key
     # hints.
     undescribed = []

@@ -7,7 +7,7 @@
 
 ## 2. Project bindings to a write, a quit, or the command line
 
-- [ ] 2.1 `carat/domain/config.rb` `binding?` refuses `PROJECT_REFUSED` and `cmdline.` actions in every mode (proved by the rows of `test/domain_rc_parser.rb` and "a project file cannot bind a write, a quit, or the command line" in `test/adapters_config_gateway.rb`; `test/use_cases_actions.rb` checks every listed name is registered)
+- [x] 2.1 `carat/domain/config.rb` `binding?` refuses `PROJECT_REFUSED` and `cmdline.` actions in every mode (proved by the rows of `test/domain_rc_parser.rb` and "a project file cannot bind a write, a quit, or the command line" in `test/adapters_config_gateway.rb`; `test/use_cases_actions.rb` checks every listed name is registered)
 
 ## 3. Options
 
