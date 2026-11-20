@@ -29,7 +29,7 @@ None.
 ## Out of scope
 
 - No `tools/rules.sh` edit; no file of the feature lane.
-- The XDG global configuration (`~/.config/git/config`), and the main checkout's `HEAD` switched to another branch at the same commit (`main_moved` compares the commit only): not in the queue item, recorded in `docs/findings/check-runner-safety-c.md`. The common `objects/`, which every lane writes, stay unscanned, and so do the remote-tracking refs (Design, Risks).
+- The XDG global configuration (`~/.config/git/config`), and the main checkout's `HEAD` switched to another branch at the same commit (`main_moved` compares the commit only): not in the queue item, recorded in `docs/findings/check-runner-safety-c.md` (its entry, written before `main_moved` compared the commit, names the HEAD whole). The common `objects/`, which every lane writes, stay unscanned, and so do the remote-tracking refs (Design, Risks).
 - A stage that deletes a file of the lane's git directory leaves no entry with a new status-change time once its directory's own entry is left out; such a deletion breaks only the lane itself.
 
 ## Impact
