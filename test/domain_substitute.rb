@@ -24,12 +24,12 @@ module DomainSubstituteTest
   end
 
   # The flags applied to a fresh memory after the flags "g":
-  # [all, report, count_only, case_mode, print].
+  # [all, report, count_only, case_mode, print], the last two as text.
   def self.flags(text)
     memory = D::LastSubstitute.new
     memory.apply_flags("g")
     memory.apply_flags(text.to_s)
-    [memory.all, memory.report, memory.count_only, memory.case_mode, memory.print]
+    [memory.all, memory.report, memory.count_only, memory.case_mode.to_s, memory.print.to_s]
   end
 
   def self.main
@@ -64,14 +64,16 @@ module DomainSubstituteTest
 
     # Rows are [label, flags, [all, report, count_only, case_mode, print]].
     t.table([
-      ["no flags start again", "", [false, true, false, 0, 0]],
-      ["g switches every match on", "g", [true, true, false, 0, 0]],
-      ["& keeps the flags and g switches", "&g", [false, true, false, 0, 0]],
-      ["& alone keeps them", "&", [true, true, false, 0, 0]],
-      ["e switches the report off", "e", [false, false, false, 0, 0]],
-      ["n counts", "n", [false, true, true, 0, 0]],
-      ["i ignores case and I matches it", "iI", [false, true, false, 2, 0]],
-      ["p prints and # numbers", "p#", [false, true, false, 0, 2]]
+      ["no flags start again", "", [false, true, false, "options", "none"]],
+      ["g switches every match on", "g", [true, true, false, "options", "none"]],
+      ["& keeps the flags and g switches", "&g", [false, true, false, "options", "none"]],
+      ["& alone keeps them", "&", [true, true, false, "options", "none"]],
+      ["e switches the report off", "e", [false, false, false, "options", "none"]],
+      ["n counts", "n", [false, true, true, "options", "none"]],
+      ["i ignores case and I matches it", "iI", [false, true, false, "match", "none"]],
+      ["p prints and # numbers", "p#", [false, true, false, "options", "number"]],
+      ["i ignores case", "i", [false, true, false, "ignore", "none"]],
+      ["p prints the line", "p", [false, true, false, "options", "line"]]
     ]) do |text|
       flags(text)
     end
@@ -135,6 +137,23 @@ module DomainSubstituteTest
     ]) do |text|
       D::Replacement.check(text.to_s)
     end
+
+    # The group an item names, read by the one block of expand that
+    # inserts a group. Rows are [label, [text, byte], group].
+    t.cases([
+      ["an ampersand is the match", ["a&", 1], 0],
+      ["a backslash and zero is the match", ["\\0", 0], 0],
+      ["a backslash and a digit is its group", ["x\\9", 1], 9],
+      ["an escaped ampersand is no group", ["\\&", 0], -1],
+      ["a case escape is no group", ["\\u", 0], -1],
+      ["a backslash last is no group", ["a\\", 1], -1],
+      ["a digit alone is no group", ["1", 0], -1]
+    ]) do |input|
+      text = input[0].to_s
+      D::Replacement.group_at(text, input[1].to_i, text.bytesize)
+    end
+    plain = "ab"
+    t.assert_true(D::Replacement.recase(plain, 0, 0).equal?(plain), "recase answers the text itself when nothing is recased")
 
     big = "x" * 600_000
     t.assert_equal([false, true], [D::Replacement.too_long?("~", big), D::Replacement.too_long?("~~", big)], "a string whose tildes could pass a mebibyte is too long")

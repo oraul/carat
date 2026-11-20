@@ -98,10 +98,10 @@ module Carat
         memory = @last_substitute
         ignorecase = state.options.ignorecase
         smartcase = state.options.smartcase
-        if memory.case_mode == 1
+        if memory.case_mode == :ignore
           ignorecase = true
           smartcase = false
-        elsif memory.case_mode == 2
+        elsif memory.case_mode == :match
           ignorecase = false
         end
         Domain::VimPattern.compile_substitute(source, ignorecase, smartcase, memory.previous, memory.previous_kept)
@@ -116,7 +116,7 @@ module Carat
         memory = @last_substitute
         memory.pattern = source
         @last_search.remember(compiled, @last_search.forward)
-        @last_search.recompile(state.options, memory) unless memory.case_mode == 0
+        @last_search.recompile(state.options, memory) unless memory.case_mode == :options
         @registers.search = source
         @search_history.add(source) if args.fresh && !args.pattern.empty?
       end
@@ -148,7 +148,7 @@ module Carat
         return Outcome.success("#{plural(total, "match", "matches")} on #{plural(rows.length, "line", "lines")}") if memory.count_only
         landed = apply(buffer, rows, texts)
         state.cursor.move_to(landed, buffer.first_nonblank(landed))
-        return Outcome.success(printed(buffer, landed, memory.print == 2)) if memory.print > 0
+        return Outcome.success(printed(buffer, landed, memory.print == :number)) unless memory.print == :none
         return Outcome.none if total <= Domain::Messages::REPORT
         Outcome.success("#{plural(total, "substitution", "substitutions")} on #{plural(rows.length, "line", "lines")}")
       end
