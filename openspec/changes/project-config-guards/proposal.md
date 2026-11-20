@@ -7,7 +7,7 @@ A project `.caratrc` comes with whatever directory the user opens, so it is untr
 ## What Changes
 
 - `FilePort#read_no_link(path, limit)`: `read`'s bounded, non-blocking read, refusing a path that is a symbolic link when it opens it (`File::NOFOLLOW` in `DiskFiles`, the link mark in `MemoryFiles`). `RcConfigGateway` reads the project file through it, so a link swapped in after the stat is refused as "cannot be read"; the user file, which may be a link, is still read with `read`.
-- `Config` refuses a project file's keymap line whose action writes or quits (`file.save`, `quit.all`, `quit.write_all`, `window.quit`) or is a command-line action (`cmdline.*`), in every mode, reported as `file:line: write, quit, and command-line actions are not bound from a project file`; the defaults and the user file still bind them, and the project file still unbinds them with `none`.
+- `Config` refuses a project file's keymap line whose action writes or quits (`file.save`, `quit.all`, `quit.write_all`, `window.quit`) or is a command-line action (`cmdline.*`), in every mode, reported as `file:line: write, quit, and command-line actions are not bound from a project file`; the defaults and the user file still bind them, and the project file still unbinds them with `none`. It refuses a project file's `keymap.leader` line too, reported as `file:line: keymap.leader is not read from a project file`, since a project leader such as `d` would move the defaults' and the user's `<leader>fs` and `<leader>qw` onto `dfs` and `dqw`, a write and a write-and-quit typed as a Vim command.
 - `Options` bounds `scroll` and `scrolloff` to 0 to 9999 lines, `timeoutlen` to 0 to 10000 milliseconds, and `undolevels` to 0 to 10000, a value outside reported as `file:line: option.<name> takes a number from <low> to <high>` and the value before it kept, as `tabstop` and `keyhints.delay` are.
 - `Options#apply` checks every bounded number through one private `bounded` and every named value through one private `named`, replacing `width_problem`, `range_problem`, and the seven copied known-name branches; the messages stay as they were.
 - Docs: `docs/architecture.md` (the port table and the project-file rule of section 7), `README.md` (the option bounds and the project-file sentence), `docs/compatibility.md` rows of the four options, and the code map's area 3.
@@ -20,7 +20,7 @@ None.
 
 ### Modified Capabilities
 
-- `config-files`: ADDED requirements "A project file is refused when it is a link at the open", "A project file cannot bind keys to a write, a quit, or the command line", and "Line, wait, and undo numbers are bounded".
+- `config-files`: ADDED requirements "A project file is refused when it is a link at the open", "A project file cannot bind keys to a write, a quit, or the command line", "A project file cannot set the leader", and "Line, wait, and undo numbers are bounded".
 
 ## Out of scope
 
@@ -32,8 +32,8 @@ None.
 
 ## Impact
 
-- README.md: changed, the option bounds and the project file's refused bindings.
-- docs/architecture.md: changed, the `FilePort` row of section 6 and the project-file rule and gateway row of section 7; the validation bullet of section 7 no longer repeats the three file names listed above it, so the doc stays within its docs-lint budget.
+- README.md: changed, the option bounds and the project file's refused bindings and leader.
+- docs/architecture.md: changed, the `FilePort` row of section 6 and the project-file rule and gateway row of section 7; the validation bullet of section 7 names the files by their paths above instead of repeating the three names, and a few words of section 7 are tightened, so the doc stays within its docs-lint budget.
 - CLAUDE.md: unchanged, no process changes.
 - docs/codebase-map.md: area 3 (`Config`, `Options`, `RcConfigGateway`) and the ports and drivers rows that list `FilePort` methods.
 - docs/compatibility.md: the rows of `option.scroll`, `scrolloff`, `timeoutlen`, `undolevels` where they exist.

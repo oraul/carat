@@ -17,3 +17,11 @@
 ## 4. Docs
 
 - [x] 4.1 `docs/architecture.md`, `README.md`, `docs/compatibility.md`, `docs/codebase-map.md` (proved by `make lint` and `make docs-lint`)
+
+## 5. Review fixes
+
+- [x] 5.1 `carat/domain/config.rb` `binding?` refuses a project file's `keymap.leader` line, so the `<leader>` write and quit bindings stay on the defaults' or the user's leader (proved by "a project leader leaves <leader>fs and <leader>qw on the user's leader" and "a project leader leaves the default leader" in `test/adapters_config_gateway.rb` and the leader row of `test/domain_rc_parser.rb`; delta spec "A project file cannot set the leader")
+- [x] 5.2 `test/use_cases_actions.rb` asserts the command line has refused actions instead of pinning their number at 4
+- [x] 5.3 `test/adapters_config_gateway.rb` drops "a user file read through a link is still read", which repeated the "a linked user file is read" row
+- [x] 5.4 `docs/architecture.md` section 7 again says the problems name their files and that the project file still binds other action names and `none`
+- [x] 5.5 `carat/domain/options.rb` passes the word to `bounded` as `named` gets it
