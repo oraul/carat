@@ -13,6 +13,9 @@
 #                    when HEAD moved while it ran
 #   review.KIND      "RESULT COMMIT SUMMARY" (security, quality, bench, and
 #                    periodic-security and periodic-quality after a merge)
+#   at.review.KIND   the UTC time a periodic review was recorded
+#   at.plan-needed   the UTC time plan-needed last read the review runs
+#                    before the change's planner (merged_since)
 #   pushes, ci_fixes the pushes made and the CI fixes they may answer
 #   review_fixes     the review fix pushes made (at most one a run)
 #   gates_failed     the push attempts the pre-push gates refused
@@ -75,7 +78,7 @@
 #   gated CHANGE clear|pass     the merge gates' record: none (in every run
 #                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
-#                               stage.*, and moved, which their own commands write,
+#                               stage.*, at.*, and moved, which their own commands write,
 #                               a pushed value but a commit hash, a ci value
 #                               but "red|green COMMIT" at the pushed head, and
 #                               a merged value but the squash commit on main
@@ -104,7 +107,8 @@
 #                               RESULT pass or blocked, and for the periodic
 #                               kinds also partial, some areas not reviewed,
 #                               or not-run, no result) at COMMIT, HEAD when
-#                               omitted; a pass also records phase.KIND
+#                               omitted, a periodic kind its time as
+#                               at.review.KIND; a pass also records phase.KIND
 #                               (a SUMMARY with carried=1 only at the head
 #                               of the moved record, its reviewed commit
 #                               another, where review.KIND passed)
@@ -315,9 +319,11 @@
 #                               records change merged after it placed, or
 #                               the head item names no estimate, or a review run records
 #                               a failing periodic security review with no
-#                               change planned and merged since
-#                               (merged_since) nor a later periodic
-#                               security review passed (passed_since);
+#                               change planned after it was recorded and
+#                               merged since (merged_since) nor a later
+#                               whole-tree periodic security review passed
+#                               (passed_since); while the change's plan is
+#                               ahead, record when it read them (at.plan-needed);
 #                               print "not needed: ..." with the head item's size and exit 1
 #   budget CHANGE               print "over:", "under:", "unmeasured:", or
 #                               "no estimate:" with the change's estimate, its
@@ -512,6 +518,10 @@ SPRINT_SIZE_BEFORE=5
 # The run states of reviews, not changes, which a sprint never counts:
 # /review's review-DATE and sprint-planning's sprint-N.
 REVIEW_RUNS='^(review|sprint)-[0-9]'
+# The review runs whose scope is a sprint's combined diff, sprint-N, its
+# periodic security review never superseding another (passed_since); the
+# rest, review-DATE and sprint-N-sweep, review the whole tree.
+DIFF_REVIEW_RUN='sprint-[0-9]+'
 # The words that mark a queue item, inside its first parenthesis, as a
 # change the user approved beyond a sprint's size, which it does not count;
 # distinct from "the user-approved exception" inside an item's parenthesis,
@@ -3156,18 +3166,24 @@ records_excluded() {
   echo "$1: $2 excludes the planning records (records=skip); $what"
 }
 
-# True when a change planned and merged after COMMIT, the commit a
-# periodic review read: any history row's change merged after COMMIT (the
-# rows read newest first, up to the first merged at or before it, since
-# main is linear), or a pending one, whose merged commit and recorded
-# phase.plan both descend from COMMIT and are not it, its planner not
-# skipped (metric.planned is not 0). That planner saw the review:
-# plan-needed names a failing review before any other reason and the
-# workflow passes the review run to the planner, so its finding was
-# delivered first or judged not blocking. Later merges whose planner was
-# skipped leave it cleared. A merge planned at or before COMMIT, or
-# without its run state, clears nothing (review-coverage-b). A COMMIT git
-# does not know is never merged since.
+# True when a change planned and merged after a periodic review of COMMIT
+# recorded at TIME ($2, its at.review.periodic-security): any history
+# row's change merged after COMMIT (the rows read newest first, up to the
+# first merged at or before it, since main is linear), or a pending one,
+# whose merged commit and recorded phase.plan both descend from COMMIT and
+# are not it, its planner not skipped (metric.planned is not 0), and,
+# when TIME is a record time, whose at.plan-needed, the time plan-needed
+# read the review runs before its planner, is strictly later than TIME.
+# That planner saw the review: plan-needed names a failing review before
+# any other reason and the workflow passes the review run to the planner,
+# so its finding was delivered first or judged not blocking. A change
+# planned before the review was recorded, whatever its commits descend
+# from, or resumed past its plan after it, clears nothing; a review with
+# no record time, recorded before record times existed, is judged by the
+# commits alone. Later merges whose planner was skipped leave it cleared.
+# A merge planned at or before COMMIT, or without its run state, clears
+# nothing (review-coverage-b, periodic-clear-rules). A COMMIT git does
+# not know is never merged since.
 merged_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
@@ -3184,19 +3200,26 @@ merged_since() {
     for m in $commits; do
       descends "$since" "$m" || continue 2
     done
+    if record_time "$2"; then
+      later_than "$(change=$ran; read_key at.plan-needed)" "$2" || continue
+    fi
     return 0
   done
   return 1
 }
 
-# True when a review run records a passing periodic security review (pass,
-# no blocking finding) at a commit that descends from COMMIT and is not
-# it: a later whole-tree security review superseded the failing one at
-# COMMIT (review-coverage-b).
+# True when a whole-tree review run (REVIEW_RUNS but a sprint's diff
+# review, sprint-N, whose scope covers no other review) records a passing
+# periodic security review (pass, no blocking finding) at a commit that
+# descends from COMMIT and is not it and, when TIME ($2, the failing
+# review's at.review.periodic-security) is a record time, recorded
+# strictly after TIME: a later whole-tree security review superseded the
+# failing one at COMMIT (review-coverage-b, periodic-clear-rules).
 passed_since() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
   for later in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+    ! valid "$DIFF_REVIEW_RUN" "$later" || continue
     passed=$(change=$later; read_key review.periodic-security)
     case "$passed" in
       "pass "*) ;;
@@ -3206,9 +3229,23 @@ passed_since() {
     at=${passed#pass }
     at=${at%% *}
     valid '[0-9a-f]{7,40}' "$at" || continue
-    descends "$since" "$at" && return 0
+    descends "$since" "$at" || continue
+    if record_time "$2"; then
+      later_than "$(change=$later; read_key at.review.periodic-security)" "$2" || continue
+    fi
+    return 0
   done
   return 1
+}
+
+# True when TIME is a record time as utc_now writes it.
+record_time() {
+  valid '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' "$1"
+}
+
+# True when TIME and OTHER are record times and TIME is strictly later.
+later_than() {
+  record_time "$1" && record_time "$2" && [ "$(printf '%s\n%s\n' "$1" "$2" | LC_ALL=C sort | tail -1)" = "$1" ] && [ "$1" != "$2" ]
 }
 
 # The change's merged and phase.plan commits, on one line, when both are 7
@@ -3239,8 +3276,8 @@ descends() {
 # Whether the queue needs the planner before the change starts: needed,
 # first, when a review run (REVIEW_RUNS) records a failing periodic
 # security review (blocked, or blocking findings counted) and no change
-# merged since (merged_since) nor a later one passed (passed_since),
-# the line naming that run, which the
+# planned after it was recorded merged since (merged_since) nor a later
+# whole-tree one passed (passed_since), the line naming that run, which the
 # workflow hands the planner so its security-first stop applies whatever
 # else needs it; then when the change is not the first item of
 # a lane queue (docs/queue-feature.md or docs/queue-backlog.md), or when another merged change without a history row
@@ -3250,7 +3287,15 @@ descends() {
 # head item names no estimate; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in its lane queue.
+# Before it reads the review runs it records the time, at.plan-needed, in
+# the change's run state while that holds no phase.plan, phase.implement,
+# or merged record, the condition the workflow runs the planner under, so
+# merged_since knows which reviews that planner was handed and a resume
+# past the plan keeps the first time.
 plan_needed() {
+  if [ -f "$(state_file)" ] && [ -z "$(read_key phase.plan)$(read_key phase.implement)$(read_key merged)" ]; then
+    write_key at.plan-needed "$(utc_now)"
+  fi
   queues=$queue_files
   ! sprint_waiting || queues="$plan_dir/queue-feature.md $plan_dir/queue-backlog.md"
   for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
@@ -3261,8 +3306,9 @@ plan_needed() {
     esac
     reviewed=${record#* }
     reviewed=${reviewed%% *}
-    merged_since "$reviewed" && continue
-    passed_since "$reviewed" && continue
+    recorded=$(change=$run; read_key at.review.periodic-security)
+    merged_since "$reviewed" "$recorded" && continue
+    passed_since "$reviewed" "$recorded" && continue
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
   done
@@ -3607,7 +3653,7 @@ case "$command" in
     [ $# -eq 2 ] || usage
     value=$2
     case "$1" in
-      review.*|phase.*|stage.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, check, gated, moved)" ;;
+      review.*|phase.*|stage.*|at.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, review and plan-needed, check, gated, moved)" ;;
       pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
       merged) value=$(merged_at "$2" set) || exit 1 ;;
       ci)
@@ -3651,6 +3697,7 @@ case "$command" in
     at=$(commit_at "${4:-}") || exit 1
     case " $3 " in *" carried=1 "*) carried_backed "$1" "$at" || die "review: refused: a carried review at $at needs tools/run_state.sh moved to have exited 0 at that commit against the commit review.$1 passed at (the moved record: ${moved_record:-none})" ;; esac
     write_key "review.$1" "$2 $at $3"
+    case "$1" in periodic-*) write_key "at.review.$1" "$(utc_now)" ;; esac
     [ "$2" != pass ] || write_key "phase.$1" "$at" ;;
   stage)
     [ $# -ge 2 ] || usage
