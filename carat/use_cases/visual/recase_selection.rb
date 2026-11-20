@@ -8,7 +8,8 @@ module Carat
   module UseCases
     # Visual ~ (:toggle), u (:lower), U (:upper), and r{char} (:replace):
     # leaves visual mode and changes every selected character; the cursor
-    # goes to the start.
+    # goes to the start. A selection that changes no character leaves the
+    # buffer and its undo history as they were.
     class RecaseSelection
       #: (Domain::EditorState, Domain::Command, Symbol) -> Outcome
       def call(state, command, how)
@@ -23,14 +24,17 @@ module Carat
           home = Domain::Position.new(row: top, col: selection.span(buffer, top, tabstop).from)
         end
         lines = []
+        changed = false
         row = top
         while row <= selection.bottom
           line = buffer.line(row)
           span = selection.span(buffer, row, tabstop)
-          lines << Domain::Operators.recase_row(line, span.from, span.to, how, command.char)
+          made = Domain::Operators.recase_row(line, span.from, span.to, how, command.char)
+          changed = true if made != line
+          lines << made
           row += 1
         end
-        buffer.set_lines(top, selection.bottom + 1, lines)
+        buffer.set_lines(top, selection.bottom + 1, lines) if changed
         state.cursor.move_to(home.row, state.clamp_col(home.row, home.col))
         Outcome.none
       end

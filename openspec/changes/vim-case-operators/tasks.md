@@ -19,3 +19,4 @@
 - [x] 4.1 `carat/adapters/editor_assembly.rb` builds one `RecaseSelection` into a `recase_selection` reader and passes it to the operator and the selection handlers (proved by "the case operators and the visual case keys share the one RecaseSelection" in `test/adapters_assembly.rb`)
 - [x] 4.2 `Domain::Operators.recase_row` slices and recases one row, used by `recase_range` and `RecaseSelection` (proved by the unchanged rows of `test/editor_case_operators.rb`)
 - [x] 4.3 The label of the empty-line visual row in `test/editor_case_operators.rb` names the keys it sends
+- [x] 4.4 `RecaseSelection` calls `buffer.set_lines` only when a rebuilt row differs from its original, as `Operators.recase_range` does, so a visual case key over text already in the target case leaves no undo step (proved by the three "a visual ... leaves no undo step" rows of `test/editor_case_operators.rb`; the operators spec line already states it)

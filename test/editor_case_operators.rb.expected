@@ -94,6 +94,9 @@ ok   one undo for a case operator: a second u undoes the first
 ok   one undo for a case operator: u after a visual gU
 ok   one undo for a case operator: u after gUU over multibyte letters
 ok   one undo for a case operator: a change of nothing leaves no undo step
+ok   one undo for a case operator: a visual gU over capitals leaves no undo step
+ok   one undo for a case operator: a visual u over lower case leaves no undo step
+ok   one undo for a case operator: a visual ~ over no letters leaves no undo step
 ok   recase toggles ASCII
 ok   recase lowers ASCII
 ok   recase uppers ASCII
@@ -107,4 +110,4 @@ ok   recase toggles the dotted capital I to i
 ok   recase keeps a ligature when upper-cased
 ok   recase of an empty string
 ok   recase changes only the ASCII letters of text that is not valid UTF-8
-editor_case_operators: 109 passed, 0 failed
+editor_case_operators: 112 passed, 0 failed
