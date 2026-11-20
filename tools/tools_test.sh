@@ -1595,9 +1595,9 @@ expect "run_state: history refuses a lane file whose header is short of HEADER" 
 expect "run_state: history appends no row under a header short of HEADER" 0 "^$" cmp docs/metrics-backlog.tsv short.tsv
 { printf '%s\r\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
 expect "run_state: history refuses a header ending in a carriage return" 1 "line 1 differs from HEADER" state history
-printf '%s\n' "$full" > docs/metrics-feature.tsv
 { printf '%s\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
-expect "run_state: history checks the other lane's header too" 1 "docs/metrics-feature[.]tsv's line 1 differs from HEADER" sh -c "printf 'change\tdate\n' > docs/metrics-feature.tsv; sh '$here/run_state.sh' history"
+printf 'change\tdate\n' > docs/metrics-feature.tsv
+expect "run_state: history checks the other lane's header too" 1 "docs/metrics-feature[.]tsv's line 1 differs from HEADER" state history
 printf '%s\n' "$full" > docs/metrics-feature.tsv
 expect "run_state: history appends under a header equal to HEADER" 0 "appended second" state history
 
