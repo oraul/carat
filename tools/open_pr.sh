@@ -21,7 +21,8 @@
 #       is the pushed head, and records its number (tools/run_state.sh set
 #       CHANGE pr N): the one such pull request, or the one recorded at an
 #       earlier push among several; refuses several otherwise, since a
-#       fork's pull request can share the commit
+#       fork's pull request can share the commit; git shows no head
+#       repository, so the merger checks it before the merge
 #   sh tools/open_pr.sh message CHANGE SHA   the merger, before its squash
 #       merge: prints the squash message, the body of the change's one
 #       archived pr.md at SHA (40 digits; the archive's own entries, as the
@@ -36,12 +37,17 @@
 #   sh tools/open_pr.sh gate DIR TOOLS       the workflow: TOOLS/gates.sh
 #       pr-body on DIR/body and TOOLS/scan_text.sh on DIR/title, TOOLS
 #       the tools directory of main's checkout
+#   sh tools/open_pr.sh rule                 the workflow, with GH_TOKEN
+#       and GH_REPO, before the token step: refuses unless the environment
+#       AI admits exactly one deployment ref, the branch main, the setting
+#       that keeps PR_TOKEN from any branch's own workflow
 #   sh tools/open_pr.sh open BRANCH DIR      the workflow, with GH_TOKEN
 #       and GH_REPO: opens the pull request from DIR/title and DIR/body
-#       with gh, or, when the branch has one open, sets its title and body
-#       to them where either differs (more than one open is refused);
-#       reads the text back and fails unless both equal the files but for
-#       trailing newlines
+#       with gh, or, when the branch has one open in GH_REPO, sets its
+#       title and body to them where either differs (more than one open is
+#       refused); a fork's pull request on a branch of the same name is
+#       neither counted nor edited; reads the text back by number and
+#       fails unless both equal the files but for trailing newlines
 #
 # Environment: WAIT_STEP, the seconds between two reads of origin (10).
 # Exit status: 0 done or nothing to do, 1 refused or not equal, 2 a usage
@@ -87,8 +93,8 @@ $out"
 $out"
 }
 
-# live_text BRANCH DIR: the open pull request's title and body, as gh
-# reads them back, into DIR/title.live and DIR/body.live.
+# live_text NUMBER DIR: the pull request's title and body, as gh reads
+# them back, into DIR/title.live and DIR/body.live.
 live_text() {
   gh pr view "$1" --repo "$GH_REPO" --json title --jq .title > "$2/title.live" || refuse "cannot read the title back"
   gh pr view "$1" --repo "$GH_REPO" --json body --jq .body > "$2/body.live" || refuse "cannot read the body back"
@@ -134,7 +140,9 @@ case "$cmd" in
     matches "$pushed" '[0-9a-f]{40}' || refuse "no pushed head in the run state"
     # Git shows no pull request's head repository, so a fork's pull request
     # on the pushed commit looks like ours: one number is taken, or the one
-    # the run state recorded at an earlier push; more are refused.
+    # the run state recorded at an earlier push; more are refused. The
+    # merger reads the recorded one's head repository and branch and
+    # merges it only when they are this repository's and the change's.
     recorded=$(state pr)
     waited=0
     while :; do
@@ -214,31 +222,64 @@ $found"
     [ $# -eq 2 ] || usage
     gate_text "$1/title" "$1/body" "$2"
     echo "open_pr: the title and body pass" ;;
+  rule)
+    [ $# -eq 0 ] || usage
+    [ -n "${GH_REPO:-}" ] || refuse "GH_REPO is not set"
+    # The environment's secrets reach a job only on a deployment ref its
+    # rule admits; with every branch admitted, a branch's own workflow
+    # naming AI reads PR_TOKEN. null is the rule admitting every branch.
+    policy=$(gh api "repos/$GH_REPO/environments/AI" --jq '.deployment_branch_policy | if . == null then "every branch" else "\(.protected_branches) \(.custom_branch_policies)" end') ||
+      refuse "cannot read the environment AI of $GH_REPO"
+    refs=""
+    if [ "$policy" = "false true" ]; then
+      refs=$(gh api "repos/$GH_REPO/environments/AI/deployment-branch-policies" --jq '.branch_policies[] | "\(.type // "branch") \(.name)"') ||
+        refuse "cannot read the deployment refs of the environment AI"
+    fi
+    if [ "$policy" != "false true" ] || [ "$refs" != "branch main" ]; then
+      case "$policy" in
+        "every branch") admitted="every branch" ;;
+        "false true") admitted=$(printf '%s' "${refs:-no ref}" | tr '\n' ';' | sed 's/;/; /g') ;;
+        "true "*) admitted="the protected branches" ;;
+        *) admitted="an unknown rule ($policy)" ;;
+      esac
+      refuse "the environment AI admits $admitted as deployment refs, not the branch main alone: set its deployment branches to the selected branch main, or any branch's own workflow can read PR_TOKEN"
+    fi
+    echo "open_pr: the environment AI admits the branch main alone" ;;
   open)
     [ $# -eq 2 ] || usage
     branch=$1
     dir=$2
     matches "$branch" "$BRANCH_RE" || refuse "not a Conventional Branch of an allowed type: $branch"
     [ -n "${GH_REPO:-}" ] || refuse "GH_REPO is not set"
-    count=$(gh pr list --repo "$GH_REPO" --head "$branch" --state open --json number --jq length) ||
+    # --head matches a head branch's name in any repository, so a fork's
+    # pull request on a branch of the same name is listed too: only those
+    # of this repository count, and each is named by its number, never by
+    # the branch, which gh resolves to any pull request of that head name.
+    listed=$(gh pr list --repo "$GH_REPO" --head "$branch" --state open --json number,isCrossRepository --jq '.[] | "\(.number) \(.isCrossRepository)"') ||
       refuse "cannot list the pull requests of $branch"
-    matches "$count" '[0-9]+' || refuse "gh pr list printed no count: $count"
-    [ "$count" -le 1 ] || refuse "$branch has $count open pull requests: close all but one"
+    printf '%s\n' "$listed" | grep -q -v -x -E '([0-9]+ (true|false))?' && refuse "gh pr list printed no number and repository flag: $listed"
+    numbers=$(printf '%s\n' "$listed" | awk '$2 == "false" { print $1 }')
+    count=$(printf '%s' "$numbers" | grep -c '^' || true)
+    [ "$count" -le 1 ] || refuse "$branch has $count open pull requests in $GH_REPO: close all but one"
     if [ "$count" -eq 1 ]; then
-      live_text "$branch" "$dir"
+      number=$numbers
+      live_text "$number" "$dir"
       if [ "$(chomped "$dir/title")" = "$(chomped "$dir/title.live")" ] && [ "$(chomped "$dir/body")" = "$(chomped "$dir/body.live")" ]; then
-        echo "open_pr: the open pull request of $branch already holds pr.md's title and body"
+        echo "open_pr: the open pull request $number of $branch already holds pr.md's title and body"
         exit 0
       fi
-      gh pr edit "$branch" --repo "$GH_REPO" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
+      gh pr edit "$number" --repo "$GH_REPO" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
         refuse "gh pr edit failed"
-      done_text="set the title and body of the open pull request of $branch"
+      done_text="set the title and body of the open pull request $number of $branch"
     else
-      gh pr create --repo "$GH_REPO" --base main --head "$branch" --title "$(cat "$dir/title")" --body-file "$dir/body" ||
+      created=$(gh pr create --repo "$GH_REPO" --base main --head "$branch" --title "$(cat "$dir/title")" --body-file "$dir/body") ||
         refuse "gh pr create failed"
-      done_text="opened the pull request of $branch"
+      # gh prints the new pull request's address, its number last.
+      number=$(printf '%s\n' "$created" | sed -n '$s|.*/pull/\([0-9][0-9]*\)$|\1|p')
+      matches "$number" '[0-9]+' || refuse "gh pr create printed no pull request number: $created"
+      done_text="opened the pull request $number of $branch"
     fi
-    live_text "$branch" "$dir"
+    live_text "$number" "$dir"
     for part in title body; do
       [ "$(chomped "$dir/$part")" = "$(chomped "$dir/$part.live")" ] ||
         refuse "the pull request's $part differs from pr.md's"

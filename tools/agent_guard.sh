@@ -737,7 +737,7 @@ script_form() {
       # The pull request opened on the branch push: the contributor writes
       # pr.md before its push and waits for the pull request after it; the
       # merger prints the squash message from it at the pushed head; read,
-      # gate, and open are the open-pr workflow's alone.
+      # gate, rule, and open are the open-pr workflow's alone.
       case "${1:-}" in
         write)
           only_profiles contributor "tools/open_pr.sh write"

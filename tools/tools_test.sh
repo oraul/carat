@@ -1440,32 +1440,41 @@ expect "open_pr: the read title and body pass the gates" 0 "pass" sh "$here/open
 cp -R "$work/openpr-read" "$work/openpr-bad"
 echo "Generated with a tool" >> "$work/openpr-bad/body"
 expect "open_pr: a body failing the pr-body gate is refused" 1 "fails the pr-body gate" sh "$here/open_pr.sh" gate "$work/openpr-bad" "$here"
-# The stand-in gh: pr list prints GH_OPEN, pr create and pr edit keep the
-# title and body file in GH_DIR, pr view prints them back, the body with
-# GH_FOOTER.
+# The stand-in gh: pr list prints GH_PRS, the open pull requests of the
+# head branch's name as "NUMBER CROSS-REPOSITORY" lines split at ";", as
+# open's filter prints them; pr create and pr edit keep the title and body
+# file in GH_DIR, pr create printing the new pull request's path, number
+# GH_NEW (9), last; pr view prints them back, the body with GH_FOOTER;
+# api prints the environment AI's rule, GH_POLICY ("false true": custom
+# refs, not protected branches), and its refs, GH_RULES ("branch main").
 mkdir -p "$work/openpr-bin" "$work/openpr-gh"
 cat > "$work/openpr-bin/gh" <<'GH'
 #!/bin/sh
 echo "$*" >> "$GH_DIR/calls"
 case "$1 $2" in
-  "pr list") echo "${GH_OPEN:-0}" ;;
+  "pr list") [ -z "${GH_PRS:-}" ] || printf '%s\n' "$GH_PRS" | tr ';' '\n' ;;
   "pr create"|"pr edit")
+    verb=$2
     while [ $# -gt 0 ]; do
       case "$1" in
         --title) printf '%s\n' "$2" > "$GH_DIR/title"; shift ;;
         --body-file) cat "$2" > "$GH_DIR/body"; shift ;;
       esac
       shift
-    done ;;
+    done
+    [ "$verb" != create ] || echo "o/r/pull/${GH_NEW-9}" ;;
   "pr view")
     case "$*" in
       *"--json title"*) cat "$GH_DIR/title" ;;
       *) cat "$GH_DIR/body"; printf '%s' "${GH_FOOTER:-}" ;;
     esac ;;
+  "api repos/o/r/environments/AI") printf '%s\n' "${GH_POLICY-false true}" ;;
+  "api repos/o/r/environments/AI/deployment-branch-policies") [ -z "${GH_RULES-branch main}" ] || printf '%s\n' "${GH_RULES-branch main}" | tr ';' '\n' ;;
+  *) exit 1 ;;
 esac
 GH
 chmod +x "$work/openpr-bin/gh"
-expect "open_pr: open creates the pull request and reads it back equal" 0 "opened the pull request of chore/openpr" \
+expect "open_pr: open creates the pull request and reads it back equal" 0 "opened the pull request 9 of chore/openpr" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 expect "open_pr: open created it on main from the branch" 0 "pr create --repo o/r --base main --head chore/openpr" cat "$work/openpr-gh/calls"
 expect "open_pr: a pull request read back with a footer is refused" 1 "body differs" \
@@ -1474,20 +1483,58 @@ expect "open_pr: a pull request read back with a footer is refused" 1 "body diff
 # pr.md's title and body from the push, never from a session's tool.
 : > "$work/openpr-gh/calls"
 expect "open_pr: an open pull request equal to pr.md is left as it is" 0 "already holds pr.md's title and body" \
-  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="7 false" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 expect "open_pr: an open pull request equal to pr.md gets no edit or create" 1 "^$" grep -n -E "pr (create|edit)" "$work/openpr-gh/calls"
 printf 'chore: an older title\n' > "$work/openpr-gh/title"
 printf 'an older body\n' > "$work/openpr-gh/body"
-expect "open_pr: open sets an open pull request's title and body to pr.md's" 0 "set the title and body of the open pull request of chore/openpr, its title and body equal" \
-  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
-expect "open_pr: the edit names the branch's pull request and pr.md's text" 0 "^same$" \
-  sh -c 'grep -q -x -F "pr edit chore/openpr --repo o/r --title chore(tools): open on push --body-file $1/body" "$2/calls" && cmp -s "$1/body" "$2/body" && echo same' _ "$work/openpr-read" "$work/openpr-gh"
+expect "open_pr: open sets an open pull request's title and body to pr.md's" 0 "set the title and body of the open pull request 7 of chore/openpr, its title and body equal" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="7 false" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: the edit names the pull request's number and pr.md's text" 0 "^same$" \
+  sh -c 'grep -q -x -F "pr edit 7 --repo o/r --title chore(tools): open on push --body-file $1/body" "$2/calls" && cmp -s "$1/body" "$2/body" && echo same' _ "$work/openpr-read" "$work/openpr-gh"
 expect "open_pr: an open pull request gets no create" 1 "^$" grep -n "pr create" "$work/openpr-gh/calls"
 printf 'an older body\n' > "$work/openpr-gh/body"
 expect "open_pr: an edit read back with a footer is refused" 1 "body differs" \
-  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=1 GH_FOOTER="A footer" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
-expect "open_pr: more than one open pull request is refused" 1 "has 2 open pull requests" \
-  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_OPEN=2 sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="7 false" GH_FOOTER="A footer" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: more than one open pull request is refused" 1 "has 2 open pull requests in o/r" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="7 false;8 false" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+# A fork's pull request on a branch of the same name is listed by --head:
+# it is neither counted nor edited, so ours is opened, or edited by its
+# number ("Fork pull requests sharing the branch name block open_pr.sh",
+# "Restrict the open-pr edit path to same-repository pull requests").
+: > "$work/openpr-gh/calls"
+expect "open_pr: open opens its own pull request beside a fork's on the branch's name" 0 "opened the pull request 9 of chore/openpr" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="5 true;6 true" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: open reads back its created pull request by number, never a fork's" 0 "^good$" \
+  sh -c 'grep -q "^pr create " "$1" && grep -q "^pr view 9 " "$1" && ! grep -q -E "^pr (view|edit) [56] " "$1" && echo good' _ "$work/openpr-gh/calls"
+: > "$work/openpr-gh/calls"
+printf 'chore: an older title\n' > "$work/openpr-gh/title"
+expect "open_pr: open edits its own pull request by number beside a fork's" 0 "set the title and body of the open pull request 7 of chore/openpr" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="5 true;7 false" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: a fork's pull request on the branch's name is neither read, edited, nor joined by a create" 0 "^good$" \
+  sh -c 'grep -q "^pr edit 7 " "$1" && ! grep -q -E "^pr (view|edit) 5 |^pr create " "$1" && echo good' _ "$work/openpr-gh/calls"
+expect "open_pr: a list line without a number and repository flag is refused" 1 "printed no number and repository flag" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="1" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: a create printing no pull request number is refused" 1 "printed no pull request number" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_NEW= sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+# The environment AI's rule, read before the token step: only the branch
+# main alone passes ("pr-on-push security Low at
+# .github/workflows/open-pr.yml:39").
+expect "open_pr: rule passes the environment admitting the branch main alone" 0 "admits the branch main alone" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses an environment admitting every branch" 1 "admits every branch as deployment refs" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_POLICY="every branch" sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses an environment admitting the protected branches" 1 "admits the protected branches" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_POLICY="true false" sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses a ref beside main" 1 "admits branch main; branch dev as" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES="branch main;branch dev" sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses a pattern other than main" 1 "admits branch ma[*] as" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES="branch ma*" sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses a tag named main" 1 "admits tag main as" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES="tag main" sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses custom refs naming none" 1 "admits no ref as" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES= sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses an environment it cannot read" 1 "cannot read the environment AI of x/y" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=x/y sh "$here/open_pr.sh" rule
 cd "$work/openpr" || exit 1
 expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
@@ -4188,6 +4235,27 @@ expect "repository: the open-pr checkout stores no token" 0 "^good$" \
   sh -c 'f="$1/../.github/workflows/open-pr.yml"
     [ "$(grep -c "uses: actions/checkout@" "$f")" -eq 1 ] &&
     awk "/^      - name:/ { step = \$0 } /^          persist-credentials: false\$/ { print step }" "$f" | grep -q "Check out main" && echo good' _ "$here"
+# Every action beside PR_TOKEN is pinned by its full commit, never a tag
+# that can move ("open-pr pins its actions by tag beside PR_TOKEN").
+expect "repository: open-pr pins every action by a full commit sha" 0 "^good$" \
+  sh -c 'f="$1/../.github/workflows/open-pr.yml"
+    [ "$(grep -c "uses:" "$f")" -ge 1 ] && ! grep "uses:" "$f" | grep -q -v -E "^ *(- )?uses: [a-z0-9-]+/[a-z0-9-]+@[0-9a-f]{40}( # v[0-9.]+)?\$" && echo good' _ "$here"
+# The environment's rule is checked with the job's own token in the step
+# after the checkout, and PR_TOKEN reaches the open step alone.
+expect "repository: open-pr checks the environment rule with its own token before the read" 0 "^good$" \
+  sh -c 'f="$1/../.github/workflows/open-pr.yml"
+    awk "/^      - name:/ { n++ } n == 2" "$f" | grep -q -x "        run: sh tools/open_pr.sh rule" &&
+    awk "/^      - name:/ { n++ } n == 2" "$f" | grep -q -x -F "          GH_TOKEN: \${{ github.token }}" &&
+    awk "/^      - name:/ { n++ } n == 3" "$f" | grep -q -x "      - name: Read pr.md from the branch" &&
+    grep -q -x "  actions: read" "$f" &&
+    [ "$(grep -c "secrets[.]PR_TOKEN" "$f")" -eq 1 ] &&
+    awk "/^      - name:/ { step = \$0 } /secrets[.]PR_TOKEN/ { print step }" "$f" | grep -q "Open or edit the pull request" && echo good' _ "$here"
+# The merger merges a pull request only when its head repository and
+# branch are the change's: the wait, reading git alone, can record a
+# fork's pull request on the pushed commit ("pr-on-push security Low at
+# tools/open_pr.sh:118").
+expect "repository: the merger merges only a pull request of this repository and branch" 0 "^good$" \
+  sh -c 'grep "^1[.] Read the pull request once" "$1/../.claude/agents/merger.md" | grep -q -F "its head repository must be the input repository and its head branch the input branch" && echo good' _ "$here"
 
 fresh docs
 echo new > tools/new.sh

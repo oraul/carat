@@ -2,19 +2,19 @@
 
 ## 1. Same-repository open
 
-- [ ] 1.1 `tools/open_pr.sh open`: list with `isCrossRepository`, keep same-repository numbers, view and edit by number, read the created number; tests in `tools/tools_test.sh` ("open_pr: open skips a fork's pull request on the branch's name", "open_pr: open edits its own pull request by number beside a fork's", the existing open cases on the new stand-in)
+- [x] 1.1 `tools/open_pr.sh open`: list with `isCrossRepository`, keep same-repository numbers, view and edit by number, read the created number; tests in `tools/tools_test.sh` ("open_pr: open skips a fork's pull request on the branch's name", "open_pr: open edits its own pull request by number beside a fork's", the existing open cases on the new stand-in)
 
 ## 2. Environment rule
 
-- [ ] 2.1 `tools/open_pr.sh rule` and its step in `.github/workflows/open-pr.yml` with `actions: read`; tests in `tools/tools_test.sh` ("open_pr: rule ..." cases, "repository: open-pr checks the environment rule before the token")
+- [x] 2.1 `tools/open_pr.sh rule` and its step in `.github/workflows/open-pr.yml` with `actions: read`; tests in `tools/tools_test.sh` ("open_pr: rule ..." cases, "repository: open-pr checks the environment rule before the token")
 
 ## 3. Pinned checkout
 
-- [ ] 3.1 `.github/workflows/open-pr.yml` pins `actions/checkout` by sha; test "repository: open-pr pins every action by a full commit sha"
+- [x] 3.1 `.github/workflows/open-pr.yml` pins `actions/checkout` by sha; test "repository: open-pr pins every action by a full commit sha"
 
 ## 4. Merger head repository
 
-- [ ] 4.1 `.claude/agents/merger.md` step 1 and `open_pr.sh wait`'s comment and usage; test "repository: the merger merges only a pull request of this repository and branch"
+- [x] 4.1 `.claude/agents/merger.md` step 1 and `open_pr.sh wait`'s comment and usage; test "repository: the merger merges only a pull request of this repository and branch"
 
 ## 5. Docs
 
