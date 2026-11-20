@@ -191,7 +191,7 @@ Closes issue 42. Tokens are stored hashed, so existing sessions are unaffected. 
 
 Specs and change proposals live under `openspec/`; the commands and skills OpenSpec installs live under `.claude/`.
 
-- Run it with `npx @fission-ai/openspec@latest <command>`; it is not a project dependency. Usage statistics are disabled: `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0`; outside Claude Code, export it or run `openspec config set telemetry.enabled false` once.
+- Run it with `npx @fission-ai/openspec@2.1.1 <command>` (pinned), not a project dependency. Usage statistics are disabled: `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0`; outside Claude Code, export it or run `openspec config set telemetry.enabled false` once.
 - `/opsx:propose`, `/opsx:apply`, and `/opsx:archive` before the pull request, so the squash commit carries the implementation, the synced specs, and the archived change together. `/deliver` runs the whole loop (Agents).
 - Every change goes through OpenSpec, refactors, tooling, and docs included. A change that alters no behavior still gets a proposal, a design, and tasks, sets `skip_specs: true` in its `.openspec.yaml`, and is archived with `--skip-specs`. The archived change records why the code looks the way it does.
 - Specs in `openspec/specs/` are the source of truth for behavior, changed only through a proposal. Constraints for the artifacts go in `openspec/config.yaml`. `.claude/commands/opsx/` and `.claude/skills/openspec-*/` are generated: refresh them with `openspec update`, never edit them.

@@ -41,7 +41,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make gates` | Check the branch against the rules: the commit trailer, no link, address, or session id, snapshots from the runner, the docs kept current, a test naming every added or modified spec scenario, a case for every changed tool script, and the attribution settings |
 | `make check` | Run every stage of `CHECK_STAGES` in order (`make stages` prints the checker's `FAST_STAGES`); `make check-stage S=NAME` runs one |
 | `make new-use-case`, `make new-action`, `make new-ex-command`, `make new-test`, `make new-plugin` | Scaffold one file of that kind from its golden example and wire it in: signatures, the code map, requires and registrations, the documentation row, the runner lines, and a snapshot; `docs/examples.md` lists the arguments |
-| `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands; `spec-validate` also validates each active change as its archive would leave the specs |
+| `make spec-list`, `make spec-validate`, `make spec-update` | The OpenSpec commands, run at the one version the Makefile's `OPENSPEC_PACKAGE` pins; `spec-validate` also validates each active change as its archive would leave the specs |
 
 ## Starting
 
