@@ -37,9 +37,10 @@
 #              difference to HEAD touches only the records-only paths of
 #              tools/rules.sh: openspec/, docs/backlog.md, docs/findings/,
 #              the lane queues docs/queue-feature.md and
-#              docs/queue-backlog.md, docs/goals.md, the lane histories
+#              docs/queue-backlog.md, the lane histories
 #              docs/metrics-feature.tsv and docs/metrics-backlog.tsv, and
-#              docs/sprints.tsv
+#              docs/sprints.tsv, but never docs/goals.md, which agents act
+#              on (INSTRUCTION_RECORDS_RE)
 #   stages     phase.check is at such a commit and every canonical stage
 #              (STAGES, else the CHECK_STAGES line of the Makefile beside
 #              this script) passed at exactly that commit
@@ -108,6 +109,13 @@ state() {
   sh "$here/run_state.sh" get "$change" "$1" 2>/dev/null
 }
 
+# The records-only paths agents act on as instructions (docs/goals.md: the
+# tiers, the budgets, the critical-change routing), which settled_at never
+# settles a pass across although RECORDS_RE lists them, so CI's and the
+# checker's scopes still read them as documentation. tools/run_state.sh
+# keeps the same line (tools/tools_test.sh compares them).
+INSTRUCTION_RECORDS_RE='docs/goals\.md$'
+
 # True when the difference from COMMIT to HEAD touches only files no check
 # reads but docs-lint: the records-only paths of tools/rules.sh
 # (RECORDS_RE): the OpenSpec change (archived after the checks), the
@@ -117,7 +125,9 @@ state() {
 # package step and CI run again. docs/sprints.tsv counts only by groom's
 # one appended row (appended_rows, groom_row): an edited, forged, or second
 # row moves the sprint base, which the sprint-end security review starts
-# from. The security, stages, and passed gates share it. Without rename
+# from. An instruction record (INSTRUCTION_RECORDS_RE) never counts:
+# agents act on its rules, so a pass before an edit of it is stale. The
+# security, stages, and passed gates share it. Without rename
 # detection, a file moved into openspec/ counts by its old path too.
 # The three helpers set only names of their own (settled_, row_, rows_),
 # since a gate calls them between setting and reading its own (want).
@@ -125,6 +135,7 @@ settled_at() {
   hex "$1" || return 1
   settled_rest=$(git diff --no-renames --name-only --end-of-options "$1" HEAD -- 2>/dev/null) || return 1
   [ -z "$(printf '%s\n' "$settled_rest" | grep -v -E "^($RECORDS_RE|\$)")" ] || return 1
+  ! printf '%s\n' "$settled_rest" | grep -q -E "^($INSTRUCTION_RECORDS_RE)" || return 1
   ! printf '%s\n' "$settled_rest" | grep -q -x -F docs/sprints.tsv || { appended_rows "$1" docs/sprints.tsv && groom_row "$1"; }
 }
 
