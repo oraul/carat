@@ -42,7 +42,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.9
+ok   the plugin API is 2.10
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
