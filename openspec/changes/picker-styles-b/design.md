@@ -16,11 +16,11 @@ A plugin float is a `Domain::FloatWindow` over a plain `Domain::Buffer` the plug
 
 ### Validation before change
 
-The request resolves the float as `set_float_lines` does (`own_float_tab`, then the listed-buffer check, "No float N"), then checks `selected` (-1 or a row of the float's buffer), the span list's length, and each span's row, column, length, and group, and only then writes, so a refused request leaves the previous style. A span past the line's end is cut by the painter, as a token is.
+The request resolves the float as `set_float_lines` does, through the private `unlisted_float_tab` both share (`own_float_tab`, then the listed-buffer check, "No float N"; an index, not a nullable float, since a nullable local cost the test runner a third re-narrowing round), then checks `selected` (-1 or a row of the float's buffer), the span list's length, and each span's row, column, length, and group, and only then writes, so a refused request leaves the previous style. A span past the line's end is cut by the painter, as a token is.
 
 ### Storing the style
 
-Each row gets a `SyntaxLine` built with the buffer's own line string, so `Buffer#style_at` draws it only while that string is still the row's; `float.selected` takes the selected row. A span's length is kept cut to 2^30 (`LONGEST_SPAN`), more than any line holds, so the painter's column plus length never grows past what it can add; the cut draws the same cells. With no span at all the buffer's styles are emptied, so `styled?` is false and the painter skips the token pass. `set_float_lines` also empties the styles and sets `selected` to -1, since a refill's rows are new strings and a selected row would point at a different entry.
+Each row gets a `SyntaxLine` built with the buffer's own line string, so `Buffer#style_at` draws it only while that string is still the row's; `float.selected` takes the selected row. A span's length is kept cut to 2^30 (`LONGEST_SPAN`), more than any line holds, so the painter's column plus length never grows past what it can add; the cut draws the same cells. With no span at all the buffer's styles are emptied, so `styled?` is false and the painter skips the token pass. `set_float_lines` also empties the styles, when it has any so an unstyled refill allocates nothing, and sets `selected` to -1, since a refill's rows are new strings and a selected row would point at a different entry.
 
 ### Repainting a restyle
 
