@@ -227,6 +227,12 @@ module EditorFloatsTest
     h.redraw
     t.assert_equal([1, true, id, true, 0, "only"], [before, refilled.ok, h.state.window.id, h.state.tab.floats.focused?, h.state.window.cursor.row, h.state.window.buffer.lines.join("|")], "The current float refilled with 0 shows the line, stays current, and its cursor goes to its first line")
     t.assert_equal("only", h.row(1)[3, 4], "the current float draws its new line")
+    h.plugins.window_requests.set_float_lines("test", 0, ["a", "b", "c"], "")
+    h.type("jvj")
+    selecting = [h.state.window.anchor.row, h.state.window.cursor.row]
+    h.plugins.window_requests.set_float_lines("test", 0, ["one"], "")
+    h.redraw
+    t.assert_equal([1, 2, 0, 0, "one"], [selecting[0], selecting[1], h.state.window.anchor.row, h.state.window.cursor.row, h.row(1)[3, 3]], "a float refilled during a selection in it puts the anchor and the cursor on its first line")
 
     # Scenario: Refilled with no lines.
     refilled = h.plugins.window_requests.set_float_lines("test", id, strings([]), "")

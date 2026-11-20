@@ -262,8 +262,9 @@ module Carat
       end
 
       # Replaces the lines and the title of the plugin's float in place,
-      # its cursor and scroll back at the start, as a reopened float has
-      # them; the window id, box, z order, and focus stay.
+      # its cursor, selection anchor, and scroll back at the start, as a
+      # reopened float has them; the window id, box, z order, and focus
+      # stay.
       #: (String, Integer, Array[String], String) -> PluginApi::Response
       def set_float_lines(name, id, lines, title)
         index = own_float_tab(name, id)
@@ -277,6 +278,7 @@ module Carat
         buffer.title = shown
         float.spec = float.spec.titled(shown)
         window.cursor = Domain::Cursor.new(row: 0, col: 0)
+        window.anchor = Domain::Position.new(row: 0, col: 0)
         window.top = 0
         window.left = 0
         PluginApi::Response.success("", 0)

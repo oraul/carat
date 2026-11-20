@@ -39,6 +39,7 @@ ok   the refilled float holds the new lines and title
 ok   the refilled float shows the new title and lines and equals a full repaint
 ok   The current float refilled with 0 shows the line, stays current, and its cursor goes to its first line
 ok   the current float draws its new line
+ok   a float refilled during a selection in it puts the anchor and the cursor on its first line
 ok   Refilled with no lines, the float shows one empty line
 ok   Another plugin's float is not refilled, nor an unknown id or a layout window
 ok   the float keeps its lines and title and the layout window its text
@@ -72,4 +73,4 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 74 passed, 0 failed
+editor_floats: 75 passed, 0 failed

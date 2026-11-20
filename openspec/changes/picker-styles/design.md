@@ -16,7 +16,7 @@ The request resolves the float as `move_float` and `close_float` do, through `ow
 
 ### The refill
 
-`replace_lines` reloads the buffer in one transaction with copied strings (empty lines leave one empty line, as `Buffer#reload` does), then the buffer's title and the spec (`FloatSpec#titled`, a new Data value with only the title changed) take the new title, and the float window's cursor, top row, and left column go back to the start, as a reopened float had them, so a shorter list never leaves the cursor past the last line. The window id, box, z order, focus, and the float's position in its layer stay. The presenter draws the buffer's new text because its change count moved, which the test proves against a full repaint.
+`replace_lines` reloads the buffer in one transaction with copied strings (empty lines leave one empty line, as `Buffer#reload` does), then the buffer's title and the spec (`FloatSpec#titled`, a new Data value with only the title changed) take the new title, and the float window's cursor, selection anchor, top row, and left column go back to the start, as a reopened float had them, so a shorter list never leaves the cursor or a selection in it past the last line. The window id, box, z order, focus, and the float's position in its layer stay. The presenter draws the buffer's new text because its change count moved, which the test proves against a full repaint.
 
 ### The finder
 

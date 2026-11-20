@@ -2,7 +2,7 @@
 
 ## 1. The host request
 
-- [x] 1.1 `carat/plugin_api.rb` `Host#set_float_lines` and API 2.11, `carat/use_cases/plugins/plugin_link.rb` override, `carat/use_cases/plugins/window_requests.rb` `set_float_lines`, `carat/domain/float_spec.rb` `titled` (proved by "Refilled in place", "The current float refilled with 0", "Refilled with no lines", "Another plugin's float is not refilled" in `test/editor_floats.rb`, and `make lint`)
+- [x] 1.1 `carat/plugin_api.rb` `Host#set_float_lines` and API 2.11, `carat/use_cases/plugins/plugin_link.rb` override, `carat/use_cases/plugins/window_requests.rb` `set_float_lines`, `carat/domain/float_spec.rb` `titled` (proved by "Refilled in place", "The current float refilled with 0", "Refilled with no lines", "Another plugin's float is not refilled" in `test/editor_floats.rb`, "a float refilled during a selection in it", and `make lint`)
 - [x] 1.2 Version tests: `test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb` read 2.11 (proved by "A plugin written against 2.10 still loads" in `test/use_cases_plugins.rb`)
 
 ## 2. The finder

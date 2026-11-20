@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: A plugin refills its float in place
-The request `set_float_lines(window, lines, title)` (API 2.11) SHALL replace every line of one of the plugin's floats, window 0 for the current window, with a copy of the lines, and its title with the given title, keeping its window id, box, and focus, its cursor back on the first line. Another plugin's float, or an id no float has, SHALL fail with "No float N". The host's API version SHALL be 2.11; an older 2.x manifest SHALL still load.
+The request `set_float_lines(window, lines, title)` (API 2.11) SHALL replace every line of one of the plugin's floats, window 0 for the current window, with a copy of the lines, and its title with the given title, keeping its window id, box, and focus, its cursor and selection anchor back on the first line. Another plugin's float, or an id no float has, SHALL fail with "No float N". The host's API version SHALL be 2.11; an older 2.x manifest SHALL still load.
 
 #### Scenario: Refilled in place
 - **WHEN** a plugin opens a bordered float titled "old" showing "first" and "rows", and refills it with "other" titled "new"
