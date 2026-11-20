@@ -23,3 +23,8 @@
 - [x] 4.6 `.claude/agents/planner.md` keeps "Each decision is one line." and "(which `groom` folds in)", its new words shortened
 - [x] 4.7 Cases for a later `- Merged:` line blocking stale and a queue item moved unchanged not blocking it: "run_state: groom refuses a stale entry a later - Merged: line names" and "run_state: groom removes a stale entry, a folded one, and one whose queue item moved unchanged"
 - [x] 4.8 A stale heading with no title refused; proved by "run_state: groom refuses a stale heading with no title"
+
+## 5. Closing advisories
+
+- [x] 5.1 `.claude/agents/planner.md` triage sentence: "by any proof (`closed`, `gone`, `stale`, `duplicate`), and add", its comma and proof list back
+- [x] 5.2 A case for the plan's queue blocking stale: "run_state: groom refuses a stale entry the plan's queue still names" in `tools/tools_test.sh`

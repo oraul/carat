@@ -2510,6 +2510,12 @@ printf 'stale ## sa merged later\n' > build/plan/groom.txt
 expect "run_state: groom refuses a stale entry a later - Merged: line names" 1 "groom: $merged_note names the entry again after" state groom sprint-2-records
 printf 'stale ## sc queued with it\n' > build/plan/groom.txt
 expect "run_state: groom refuses a stale entry a lane queue still names, though queued in the commit adding it" 1 "docs/queue-feature[.]md still names the entry: stale ## sc queued with it$" state groom sprint-2-records
+# The plan's queue, untracked, holding a title blocks it too; the line
+# is taken out again so the removal case below still applies.
+printf -- '- n never a path\n' >> build/plan/queue-backlog.md
+printf 'stale ## n never a path\n' > build/plan/groom.txt
+expect "run_state: groom refuses a stale entry the plan's queue still names" 1 "build/plan/queue-backlog[.]md still names the entry: stale ## n never a path$" state groom sprint-2-records
+awk '!/^- n never a path$/' build/plan/queue-backlog.md > "$work/q" && mv "$work/q" build/plan/queue-backlog.md
 printf 'stale ##  \n' > build/plan/groom.txt
 expect "run_state: groom refuses a stale heading with no title" 1 "the heading has no title" state groom sprint-2-records
 printf 'stale ## t near miss\n' > build/plan/groom.txt
