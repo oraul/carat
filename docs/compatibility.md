@@ -357,7 +357,7 @@ A range comes before the command name; `:s`, `:&`, `:g`, `:v`, and the line comm
 | `&` | First: keep the last substitute's flags; without it the flags start from none | `editor_substitute`, `domain_substitute` |
 | `g` | Every match in the line (switches a kept `g`) | `editor_substitute`, `domain_substitute` |
 | `e` | No `E486` when nothing matches (switches) | `editor_substitute`, `domain_substitute` |
-| `i`, `I` | Ignore or match case, over `ignorecase` and `smartcase` | `editor_substitute`, `domain_substitute` |
+| `i`, `I` | Ignore or match case, over `ignorecase` and `smartcase`, for this substitute only: `n` and `N` match by the options | `editor_substitute`, `domain_substitute` |
 | `n` | Count the matches, `N matches on M lines`, and change nothing | `editor_substitute`, `domain_substitute` |
 | `r` | `:&` and `:s` without a pattern use the last search pattern, not the last substitute's | `editor_substitute` |
 | `p`, `#` | Show the last changed line, with `#` after its number | `editor_substitute`, `domain_substitute` |
