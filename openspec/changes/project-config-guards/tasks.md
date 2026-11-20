@@ -2,8 +2,8 @@
 
 ## 1. The project file opened without following a link
 
-- [ ] 1.1 `carat/ports/file_port.rb`, `carat/drivers/disk_files.rb`, `carat/doubles/memory_files.rb`: `read_no_link` (proved by "a link is refused by the open" in `test/drivers_disk_files.rb`)
-- [ ] 1.2 `carat/adapters/rc_config_gateway.rb` reads the project file with `read_no_link` (proved by "a project file swapped for a link after the check is not read" in `test/adapters_config_gateway.rb`)
+- [x] 1.1 `carat/ports/file_port.rb`, `carat/drivers/disk_files.rb`, `carat/doubles/memory_files.rb`: `read_no_link` (proved by "a link is refused by the open" in `test/drivers_disk_files.rb`)
+- [x] 1.2 `carat/adapters/rc_config_gateway.rb` reads the project file with `read_no_link` (proved by "a project file swapped for a link after the check is not read" in `test/adapters_config_gateway.rb`)
 
 ## 2. Project bindings to a write, a quit, or the command line
 
