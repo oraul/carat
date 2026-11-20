@@ -141,7 +141,8 @@ module EditorCaseOperatorsTest
       ["one undo for a case operator: a change of nothing leaves no undo step", ["ab\n", [0, 0], "xgUUuu"], [["ab"], [0, 0], :normal]],
       ["one undo for a case operator: a visual gU over capitals leaves no undo step", ["aBC\n", [0, 0], "xvlgUu"], [["aBC"], [0, 0], :normal]],
       ["one undo for a case operator: a visual u over lower case leaves no undo step", ["abc\n", [0, 0], "xvluu"], [["abc"], [0, 0], :normal]],
-      ["one undo for a case operator: a visual ~ over no letters leaves no undo step", ["a12\n", [0, 0], "xv~u"], [["a12"], [0, 0], :normal]]
+      ["one undo for a case operator: a visual ~ over no letters leaves no undo step", ["a12\n", [0, 0], "xv~u"], [["a12"], [0, 0], :normal]],
+      ["one undo for a case operator: a visual r over matching characters is still one undo step", ["axx\n", [0, 0], "xvlrxu"], [["xx"], [0, 0], :normal]]
     ]) do |input|
       h = editor(input[0])
       h.state.cursor.move_to(Carat::Json.element(input[1], 0), Carat::Json.element(input[1], 1))

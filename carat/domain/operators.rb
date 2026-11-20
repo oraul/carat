@@ -255,6 +255,25 @@ module Carat
         line[0, first] + recase(line[first, last - first], how, char) + line[last, line.length - last]
       end
 
+      # The rows from top, each recased from its first to its exclusive
+      # last column (firsts and lasts hold one column per row), in one
+      # edit. A case change (:toggle, :lower, :upper) edits nothing when
+      # no character changes; :replace always sets the rows.
+      #: (Buffer, Integer, Array[Integer], Array[Integer], Symbol, String) -> void
+      def self.recase_rows(buffer, top, firsts, lasts, how, char)
+        lines = []
+        changed = how == :replace
+        i = 0
+        while i < firsts.length
+          line = buffer.line(top + i)
+          made = recase_row(line, firsts[i], lasts[i], how, char)
+          changed = true if made != line
+          lines << made
+          i += 1
+        end
+        buffer.set_lines(top, top + firsts.length, lines) if changed
+      end
+
       # The rows of a range with the case of its characters changed, in
       # one edit: how is :toggle, :lower, or :upper. A linewise range
       # changes whole lines, a charwise one is used normalized, from its
@@ -264,8 +283,8 @@ module Carat
       def self.recase_range(buffer, range, how)
         linewise = range.kind == :linewise
         span = linewise ? range : range.normalized
-        lines = []
-        changed = false
+        firsts = []
+        lasts = []
         row = span.from.row
         while row <= span.to.row
           line = buffer.line(row)
@@ -276,12 +295,11 @@ module Carat
             last = span.to.col if row == span.to.row && span.to.col < line.length
             first = last if first > last
           end
-          made = recase_row(line, first, last, how, "")
-          changed = true if made != line
-          lines << made
+          firsts << first
+          lasts << last
           row += 1
         end
-        buffer.set_lines(span.from.row, span.to.row + 1, lines) if changed
+        recase_rows(buffer, span.from.row, firsts, lasts, how, "")
       end
 
       # recase for text that is not valid UTF-8: tr changes only the ASCII
