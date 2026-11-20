@@ -114,4 +114,5 @@ ok   reads, stats, and icons too
 ok   the plugin has a float in each tab page, beside another plugin's
 ok   a disabled plugin's segment is dropped when it is disabled
 ok   a disabled plugin's floats are closed in every tab page and another plugin's float stays
-use_cases_plugins: 116 passed, 0 failed
+ok   a disabled plugin's style_float is refused by its link, the float's style unchanged
+use_cases_plugins: 117 passed, 0 failed

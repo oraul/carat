@@ -563,6 +563,11 @@ module UseCasesPluginsTest
     host.action("plugin.probe.go", D::Command.plain("plugin.probe.go"))
     t.assert_equal({}, host.plugin_ui.segments, "a disabled plugin's segment is dropped when it is disabled")
     t.assert_equal([1, foreign, 0], [state.tabs.tab_at(0).floats.count, state.tabs.tab_at(0).floats.at(0).id, state.tabs.tab_at(1).floats.count], "a disabled plugin's floats are closed in every tab page and another plugin's float stays")
+    # The probe's own link, built as the host builds it, so the call has one receiver.
+    link = Carat::UseCases::PluginLink.new(name: "probe", registry: host.registry, buffer_requests: host.buffer_requests, window_requests: host.window_requests, file_requests: host.file_requests, ui_requests: host.ui_requests)
+    styled = link.style_float(foreign, 0, [0, 0, 1, D::Highlight::POPUP_MENU_MATCH])
+    kept = state.tabs.tab_at(0).floats.at(0)
+    t.assert_equal([false, "Plugin probe is disabled", -1, 0, false], [styled.ok, styled.message, kept.selected, kept.style_count, kept.window.buffer.styled?], "a disabled plugin's style_float is refused by its link, the float's style unchanged")
 
     t.finish
   end
