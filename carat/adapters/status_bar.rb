@@ -4,6 +4,7 @@ require_relative "../domain/frame"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/icons"
+require_relative "../domain/messages"
 require_relative "../domain/mode"
 require_relative "../domain/plugin_ui"
 require_relative "../domain/status_slots"
@@ -44,7 +45,6 @@ module Carat
       PRIORITIES = [100, 90, 40, 70, 0, 60, 30, 20, 80, 50, 35]
 
       ENCODING_TEXT = "utf-8"
-      NO_NAME = "[No Name]"
       # The cells of the progress bar, and the done cells of one without a
       # percent, which move one cell for each report.
       BAR_CELLS = 10
@@ -362,7 +362,7 @@ module Carat
       #: (Domain::Buffer) -> String
       def file_name(buffer)
         name = buffer.display_name
-        name.nil? ? NO_NAME : name
+        name.nil? ? Domain::Messages::NO_NAME : name
       end
 
       #: (String) -> Integer

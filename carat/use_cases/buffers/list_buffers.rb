@@ -2,6 +2,7 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/display_width"
 require_relative "../../domain/control_text"
+require_relative "../../domain/messages"
 require_relative "../../domain/tab_list"
 require_relative "../outcome"
 
@@ -19,9 +20,8 @@ module Carat
     # buffers it names; those for states no buffer here has keep none.
     class ListBuffers
       NAME_END = 40
-      NO_NAME = "[No Name]"
       UNMATCHED = "#-xRF?"
-      private_constant :NAME_END, :NO_NAME, :UNMATCHED
+      private_constant :NAME_END, :UNMATCHED
 
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -103,7 +103,7 @@ module Carat
       def name_of(buffer)
         path = buffer.path
         return Domain::ControlText.caret(path) unless path.nil?
-        buffer.title.empty? ? NO_NAME : Domain::ControlText.caret(buffer.title)
+        buffer.title.empty? ? Domain::Messages::NO_NAME : Domain::ControlText.caret(buffer.title)
       end
     end
   end

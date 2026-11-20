@@ -4,6 +4,7 @@ require_relative "../domain/frame"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
 require_relative "../domain/icons"
+require_relative "../domain/messages"
 
 module Carat
   module Adapters
@@ -19,7 +20,6 @@ module Carat
     # allows. Names are written from the byte after the path's last slash
     # and every width is counted, so a row costs no object per frame.
     class TabBar
-      NO_NAME = "[No Name]"
       MARK_CELLS = 1
 
       attr_reader :buffers #: Domain::BufferList
@@ -122,7 +122,7 @@ module Carat
         x = frame.put_within(0, x, " ", hl, limit)
         path = buffer.path
         if path.nil?
-          x = frame.put_within(0, x, NO_NAME, hl, limit)
+          x = frame.put_within(0, x, Domain::Messages::NO_NAME, hl, limit)
         else
           x = frame.put_from(0, x, path, buffer.name_start, hl, limit)
         end
@@ -143,7 +143,7 @@ module Carat
       #: (Domain::Buffer, String) -> Integer
       def tab_width(buffer, set)
         path = buffer.path
-        name = path.nil? ? NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
+        name = path.nil? ? Domain::Messages::NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
         Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + MARK_CELLS + 4
       end
 

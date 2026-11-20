@@ -1,0 +1,5 @@
+# Brief
+
+status-winbar-tabs: docs/queue-feature.md Sprint 24 item 1 at 7e3d400 (the user's decision of 2026-11-20: the Facet waves first; the decided look is in docs/architecture.md and the Facet rules), in the feature lane, beside the backlog-lane delivery project-config-guards; touch no file of the backlog lane (docs/queue-backlog.md, docs/metrics-backlog.tsv). The queue line: the status bar, winbar, and buffer tabs keep their pre-Facet look; `[No Name]` is defined 3 times (`status_bar.rb:47`, `winbar.rb:18`, `tab_bar.rb:22`). Accepted when frame rows show each row in carat-dark, carat-light, and `option.icons ascii`, a test reads one no-name constant, and `lh-winbar` is held.
+
+Split by the plan: this delivery's acceptance is the status bar in carat-dark, carat-light, and option.icons ascii; one no-name constant replacing the 3 copies, the winbar and the tabs only reading it; a test reads that constant; lh 26.0 is held. The winbar and tab styling and lh-winbar move to status-winbar-tabs-b.

@@ -76,7 +76,7 @@ module AdaptersTabBarTest
     # One row per case, 40 columns wide.
     t.cases([
       ["two tabs, one modified: a tab per file with its icon and modified dot", [["*src/a.rb", "b.txt"], 1, 1], " ◈ a.rb ●  • b.txt"],
-      ["an unnamed buffer", [["", "b.txt"], 0, 1], " • [No Name]    • b.txt"],
+      ["an unnamed buffer", [["", "b.txt"], 0, 1], " • " + Carat::Domain::Messages::NO_NAME + "    • b.txt"],
       ["a buffer at the root shows / in its tab", [["/", "b.txt"], 0, 1], " • /    • b.txt"],
       ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], " • a.txt    • b.txt"],
       ["an unlisted buffer has no tab", [["~a.txt", "b.txt", "c.txt"], 1, 1], " • b.txt    • c.txt"],
