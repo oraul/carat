@@ -627,9 +627,12 @@ expect "run_state: a stage that hides a write to a tracked file of the main chec
 git -C "$iso_top" update-index --no-assume-unchanged README.md
 git -C "$iso_top" checkout -q README.md
 # origin is a local bare repository from here, so the runner reads the
-# commit its branch names (main_moved).
+# commit its branch names (main_moved); it holds the main checkout's
+# starting commit, so a stage that moves the main checkout elsewhere fails
+# on the commit origin names, not on an empty answer.
 git init -q --bare "$work/origin.git"
 git -C "$iso_top" config remote.origin.url "$work/origin.git"
+git -C "$iso_top" push -q "$work/origin.git" "$main_head:refs/heads/chore/isolated"
 expect "run_state: a stage that moves the main checkout from a lane fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-reset
 git -C "$iso_top" reset -q --hard "$main_head"
 expect "run_state: a stage that stages into the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-index
@@ -646,7 +649,8 @@ expect "run_state: a stage that writes HOME's git configuration fails the check"
 REACH_HOME=
 rm -r "$work/home"
 # The lane's commit the main checkout fast-forwards to adds a tracked file
-# outside the parts the scan leaves out.
+# outside the parts the scan leaves out; origin still names the starting
+# commit, so the forged fast-forward fails on the commit mismatch.
 echo merged > merged.txt
 git_q add merged.txt
 git_q commit -q -m "chore: merged" -m "$TRAILER"
