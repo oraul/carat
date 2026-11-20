@@ -20,13 +20,14 @@ module Carat
     # compiled as a search pattern with capturing groups and becomes the
     # last search pattern, the "/" register, and, when typed, a search
     # history entry; n and N read it with the case options, not the i or
-    # I flag. The c and l flags are refused before anything is kept. Every line is substituted under one budget before
-    # anything changes; the changed rows are then replaced in one splice,
-    # which is one undo state inside the dispatcher's transaction, and the
-    # cursor goes to the first non-blank of the last line changed. The
-    # messages are Vim's: E33, E35, E486 (not with "e"), E939, E363 when
-    # the budget ran out, the count above two substitutions, the count of
-    # "n", or the last line with "p" or "#".
+    # I flag. The c and l flags are refused before anything is kept. Every
+    # line is substituted under one budget before anything changes; the
+    # changed rows are then replaced in one splice, which is one undo
+    # state inside the dispatcher's transaction, and the cursor goes to
+    # the first non-blank of the last line changed. The messages are
+    # Vim's: E33, E35, E486 (not with "e"), E939, E363 when the budget ran
+    # out, the count above two substitutions, the count of "n", or the
+    # last line with "p" or "#".
     class SubstituteLines
       attr_reader :last_substitute #: Domain::LastSubstitute
       attr_reader :last_search #: Domain::LastSearch

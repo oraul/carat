@@ -92,7 +92,8 @@ module Carat
         i = 0
         while i < n
           byte = text.getbyte(i).to_i
-          k = group_at(text, i, n)
+          # Only "&" and a backslash can name a group.
+          k = byte == 38 || byte == 92 ? group_at(text, i, n) : -1
           if k >= 0
             group = group_text(line, found, k)
             out << recase(group, one, all)

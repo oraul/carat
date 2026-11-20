@@ -11,3 +11,8 @@
 - [x] 2.2 `carat/use_cases/search/substitute_lines.rb`: with `i` or `I` the last search is recompiled under the options (proved by "n after the i flag matches case by the options" and "N after the I flag ignores case by the options" in `test/editor_substitute.rb`)
 - [x] 2.3 `carat/domain/last_substitute.rb` and its readers: `case_mode` and `print` are symbols (proved by the flag rows of `test/domain_substitute.rb`)
 - [x] 2.4 `carat/domain/replacement.rb`: `group_at` and one block inserting a group, `recase` answering its text when nothing is recased (proved by the `group_at` rows and the expand rows of `test/domain_substitute.rb`, and `test/editor_substitute.rb`)
+
+## 3. Review fixes
+
+- [x] 3.1 `carat/domain/replacement.rb`: `expand` calls `group_at` only on "&" or a backslash, so the per-character loop reads no byte twice for plain text (proved by the expand rows of `test/domain_substitute.rb` and `test/editor_substitute.rb`, unchanged)
+- [x] 3.2 `carat/use_cases/search/substitute_lines.rb`: the class comment is rewrapped at 72 columns (no behavior; proved by `make lint`)
