@@ -14,18 +14,15 @@ module Carat
       # @rbs path: String
       # @rbs limit: Integer
       def read(path, limit)
-        file = File.open(path, File::RDONLY | File::NONBLOCK)
-        begin
-          info = file.stat
-          raise IOError, "Is a directory" if info.directory?
-          raise IOError, "Not a regular file" unless info.file?
-          chunk = file.read(limit + 1)
-          return +"" if chunk.nil?
-          raise IOError, "File too large" if chunk.bytesize > limit
-          chunk.force_encoding(Encoding::UTF_8)
-        ensure
-          file.close
-        end
+        read_open(path, File::RDONLY | File::NONBLOCK, limit)
+      end
+
+      # Returns the text as read does, opened with NOFOLLOW, so the open
+      # itself fails when path is a symbolic link.
+      # @rbs path: String
+      # @rbs limit: Integer
+      def read_no_link(path, limit)
+        read_open(path, File::RDONLY | File::NONBLOCK | File::NOFOLLOW, limit)
       end
 
       #: (String, String) -> void
@@ -97,6 +94,26 @@ module Carat
       def home
         value = ENV["HOME"].to_s
         value.start_with?("/") ? value : ""
+      end
+
+      private
+
+      # Opens path with the flags and returns the regular file's text, of at
+      # most limit bytes, checking the kind on the opened file.
+      #: (String, Integer, Integer) -> String
+      def read_open(path, flags, limit)
+        file = File.open(path, flags)
+        begin
+          info = file.stat
+          raise IOError, "Is a directory" if info.directory?
+          raise IOError, "Not a regular file" unless info.file?
+          chunk = file.read(limit + 1)
+          return +"" if chunk.nil?
+          raise IOError, "File too large" if chunk.bytesize > limit
+          chunk.force_encoding(Encoding::UTF_8)
+        ensure
+          file.close
+        end
       end
     end
   end

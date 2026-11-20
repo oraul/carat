@@ -35,6 +35,14 @@ module Carat
       # own: a language line, so only the defaults and the user file set it.
       TRUSTED_ROOTS = "language.trusted_roots"
 
+      # The actions that write the buffer or quit, which a project file
+      # may not bind in any mode, as a key the user types would run them.
+      PROJECT_REFUSED = ["file.save", "quit.all", "quit.write_all", "window.quit"]
+
+      # The prefix of the command line's actions, which run or recall an
+      # ex command, so a project file may not bind them in any mode.
+      COMMAND_LINE = "cmdline."
+
       # @rbs @settings: Array[untyped]
       # @rbs @problems: Array[String]
       # @rbs @orders: Array[Integer]
@@ -234,14 +242,27 @@ module Carat
       # value is an action name or none, or a group name, which binds
       # nothing. A key sequence to replay is noted
       # and refused, because a replay types anything, :w with any path
-      # included, so a project file could write any file the user can.
+      # included, so a project file could write any file the user can. So
+      # is an action that writes, quits, or runs the command line, in any
+      # mode (PROJECT_REFUSED, COMMAND_LINE), and a leader, which would
+      # move the defaults' and the user's <leader> write and quit
+      # bindings onto keys such as d.
       #: (RcLine) -> bool
       def binding?(line)
         words = line.words
-        return true if line.name == "leader" || line.name == "group" || words.length != 2
+        if line.name == "leader"
+          note(line, "keymap.leader is not read from a project file")
+          return false
+        end
+        return true if line.name == "group" || words.length != 2
         value = words[1].to_s
-        return true if value == "none" || RcParser.key?(value, 0, value.bytesize)
-        note(line, "key sequences are not read from a project file")
+        return true if value == "none"
+        unless RcParser.key?(value, 0, value.bytesize)
+          note(line, "key sequences are not read from a project file")
+          return false
+        end
+        return true unless PROJECT_REFUSED.include?(value) || value.start_with?(COMMAND_LINE)
+        note(line, "write, quit, and command-line actions are not bound from a project file")
         false
       end
 

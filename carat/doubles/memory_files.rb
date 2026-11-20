@@ -107,6 +107,15 @@ module Carat
         text
       end
 
+      # Returns the text as read does, raising when a test marked the path a
+      # link, as the driver's open with NOFOLLOW does.
+      # @rbs path: String
+      # @rbs limit: Integer
+      def read_no_link(path, limit)
+        raise IOError, "Too many levels of symbolic links" if @links.key?(key(path))
+        read(path, limit)
+      end
+
       #: (String, String) -> void
       def write(path, text)
         raise ArgumentError, "Permission denied" if @unwritable.include?(path)

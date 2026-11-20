@@ -16,6 +16,15 @@ module Carat
         raise NotImplementedError, "FilePort#read"
       end
 
+      # Returns the text as read does, but raises when path is a symbolic
+      # link at the open, so a path checked by stat and swapped for a link
+      # before the read is refused, not followed.
+      # @rbs path: String
+      # @rbs limit: Integer
+      def read_no_link(path, limit)
+        raise NotImplementedError, "FilePort#read_no_link"
+      end
+
       #: (String, String) -> void
       def write(path, text)
         raise NotImplementedError, "FilePort#write"

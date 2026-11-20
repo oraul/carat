@@ -20,6 +20,18 @@ module AdaptersConfigGatewayTest
     end
   end
 
+  # A file system whose project file is checked as a regular file and is
+  # a link by the time it is read, as when it is swapped between the two.
+  class SwappedFiles < Carat::Doubles::MemoryFiles
+    # Answers the project file's stat from before the swap.
+    # @rbs path: String
+    def stat(path)
+      info = super(path)
+      return info unless path == PROJECT
+      D::PathInfo.new(exists: info.exists, size: info.size, mtime: info.mtime, directory: info.directory, symlink: false, regular: info.regular)
+    end
+  end
+
   LIMIT = 1_048_576
 
   # A file system holding one hostile arrangement of the user and project
@@ -125,6 +137,39 @@ module AdaptersConfigGatewayTest
     unreadable.put(PROJECT, "option.tabstop 3\n")
     unreadable.put(USER, "option.tabstop 4\n")
     t.assert_equal([4, [".caratrc: cannot be read"]], tabstop(unreadable), "a file that cannot be read is reported and skipped")
+    # Scenario: A project file swapped for a link after the check.
+    swapped = SwappedFiles.new
+    swapped.put(PROJECT, "option.tabstop 3\n")
+    swapped.link(PROJECT)
+    t.assert_equal([2, [".caratrc: cannot be read"]], tabstop(swapped), "a project file swapped for a link after the check is not read")
+
+    # Scenario: A write or quit binding in the project file.
+    # Scenario: A command-line binding in any mode.
+    # Scenario: The user file binds a write, the project file unbinds one.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.normal Q quit.all\n")
+    files.put(PROJECT, "keymap.normal j file.save\nkeymap.insert x quit.write_all\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k cmdline.history_older\nkeymap.visual q window.quit\nkeymap.normal ZZ none\nkeymap.normal K cursor.down\nkeymap.normal ; mode.cmdline\n")
+    config = load(files)
+    bound = []
+    i = 0
+    while i < config.count
+      line = config.line_at(i)
+      bound << "#{line.source} #{line.name} #{line.words.join(" ")}" unless config.shipped?(line)
+      i += 1
+    end
+    refused = "write, quit, and command-line actions are not bound from a project file"
+    t.assert_equal([["~/.config/carat/caratrc normal Q quit.all", ".caratrc normal ZZ none", ".caratrc normal K cursor.down", ".caratrc normal ; mode.cmdline"], [".caratrc:1: #{refused}", ".caratrc:2: #{refused}", ".caratrc:3: #{refused}", ".caratrc:4: #{refused}", ".caratrc:5: #{refused}"]], [bound, config.report], "a project file cannot bind a write, a quit, or the command line")
+
+    # Scenario: A project leader leaves the leader bindings where they were.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.leader ,\n")
+    files.put(PROJECT, "keymap.leader d\n")
+    config = load(files)
+    t.assert_equal([",", [".caratrc:1: keymap.leader is not read from a project file"]], [D::Keymap.leader_from(config), config.report], "a project leader leaves <leader>fs and <leader>qw on the user's leader")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.leader f\n")
+    config = load(files)
+    t.assert_equal(["<Space>", [".caratrc:1: keymap.leader is not read from a project file"]], [D::Keymap.leader_from(config), config.report], "a project leader leaves the default leader")
 
     # Hostile files: rows are [label, arrangement, [tabstop, problems]].
     t.table([

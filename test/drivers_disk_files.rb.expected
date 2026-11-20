@@ -6,6 +6,7 @@ ok   a link to a regular file
 ok   a link to /dev/zero
 ok   a FIFO with no writer
 ok   a directory
+ok   a link is refused by the open
 ok   a bounded read gives UTF-8 bytes as they are
 ok   a regular file
 ok   a directory
@@ -26,4 +27,4 @@ ok   a rename below a link that stays inside
 ok   a delete below a linked root
 ok   a delete of the link leading out unlinks only the link
 ok   the link is gone and its target stays
-drivers_disk_files: 28 passed, 0 failed
+drivers_disk_files: 29 passed, 0 failed

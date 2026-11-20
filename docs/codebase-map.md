@@ -94,13 +94,13 @@ Files:
 - `carat/domain/rc_parse.rb`: `RcParse`, one parse result; `ok?`, `blank?`.
 - `carat/domain/rc_line.rb`: `RcLine`, a kept setting with file label, ordinal, line number, scope, name, and words; `from_parse`, `problem`, `order`.
 - `carat/domain/rc_value.rb`: `RcValue` bool, integer, string, and list kinds; `valid?`, `expectation`, `text`, `number?`.
-- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks (`lsp.root` needs a root, by `RootWord.root?`, and a command), the project file refused language commands and key-sequence bindings.
+- `carat/domain/config.rb`: `Config`; `read_defaults`, `shipped?`, `read`, `refuse`, `line_at`, `last`, `note`, `report` (a stable merge of the ascending runs the readers note); scope and language checks (`lsp.root` needs a root, by `RootWord.root?`, and a command), the project file refused language commands, key-sequence bindings, `keymap.leader`, and bindings to the write, quit, and command-line actions (`PROJECT_REFUSED`, `COMMAND_LINE`).
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
 - `carat/domain/root_word.rb`: `RootWord.root?`, what a root word is (`~`, `~/...`, or absolute, no `.` or `..` segment), the one rule of the configuration reader and of `TrustedRoots.root_of`.
 - `carat/domain/trusted_roots.rb`: `TrustedRoots.cover?`, whether the last `language.trusted_roots` line covers the working directory, and `under?`, one root word, a `language.<name>.lsp.root` root's rule too; the language gateway (area 17) and the plugin host's `run_program` (area 15) ask it.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply`, `width_problem` (tabstop 1 to 9999, shiftwidth 0 to 9999), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`).
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), and the rest); `from_config`, `apply` (each bounded number through `bounded`: tabstop 1 to 9999, shiftwidth, scroll, and scrolloff 0 to 9999, timeoutlen and undolevels 0 to 10000; each named value through `named`), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`).
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
-- `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`.
+- `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`, and reads the project file with `read_no_link`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
 
 Tests: `test/domain_rc_parser.rb`, `test/domain_options_config.rb`, `test/adapters_config_gateway.rb`, `test/config_sync.rb` (the mirror and the registry match their sources, the defaults read cleanly and bind every mode), `test/domain_trusted_roots.rb`.
@@ -611,12 +611,12 @@ Files:
 
 - `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `no_color?`, `background`, `enter`, `leave`.
 - `carat/ports/clock_port.rb`: `ClockPort`; `now`, `sleep`.
-- `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
+- `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `read_no_link` (the same, refusing a link at the open), `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
 - `carat/ports/config_port.rb`: `ConfigPort#load`, the `Domain::Config` of every configuration file.
 - `carat/ports/signal_port.rb`: `SignalPort`; `install`, `terminated?`, `resized?`, `acknowledge_resize`.
 - `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors` and `NO_COLOR` for `no_color?`, the environment reads but the `HOME` of `DiskFiles#home`; the first `read_key` after `enter` writes the OSC 11 query, after the first frame and in raw mode, and the reads take the answer out of the key bytes until one came, holding a start of it across reads and dropping it on a timeout, for `background`.
 - `carat/domain/terminal_background.rb`: `TerminalBackground`, the OSC 11 `QUERY`, `reply_size` (where an answer ends in the key bytes, or 0 to hold it under `LIMIT`) and `parse` (`rgb:` or `rgba:` within `LIMIT` bytes, light over half the luma, else dark or `""`).
-- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file.
+- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file, `read_no_link` adds `O_NOFOLLOW`.
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.
