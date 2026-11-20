@@ -33,7 +33,7 @@ None.
 ## Impact
 
 - README.md: changed, the option bounds and the project file's refused bindings.
-- docs/architecture.md: changed, the `FilePort` row of section 6 and the project-file rule and gateway row of section 7.
+- docs/architecture.md: changed, the `FilePort` row of section 6 and the project-file rule and gateway row of section 7; the validation bullet of section 7 no longer repeats the three file names listed above it, so the doc stays within its docs-lint budget.
 - CLAUDE.md: unchanged, no process changes.
 - docs/codebase-map.md: area 3 (`Config`, `Options`, `RcConfigGateway`) and the ports and drivers rows that list `FilePort` methods.
 - docs/compatibility.md: the rows of `option.scroll`, `scrolloff`, `timeoutlen`, `undolevels` where they exist.
