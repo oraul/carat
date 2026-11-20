@@ -52,3 +52,13 @@
 - Location: tools/run_state.sh plan_apply (goals.md over docs/goals.md, in the package step)
 - Why: since review-trust-lows the push gate settles no pass across a docs/goals.md commit, so a planner-written goals.md applied in the package step makes the security pass stale and reviewed-edits names it; the planned goals change is then restored away instead of landing.
 - Fix: apply a planned goals.md in the implement step, where the reviews read it, or have plan-apply refuse it with a note that the goals change needs its own delivery.
+
+### INSTRUCTION_RECORDS_RE is defined twice beside the rules file both scripts source (`review-trust-lows` quality advisory)
+- Location: `tools/gates.sh:117`, `tools/run_state.sh:465`, `tools/tools_test.sh` ("rules: the instruction records are the gates'"), `tools/rules.sh:69`
+- Why: the same pattern lives in two scripts that both source `tools/rules.sh`, held equal only by a test, so a later edit of one copy is a test failure rather than one edit; this change may not edit `tools/rules.sh`, the merge gate's own rules.
+- Fix: in a separate rules change landing first, alone, move `INSTRUCTION_RECORDS_RE` beside `RECORDS_RE` in `tools/rules.sh`, drop the two copies and the equality test.
+
+### plan-apply copies goals.md after the security review that reviewed-edits says to restore (`review-trust-lows` quality advisory)
+- Location: `tools/run_state.sh` `plan_apply` (about line 1960) against `reviewed_edits` (about line 2103)
+- Why: the package step runs `plan-apply`, which copies `build/plan/CHANGE/goals.md` over `docs/goals.md` after the security review, while `reviewed-edits` now tells the contributor to restore any `docs/goals.md` change since that review, so the two rules contradict and a planned goals edit cannot land through a package step.
+- Fix: have `plan-apply` leave `goals.md` and name it when a security pass is recorded (or apply it in the implement step, before the reviews), with a tools-test case.
