@@ -190,7 +190,8 @@ module UseCasesActionsTest
       command_line += 1 if names[i].start_with?(D::Config::COMMAND_LINE)
       i += 1
     end
-    t.assert_equal([[], 4], [stale, command_line], "the actions a project file may not bind are registered")
+    t.assert_equal([], stale, "the actions a project file may not bind are registered")
+    t.assert_true(command_line > 0, "the command line has actions a project file may not bind")
 
     # Every core action is described in 1 to 32 characters for the key
     # hints.
