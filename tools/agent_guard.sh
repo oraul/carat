@@ -85,7 +85,8 @@
 #   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
 #                rm restore, git merge origin/main; make -s -k TARGET with
 #                the variables of MAKE_VARS, no shell character in a value;
-#                openspec and npx @fission-ai/openspec@latest; mkdir rm cp
+#                openspec and npx @fission-ai/openspec@2.1.1, the
+#                Makefile's OPENSPEC_PACKAGE; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history groom plan-apply merge-main
 #                reviewed-edits, push CHANGE
@@ -898,7 +899,7 @@ judge() {
       only_profiles contributor npx
       pkg=${2:-}
       case "$pkg" in -y|--yes) pkg=${3:-} ;; esac
-      case "$pkg" in @fission-ai/openspec|@fission-ai/openspec@latest) ;; *) refuse "npx of other than @fission-ai/openspec" ;; esac ;;
+      case "$pkg" in @fission-ai/openspec@2.1.1) ;; *) refuse "npx of other than @fission-ai/openspec@2.1.1" ;; esac ;;
     *) refuse "$1 is not a command of this profile" ;;
   esac
   i=0

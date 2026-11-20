@@ -2890,11 +2890,11 @@ expect "guard: merger refuses open_pr message of a path" 2 "tools/open_pr.sh mes
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
-expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@latest new change c && npx @fission-ai/openspec@latest validate \"c\" --strict --no-interactive && openspec status --change c --json'
+expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@2.1.1 new change c && npx @fission-ai/openspec@2.1.1 validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
 expect "guard: contributor records the plan" 0 "^$" guard contributor 'cp build/plan/queue-backlog.md docs/queue-backlog.md && cp build/plan/goals.md docs/goals.md && sh tools/run_state.sh history'
-expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@latest archive c -y --skip-specs && npx @fission-ai/openspec@latest validate --all --strict --no-interactive'
+expect "guard: contributor archives" 0 "^$" guard contributor 'npx @fission-ai/openspec@2.1.1 archive c -y --skip-specs && npx @fission-ai/openspec@2.1.1 validate --all --strict --no-interactive'
 expect "guard: contributor pushes and opens the pull request" 0 "^$" guard contributor 'sh tools/run_state.sh push c && sh tools/gates.sh pr-body build/pipeline/c.body.md && sh tools/run_state.sh set c pr 47 && sh tools/run_state.sh show c'
 expect "guard: the contributor runs open_pr write and wait" 0 "^$" guard contributor 'sh tools/open_pr.sh write c \"chore(tools): open on push\" && sh tools/open_pr.sh wait c && sh tools/open_pr.sh wait c 300'
 expect "guard: the contributor's git push of a tag is refused" 2 "git push" guard contributor 'git push origin refs/tags/pr/chore/c'
@@ -2998,6 +2998,11 @@ expect "guard: contributor refuses a make option that runs text" 2 "the make opt
 expect "guard: contributor refuses a make variable it does not list" 2 "the make variable SPIN" guard contributor 'make lint SPIN=x'
 expect "guard: contributor refuses a command in a make variable" 2 "a shell character in the make variable T" guard contributor 'make test-one T=\"x; git push\"'
 expect "guard: contributor refuses npx of another package" 2 "npx of other than" guard contributor 'npx cowsay x'
+# OpenSpec only at the pinned version: a tag or the bare name runs whatever
+# the registry or npx's cache names, beside the push credentials.
+expect "guard: contributor refuses npx of OpenSpec at latest" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx -y @fission-ai/openspec@latest validate --all --strict --no-interactive'
+expect "guard: contributor refuses npx of OpenSpec unversioned" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx @fission-ai/openspec validate --all'
+expect "guard: contributor refuses npx of another OpenSpec version" 2 "npx of other than @fission-ai/openspec@2[.]1[.]1" guard contributor 'npx --yes @fission-ai/openspec@2.1.0 list'
 expect "guard: contributor refuses a script by a path" 2 "a command named by a path" guard contributor './tools/run_state.sh push c'
 expect "guard: contributor refuses a link" 2 "ln is not a command" guard contributor 'ln -s c.json build/x'
 expect "guard: contributor refuses a copy into .git" 2 "a write under .git" guard contributor 'cp x .git/hooks/pre-commit'
@@ -3632,6 +3637,26 @@ expect "spec_validate: archives a change without specs with --skip-specs" 0 "^ar
 expect "spec_validate: leaves the real tree as it was" 0 "^short$" sh -c "[ -d specv/openspec/changes/long ] && [ ! -d specv/openspec/changes/archive ] && cat specv/openspec/specs/a/spec.md"
 rm -rf specv/openspec/changes/long
 expect "spec_validate: passes when every change as archived is valid" 0 "good as archived passes strict validation" specv
+# With no OPENSPEC_CMD the script runs npx of OpenSpec at one exact version,
+# never a tag the registry moves: a stub npx first on the PATH logs its
+# words and hands the rest to the stub openspec.
+mkdir -p "$work/npxbin"
+printf '#!/bin/sh\necho "npx $*" >> "$STUB_LOG"\nshift 2\nexec sh "%s/stub_openspec" "$@"\n' "$work" > "$work/npxbin/npx"
+chmod +x "$work/npxbin/npx"
+: > specv.log
+(cd "$work/specv" && env -u OPENSPEC_CMD PATH="$work/npxbin:$PATH" STUB_LOG="$work/specv.log" sh "$here/spec_validate.sh" > /dev/null)
+expect "spec_validate: runs the pinned OpenSpec when no command is given" 0 "^npx -y @fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+ validate --all --strict --no-interactive$" head -n 1 specv.log
+# pins: the OpenSpec package of the Makefile, of the script's default, and
+# of the guard's npx case, one per line.
+pins() {
+  sed -n 's/^OPENSPEC_PACKAGE := //p' "$here/../Makefile"
+  sed -n 's/^openspec=[$]{OPENSPEC_CMD:-npx -y \(.*\)}$/\1/p' "$here/spec_validate.sh"
+  sed -n 's/^ *case "[$]pkg" in \(@fission-ai[^)]*\)).*/\1/p' "$here/agent_guard.sh"
+}
+one_pin() {
+  [ "$(pins | wc -l)" -eq 3 ] && [ "$(pins | sort -u | wc -l)" -eq 1 ] && pins | head -n 1
+}
+expect "spec_validate: the Makefile, the script, and the guard pin one OpenSpec version" 0 "^@fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+$" one_pin
 
 # ---------------------------------------------------------------- gates.sh
 

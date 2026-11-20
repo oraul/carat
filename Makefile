@@ -132,7 +132,12 @@ BASE_METRICS ?= build/metrics/base.tsv
 CHECK_SKIP   := behavior,build,inference,advice
 # The generated files make config-current checks.
 GENERATED    := carat/domain/default_config.rb carat/plugins/registry.rb
-OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y @fission-ai/openspec@latest
+# OpenSpec at one exact version, never a tag the registry moves: it runs
+# beside the push credentials. tools/spec_validate.sh and the contributor's
+# npx case in tools/agent_guard.sh name the same package, which a tools
+# test case keeps equal; a bump edits all three.
+OPENSPEC_PACKAGE := @fission-ai/openspec@2.1.1
+OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y $(OPENSPEC_PACKAGE)
 
 # tools/noruby holds a ruby that refuses to run and exits 127. It comes first
 # on the PATH of every recipe, so no target can start a CRuby installed on
