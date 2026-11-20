@@ -22,3 +22,8 @@
 - Location: carat/adapters/json_rpc_language_gateway.rb `complete`, `send_hover`, `send_definition`, `send_signature`, and `send_symbols` (each checks only that the buffer has a path)
 - Why: since lsp-tidy a buffer outside the working directory is never opened on the server, yet a completion, hover, definition, signature, or symbol request still names its URI; the server answers for a document it was never sent, usually with an error or nothing, and it learns the path
 - Fix: have `running_server` or the request senders skip a buffer the server has no version for (`server.versions[uri]` nil), with a test that K and gd in an outside file send no request
+
+### A concurrent lane's bench fails another lane's check as an escape
+- Location: tools/run_state.sh, escape_mark, main_scan and bench_compare (metrics_out, last.tsv)
+- Why: the check of one lane failed with "a stage wrote outside its clone" naming the main checkout's build/metrics/current.tsv and last.tsv, written at 07:39:14 and 07:39:22 by the other lane's bench phase, which runs in the main checkout right after its own metrics stage; every stage of the failed check exited 0, so a clean change costs a full check round whenever two lanes overlap.
+- Fix: have bench write its figures under the lane's own build/ (or build/stages/CHANGE/), or leave build/metrics out of main_scan like build/pipeline and build/stages, with a tools_test case running a bench beside a check.
