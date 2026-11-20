@@ -19,4 +19,5 @@
 ## 5. Docs
 
 - [x] 5.1 Update the comment above `append_history`, the usage header of `tools/docs_lint.sh`, the header comment of `tools/tools_test.sh`, the README's docs-lint line and documents paragraph, and the map's `tools/run_state.sh` and `tools/docs_lint.sh` entries; checked by `make docs-lint` and `make gates`
-- [ ] 5.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
+- [x] 5.2 Write `HEADER` (`HISTORY_HEADER`) as line 1 of the sprint, budget, and bench fixtures of `tools/tools_test.sh` that wrote a placeholder, since history now refuses one; checked by `make tools-test`
+- [x] 5.3 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`

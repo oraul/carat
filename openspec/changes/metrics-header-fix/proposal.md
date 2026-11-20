@@ -10,7 +10,7 @@ closing-loop (#227) added `advisories_closed` and `advisories_left` to `HEADER` 
 - `append_history` (`tools/run_state.sh`) refuses, before it appends any row, when a non-empty lane file's line 1 is not `HEADER` exactly, naming the file and what to do, and appends nothing; a lane file that is absent or empty gets `HEADER` first.
 - `tools/docs_lint.sh` gains the `histories` check: every non-blank row of each `docs/metrics-*.tsv` has its line 1's field count, a row that does not named by file, line, and counts.
 - `docs/queue-backlog.md`: the user-approved exception line for this change under its Sprint 23 heading.
-- Cases in `tools/tools_test.sh`: history refuses a lane file whose header is short of `HEADER` (failing before the fix), refuses a header ending in a carriage return, appends nothing then, and writes the header into an empty lane file; docs-lint passes histories whose rows match their header and refuses one that does not.
+- Cases in `tools/tools_test.sh`: history refuses a lane file whose header is short of `HEADER` (failing before the fix), refuses a header ending in a carriage return, appends nothing then, and writes the header into an empty lane file; docs-lint passes histories whose rows match their header and refuses one that does not; the sprint, budget, and bench fixtures that wrote a placeholder line 1 write `HEADER` instead.
 - Docs: the comment above `append_history`, the usage header of `tools/docs_lint.sh`, the README's docs-lint line and documents paragraph, and the map's `tools/run_state.sh` and `tools/docs_lint.sh` entries.
 
 ## Capabilities
