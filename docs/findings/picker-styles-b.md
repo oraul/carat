@@ -12,3 +12,8 @@
 - Location: `tools/run_state.sh` `escaped_paths` (`main_scan`) and `.claude/agents/benchmark.md` step 1
 - Why: the check of picker-styles-b at 70f84e685dbd passed every stage but was refused because `build/scratch-base-build.log` appeared in the main checkout during its window; the file was written by another lane's benchmark agent redirecting its `make -C tmp/.base` output there, not by any stage, so a parallel delivery turns a clean check into a failed round.
 - Fix: have the benchmark agent write its base logs under `tmp/.base/build/` (and the guard refuse a redirection into the main checkout's `build/`), or let `main_scan` skip ignored paths another lane's agent owns, with a tools test for each.
+
+### Check refused on another lane's scratch logs in the shared build directory
+- Location: tools/run_state.sh escaped_paths (main_scan of the main checkout's build/), check of picker-styles-b at 272ead28c383
+- Why: an agent of the concurrent lane metrics-header-fix redirected its make output to build/scratch-lane-build.log, scratch-lane-metrics.log, scratch-base-build.log, and scratch-base-measure.log in the main checkout while this check ran, so every passed stage was discarded as an escape though no stage wrote them, costing a fix round with no code to change.
+- Fix: have agents write scratch output under their own lane or the session scratchpad, never the main checkout's build/, or have escaped_paths ignore files whose writer is outside the check's process tree (for example by scanning only paths the stages can reach, or by refusing only with a stage's pid recorded).
