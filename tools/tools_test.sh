@@ -2632,6 +2632,9 @@ expect "run_state: plan-needed names a failing periodic security review no merge
 expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
 expect "run_state: a periodic review records its time" 0 "^20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z\$" state get review-20261116 at.review.periodic-security
 expect "run_state: set refuses a record time" 1 "set: refused: at[.]review[.]periodic-security is written only by its own command" state set review-20261116 at.review.periodic-security 2000-01-01T00:00:00Z
+# Only the security review's time is read (merged_since, passed_since).
+state review review-20261116 periodic-quality pass "blocking=0 advisory=0" > /dev/null
+expect "run_state: a periodic quality review records no time" 1 "^0\$" grep -c -F at.review.periodic-quality build/pipeline/review-20261116.json
 state review review-20261116 periodic-security blocked "high=0 medium=1 low=0 blocking=1" "$(git rev-parse --short=12 HEAD^)" > /dev/null
 stamp review-20261116 at.review.periodic-security 2026-11-16T10:00:00Z
 # Only a merge whose planner ran after the review clears it: prev planned
@@ -2656,6 +2659,11 @@ stamp prev at.plan-needed 2026-11-16T10:00:00Z
 expect "run_state: plan-needed keeps a failing periodic security review a merge planned in the second it was recorded followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
 stamp prev at.plan-needed 2026-11-16T11:00:00Z
 expect "run_state: plan-needed leaves a failing periodic security review a merge planned after it was recorded followed" 1 "^not needed" state plan-needed next
+# A review without its record time, such as one recorded before record
+# times existed, is cleared by no merge, whatever the planner's time.
+stamp review-20261116 at.review.periodic-security ""
+expect "run_state: plan-needed keeps a failing periodic security review with no record time a merge planned after it followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+stamp review-20261116 at.review.periodic-security 2026-11-16T10:00:00Z
 # Every history row merged after the review counts, so later deliveries
 # whose planner was skipped keep it cleared; a failing review no planned
 # merge followed is superseded by a passing one of a later commit, not of
@@ -2686,11 +2694,20 @@ state init sprint-5 main > /dev/null 2>&1
 state review sprint-5 periodic-security pass "diff high=0 medium=0 low=0 blocking=0 disputed=0 not_reviewed=0" > /dev/null
 stamp sprint-5 at.review.periodic-security 2026-11-17T11:00:00Z
 expect "run_state: plan-needed keeps a failing whole-tree periodic security review a later sprint diff pass followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
+# The sprint's sweep, sprint-N-sweep, reviews the whole tree: only the
+# whole name sprint-N is a diff review (DIFF_REVIEW_RUN).
+state init sprint-5-sweep main > /dev/null 2>&1
+state review sprint-5-sweep periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
+stamp sprint-5-sweep at.review.periodic-security 2026-11-17T11:00:00Z
+expect "run_state: plan-needed leaves a failing whole-tree periodic security review a later sprint sweep pass superseded" 1 "^not needed" state plan-needed next
+rm -f build/pipeline/sprint-5-sweep.json
 state review review-20261117 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
 stamp review-20261117 at.review.periodic-security 2026-11-16T11:30:00Z
 expect "run_state: plan-needed keeps a failing whole-tree periodic security review a whole-tree pass recorded before it followed" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed next
 stamp review-20261117 at.review.periodic-security 2026-11-17T10:00:00Z
 expect "run_state: plan-needed leaves a failing whole-tree periodic security review a later whole-tree pass superseded" 1 "^not needed" state plan-needed next
+stamp review-20261116 at.review.periodic-security ""
+expect "run_state: plan-needed leaves a failing periodic security review with no record time a later whole-tree pass superseded" 1 "^not needed" state plan-needed next
 # A passing review alone needs no planner.
 rm -f build/pipeline/review-20261117.json build/pipeline/sprint-5.json
 state review review-20261116 periodic-security pass "high=0 medium=0 low=0 blocking=0" > /dev/null
