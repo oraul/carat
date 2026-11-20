@@ -5,6 +5,9 @@ module Carat
     # with a value in it.
     module Messages
       E16 = "E16: Invalid range"
+      # The one name of a buffer with no path or title, which the status
+      # bar, the winbar, the buffer tabs, and :ls show.
+      NO_NAME = "[No Name]"
       E36 = "E36: Not enough room"
       E37 = "E37: No write since last change (add ! to override)"
       E444 = "E444: Cannot close last window"
@@ -19,7 +22,7 @@ module Carat
       # characters in caret notation so the name adds no line.
       #: (String) -> String
       def self.unsaved_buffer(path)
-        name = path.empty? ? "[No Name]" : ControlText.caret(path)
+        name = path.empty? ? NO_NAME : ControlText.caret(path)
         "E37: No write since last change\nE162: No write since last change for buffer \"#{name}\""
       end
 

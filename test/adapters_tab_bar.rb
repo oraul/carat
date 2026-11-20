@@ -84,6 +84,7 @@ module AdaptersTabBarTest
       ["the tab-page numbers at the right end", [["a.txt", "b.txt"], 0, 2], " • a.txt    • b.txt" + (" " * 16) + "1  2"],
       ["tab pages without a second file", [["a.txt"], 0, 3], " • a.txt" + (" " * 24) + "1  2  3"]
     ]) { |input| paint(setup(input[0], input[1], input[2]), 40).row_text(0) }
+    t.assert_equal(" • " + Carat::Domain::Messages::NO_NAME, paint(setup(["", "b.txt"], 0, 1), 40).row_text(0)[0, 3 + Carat::Domain::Messages::NO_NAME.length], "the tab shows the one no-name constant")
 
     # Overflow: ten tabs of 12 cells in 40 columns, counted at the ends,
     # the current one always shown.

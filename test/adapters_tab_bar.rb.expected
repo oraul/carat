@@ -6,6 +6,7 @@ ok   an unlisted buffer has no tab
 ok   an unlisted buffer at the end has no tab
 ok   the tab-page numbers at the right end
 ok   tab pages without a second file
+ok   the tab shows the one no-name constant
 ok   the first current
 ok   the sixth current
 ok   the last current
@@ -18,4 +19,4 @@ ok   nerd
 ok   unicode
 ok   ascii
 ok   the counts are plain
-adapters_tab_bar: 20 passed, 0 failed
+adapters_tab_bar: 21 passed, 0 failed

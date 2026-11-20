@@ -2,6 +2,7 @@ require_relative "../domain/frame"
 require_relative "../domain/highlight"
 require_relative "../domain/window"
 require_relative "../domain/symbol_request"
+require_relative "../domain/messages"
 
 module Carat
   module Adapters
@@ -15,7 +16,6 @@ module Carat
     # TabLineFill, cut at the window's right edge. Every string written is
     # already stored, so a winbar costs no object per frame.
     class Winbar
-      NO_NAME = "[No Name]"
       SEPARATOR = " › "
       ASCII_SEPARATOR = " > "
 
@@ -38,7 +38,7 @@ module Carat
         buffer = window.buffer
         name = buffer.display_name
         c = frame.put_within(row, x, " ", hl, limit)
-        c = frame.put_within(row, c, name.nil? ? NO_NAME : name, hl, limit)
+        c = frame.put_within(row, c, name.nil? ? Domain::Messages::NO_NAME : name, hl, limit)
         ask = @symbols
         if ask.held?(buffer.id)
           cursor_row = window.cursor.row
