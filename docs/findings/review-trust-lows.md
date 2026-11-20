@@ -62,3 +62,18 @@
 - Location: `tools/run_state.sh` `plan_apply` (about line 1960) against `reviewed_edits` (about line 2103)
 - Why: the package step runs `plan-apply`, which copies `build/plan/CHANGE/goals.md` over `docs/goals.md` after the security review, while `reviewed-edits` now tells the contributor to restore any `docs/goals.md` change since that review, so the two rules contradict and a planned goals edit cannot land through a package step.
 - Fix: have `plan-apply` leave `goals.md` and name it when a security pass is recorded (or apply it in the implement step, before the reviews), with a tools-test case.
+
+### moved_change carried reviews across a branch-side docs/goals.md edit (review-trust-lows security Low (6))
+- Location: tools/run_state.sh:3666 moved_change (reported at :3673, before the branch's moved_change fix)
+- Why: dropping every RECORDS_RE path, docs/goals.md included, from REVIEWED, CURRENT, and MOVED let a goals.md edit committed after the security pass and before merge-main go uncompared, so moved recorded the carry and the review was rewritten at the new head, where settled_at trivially passes, reopening the stale-pass path settled_at, settled_round, and reviewed_edits close.
+- Fix: moved_change now filters through outside_records (keeping INSTRUCTION_RECORDS_RE paths), with the tools-test case "run_state: moved reruns the reviews when an instruction record changed after the pass"; confirm at review that the case covers an edit after the review, then merge-main, then moved, expecting the refusal, and close this entry if it does.
+
+### INSTRUCTION_RECORDS_RE is defined twice and held equal by a test (review-trust-lows quality advisory, raised twice)
+- Location: tools/gates.sh:117 and tools/run_state.sh:465 (also reported at :466)
+- Why: both scripts source tools/rules.sh, yet each keeps its own copy of the line, held equal only by the tools-test case "rules: the instruction records are the gates'", so one rule has two homes.
+- Fix: in a separate tools/rules.sh change landing first and alone, move INSTRUCTION_RECORDS_RE beside RECORDS_RE in tools/rules.sh, drop both copies and the equality test.
+
+### plan-apply copies a planned goals.md after the security review that reviewed-edits then asks to restore (review-trust-lows quality advisory, raised three times)
+- Location: tools/run_state.sh:1970 plan_apply (also reported at :1960) and tools/run_state.sh:2112 reviewed_edits (also reported at :2103 and :2113)
+- Why: the package step's plan-apply copies build/plan/CHANGE/goals.md over docs/goals.md after the security review, which makes the pass stale, and reviewed-edits then tells the contributor to restore the file, so the two rules contradict.
+- Fix: have plan-apply leave docs/goals.md and name it when a security pass is recorded, or apply it in the implement step, with a tools-test case.
