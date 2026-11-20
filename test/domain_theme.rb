@@ -14,9 +14,10 @@ module DomainThemeTest
   NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
   # The palettes whose indent guides recede behind the text, ordered
   # below Comment rather than held to 3:1, and whose float border keeps
-  # its own 1.3:1 floor, and the guide groups.
+  # its own 1.3:1 floor, and the guide groups, Whitespace among them since
+  # the whitespace marks take the guides' color.
   RECEDING = ["carat-dark", "carat-light"]
-  GUIDES = [H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
+  GUIDES = [H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE, H::WHITESPACE]
 
   # The linear light of one sRGB component, WCAG 2's formula.
   #: (Integer) -> Float
@@ -161,12 +162,15 @@ module DomainThemeTest
     out
   end
 
-  # The indent guides' entries among a theme's low_contrast ones.
+  # The entries of the guide groups (the indent guides and Whitespace)
+  # among a theme's low_contrast ones.
   #: (Carat::Domain::Theme, bool, Integer) -> Array[String]
   def self.guide_low_contrast(theme, at256, layer)
     out = []
     low_contrast(theme, at256, layer).each do |entry|
-      out << entry if entry.start_with?("#{H::NAMES[H::INDENT_GUIDE]} ") || entry.start_with?("#{H::NAMES[H::INDENT_GUIDE_SCOPE]} ")
+      GUIDES.each do |id|
+        out << entry if entry.start_with?("#{H::NAMES[id]} ")
+      end
     end
     out
   end
@@ -478,7 +482,9 @@ module DomainThemeTest
     # Scenario: The other palettes' guides keep 3:1. IblIndent and
     # IblScope of one_dark, one_light, dark_plus, and light_plus keep 3:1
     # on the background and on the cursor line, at 24 bits and at 256
-    # colors.
+    # colors. Scenario: The other palettes' whitespace marks keep 3:1:
+    # guide_low_contrast checks every group of GUIDES, Whitespace among
+    # them.
     ["one_dark", "one_light", "dark_plus", "light_plus"].each do |name|
       theme = D::Themes.find(name, "theme")
       [0, H::CURSOR_LINE_LAYER].each do |layer|
@@ -508,6 +514,20 @@ module DomainThemeTest
     ]) do |input|
       theme = D::Themes.find(input[0].to_s, "terminal")
       [theme.fg(H::INDENT_GUIDE), theme.fg(H::INDENT_GUIDE_SCOPE), theme.fg16(H::INDENT_GUIDE), theme.fg16(H::INDENT_GUIDE_SCOPE)]
+    end
+
+    # Scenario: The whitespace marks take the guide color. Whitespace has
+    # IblIndent's color in every palette, at 24 bits and 16 colors.
+    t.cases([
+      ["The whitespace marks take the guide color: carat-dark", ["carat-dark"], [0x30364b, 8, true]],
+      ["The whitespace marks take the guide color: carat-light", ["carat-light"], [0xd8dce8, 8, true]],
+      ["The whitespace marks take the guide color: one_dark", ["one_dark"], [0x737a8a, 8, true]],
+      ["The whitespace marks take the guide color: one_light", ["one_light"], [0x84868e, 8, true]],
+      ["The whitespace marks take the guide color: dark_plus", ["dark_plus"], [0x737373, 8, true]],
+      ["The whitespace marks take the guide color: light_plus", ["light_plus"], [0x858585, 8, true]]
+    ]) do |input|
+      theme = D::Themes.find(input[0].to_s, "terminal")
+      [theme.fg(H::WHITESPACE), theme.fg16(H::WHITESPACE), theme.fg256(H::WHITESPACE) == theme.fg256(H::INDENT_GUIDE)]
     end
 
     # Scenario: The border colors. Carat's palettes give FloatBorder its
