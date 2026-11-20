@@ -10,7 +10,7 @@
 
 ## 3. Histories
 
-- [ ] 3.1 Rewrite line 1 of `docs/metrics-feature.tsv` and `docs/metrics-backlog.tsv` to `HEADER` and pad each 22-field row with two `-` fields, no other field changed; checked by the docs-lint `histories` check of task 4.1 and a `git diff --numstat` of 64 and 125 changed lines
+- [x] 3.1 Rewrite line 1 of `docs/metrics-feature.tsv` and `docs/metrics-backlog.tsv` to `HEADER` and pad each 22-field row with two `-` fields, no other field changed; checked by the docs-lint `histories` check of task 4.1 and a `git diff --numstat` of 64 and 125 changed lines
 
 ## 4. docs-lint
 
