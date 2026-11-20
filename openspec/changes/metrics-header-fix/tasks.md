@@ -2,7 +2,7 @@
 
 ## 1. Queue
 
-- [ ] 1.1 Add the user-approved exception line under the Sprint 23 heading of `docs/queue-backlog.md`; checked by `make docs-lint` (queue)
+- [x] 1.1 Add the user-approved exception line under the Sprint 23 heading of `docs/queue-backlog.md`; checked by `make docs-lint` (queue)
 
 ## 2. Row writer
 
