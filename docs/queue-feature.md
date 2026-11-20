@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 24
 
-1. `status-winbar-tabs` (T2 user request, Facet wave 2, estimated medium): the status bar, winbar, and buffer tabs keep their pre-Facet look: painters `carat/adapters/status_bar.rb:78`, `carat/adapters/winbar.rb:32`, `carat/adapters/tab_bar.rb:34`, `:118`; the winbar joins symbols with ` › ` or ` > ` (`winbar.rb:19`); `[No Name]` is defined 3 times (`status_bar.rb:47`, `winbar.rb:18`, `tab_bar.rb:22`). Fix outline: the Facet plan's styling of the three rows in both themes; one no-name word. Accepted when frame rows show each row in carat-dark, carat-light, and `option.icons ascii`, a test reads one no-name constant, and `lh-winbar` is held. Backlog: none.
+1. `status-winbar-tabs-b` (T2 user request, Facet wave 2, split from status-winbar-tabs at 7e3d400, estimated medium): the winbar and buffer tabs keep their pre-Facet look: painters `carat/adapters/winbar.rb:32`, `carat/adapters/tab_bar.rb:34`, `:118`; the winbar joins symbols with ` › ` or ` > ` (`winbar.rb:19`). Fix outline: the Facet plan's styling of both rows in both themes. Accepted when frame rows show the winbar and the tabs in carat-dark, carat-light, and `option.icons ascii`, both read the one no-name word status-winbar-tabs left, and `lh-winbar` is held. Backlog: none.
 2. `listchars-folds` (T2 user request, Facet wave 2, estimated medium): no option shows tabs, trailing blanks, or no-break spaces (`config/default.caratrc` has no `listchars`), and a closed fold is one plain row (`carat/adapters/frame_presenter.rb:799`). Fix outline: Facet's whitespace markers behind an option, off by default, with an ascii fallback; the closed fold's text and fill in Folded. Accepted when frame rows show each marker on and off, a closed fold in both themes and ascii, a `.caratrc` row per option with `make gen-config` current, and `lh` and `j` held. Backlog: none.
 3. `border-vocabulary` (T2 user request, Facet wave 3, estimated medium, critical d carat/plugin_api.rb): a float's border is one bool (`FloatOptions`, `carat/plugin_api.rb:203`) drawn in the global `option.winborder rounded` (`config/default.caratrc:52`); split separators are fixed `│` and `─` (`frame_presenter.rb:107`, `:109`), every edge FloatBorder (`:537`, `:724`). Fix outline: the Facet border vocabulary as named styles a float may request at API 2.13, a 2.12 plugin's bool still honored. Accepted when frame rows draw each style and its ascii fallback, a plugin test requests a style, a 2.12 plugin loads, and `lh-float` is held. Backlog: none.
 
@@ -33,10 +33,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first (T0): none; the sprint-23 review's security Low (3) `window_requests.rb:397` is disputed (sprint-23 note 3), kept in the backlog.
-- Sprint 24 (T2 user request): 3 features, 3 backlog; the waves in order, picker-styles-b note 13: "Sprint 24's three features come from the waves in that order".
-- Pushed back (T2): finder-switch, finder-rows, unmerged in Sprint 23 (2 of 7 merges features), behind the waves by note 13.
-- Size (T2): medium each; last two feature rows background-detect 1,756,083 (over medium), picker-styles 1,428,108 (under large), no size up.
-- Critical (d): border-vocabulary, `carat/plugin_api.rb` 2.12 to 2.13.
-- Folded (T2): finder-rows takes the selected-row hole (picker-styles-b notes 1, 6); plugin-ui-tokens the 4 float span entries.
-- Moved (T5): set-options, theme-tuning, semantic-highlight from the backlog pool, as syntax-tidy's plan said.
+- Security first (T0): none; sprint-18 periodic security Medium (9) `tools/run_state.sh:449` and Low (3) `:2648` at 53b1e58 fixed by b5b0aec (#214), its cases at `tools/tools_test.sh:2424`.
+- Split (T2): status-winbar-tabs held 3 testable rows (status bar 392 lines, winbar 59, tab bar 191); delivered the status bar and one no-name word (3 copies), the winbar and tabs to status-winbar-tabs-b, Sprint 24 item 1's split part.
+- Size (T2): medium each; the whole large by comparable rows message-styling 1,470,193, picker-styles 1,428,108; last two rows 1,428,108 and 1,984,280 under large, no size up.
+- Critical: none; area 13 painters match no rule of `docs/goals.md`.
+- Sprint 24 (T2 user request): 3 features, 3 backlog; the waves in order, picker-styles-b note 13.
+- Placed (T1): sprint-23-records retro notes 9, 10, 11 in this plan's backlog.md, beside closing-loop-fold, records-bench-skip, and the none/None entry; this delivery touches no backlog-lane file.
