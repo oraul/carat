@@ -82,9 +82,10 @@ module Carat
       # child itself: TERM goes to its own pid, never a group, before the
       # detach reaps it, so the number cannot yet belong to another
       # process. KILL follows when the detach thread has not reaped it
-      # STOP_SECONDS later; the one window left is the child ending, and
-      # its number being taken again, between that wait's end and the
-      # signal. A closed handle is never signalled again.
+      # STOP_SECONDS later and is still waiting just before the signal;
+      # the one window left is the child being reaped, and its number
+      # taken again, between that last look and the signal. A closed
+      # handle is never signalled again.
       #: (Integer) -> void
       def stop(handle)
         return unless open?(handle)
@@ -93,7 +94,7 @@ module Carat
         post(@outboxes[handle - 1], nil)
         terminate(pid)
         waiter = Process.detach(pid)
-        kill(pid) if waiter.join(STOP_SECONDS).nil?
+        kill(pid) if waiter.join(STOP_SECONDS).nil? && waiter.alive?
       end
 
       # @rbs argv: Array[String]
