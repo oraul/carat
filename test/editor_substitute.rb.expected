@@ -34,6 +34,7 @@ ok   an empty pattern with no search
 ok   the whole match
 ok   groups
 ok   case
+ok   case escape on a dotted capital I
 ok   line breaks
 ok   line breaks on several lines
 ok   the previous string
@@ -68,4 +69,4 @@ ok   undo a line break
 ok   dot does not repeat it
 ok   n searches the pattern
 ok   the search register holds it
-editor_substitute: 70 passed, 0 failed
+editor_substitute: 71 passed, 0 failed

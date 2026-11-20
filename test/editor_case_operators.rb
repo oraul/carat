@@ -9,7 +9,9 @@ require_relative "../carat/testing"
 # of their rows: "g~ gu gU over motions", "g~ gu gU over text objects",
 # "g~ gu gU with counts", "the doubled forms", "multibyte letters",
 # "the edges of the buffer", "dot repeats a case operator", "one undo
-# for a case operator", and "the visual modes".
+# for a case operator", and "the visual modes". The two ~ rows under "multibyte
+# letters" and the :s row in editor_substitute.rb prove the callers of the
+# per-letter rule outside the operators.
 module EditorCaseOperatorsTest
   def self.editor(text)
     files = Carat::Doubles::MemoryFiles.new
@@ -95,6 +97,8 @@ module EditorCaseOperatorsTest
       ["multibyte letters: a final sigma lowers as a plain sigma", ["ΑΣ\n", [0, 0], "guu"], [["ασ"], [0, 0], :normal]],
       ["multibyte letters: a letter with no single-letter form stays", ["ﬁa\n", [0, 0], "gUU"], [["ﬁA"], [0, 0], :normal]],
       ["multibyte letters: a dotted capital I lowers to i", ["İa\n", [0, 0], "guu"], [["ia"], [0, 0], :normal]],
+      ["multibyte letters: normal ~ keeps the sharp s and moves on", ["ßa\n", [0, 0], "~"], [["ßa"], [0, 1], :normal]],
+      ["multibyte letters: normal ~ turns a dotted capital I into i", ["İa\n", [0, 0], "~"], [["ia"], [0, 1], :normal]],
       # The edges of the buffer.
       ["the edges of the buffer: gUU on an empty line", ["\nab\n", [0, 0], "gUU"], [["", "ab"], [0, 0], :normal]],
       ["the edges of the buffer: gUU in an empty buffer", ["", [0, 0], "gUU"], [[""], [0, 0], :normal]],

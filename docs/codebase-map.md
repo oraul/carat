@@ -229,7 +229,7 @@ Flow: `OperatorHandler` (kind `:operator`, the eight pending operators `d c y > 
 
 Files:
 
-- `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `recase_letter`, `recase_range`, `make_indent`.
+- `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `recase_letter`, `recase_row`, `recase_rows`, `recase_range`, `make_indent`.
 - `carat/domain/operator_kind.rb`: `OperatorKind`, the eight operator action names.
 - `carat/domain/register_entry.rb`: `RegisterEntry` (charwise, linewise, or blockwise); `charwise`, `lines`, `block`, `linewise?`, `blockwise?`, `joined`.
 - `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`, `unnamed?` (a name standing for no register in particular).

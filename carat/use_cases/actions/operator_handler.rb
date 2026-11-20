@@ -11,9 +11,9 @@ require_relative "action_table"
 
 module Carat
   module UseCases
-    # The eight pending operators d c y > < g~ gu gU. In normal mode the grammar
-    # holds the operator until its motion, text object, or doubled key
-    # arrives, and the dispatcher runs this handler with the whole
+    # The eight pending operators d c y > < g~ gu gU. In normal mode the
+    # grammar holds the operator until its motion, text object, or doubled
+    # key arrives, and the dispatcher runs this handler with the whole
     # command, which Operate carries out; in a visual mode the operator
     # acts on the selection at once, through the selection use case of
     # its operation.

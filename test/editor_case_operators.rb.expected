@@ -54,6 +54,8 @@ ok   multibyte letters: gUe from after a multibyte letter
 ok   multibyte letters: a final sigma lowers as a plain sigma
 ok   multibyte letters: a letter with no single-letter form stays
 ok   multibyte letters: a dotted capital I lowers to i
+ok   multibyte letters: normal ~ keeps the sharp s and moves on
+ok   multibyte letters: normal ~ turns a dotted capital I into i
 ok   the edges of the buffer: gUU on an empty line
 ok   the edges of the buffer: gUU in an empty buffer
 ok   the edges of the buffer: gUl on an empty line changes nothing
@@ -111,4 +113,4 @@ ok   recase toggles the dotted capital I to i
 ok   recase keeps a ligature when upper-cased
 ok   recase of an empty string
 ok   recase changes only the ASCII letters of text that is not valid UTF-8
-editor_case_operators: 113 passed, 0 failed
+editor_case_operators: 115 passed, 0 failed
