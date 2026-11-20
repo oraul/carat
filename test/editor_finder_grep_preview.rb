@@ -59,6 +59,28 @@ module EditorFinderGrepPreviewTest
     files
   end
 
+  # 399 files of 1000 lines of x after the guide, so the store cap of
+  # 400,000 lines cuts z.txt after its 999th line; z.txt holds 1010 lines
+  # of a but line 995, twenty z's.
+  def self.capped_files
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    i = 0
+    while i < 399
+      files.put("f#{i}.txt", "x\n" * 1000)
+      i += 1
+    end
+    text = +""
+    i = 1
+    while i <= 1010
+      text << (i == 995 ? "z" * 20 + "\n" : "a\n")
+      i += 1
+    end
+    files.put("z.txt", text)
+    files
+  end
+
   def self.editor_on(files, cols)
     h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with(""), rows: 24, cols: cols, plugins: [Carat::Plugins::Finder::Plugin.new])
     h.open("docs/guide.md")
@@ -106,13 +128,26 @@ module EditorFinderGrepPreviewTest
       ["on the last line the window ends at it", [40, 40, 120], [expected_preview(23, 40, 40)]],
       ["a file shorter than the window shows whole", [5, 3, 120], [expected_preview(1, 5, 3)]],
       ["a file of one line shows it", [1, 1, 120], [expected_preview(1, 1, 1)]],
-      ["a file past the 1000 stored lines ends at the last stored line", [1200, 995, 120], [expected_preview(983, 1000, 995)]],
+      ["a line past the 1000th is previewed around it", [1200, 1100, 120], [expected_preview(1091, 1108, 1100)]],
+      ["a file of 1200 lines ends at its last line", [1200, 1195, 120], [expected_preview(1183, 1200, 1195)]],
       # Scenario: A narrow screen shows no grep preview
       ["99 columns show no preview", [40, 20, 99], [""]],
       ["100 columns show the preview", [40, 20, 100], [expected_preview(11, 28, 20)]]
     ]) do |input|
       [preview_text(numbered_files(input[0].to_i, input[1].to_i), "<Space>fgneedle", input[2].to_i)]
     end
+
+    # Scenario: The preview is clamped at the file's start and end
+    # The store cap cut z.txt after line 999: its preview ends there, each
+    # key of z's continuing the search until it reaches the file.
+    cut = +""
+    i = 982
+    while i <= 999
+      cut << (i == 995 ? "> " + "z" * 20 : "  a")
+      cut << "\n" if i < 999
+      i += 1
+    end
+    t.assert_equal("z.txt|" + cut, preview_text(capped_files, "<Space>fg" + "z" * 15, 120), "a file the store cap cut ends at its last stored line")
 
     # Rows are [label, keys, the preview float].
     t.table([
@@ -144,7 +179,8 @@ module EditorFinderGrepPreviewTest
     # Rows are [label, keys, the preview float].
     t.table([
       # Scenario: The preview shows its text safely
-      ["empty lines the store skipped show as empty lines", "<Space>fggapword", "gap.txt|  a\n\n> gapword\n\n  b"],
+      # Scenario: The preview ends at the file's last line
+      ["empty lines the store skipped show as empty lines, those at the file's end too", "<Space>fggapword", "gap.txt|  a\n\n> gapword\n\n  b\n\n"],
       ["control bytes, invalid UTF-8, and a bidirectional override show safely", "<Space>fgctrlword", "ctrl.txt|  x  [31mred  y\n> ctrlword ??\n  z z"],
       ["a line over 400 bytes shows cut", "<Space>fglongword", "long.txt|> longword " + "q" * 391],
       ["a path with a control byte shows it as a space in the title", "<Space>fgnamedword", "tab here.txt|> namedword"]
