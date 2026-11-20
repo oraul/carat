@@ -18,5 +18,5 @@
 
 ## 5. Docs
 
-- [ ] 5.1 Update the comment above `append_history`, the usage header of `tools/docs_lint.sh`, the header comment of `tools/tools_test.sh`, the README's docs-lint line and documents paragraph, and the map's `tools/run_state.sh` and `tools/docs_lint.sh` entries; checked by `make docs-lint` and `make gates`
+- [x] 5.1 Update the comment above `append_history`, the usage header of `tools/docs_lint.sh`, the header comment of `tools/tools_test.sh`, the README's docs-lint line and documents paragraph, and the map's `tools/run_state.sh` and `tools/docs_lint.sh` entries; checked by `make docs-lint` and `make gates`
 - [ ] 5.2 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
