@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: The editor asks the terminal for its background without waiting
-On start the editor SHALL ask the terminal for its background color with the OSC 11 query and SHALL draw the first frame without waiting for an answer. The answer SHALL be read as untrusted input within a fixed bound: a reply naming a light color SHALL report the background light, one naming a dark color dark, and a malformed reply or none SHALL leave it unknown. No byte of a reply SHALL reach the keys but the rest of one a timeout cut short; the keys typed around it SHALL arrive unchanged.
+On start the editor SHALL ask the terminal for its background color with the OSC 11 query and SHALL draw the first frame without waiting for an answer. The answer is untrusted input, read within a fixed bound: a light color SHALL report the background light, a dark one dark, and a malformed reply or none SHALL leave it unknown. No byte of a reply SHALL reach the keys, except the rest of a reply whose held start a read timeout dropped; keys typed around it SHALL arrive unchanged.
 
 #### Scenario: The first frame waits for no reply
 - **WHEN** the editor starts on a terminal that has not answered

@@ -20,3 +20,4 @@
 - [x] 4.3 `carat/domain/terminal_background.rb` the luma weights are the constant `LUMA_WEIGHTS` (proved by `test/domain_terminal_background.rb`)
 - [x] 4.4 `docs/architecture.md` the ports paragraph restored, only the `TerminalPort` row changed (proved by `make lint`)
 - [x] 4.5 `carat/drivers/ansi_terminal.rb` the `read_key` comment rewrapped (proved by `make lint`)
+- [x] 4.6 `openspec/changes/background-detect/specs/editor-startup/spec.md` the requirement states the delayed reply exception in a clear sentence (proved by `make spec-validate`)
