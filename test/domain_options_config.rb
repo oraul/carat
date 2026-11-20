@@ -135,8 +135,8 @@ module DomainOptionsConfigTest
 
     # The whitespace marks' options: rows are [label, project lines, [list,
     # listchars, the codes drawn for the tab's three marks, trail, and
-    # nbsp, problems]]. Scenario: A listchars value that does not read is
-    # refused (the rows from "an unknown key").
+    # nbsp, problems]]. The rows from "an unknown key" on prove:
+    # Scenario: A listchars value that does not read is refused
     refused = ".caratrc:1: option.listchars takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide"
     t.table([
       ["the marks are off by default, with Neovim's listchars", "", [false, "tab:> ,trail:-,nbsp:+", [62, 32, 0, 45, 43], []]],
