@@ -306,8 +306,14 @@ module Carat
         #: (Carat::PluginApi::Host) -> void
         def close_floats(host)
           host.close_float(@list_float) if @list_float != 0
-          host.close_float(@preview_float) if @preview_float != 0
           @list_float = 0
+          close_preview(host)
+        end
+
+        # Closes the preview float when one is open.
+        #: (Carat::PluginApi::Host) -> void
+        def close_preview(host)
+          host.close_float(@preview_float) if @preview_float != 0
           @preview_float = 0
         end
 
@@ -336,8 +342,7 @@ module Carat
           @list_float = show_float(host, @list_float, @list_box, list, list_lines(height))
           @list_box = box_key(list)
           unless preview && !@matches.empty?
-            host.close_float(@preview_float) if @preview_float != 0
-            @preview_float = 0
+            close_preview(host)
             return
           end
           preview_title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
