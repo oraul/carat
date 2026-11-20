@@ -27,3 +27,12 @@
 - Location: tools/run_state.sh, escape_mark, main_scan and bench_compare (metrics_out, last.tsv)
 - Why: the check of one lane failed with "a stage wrote outside its clone" naming the main checkout's build/metrics/current.tsv and last.tsv, written at 07:39:14 and 07:39:22 by the other lane's bench phase, which runs in the main checkout right after its own metrics stage; every stage of the failed check exited 0, so a clean change costs a full check round whenever two lanes overlap.
 - Fix: have bench write its figures under the lane's own build/ (or build/stages/CHANGE/), or leave build/metrics out of main_scan like build/pipeline and build/stages, with a tools_test case running a bench beside a check.
+### The benchmark starts on a diff touching no carat, bench, or test file (pr-trust-lows retro 7)
+- Location: `.claude/workflows/deliver-change.js`, the bench phase's start condition; `.claude/agents/benchmark.md`.
+- Why: pr-trust-lows made 4 bench starts, 24 of 237 calls (10.1 percent) and 16,538 output tokens, each building origin/main in a temporary worktree, every allocation and round key equal, the release bench skipped each time, 0 findings; bench first pass 204/205. Near the backlog queue's `bench-skip-no-code` (Pool 22).
+- Fix: skip the bench start when the diff touches no carat/, bench/, or test/ file; accepted when such a run records no bench start, review.bench says skipped, and the record still passes.
+
+### The first quality pass names one occurrence of a pattern it flags (pr-trust-lows retro 8)
+- Location: `.claude/agents/quality-reviewer.md`, the first-pass instruction.
+- Why: pr-trust-lows' advisory at d388c4a (pin copies the test does not read) missed the guard's refusal literal at `tools/agent_guard.sh:902`, present since d388c4a and found only at ee4ce6c, costing rework round 2; the run recorded rework 3 of 3 with every first pass 1 and 0 blocking findings, reviews 63,219 output tokens (21.0 percent) over 56 calls; quality first pass 113/205. Near the backlog queue's `stale-wording-first-pass` (Pool 22) and `rework-review-repeat` (Pool 20).
+- Fix: have the first pass search the branch for every occurrence of a pattern it flags; accepted when over the next 5 runs no advisory names a line unchanged since an earlier quality review of the same run.
