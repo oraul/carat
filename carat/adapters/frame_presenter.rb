@@ -111,7 +111,7 @@ module Carat
       ASCII_SEPARATOR = "|"
       ASCII_ROW_SEPARATOR = "-"
       FAR = 1 << 30
-      FLOAT_STRIDE = 10
+      FLOAT_STRIDE = 11
       # The title of a notification box by its level.
       NOTICE_TITLES = ["Info", "Warning", "Error"]
       # The rows of a notification box and its narrowest width.
@@ -442,8 +442,8 @@ module Carat
       # What the floats to paint show, FLOAT_STRIDE integers each: the box
       # (top, the row after it, left, the column after it), the first
       # row and column the float shows, its buffer's change counters, its
-      # window id, so a float reopened at the same box repaints, and its
-      # selected menu row.
+      # window id, so a float reopened at the same box repaints, its
+      # selected menu row, and its style count, so a restyle repaints.
       #: (Domain::FloatLayer) -> void
       def build_float_key(floats)
         key = @float_key
@@ -463,6 +463,7 @@ module Carat
           key << buffer.changes
           key << window.id
           key << float.selected
+          key << float.style_count
           i += 1
         end
       end
@@ -502,6 +503,7 @@ module Carat
           key << 0
           key << 0
           key << -1
+          key << 0
           i += 1
         end
       end

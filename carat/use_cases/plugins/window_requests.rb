@@ -10,6 +10,8 @@ require_relative "../../domain/float_window"
 require_relative "../../domain/border_style"
 require_relative "../../domain/window"
 require_relative "../../domain/messages"
+require_relative "../../domain/highlight"
+require_relative "../../domain/syntax_line"
 require_relative "../files/open_file"
 require_relative "../../ports/file_port"
 require_relative "../windows/split_window"
@@ -266,7 +268,8 @@ module Carat
       # reopened float has them; the window id, box, z order, and focus
       # stay. A float switched to a buffer of the list, such as one of
       # the plugin's scratch buffers, is refused: only the unlisted buffer
-      # the float was opened with is refilled.
+      # the float was opened with is refilled. The refill drops the
+      # float's style, its rows new strings.
       #: (String, Integer, Array[String], String) -> PluginApi::Response
       def set_float_lines(name, id, lines, title)
         index = own_float_tab(name, id)
@@ -284,6 +287,31 @@ module Carat
         window.anchor = Domain::Position.new(row: 0, col: 0)
         window.top = 0
         window.left = 0
+        float.selected = -1
+        buffer.styles = Array.new(0, nil)
+        PluginApi::Response.success("", 0)
+      end
+
+      # Replaces the style of the plugin's float: its selected row, in
+      # PmenuSel with the other rows in Pmenu, or -1, and its spans, flat
+      # (row, column, length, group) quadruples kept as each row's tokens
+      # for that row's string, PmenuMatch on the selected row given as
+      # PmenuMatchSel. Everything is checked before anything changes, so a
+      # refused request leaves the previous style; the same float as
+      # set_float_lines is refused.
+      #: (String, Integer, Integer, Array[Integer]) -> PluginApi::Response
+      def style_float(name, id, selected, spans)
+        index = own_float_tab(name, id)
+        return PluginApi::Response.failure("No float #{id}") if index < 0
+        floats = @tabs.tab_at(index).floats
+        float = floats.at(floats.index_of(window_or_current(id)))
+        buffer = float.window.buffer
+        return PluginApi::Response.failure("No float #{id}") if @buffers.index_of(buffer) >= 0
+        why = style_refusal(buffer.line_count, selected, spans)
+        return PluginApi::Response.failure(why) unless why.empty?
+        float.selected = selected
+        float.style_count += 1
+        buffer.styles = spans.empty? ? Array.new(0, nil) : row_styles(buffer, selected, spans)
         PluginApi::Response.success("", 0)
       end
 
@@ -332,6 +360,66 @@ module Carat
         return -1 if index < 0
         floats = @tabs.tab_at(index).floats
         floats.at(floats.index_of(target)).window.buffer.owner == name ? index : -1
+      end
+
+      # Why a style of the selected row and the spans cannot go on a float
+      # of count lines, "" when it can.
+      #: (Integer, Integer, Array[Integer]) -> String
+      def style_refusal(count, selected, spans)
+        return "No row #{selected}" if selected < -1 || selected >= count
+        return "Spans are row, column, length, and group" if spans.length % 4 != 0
+        i = 0
+        while i < spans.length
+          row = spans[i]
+          from = spans[i + 1]
+          length = spans[i + 2]
+          group = spans[i + 3]
+          return "No row #{row}" if row < 0 || row >= count
+          return "No span at column #{from} length #{length}" if from < 0 || length < 1
+          return "No float group #{group}" unless Domain::Highlight.float_style?(group)
+          i += 4
+        end
+        ""
+      end
+
+      # A SyntaxLine per row of the buffer: for a row with spans, one made
+      # for the row's own string holding them as (column, length, group)
+      # triples in their order; SyntaxLine::NONE for any other row. The
+      # spans are chained per row first, so the work is one pass over the
+      # rows and one over the spans.
+      #: (Domain::Buffer, Integer, Array[Integer]) -> Array[untyped]
+      def row_styles(buffer, selected, spans)
+        count = buffer.line_count
+        first = Array.new(count, -1)
+        after = Array.new(spans.length / 4, -1)
+        i = spans.length - 4
+        while i >= 0
+          row = spans[i]
+          after[i / 4] = first[row]
+          first[row] = i
+          i -= 4
+        end
+        out = Array.new(0, nil)
+        row = 0
+        while row < count
+          at = first[row]
+          if at < 0
+            out << Domain::SyntaxLine::NONE
+          else
+            tokens = Array.new(0, 0)
+            while at >= 0
+              group = spans[at + 3]
+              group = Domain::Highlight::POPUP_MENU_MATCH_SELECTED if row == selected && group == Domain::Highlight::POPUP_MENU_MATCH
+              tokens << spans[at + 1]
+              tokens << spans[at + 2]
+              tokens << group
+              at = after[at / 4]
+            end
+            out << Domain::SyntaxLine.new(text: buffer.line(row), start: 0, tokens: tokens, end_state: 0)
+          end
+          row += 1
+        end
+        out
       end
 
       #: (Integer) -> Integer

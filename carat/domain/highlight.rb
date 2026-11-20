@@ -188,6 +188,22 @@ module Carat
         id >= SYNTAX_FIRST && id < COUNT
       end
 
+      # Whether id is a group a plugin float's span may carry: a token's
+      # group, PmenuSel, or PmenuMatch; every other UI group is refused.
+      #: (Integer) -> bool
+      def self.float_style?(id)
+        token?(id) || id == POPUP_MENU_SELECTED || id == POPUP_MENU_MATCH
+      end
+
+      # The id of the group a plugin float's span may carry with that
+      # name, as float_style? admits; -1 for any other name.
+      #: (String) -> Integer
+      def self.float_style_id(name)
+        return POPUP_MENU_SELECTED if name == NAMES[POPUP_MENU_SELECTED]
+        return POPUP_MENU_MATCH if name == NAMES[POPUP_MENU_MATCH]
+        token_id(name)
+      end
+
       # The name of the group with that id, "" for none.
       #: (Integer) -> String
       def self.name_of(id)

@@ -37,8 +37,8 @@ The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the 
 - **THEN** the second row is drawn in `PmenuSel`, the other rows in `Pmenu`, the span's cells in `PmenuMatch` on the first row and `PmenuMatchSel` on the second, and the screen equals a full repaint
 
 #### Scenario: A restyle repaints
-- **WHEN** the plugin styles the same float again with its third row selected and no span, its lines unchanged
-- **THEN** the third row is drawn in `PmenuSel`, no cell in `PmenuMatch`, and the screen equals a full repaint
+- **WHEN** the plugin styles the same float again with the same row selected and a `PmenuMatch` span on its third row only, its lines unchanged
+- **THEN** the first and second rows show no match cell, the span's cells on the third row are in `PmenuMatch`, and the screen equals a full repaint
 
 #### Scenario: Spans without a selected row
 - **WHEN** the plugin styles its float with no selected row, a `PmenuSel` span, and a span in a syntax group

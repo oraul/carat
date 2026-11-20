@@ -13,12 +13,14 @@ module Carat
     # selected, drawn in PmenuSel and its other rows in Pmenu; any other
     # float has -1 there. A float may mark the display columns mark_from
     # up to mark_to of its buffer's first row (the active parameter of a
-    # signature), drawn in Visual; -1 for none. A centered float (the
+    # signature), drawn in Visual; -1 for none. style_count counts the
+    # styles a plugin gave the float (style_float), so the presenter's
+    # float key moves when only the styles changed. A centered float (the
     # palette) has its column computed by place from its box at every
     # arrange, so it is centered at show and after a resize, the spec's
     # column unused. A Struct record: mutable, with a reader and a writer
     # per member.
-    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, :centered, keyword_init: true)
+    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, :centered, :style_count, keyword_init: true)
       # The columns of padding on each side of the text area.
       PAD = 1
       # The cells an editor-anchored box keeps from each side of the area
@@ -33,10 +35,11 @@ module Carat
       # @rbs @mark_to: Integer
       # @rbs @edge: Integer
       # @rbs @centered: bool
+      # @rbs @style_count: Integer
 
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
-        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge, centered: false)
+        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge, centered: false, style_count: 0)
       end
 
       # The columns a box's frame takes beside its text: the padding on
