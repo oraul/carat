@@ -19,3 +19,6 @@
 - [x] 4.3 Winbar requirement of the breadcrumbs delta spec reworded so the current window's last name is the one exception
 - [x] 4.4 `top_row` of `test/editor_tab_flows.rb` strips only the gem and separator cells at tab boundaries
 - [x] 4.5 `strip_tab_cells` of `test/editor_tab_flows.rb` takes a "|" as a separator only before a tab boundary and starts a tab after an overflow counter
+- [x] 4.6 `tab_boundary?` of `test/editor_tab_flows.rb` also takes a space followed by a digit, with an overflow row ending in a counter asserted
+- [x] 4.7 `top_row` comment of `test/editor_tab_flows.rb` states the boundary rule and the kept counter
+- [x] 4.8 `strip_tab_cells` holds `counter_end` in a local
