@@ -7,7 +7,7 @@
 
 ## 2. Run the base's scope script in CI
 
-- [ ] 2.1 `.github/workflows/ci.yml`, the `Scope` step: run `tools/ci_scope.sh` and `tools/rules.sh` from the merge commit's first parent. Tested by "ci workflows: the scope step runs the base's scope script over a head that replaces it".
+- [x] 2.1 `.github/workflows/ci.yml`, the `Scope` step: run `tools/ci_scope.sh` and `tools/rules.sh` from the merge commit's first parent. Tested by "ci workflows: the scope step runs the base's scope script over a head that replaces it".
 
 ## 3. Documents and self-check
 

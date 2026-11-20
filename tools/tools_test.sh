@@ -224,6 +224,29 @@ expect "ci workflows: the main workflow never runs on a pull request" 1 "^$" gre
 expect "ci workflows: the main workflow runs on a push to main" 0 "branches: \[main\]" grep -A1 -x '  push:' "$main_flow"
 expect "ci workflows: no job of the main workflow is named spin" 1 "^$" grep -x '  spin:' "$main_flow"
 expect "ci workflows: the main workflow compiles only on compile" 0 "^$" ungated "$main_flow"
+# step_run FILE NAME: the commands of the run: of the step NAME, a block's
+# lines unindented.
+step_run() {
+  awk -v name="$2" '
+    /^      - name:/ { inside = ($0 == "      - name: " name); block = 0; next }
+    inside && /^        run: [|]$/ { block = 1; next }
+    inside && /^        run: / { sub(/^        run: /, ""); print; next }
+    inside && block && /^          / { sub(/^          /, ""); print; next }
+    inside && block { block = 0 }' "$1"
+}
+# A pull request's merge commit whose head replaces the scope script with
+# one that skips everything: the Scope step answers with the base's script
+# and rules, read from the first parent, which run the checks.
+fresh scopebase
+cp "$here/ci_scope.sh" "$here/rules.sh" tools/
+commit "chore: the base's scope"
+printf '#!/bin/sh\necho run=false: skip everything\n' > tools/ci_scope.sh
+echo code >> tools/base.sh
+commit "chore: a scope that skips"
+mkdir -p "$work/runner"
+expect "ci workflows: the scope step runs the base's scope script over a head that replaces it" 0 "^run=true: tools/(base|ci_scope)[.]sh is code" \
+  env RUNNER_TEMP="$work/runner" GITHUB_OUTPUT="$work/runner/out" PR= HEAD_SHA= EVENT=pull_request REPO=owner/carat SHA="$(git rev-parse HEAD)" sh -e -c "$(step_run "$pr_flow" Scope)"
+cd "$work/push" || exit 1
 
 # A gh that answers a GitHub 5xx error body and fails for the queries
 # matching FAKE_FAIL, as in main's CI run 246, and hands the rest to the
