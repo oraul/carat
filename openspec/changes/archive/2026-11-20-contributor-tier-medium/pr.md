@@ -10,7 +10,7 @@ Moves the contributor's calibration from the mid tier at high effort to the mid 
 
 - Change the contributor's entry in CALIBRATION of the delivery workflow to agent/medium, its comment now naming the allowed efforts low, medium, high, and session
 - Add one PROFILE pattern in the delivery workflow that accepts the medium effort, used by restoreCalibration and by the metric line's filter, which now splits each pair once and tests its value against the word pattern or PROFILE
-- Change the tools-test calibration, metric line, routing, and self-check cases to expect agent/medium, add a case that a normal contributor start passes effort medium while a critical one gets the session's model and effort, and add cases that read PROFILE and restore a recorded medium profile
+- Change the tools-test calibration, metric line, routing, and self-check cases to expect agent/medium, the edited routing case proving a normal contributor start passes effort medium while a critical one gets the session's model and effort, extend the restart case to restore a recorded medium profile, and add one case that reads PROFILE, which the calibration completeness check now uses
 - Document the trial in docs/goals.md Calibration, comparing the next 6 non-critical deliveries with rows 233 to 250 and 224 to 229 and reverting to high effort if the quality first pass or the rework gets worse, and end the earlier contributor-tier-routing trial there
 - Document the medium effort in docs/goals.md Critical changes and in the README's pipeline description
 - Add the user-approved exception line under Sprint 23 of docs/queue-backlog.md and drop contributor-tier-revert from its Pool, with the planner's queue for this lane and the backlog lane's metrics history row
