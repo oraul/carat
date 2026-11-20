@@ -26,8 +26,10 @@ set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
 # Cursor motion, scrolling, insert, delete and put, undo, repeat, the Ruby
-# tokenizer, and opening a file: about eleven seconds on four cores.
-DEFAULT_SCENARIOS="lh j insert ddp undo dot-ciw lh-ruby open-ruby"
+# tokenizer, opening a file, and the grep picker over 150,000 lines, its
+# preview float drawn: about eleven seconds on four cores, and the grep
+# scenario's runs besides.
+DEFAULT_SCENARIOS="lh j insert ddp undo dot-ciw lh-ruby open-ruby grep"
 
 die() {
   echo "metrics: $*" >&2
