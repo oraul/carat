@@ -8,7 +8,7 @@ Sprint 23 item 1 of the backlog lane gathers syntax-highlighting debts. Its fix 
 
 - The Ruby tokenizer counts the nesting depth of a paired delimiter, and the brace depth in an interpolation, in full within a line. The depth is held to the field's largest value (7 pairs, 3 braces) only when the line's state is packed, in `Tokenizer#frame_bits`. The `LineState` header says so.
 - `Filetype.program_name` cuts the version digits and dots off a program name by bytes. `program_type` looks that name up, so it no longer mixes `length` with `getbyte`.
-- `Filetype.from_name` and `from_shebang` use `PluginApi::Paths.basename`, and `Filetype.base` is removed. The two copies in `Filetype`, one of them cut by characters, become the one helper. `Buffer#name_start` keeps its byte index, which allocates nothing in the buffer tabs every frame, and follows `Paths.basename` on the root: `/` now starts its name at byte 0, since `Paths.basename` keeps `/` whole.
+- `Filetype.from_name` and `from_shebang` use `PluginApi::Paths.basename`, and `Filetype.base` is removed. The two copies in `Filetype`, one of them cut by characters, become the one helper. `Buffer#name_start` keeps its byte index, which allocates nothing in the buffer tabs every frame, and follows `Paths.basename` on the root: `/` now starts its name at byte 0, since `Paths.basename` keeps `/` whole. The buffer tab of a buffer at `/` so draws `/` instead of an empty name.
 - `docs/codebase-map.md` area 14 names `program_type` and `program_name`, and notes that the state packing clamps the depth.
 
 ## Capabilities
