@@ -16,8 +16,10 @@ module Carat
       #               delimiter (0-7), inside an interpolation, brace depth
       #               in it (0-3)
       #
-      # What does not fit (a third frame or heredoc, a deeper nesting) is
-      # dropped by the tokenizer before packing, the outermost kept.
+      # What does not fit (a third frame or heredoc) is dropped by the
+      # tokenizer before packing, the outermost kept. A deeper nesting or
+      # brace depth is counted in full within the line and held to the
+      # largest the field encodes when the line's state is packed.
       module LineState
         CODE = 0
         EMBDOC = 1

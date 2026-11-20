@@ -1,0 +1,10 @@
+### G on a large file tokenizes every row above the end once
+- Location: `carat/use_cases/syntax/highlight_view.rb` (`advance`), `test/editor_syntax.rb` "G tokenizes every row above the end once"; split off from syntax-tidy.
+- Why: a jump to the end of a 100,000-line Ruby file tokenizes every row above it once, in one frame, to carry the exact state from the top; the specification "Only visible rows and the rows above them are tokenized" and the test that the last row keeps that state require it, so a faster jump is a behavior choice, not a bug fix.
+- Fix: ask the user to choose between a sync point a bounded number of rows above the window (Neovim's syntax sync, colors approximate until the frontier reaches it) and spreading the tokenizing over idle frames (exact colors, the far rows plain at first); then change the syntax-highlighting requirement, `HighlightView#advance`, and the G rows of `test/editor_syntax.rb` together.
+
+### The cursor line doubles the highlight group-id space
+- Location: `carat/domain/highlight.rb` (`CURSOR_LINE_LAYER`, `FLOAT_LAYER`, `LIMIT`), `carat/domain/themes.rb` (`from_palette`), `carat/adapters/sgr_table.rb` (`from_theme`), `carat/domain/frame.rb` (`lift`); split off from syntax-tidy.
+- Why: every group id has a cursor-line and a float copy, so each theme array and the SGR table hold three times `COUNT` entries and each new layer multiplies the space again; no frame id reaches `LIMIT` today, so no test fails, and shrinking it is a design change of how frames carry layers.
+- Fix: carry the layer in the frame as its own small number beside the group id (or resolve only the groups a layer can reach), building the layered SGR sequences on demand, and keep `test/domain_theme.rb` and `test/adapters_screen_presenter.rb` rows on the layered colors.
+None

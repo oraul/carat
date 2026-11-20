@@ -268,12 +268,14 @@ module Carat
         PluginApi::FileIcons.file_type(PluginApi::Paths.basename(path))
       end
 
-      # The byte where the last segment of the path starts, 0 without a
-      # path or a slash.
+      # The byte where the last segment of the path starts, where
+      # PluginApi::Paths.basename cuts it: 0 without a path or a slash, and
+      # for the root, whose name is "/" itself. An index, not the name, so
+      # the buffer tabs allocate nothing for it every frame.
       #: () -> Integer
       def name_start
         current = path
-        return 0 if current.nil?
+        return 0 if current.nil? || current == "/"
         slash = current.byterindex("/")
         slash.nil? ? 0 : slash + 1
       end

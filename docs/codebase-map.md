@@ -510,7 +510,7 @@ Files:
 - `carat/domain/theme.rb`: `Theme`, per group 24-bit, 256-color, and 16-color colors and attributes; `fg`, `bg`, `fg256`, `bg256`, `fg16`, `bg16`, `attr`, `attr16`, `paints_background?`.
 - `carat/domain/themes.rb`: `Themes`, the palettes as colors per role, `PALETTES` in the order of `NAMES`, and `GROUPS`, the roles of every group (the guides' own `GUIDE` and `GUIDE_SCOPE`); `known?`, `background?`, `find`, `from_palette` (the cursor-line and float layers included, a lit cell with the terminal's foreground taking the palette's text color; Carat's own `carat-dark`, the default, and `carat-light`, then `one_dark`, `one_light`, `dark_plus`, `light_plus`).
 - `carat/domain/color_depth.rb`: `ColorDepth.detect` from `COLORTERM` and `TERM`.
-- `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang`.
+- `carat/domain/filetype.rb`: `Filetype`; `detect`, `from_name`, `from_shebang` (names cut by `PluginApi::Paths.basename`), `program_type`, `program_name` (the version cut off by bytes).
 - `carat/domain/syntax_line.rb`: `SyntaxLine`, one line's tokens for a start state with its end state.
 - `carat/domain/syntax_table.rb`: `SyntaxTable`, the identity table of them; `find`, `store`, `clear`.
 - `carat/domain/syntax_cache.rb`: `SyntaxCache`; `prepare`, `active?`, `drop`, `start_of`, `find`, `store`, `advance`, `shift`, `lookup`.
@@ -521,7 +521,7 @@ Files:
 - `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
 - `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
 - `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
-- `carat/plugins/ruby/line_state.rb`: `LineState`, the documented integer state encoding (`pack`, `mode`, `heredoc`, `frame`, and their fields).
+- `carat/plugins/ruby/line_state.rb`: `LineState`, the documented integer state encoding (`pack`, `mode`, `heredoc`, `frame`, and their fields); a nesting deeper than a field holds is counted in full within the line and clamped when `Tokenizer#frame_bits` packs it.
 - `carat/plugins/ruby/keywords.rb`: `Keywords`; `find`, `lookup`, `kind`.
 - `carat/plugins/ruby/groups.rb`: `Groups`, the integer group constants the tokenizer emits (`COMMENT`, `CONSTANT`, `STRING`, and the rest).
 

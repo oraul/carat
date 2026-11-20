@@ -1,3 +1,5 @@
+require_relative "../plugin_api"
+
 module Carat
   module Domain
     # The filetype of a buffer, from its file name or, when the name says
@@ -27,9 +29,7 @@ module Carat
       # finds its extension.
       #: (String) -> String
       def self.from_name(path)
-        slash = path.byterindex("/")
-        name = path
-        name = path.byteslice(slash + 1, path.bytesize - slash - 1).to_s unless slash.nil?
+        name = PluginApi::Paths.basename(path)
         whole = NAMES[name]
         return whole unless whole.nil?
         dot = name.byterindex(".")
@@ -47,7 +47,7 @@ module Carat
         return "" unless line.valid_encoding?
         words = line[2, line.length - 2].split(" ")
         return "" if words.empty?
-        program = base(words[0])
+        program = PluginApi::Paths.basename(words[0])
         i = 1
         if program == "env"
           program = ""
@@ -55,31 +55,31 @@ module Carat
             word = words[i]
             i += 1
             next if word.start_with?("-") || word.include?("=")
-            program = base(word)
+            program = PluginApi::Paths.basename(word)
             break
           end
         end
         program_type(program)
       end
 
-      # The last segment of a program path.
-      #: (String) -> String
-      def self.base(word)
-        slash = word.rindex("/")
-        slash.nil? ? word : word[slash + 1, word.length - slash - 1]
-      end
-
       # The type of a program name, its version digits and dots ignored.
       #: (String) -> String
       def self.program_type(program)
-        stop = program.length
+        found = PROGRAMS[program_name(program)]
+        found.nil? ? "" : found
+      end
+
+      # A program name without the version digits and dots that end it,
+      # cut by bytes (ruby3.4 is ruby).
+      #: (String) -> String
+      def self.program_name(program)
+        stop = program.bytesize
         while stop > 0
           byte = program.getbyte(stop - 1).to_i
           break unless byte == 46 || (byte >= 48 && byte <= 57)
           stop -= 1
         end
-        found = PROGRAMS[program[0, stop]]
-        found.nil? ? "" : found
+        program.byteslice(0, stop).to_s
       end
     end
   end

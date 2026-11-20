@@ -48,6 +48,18 @@ module DomainFiletypeTest
       ["no path, no shebang", [nil, ""], ""]
     ]) { |input| D::Filetype.detect(path_of(input[0]), input[1].to_s) }
 
+    # A program name loses the version that ends it, cut by bytes, so a
+    # name with a multi-byte character loses its version too. Each input
+    # is a one-element list, as the table above takes its inputs.
+    t.cases([
+      ["a versioned name", ["ruby3.4"], "ruby"],
+      ["a bare name", ["ruby"], "ruby"],
+      ["a version after a multi-byte name", ["pyth\u00f6n3"], "pyth\u00f6n"],
+      ["a multi-byte name with a dotted version", ["r\u00fcby2.7.1"], "r\u00fcby"],
+      ["only digits", ["3.4"], ""],
+      ["the empty name", [""], ""]
+    ]) { |input| D::Filetype.program_name(input[0].to_s) }
+
     # A buffer detects its filetype when it is made and when it is renamed;
     # the syntax follows the filetype.
     b = D::Buffer.from_text("x = 1\n", "a.rb")
