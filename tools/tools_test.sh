@@ -486,6 +486,25 @@ case "$REACH" in
   config-worktree) : > "$TOP/.git/config.worktree" ;;
   slow) sleep "${SLOW:-0}" ;;
   touch) touch "$TOP/build/plan/tracked" && sleep "${SLOW:-0}" ;;
+  main) echo forged >> "$MAIN/README.md" ;;
+  main-index) git -C "$MAIN" update-index --chmod=+x README.md ;;
+  main-flag) git -C "$MAIN" update-index --assume-unchanged README.md && echo forged >> "$MAIN/README.md" ;;
+  lane-index) git -C "$TOP" update-index --chmod=+x README.md ;;
+  lane-flag) git -C "$TOP" update-index --assume-unchanged README.md ;;
+  main-forge)
+    git -C "$TOP" update-ref refs/remotes/origin/chore/isolated HEAD &&
+      git -C "$MAIN" merge -q --ff-only refs/remotes/origin/chore/isolated ;;
+  info) mkdir -p "$MAIN/.git/info" && : > "$MAIN/.git/info/forged" ;;
+  ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
+  gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+  main-untracked) : > "$MAIN/forged" ;;
+  main-reset) git -C "$MAIN" reset -q --hard "$(git -C "$TOP" rev-parse HEAD)" ;;
+  concurrent)
+    touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
+      git -C "$TOP" update-ref refs/heads/chore/other-lane HEAD~1 &&
+      git -C "$MAIN" worktree remove --force "$TOP/../closed-lane" &&
+      git -C "$TOP" update-ref refs/remotes/origin/chore/isolated HEAD &&
+      git -C "$MAIN" merge -q --ff-only refs/remotes/origin/chore/isolated ;;
 esac
 EOF
 chmod +x "$work/bin/reach-make"
@@ -586,6 +605,69 @@ expect "run_state: the phase and note a stopped workflow's close writes during a
 close_phases=$(sed -n 's/^CLOSE_PHASES="\(.*\)"$/\1/p' "$here/run_state.sh")
 closable_phases=$(sed -n 's/^const CLOSABLE = .*phase \[a-z0-9-\]+ (\([a-z|]*\)) \[0-9a-f\]{7,40}|.*/\1/p' "$here/../.claude/workflows/deliver-change.js" | tr '|' ' ')
 expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE lines" 0 "^${close_phases:-none}$" printf '%s\n' "$closable_phases"
+# From a lane the scan also reads the main checkout (iso_top): its
+# untracked files, its state against its HEAD, and its HEAD; the common
+# directory's info and references; the lane's staged entries; and the
+# user's git configuration. An index refresh, a remote-tracking ref, a
+# lane's commit, the merger closing a lane and fast-forwarding the main
+# checkout's branch to its remote-tracking ref, all during the check,
+# leave it passing.
+lane_reach() {
+  env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
+    HOME="${REACH_HOME:-$HOME}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+main_head=$(git -C "$iso_top" rev-parse HEAD)
+expect "run_state: a stage that writes a tracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main
+git -C "$iso_top" checkout -q README.md
+expect "run_state: a stage that writes an untracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top/forged$" lane_reach main-untracked
+rm "$iso_top/forged"
+expect "run_state: a stage that stages into the main checkout's index from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main-index
+git -C "$iso_top" reset -q
+expect "run_state: a stage that hides a write to a tracked file of the main checkout behind an index flag from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main-flag
+git -C "$iso_top" update-index --no-assume-unchanged README.md
+git -C "$iso_top" checkout -q README.md
+# origin is a local bare repository from here, so the runner reads the
+# commit its branch names (main_moved); it holds the main checkout's
+# starting commit, so a stage that moves the main checkout elsewhere fails
+# on the commit origin names, not on an empty answer.
+git init -q --bare "$work/origin.git"
+git -C "$iso_top" config remote.origin.url "$work/origin.git"
+git -C "$iso_top" push -q "$work/origin.git" "$main_head:refs/heads/chore/isolated"
+expect "run_state: a stage that moves the main checkout from a lane fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-reset
+git -C "$iso_top" reset -q --hard "$main_head"
+expect "run_state: a stage that stages into the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-index
+git_q reset -q
+expect "run_state: a stage that flags an entry of the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-flag
+git_q update-index --no-assume-unchanged README.md
+expect "run_state: a stage that writes the common directory's info from a lane fails the check" 1 "^[|] $iso_top/[.]git/info/forged$" lane_reach info
+rm "$iso_top/.git/info/forged"
+expect "run_state: a stage that writes a reference of the common directory from a lane fails the check" 1 "^[|] $iso_top/[.]git/refs: the references changed$" lane_reach ref
+git_q update-ref -d refs/heads/forged
+mkdir -p "$work/home"
+REACH_HOME="$work/home"
+expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
+REACH_HOME=
+rm -r "$work/home"
+# The lane's commit the main checkout fast-forwards to adds a tracked file
+# outside the parts the scan leaves out; origin still names the starting
+# commit, so the forged fast-forward fails on the commit mismatch.
+echo merged > merged.txt
+git_q add merged.txt
+git_q commit -q -m "chore: merged" -m "$TRAILER"
+expect "run_state: a stage that forges the main checkout's remote-tracking ref and fast-forwards it from a lane fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-forge
+git -C "$iso_top" reset -q --hard "$main_head"
+git_q update-ref -d refs/remotes/origin/chore/isolated
+git_q push -q "$work/origin.git" HEAD:refs/heads/chore/isolated
+git_q worktree add -q -b chore/other-lane "$work/other-lane"
+git_q worktree add -q -b chore/closed-lane "$work/closed-lane"
+expect "run_state: a lane index refresh, a lane's commit, a merger's close and fast-forward during a check leave it passing" 0 "every stage passed" lane_reach concurrent
+expect "run_state: the fast-forward during the check moved the main checkout" 0 "^merged$" cat "$iso_top/merged.txt"
+git -C "$iso_top" reset -q --hard "$main_head"
+git_q worktree remove --force "$work/other-lane"
+git_q branch -q -D chore/other-lane chore/closed-lane
+git_q update-ref -d refs/remotes/origin/chore/isolated
+git -C "$iso_top" config remote.origin.url host:o/r.git
+rm -rf "$work/origin.git"
 cd "$iso_top" || exit 1
 git_q worktree remove --force "$work/isolated-lane"
 expect "run_state: every check outside its clone removes the clone" 0 "^$" ls -A "$work/checks"
