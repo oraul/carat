@@ -15,10 +15,10 @@
 
 ## 3. The windows area without readers
 
-- [ ] 3.1 `carat/use_cases/windows/`: the 11 use cases replace their 20 readers with `# @rbs @name: Type` lines (proved by `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_floats.rb`, `test/editor_slots.rb`, and `make lint`)
-- [ ] 3.2 `carat/adapters/editor_assembly.rb` records the 20 objects after each construction, `test/adapters_assembly.rb` reads them with `w.held`, and `READERLESS_DIRS` gains `carat/use_cases/windows/` (proved by `test/adapters_assembly.rb` and `make lint`)
+- [x] 3.1 `carat/use_cases/windows/`: the 11 use cases replace their 20 readers with `# @rbs @name: Type` lines (proved by `test/editor_windows.rb`, `test/editor_tabs.rb`, `test/editor_floats.rb`, `test/editor_slots.rb`, and `make lint`)
+- [x] 3.2 `carat/adapters/editor_assembly.rb` records the 20 objects after each construction, `test/adapters_assembly.rb` reads them with `w.held`, and `READERLESS_DIRS` gains `carat/use_cases/windows/` (proved by `test/adapters_assembly.rb` and `make lint`)
 
 ## 4. Docs and measurements
 
-- [ ] 4.1 `docs/examples.md` and `docs/codebase-map.md` describe the readerless golden use case and the rule (proved by `make docs-lint` and `make lint`)
+- [x] 4.1 `docs/examples.md` and `docs/codebase-map.md` describe the readerless golden use case and the rule (proved by `make docs-lint` and `make lint`)
 - [ ] 4.2 Measure analysis time and rounds of both compile roots, the binary's size, and time per key on main and on the branch for the pull request (`make metrics`)

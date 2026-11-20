@@ -40,9 +40,9 @@ module AdaptersAssemblyTest
     # needs it.
     t.assert_equal([], strangers(a.buffers, [
       ["open_file", a.open_file.buffers], ["save_all", a.save_all.buffers], ["quit", a.quit.buffers], ["quit_all", a.quit_all.buffers],
-      ["close_window", a.close_window.buffers], ["close_other_windows", a.close_other_windows.buffers], ["split_window", a.split_window.buffers],
-      ["open_side_window", a.open_side_window.buffers], ["toggle_slot", a.toggle_slot.buffers], ["open_tab", a.open_tab.buffers], ["close_tab", a.close_tab.buffers],
-      ["close_other_tabs", a.close_other_tabs.buffers], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
+      ["close_window", w.held("close_window", "buffers")], ["close_other_windows", w.held("close_other_windows", "buffers")], ["split_window", w.held("split_window", "buffers")],
+      ["open_side_window", w.held("open_side_window", "buffers")], ["toggle_slot", w.held("toggle_slot", "buffers")], ["open_tab", w.held("open_tab", "buffers")], ["close_tab", w.held("close_tab", "buffers")],
+      ["close_other_tabs", w.held("close_other_tabs", "buffers")], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
       ["registry", host.registry.buffers], ["events", host.events.buffers], ["buffer_requests", host.buffer_requests.buffers],
       ["window_requests", host.window_requests.buffers], ["list_buffers", a.list_buffers.buffers], ["switch_buffer", a.switch_buffer.buffers],
       ["delete_buffer", a.delete_buffer.buffers], ["arrange_view", a.arrange_view.buffers], ["tab_bar", a.frame_presenter.tab_bar.buffers], ["pin_hover", a.pin_hover.buffers], ["toggle_reading", a.toggle_reading.buffers]
@@ -83,10 +83,10 @@ module AdaptersAssemblyTest
     t.assert_equal([true, true, true], [a.visit_target.probe_path.equal?(a.probe_path), a.visit_target.open_file.equal?(a.open_file), a.visit_target.resolve_inside.equal?(a.resolve_inside)], "the target visitor holds the one ProbePath, OpenFile, and ResolveInside")
     t.assert_equal([], strangers(a.tabs, [
       ["state", a.state.tabs], ["buffers", a.buffers.tabs], ["feed", a.buffers.feed.tabs], ["quit", a.quit.tabs],
-      ["close_window", a.close_window.tabs], ["split_window", a.split_window.tabs], ["open_side_window", a.open_side_window.tabs],
-      ["open_tab", a.open_tab.tabs], ["close_tab", a.close_tab.tabs], ["close_other_tabs", a.close_other_tabs.tabs],
-      ["close_other_windows", a.close_other_windows.tabs], ["list_buffers", a.list_buffers.tabs], ["delete_buffer", a.delete_buffer.tabs],
-      ["switch_tab", a.switch_tab.tabs], ["registry", host.registry.tabs], ["events", host.events.tabs], ["window_requests", host.window_requests.tabs]
+      ["close_window", w.held("close_window", "tabs")], ["split_window", w.held("split_window", "tabs")], ["open_side_window", w.held("open_side_window", "tabs")],
+      ["open_tab", w.held("open_tab", "tabs")], ["close_tab", w.held("close_tab", "tabs")], ["close_other_tabs", w.held("close_other_tabs", "tabs")],
+      ["close_other_windows", w.held("close_other_windows", "tabs")], ["list_buffers", a.list_buffers.tabs], ["delete_buffer", a.delete_buffer.tabs],
+      ["switch_tab", w.held("switch_tab", "tabs")], ["registry", host.registry.tabs], ["events", host.events.tabs], ["window_requests", host.window_requests.tabs]
     ]), "the tab list")
     t.assert_equal([], strangers(a.state, [
       ["host", host.state], ["registry", host.registry.state], ["events", host.events.state],
@@ -123,11 +123,11 @@ module AdaptersAssemblyTest
     t.assert_equal([true, true], [action.is_a?(Carat::UseCases::PluginActionHandler), command.is_a?(Carat::UseCases::PluginCommandHandler)], "the plugin handlers are registered")
     t.assert_equal([], strangers(a.runner, [["execute_command_line", a.execute_command_line.runner], ["ui_requests", host.ui_requests.runner], ["global_command", a.global_command.runner]]), "the command runner")
     t.assert_true(a.runner.is_a?(Carat::UseCases::ExecuteEx), "the command runner is the ex runner")
-    t.assert_equal([], strangers(a.open_file, [["split_window", a.split_window.open_file], ["open_tab", a.open_tab.open_file]]), "the open file use case")
+    t.assert_equal([], strangers(a.open_file, [["split_window", w.held("split_window", "open_file")], ["open_tab", w.held("open_tab", "open_file")]]), "the open file use case")
     t.assert_equal([], strangers(a.open_side_window, [["window_requests", host.window_requests.open_side_window]]), "the open side window use case")
     t.assert_equal([], strangers(a.split_window, [["window_requests", host.window_requests.split_window], ["pin_hover", a.pin_hover.split_window]]), "the split window use case")
     t.assert_equal([], strangers(a.open_tab, [["window_requests", host.window_requests.open_tab]]), "the open tab use case")
-    t.assert_equal([], strangers(a.tabs, [["open_float", a.open_float.tabs], ["close_float", a.close_float.tabs]]), "the float use cases hold the tab list")
+    t.assert_equal([], strangers(a.tabs, [["open_float", w.held("open_float", "tabs")], ["close_float", w.held("close_float", "tabs")]]), "the float use cases hold the tab list")
     t.assert_equal([], strangers(a.probe_path, [["plugin_host", host.probe_path], ["open_file", a.open_file.probe_path], ["make_path", host.make_path.probe_path], ["rename_path", host.rename_path.probe_path], ["delete_path", host.delete_path.probe_path], ["file_requests", host.file_requests.probe_path]]), "the file operations")
     t.assert_equal([], strangers(host.make_path.resolve_inside, [["rename_path", host.rename_path.resolve_inside], ["delete_path", host.delete_path.resolve_inside]]), "the containment check of the file operations")
     t.assert_equal([], strangers(a.handle_key, [["controller", a.controller.handle_key]]), "the key handler")

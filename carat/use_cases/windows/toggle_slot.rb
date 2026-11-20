@@ -16,7 +16,7 @@ module Carat
     # slot; hiding the tab page's only window answers E444, and a layout
     # with no room for the slot E36.
     class ToggleSlot
-      attr_reader :buffers #: Domain::BufferList
+      # @rbs @buffers: Domain::BufferList
 
       #: (buffers: Domain::BufferList) -> void
       def initialize(buffers:)

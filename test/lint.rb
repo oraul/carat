@@ -506,7 +506,7 @@ module LintTest
   # where a concern needs one, and the assembly test reads what they were
   # handed in the wiring ledger. Each part of the use-case surface change
   # adds its area.
-  READERLESS_DIRS = ["carat/use_cases/discovery/"]
+  READERLESS_DIRS = ["carat/use_cases/discovery/", "carat/use_cases/windows/"]
 
   # The public attr_readers and attr_accessors of a use case of a
   # readerless directory, each as a problem; one after private is allowed.

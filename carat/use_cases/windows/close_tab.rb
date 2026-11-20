@@ -13,8 +13,8 @@ module Carat
       E784 = "E784: Cannot close last tab page"
       private_constant :E784
 
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(buffers:, tabs:)

@@ -13,8 +13,8 @@ module Carat
     # window showed stays listed, hidden when no other window shows it.
     # In a floating window it closes the float, never a layout window.
     class CloseWindow
-      attr_reader :buffers #: Domain::BufferList
-      attr_reader :tabs #: Domain::TabList
+      # @rbs @buffers: Domain::BufferList
+      # @rbs @tabs: Domain::TabList
 
       #: (buffers: Domain::BufferList, tabs: Domain::TabList) -> void
       def initialize(buffers:, tabs:)
