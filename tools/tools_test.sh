@@ -1515,6 +1515,8 @@ expect "open_pr: a fork's pull request on the branch's name is neither read, edi
   sh -c 'grep -q "^pr edit 7 " "$1" && ! grep -q -E "^pr (view|edit) 5 |^pr create " "$1" && echo good' _ "$work/openpr-gh/calls"
 expect "open_pr: a list line without a number and repository flag is refused" 1 "printed no number and repository flag" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="1" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
+expect "open_pr: a malformed list line after a same-repository one is refused" 1 "printed no number and repository flag" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_PRS="7 false;7 maybe" sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 expect "open_pr: a create printing no pull request number is refused" 1 "printed no pull request number" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_NEW= sh "$here/open_pr.sh" open chore/openpr "$work/openpr-read"
 # The environment AI's rule, read before the token step: only the branch

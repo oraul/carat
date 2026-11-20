@@ -257,8 +257,12 @@ $found"
     # the branch, which gh resolves to any pull request of that head name.
     listed=$(gh pr list --repo "$GH_REPO" --head "$branch" --state open --json number,isCrossRepository --jq '.[] | "\(.number) \(.isCrossRepository)"') ||
       refuse "cannot list the pull requests of $branch"
-    printf '%s\n' "$listed" | grep -q -v -x -E '([0-9]+ (true|false))?' && refuse "gh pr list printed no number and repository flag: $listed"
-    numbers=$(printf '%s\n' "$listed" | awk '$2 == "false" { print $1 }')
+    numbers=$(printf '%s\n' "$listed" | awk '
+      $0 == "" { next }
+      $0 !~ /^[0-9]+ (true|false)$/ { bad = 1; exit }
+      $2 == "false" { print $1 }
+      END { exit bad }') ||
+      refuse "gh pr list printed no number and repository flag: $listed"
     count=$(printf '%s' "$numbers" | grep -c '^' || true)
     [ "$count" -le 1 ] || refuse "$branch has $count open pull requests in $GH_REPO: close all but one"
     if [ "$count" -eq 1 ]; then
