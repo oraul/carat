@@ -219,18 +219,62 @@ module Carat
 
       # text changed as the visual "~", "u", "U", and "r" change it: how is
       # :toggle, :lower, :upper, or :replace, which puts char in place of
-      # every character. Text that is not valid UTF-8 has only its ASCII
-      # letters changed, since swapcase, downcase, and upcase read its
-      # bytes as other characters (an overlong form becomes "/").
+      # every character. Each letter changes by itself, as in Neovim, so
+      # one that has no single-letter form stays: "ß" stays under :toggle
+      # and :lower and becomes "SS" under :upper, and "İ" becomes "i" when
+      # lowered, where swapcase, downcase, and upcase of the whole text
+      # would give "SS" or two characters for them and a final sigma its
+      # own form. Text that is not valid UTF-8 has only its ASCII letters
+      # changed, since swapcase, downcase, and upcase read its bytes as
+      # other characters (an overlong form becomes "/").
       #: (String, Symbol, String) -> String
       def self.recase(text, how, char)
         return ascii_recase(text, how, char) unless text.valid_encoding?
-        case how
-        when :toggle then text.swapcase
-        when :lower then text.downcase
-        when :upper then text.upcase
-        else char * text.length
+        return char * text.length unless how == :toggle || how == :lower || how == :upper
+        return recase_letter(text, how) if text.length == text.bytesize
+        out = +""
+        text.each_char { |letter| out << recase_letter(letter, how) }
+        out
+      end
+
+      # recase of one character, or of ASCII text, where the whole text
+      # changes as one character does; a result of another length than the
+      # letter's is refused for the letter itself.
+      #: (String, Symbol) -> String
+      def self.recase_letter(letter, how)
+        return "SS" if how == :upper && letter == "ß"
+        return "i" if how != :upper && letter == "İ"
+        changed = how == :toggle ? letter.swapcase : (how == :lower ? letter.downcase : letter.upcase)
+        changed.length == letter.length ? changed : letter
+      end
+
+      # The rows of a range with the case of its characters changed, in
+      # one edit: how is :toggle, :lower, or :upper. A linewise range
+      # changes whole lines, a charwise one is used normalized, from its
+      # start to its exclusive end across the rows; nothing is edited when
+      # no character changes.
+      #: (Buffer, Range, Symbol) -> void
+      def self.recase_range(buffer, range, how)
+        linewise = range.kind == :linewise
+        span = linewise ? range : range.normalized
+        lines = []
+        changed = false
+        row = span.from.row
+        while row <= span.to.row
+          line = buffer.line(row)
+          first = 0
+          last = line.length
+          unless linewise
+            first = span.from.col if row == span.from.row
+            last = span.to.col if row == span.to.row && span.to.col < line.length
+            first = last if first > last
+          end
+          made = line[0, first] + recase(line[first, last - first], how, "") + line[last, line.length - last]
+          changed = true if made != line
+          lines << made
+          row += 1
         end
+        buffer.set_lines(span.from.row, span.to.row + 1, lines) if changed
       end
 
       # recase for text that is not valid UTF-8: tr changes only the ASCII

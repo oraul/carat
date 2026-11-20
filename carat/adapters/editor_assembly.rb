@@ -520,7 +520,7 @@ module Carat
         shift_selection = UseCases::ShiftSelection.new
         UseCases::MotionHandler.register(@actions, move: @move)
         UseCases::SearchHandler.register(@actions, jump_to_match: @jump_to_match)
-        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection)
+        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection, recase_selection: UseCases::RecaseSelection.new)
         UseCases::EditHandler.register(@actions, operate: @operate, replace_chars: UseCases::ReplaceChars.new, toggle_case: UseCases::ToggleCase.new, put_register: @put_register, join_lines: UseCases::JoinLines.new)
         UseCases::TextObjectHandler.register(@actions, extend_visual: extend_visual)
         UseCases::InsertModeHandler.register(@actions)

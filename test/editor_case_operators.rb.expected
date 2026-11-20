@@ -1,0 +1,110 @@
+ok   g~ gu gU over motions: g~w toggles to the next word
+ok   g~ gu gU over motions: gUw upper-cases the word
+ok   g~ gu gU over motions: guw lower-cases the word
+ok   g~ gu gU over motions: gU$ from the middle
+ok   g~ gu gU over motions: gu0 back to the start
+ok   g~ gu gU over motions: gUb back a word keeps the cursor at its start
+ok   g~ gu gU over motions: gUe is inclusive
+ok   g~ gu gU over motions: gUf. through the dot
+ok   g~ gu gU over motions: gUt. up to the dot
+ok   g~ gu gU over motions: gUj covers two lines and keeps the column
+ok   g~ gu gU over motions: gUk goes to the upper line
+ok   g~ gu gU over motions: gUG to the end of the buffer
+ok   g~ gu gU over motions: gUgg to the start of the buffer
+ok   g~ gu gU over motions: g~} across lines from the middle of a line
+ok   g~ gu gU over motions: g~l on the last character
+ok   g~ gu gU over motions: a search motion
+ok   g~ gu gU over motions: no register is written
+ok   g~ gu gU over text objects: g~iw
+ok   g~ gu gU over text objects: gUiw
+ok   g~ gu gU over text objects: guaw takes the blank after
+ok   g~ gu gU over text objects: gUi( inside the parentheses
+ok   g~ gu gU over text objects: gUa( with the parentheses
+ok   g~ gu gU over text objects: gUi" inside the quotes
+ok   g~ gu gU over text objects: gUip over lines
+ok   g~ gu gU over text objects: gUis
+ok   g~ gu gU with counts: 2gUw
+ok   g~ gu gU with counts: gU2w
+ok   g~ gu gU with counts: 2gU2w multiplies
+ok   g~ gu gU with counts: 2g~iw reaches the blank and the next word
+ok   g~ gu gU with counts: gUl takes one character
+ok   g~ gu gU with counts: 2gUl takes two
+ok   g~ gu gU with counts: 9gUl stops at the line end
+ok   the doubled forms: g~~ toggles the line and keeps the cursor
+ok   the doubled forms: guu lower-cases the line
+ok   the doubled forms: gUU upper-cases the line
+ok   the doubled forms: g~g~ is g~~
+ok   the doubled forms: gugu is guu
+ok   the doubled forms: gUgU is gUU
+ok   the doubled forms: 2g~~ takes two lines
+ok   the doubled forms: 3gUU takes three lines
+ok   the doubled forms: gU2U counts after the operator
+ok   the doubled forms: 9guu clamps to the buffer
+ok   the doubled forms: gUd cancels
+ok   the doubled forms: g~ then Escape cancels
+ok   multibyte letters: g~~ toggles accents and keeps the sharp s
+ok   multibyte letters: gUU turns the sharp s into SS
+ok   multibyte letters: guu lower-cases accents
+ok   multibyte letters: gUiw over Cyrillic
+ok   multibyte letters: g~w over Greek
+ok   multibyte letters: gUl on one accented letter
+ok   multibyte letters: gUl on the sharp s becomes two letters
+ok   multibyte letters: gUw after a multibyte word counts characters
+ok   multibyte letters: gUe from after a multibyte letter
+ok   multibyte letters: a final sigma lowers as a plain sigma
+ok   multibyte letters: a letter with no single-letter form stays
+ok   multibyte letters: a dotted capital I lowers to i
+ok   the edges of the buffer: gUU on an empty line
+ok   the edges of the buffer: gUU in an empty buffer
+ok   the edges of the buffer: gUl on an empty line changes nothing
+ok   the edges of the buffer: gUh at column 0 changes nothing
+ok   the edges of the buffer: gUj on the last line changes nothing
+ok   the edges of the buffer: gUU keeps trailing blanks
+ok   the edges of the buffer: gUU on the last line without a final newline
+ok   the edges of the buffer: gUU in a CRLF file changes the line and no other
+ok   the edges of the buffer: gUw at the last word of a line stays on it
+ok   the edges of the buffer: gUU on an unchanged line keeps the buffer as it was
+ok   the visual modes: vgU on characters
+ok   the visual modes: vg~ toggles
+ok   the visual modes: vgu lower-cases backwards
+ok   the visual modes: Vgu on lines
+ok   the visual modes: VgU leaves the cursor on the top line at the column it had
+ok   the visual modes: <C-v>g~ over a block
+ok   the visual modes: <C-v>gU over a block to the line ends
+ok   the visual modes: vgU over multibyte letters
+ok   the visual modes: v~ over multibyte letters
+ok   the visual modes: Vu over multibyte letters
+ok   the visual modes: <C-v>U over multibyte letters
+ok   the visual modes: v$gU on an empty line
+ok   dot repeats a case operator: gUiw then w and dot
+ok   dot repeats a case operator: g~w from the start of the next word
+ok   dot repeats a case operator: guu on the next line
+ok   dot repeats a case operator: 2gUU repeats with its count
+ok   dot repeats a case operator: a new count replaces the old
+ok   dot repeats a case operator: gUgU repeats as gUU
+ok   dot repeats a case operator: over multibyte letters
+ok   dot repeats a case operator: visual gU repeats on as many characters
+ok   dot repeats a case operator: a visual ~ repeats
+ok   dot repeats a case operator: a visual line gu repeats
+ok   one undo for a case operator: u after gUiw
+ok   one undo for a case operator: u after gUj over two lines
+ok   one undo for a case operator: u after g~ over a paragraph
+ok   one undo for a case operator: u after the repeat leaves the first change
+ok   one undo for a case operator: a second u undoes the first
+ok   one undo for a case operator: u after a visual gU
+ok   one undo for a case operator: u after gUU over multibyte letters
+ok   one undo for a case operator: a change of nothing leaves no undo step
+ok   recase toggles ASCII
+ok   recase lowers ASCII
+ok   recase uppers ASCII
+ok   recase replaces every character
+ok   recase toggles accented letters
+ok   recase keeps the sharp s when toggled
+ok   recase keeps the sharp s when lowered
+ok   recase makes SS of the sharp s when upper-cased
+ok   recase lowers the dotted capital I to i
+ok   recase toggles the dotted capital I to i
+ok   recase keeps a ligature when upper-cased
+ok   recase of an empty string
+ok   recase changes only the ASCII letters of text that is not valid UTF-8
+editor_case_operators: 109 passed, 0 failed
