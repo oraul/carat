@@ -28,3 +28,4 @@ None.
 - `carat/adapters/tab_bar.rb`, `carat/adapters/winbar.rb`, their tests, and the docs above. No new highlight group: the pill colors are `TabLineSel`, whose contrast against the row and the tabs `test/domain_theme.rb` already checks in every palette at 24 bits, 256 colors, and 16 colors, bold at 16 colors and under NO_COLOR.
 - `option.showtabline` is left out (queued as `showtabline`); no assumption beyond that.
 - README.md: updated, the winbar sentence.
+- docs/architecture.md: unchanged, it names the painters and their groups, not the glyphs or the group of each run of cells.

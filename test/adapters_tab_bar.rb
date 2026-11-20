@@ -121,7 +121,7 @@ module AdaptersTabBarTest
     f = paint(setup(ten, 5, 1), 40)
     t.assert_equal([H::TAB_LINE, H::TAB_LINE], [f.cell(0, 1).hl, f.cell(0, 33).hl], "the counts are plain")
 
-    # The gem marks the selected tab, ascii's * under option.icons ascii,
+    # Scenario "The ascii icons give the ascii gem and separator": the gem marks the selected tab, ascii's * under option.icons ascii,
     # and the separator ends every tab in TabLine, ascii's |.
     t.table([
       ["unicode", "unicode", "◆ • a.txt   │  • b.txt   │"],
