@@ -11,7 +11,8 @@ module AdaptersWhitespaceMarksTest
   CACHE = Carat::Domain::LineCache.new
   LISTED = Carat::Domain::BufferList.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: [""], path: nil, line_ending: "\n"))))
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE, buffers: LISTED)
-  P = Carat::Adapters::FramePresenter.new(input: Carat::Domain::InputState.new, plugin_ui: UI, cache: CACHE, last_search: Carat::Domain::LastSearch.new, search_prompt: Carat::Domain::SearchPrompt.new, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: Carat::Domain::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new))
+  LAST = Carat::Domain::LastSearch.new
+  P = Carat::Adapters::FramePresenter.new(input: Carat::Domain::InputState.new, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: Carat::Domain::SearchPrompt.new, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: Carat::Domain::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new))
 
   ROWS = 10
   COLS = 16
@@ -44,8 +45,7 @@ module AdaptersWhitespaceMarksTest
 
   # The first rows of a frame, each as its text (the marks as themselves,
   # other ASCII as is, any other code point ?, trailing blanks cut) and
-  # its groups (w for a cell in Whitespace, a blank otherwise, trailing
-  # blanks cut).
+  # its groups (each cell's group_letter, trailing blanks cut).
   #: (Carat::Domain::Frame, Integer) -> Array[String]
   def self.rows_of(frame, rows)
     out = []
@@ -57,7 +57,7 @@ module AdaptersWhitespaceMarksTest
       while c < COLS
         cell = frame.cell(r, c)
         text << cell_text(cell.code)
-        groups << (H.base(cell.hl) == H::WHITESPACE ? "w" : " ")
+        groups << group_letter(H.base(cell.hl))
         c += 1
       end
       out << text.rstrip
@@ -67,10 +67,19 @@ module AdaptersWhitespaceMarksTest
     out
   end
 
-  # A code point as one character: the shipped marks as themselves,
-  # a guide as |, a
-  # no-break space, a blank, or a control as a blank, printable ASCII as
-  # is, the rest ?.
+  # A cell's group as one letter: w for Whitespace, s for Search, v for
+  # Visual, a blank otherwise.
+  #: (Integer) -> String
+  def self.group_letter(group)
+    return "w" if group == H::WHITESPACE
+    return "s" if group == H::SEARCH
+    return "v" if group == H::VISUAL
+    " "
+  end
+
+  # A code point as one character: the shipped marks as themselves, a
+  # guide as |, a no-break space, a blank, or a control as a blank,
+  # printable ASCII as is, the rest ?.
   #: (Integer) -> String
   def self.cell_text(code)
     return "→" if code == 0x2192
@@ -120,6 +129,18 @@ module AdaptersWhitespaceMarksTest
       s.options.indentguides = true
       s.options.shiftwidth = 4
       rows_of(draw(s), 2)
+    when "match"
+      s = state_for(["\tx  "], 0, 0)
+      s.options.hlsearch = true
+      LAST.remember(D::VimPattern.compile(" ", false, false), true)
+      rows = rows_of(draw(s), 1)
+      LAST.hide
+      rows
+    when "selection"
+      s = state_for(["\tx  "], 0, 1)
+      s.mode = D::Mode::VISUAL
+      s.window.anchor = D::Position.new(row: 0, col: 0)
+      rows_of(draw(s), 1)
     when "plugin"
       s = state_for(MIXED, 0, 0)
       s.window.buffer.owner = "explorer"
@@ -177,7 +198,8 @@ module AdaptersWhitespaceMarksTest
     t = Carat::Testing.new("adapters_whitespace_marks")
 
     # The whitespace-marks spec: rows are [label, case, the first rows,
-    # each as its text and then its groups (w for Whitespace)].
+    # each as its text and then its groups (w for Whitespace, s for
+    # Search, v for Visual)].
     t.table([
       ["Marks with list on: the tab's first mark and blanks, ␣, two ·, a line of spaces all trailing, an empty line none", "on", ["→   a␣b··", "wwww w ww", "···", "www", "", ""]],
       ["No marks with list off", "off", ["    a b", "", "", "", "", ""]],
@@ -187,6 +209,8 @@ module AdaptersWhitespaceMarksTest
       ["The ASCII marks: > and blanks, +, -- with no code point above 127", "ascii", [">   a+b--", "wwww w ww"]],
       ["Multi-byte: a tab after é, a space before a no-break space is not trailing, U+202F marked", "multibyte", ["?→   ␣·", " www ww", "a␣b", " w"]],
       ["A tab's mark shows over an indent guide; spaces keep the guide", "over a guide", ["→   x", "wwww", "|   y", ""]],
+      ["A match colors a mark as it colors text: the trail marks in Search", "match", ["→   x··", "wwww ss"]],
+      ["The selection colors a mark as it colors text: the tab marks in Visual", "selection", ["→   x··", "vvvv ww"]],
       ["A plugin window draws no marks", "plugin", ["    a b", ""]],
       ["A float draws no marks", "float", ["", ""]],
       ["A closed fold's row draws no marks; the row after it does", "fold", ["+--  2 lines: x", "", "w··", " ww"]],

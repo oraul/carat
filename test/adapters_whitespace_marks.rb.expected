@@ -6,6 +6,8 @@ ok   A key left out draws no mark: the tab blank, the trailing space -
 ok   The ASCII marks: > and blanks, +, -- with no code point above 127
 ok   Multi-byte: a tab after é, a space before a no-break space is not trailing, U+202F marked
 ok   A tab's mark shows over an indent guide; spaces keep the guide
+ok   A match colors a mark as it colors text: the trail marks in Search
+ok   The selection colors a mark as it colors text: the tab marks in Visual
 ok   A plugin window draws no marks
 ok   A float draws no marks
 ok   A closed fold's row draws no marks; the row after it does
@@ -14,4 +16,4 @@ ok   Marks under NO_COLOR
 ok   Turning list on repaints the rows drawn without marks
 ok   A new listchars repaints the rows
 ok   Switching to the ascii icon set repaints the marks
-adapters_whitespace_marks: 16 passed, 0 failed
+adapters_whitespace_marks: 18 passed, 0 failed

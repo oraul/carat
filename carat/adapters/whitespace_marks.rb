@@ -7,12 +7,13 @@ module Carat
   module Adapters
     # The whitespace marks of file windows, Neovim's list and listchars,
     # painted by the frame presenter over a row's text cells after its
-    # syntax tokens and indent guides, so a tab's mark shows over a guide: the tab marks over every cell a tab takes (the first
-    # mark on its first cell, the middle mark on the cells after, and the
-    # last mark, when given, on its last cell), the trail mark over each
-    # space after the line's last other character, and the nbsp mark over
-    # each no-break space, all in Whitespace. The marks' code points are
-    # read from the options once a frame, only when list is on and the
+    # syntax tokens and indent guides, so a tab's mark shows over a
+    # guide: the tab marks over every cell a tab takes (the first mark on
+    # its first cell, the middle mark on the cells after, and the last
+    # mark, when given, on its last cell), the trail mark over each space
+    # after the line's last other character, and the nbsp mark over each
+    # no-break space, all in Whitespace. The marks' code points are read
+    # from the options once a frame, only when list is on and the
     # listchars or the icon set changed, so painting allocates nothing.
     class WhitespaceMarks
       # The no-break spaces Neovim marks: U+00A0 and U+202F.
