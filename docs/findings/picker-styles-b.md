@@ -7,3 +7,8 @@
 - Location: carat/use_cases/discovery/follow_palette.rb `styles`, the `tokens << char_count(line, Domain::DisplayWidth.bytes_within(line, room + NAME_WIDTH))` line
 - Why: a `SyntaxLine` token is (start column, length, group), but this pushes the column where the name's column ends, so the run reaches past the name into the key column, which would then draw in PmenuExtra; no test reads a key cell's group.
 - Fix: push that end column less `from` as the length, and add a palette test reading a key cell's group.
+
+### A concurrent lane's benchmark log fails another lane's check
+- Location: `tools/run_state.sh` `escaped_paths` (`main_scan`) and `.claude/agents/benchmark.md` step 1
+- Why: the check of picker-styles-b at 70f84e685dbd passed every stage but was refused because `build/scratch-base-build.log` appeared in the main checkout during its window; the file was written by another lane's benchmark agent redirecting its `make -C tmp/.base` output there, not by any stage, so a parallel delivery turns a clean check into a failed round.
+- Fix: have the benchmark agent write its base logs under `tmp/.base/build/` (and the guard refuse a redirection into the main checkout's `build/`), or let `main_scan` skip ignored paths another lane's agent owns, with a tools test for each.
