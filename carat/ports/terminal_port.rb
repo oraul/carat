@@ -1,10 +1,11 @@
 module Carat
   module Ports
     # The terminal as the editor core sees it: a size, raw key bytes with a
-    # timeout, a byte sink, how many colors it shows, and whether color
-    # is unwanted. Drivers and doubles subclass it. Return types of
-    # overridden methods are described in prose because the compiler
-    # applies only the parameter types of a method a subclass overrides.
+    # timeout, a byte sink, how many colors it shows, whether color is
+    # unwanted, and the background it reported. Drivers and doubles
+    # subclass it. Return types of overridden methods are described in
+    # prose because the compiler applies only the parameter types of a
+    # method a subclass overrides.
     class TerminalPort
       # Returns [rows, cols].
       # @rbs skip
@@ -37,6 +38,15 @@ module Carat
       # @rbs skip
       def no_color?
         raise NotImplementedError, "TerminalPort#no_color?"
+      end
+
+      # Returns the background the terminal reported in answer to the query
+      # written on enter: Domain::TerminalBackground's DARK ("dark") or
+      # LIGHT ("light"), or UNKNOWN ("") before an answer, with none, or
+      # with a malformed one. Reading it never waits for the answer.
+      # @rbs skip
+      def background
+        raise NotImplementedError, "TerminalPort#background"
       end
 
       #: () -> void

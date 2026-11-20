@@ -1,0 +1,51 @@
+ok   The first frame waits for no reply: the query, then the frame
+ok   The first frame waits for no reply: the background is unknown
+ok   The first frame waits for no reply: enter read no key
+ok   before enter an answer's bytes are keys
+ok   before enter nothing is asked
+ok   A dark reply: only the typed keys arrive
+ok   A dark reply: the background is dark
+ok   after an answer a second one is keys
+ok   after an answer the background stays
+ok   A light reply: a read of the answer alone has no keys
+ok   A light reply: the background is light
+ok   A light reply split: the keys before it arrive, its start is held
+ok   A light reply split: the rest is taken out
+ok   A light reply split: the background is light
+ok   A light reply split inside ST: held
+ok   A light reply split inside ST: the backslash is taken out
+ok   A light reply split inside ST: the background is light
+ok   A malformed reply, too long: no reply byte arrives as a key
+ok   A malformed reply, too long: the background stays unknown
+ok   A malformed reply, too long: it ends the asking
+ok   A malformed reply, too long, never ended: no reply byte arrives as a key
+ok   A malformed reply, too long, never ended: the background stays unknown
+ok   A malformed reply, too long, never ended: it ends the asking
+ok   A malformed reply, cut short by an arrow key: no reply byte arrives as a key
+ok   A malformed reply, cut short by an arrow key: the background stays unknown
+ok   A malformed reply, cut short by an arrow key: it ends the asking
+ok   A malformed reply, cut short by Enter: no reply byte arrives as a key
+ok   A malformed reply, cut short by Enter: the background stays unknown
+ok   A malformed reply, cut short by Enter: it ends the asking
+ok   A malformed reply, a hash color: no reply byte arrives as a key
+ok   A malformed reply, a hash color: the background stays unknown
+ok   A malformed reply, a hash color: it ends the asking
+ok   A malformed reply, two channels: no reply byte arrives as a key
+ok   A malformed reply, two channels: the background stays unknown
+ok   A malformed reply, two channels: it ends the asking
+ok   A malformed reply, bytes that are not UTF-8: no reply byte arrives as a key
+ok   A malformed reply, bytes that are not UTF-8: the background stays unknown
+ok   A malformed reply, bytes that are not UTF-8: it ends the asking
+ok   A malformed reply cut short before a timeout: held
+ok   A malformed reply cut short before a timeout: the timeout drops it
+ok   A malformed reply cut short before a timeout: the next key arrives, the background unknown
+ok   No reply: typed keys arrive
+ok   No reply: a read with nothing to read times out
+ok   No reply: a key sequence arrives
+ok   No reply: a lone escape arrives at once
+ok   No reply: the start of an OSC shorter than the introducer arrives
+ok   No reply: the background stays unknown
+ok   No reply yet: a late answer is taken out
+ok   No reply yet: a late answer is still read
+ok   the double reports no background
+drivers_ansi_terminal: 50 passed, 0 failed

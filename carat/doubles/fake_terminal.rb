@@ -46,6 +46,12 @@ module Carat
         @colors
       end
 
+      # Returns "", an unknown background: the double is asked nothing.
+      # @rbs skip
+      def background
+        ""
+      end
+
       #: (String) -> void
       def push(bytes)
         @queue << bytes

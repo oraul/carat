@@ -1,0 +1,38 @@
+ok   a dark reply: black, ended by ST
+ok   a dark reply: a dark grey blue, ended by BEL
+ok   a dark reply: just under half
+ok   a dark reply: full red is dark
+ok   a light reply: white, ended by BEL
+ok   a light reply: just over half
+ok   a light reply: two digits a channel
+ok   a light reply: one digit a channel, upper case
+ok   a light reply: three digits a channel
+ok   a light reply: rgba, alpha ignored
+ok   a dark reply: rgba, alpha ignored
+ok   a malformed reply: too long
+ok   a malformed reply: cut short, no terminator
+ok   a malformed reply: cut short, two channels
+ok   a malformed reply: rgba with three channels
+ok   a malformed reply: four channels for rgb
+ok   a malformed reply: five digits
+ok   a malformed reply: an empty channel
+ok   a malformed reply: not a hex digit
+ok   a malformed reply: a byte after the channels
+ok   a malformed reply: a hash color
+ok   a malformed reply: the query echoed
+ok   a malformed reply: bytes that are not UTF-8
+ok   a malformed reply: another OSC
+ok   a malformed reply: the introducer alone
+ok   a malformed reply: ended by a lone backslash
+ok   ends after BEL
+ok   ends after ESC \
+ok   cut short by a key sequence: ends before its ESC
+ok   cut short by Enter: ends before the control byte
+ok   cut short by DEL: ends before it
+ok   not ended, short: held
+ok   ends on ESC, short: held for the backslash
+ok   the introducer alone: held
+ok   too long with its terminator in the read: through it
+ok   too long and not ended: the whole read
+ok   the query is OSC 11 with ? ended by ST
+domain_terminal_background: 37 passed, 0 failed

@@ -54,11 +54,13 @@ require_relative "../domain_slot"
 require_relative "../domain_substitute"
 require_relative "../domain_syntax_cache"
 require_relative "../domain_tab_list"
+require_relative "../domain_terminal_background"
 require_relative "../domain_theme"
 require_relative "../domain_trusted_roots"
 require_relative "../domain_undo_tree"
 require_relative "../domain_utf8"
 require_relative "../domain_vim_pattern"
+require_relative "../drivers_ansi_terminal"
 require_relative "../drivers_disk_files"
 require_relative "../drivers_main_loop"
 require_relative "../drivers_process_runner"
@@ -172,11 +174,13 @@ when "domain_slot" then DomainSlotTest.main
 when "domain_substitute" then DomainSubstituteTest.main
 when "domain_syntax_cache" then DomainSyntaxCacheTest.main
 when "domain_tab_list" then DomainTabListTest.main
+when "domain_terminal_background" then DomainTerminalBackgroundTest.main
 when "domain_theme" then DomainThemeTest.main
 when "domain_trusted_roots" then DomainTrustedRootsTest.main
 when "domain_undo_tree" then DomainUndoTreeTest.main
 when "domain_utf8" then DomainUtf8Test.main
 when "domain_vim_pattern" then DomainVimPatternTest.main
+when "drivers_ansi_terminal" then DriversAnsiTerminalTest.main
 when "drivers_disk_files" then DriversDiskFilesTest.main
 when "drivers_main_loop" then DriversMainLoopTest.main
 when "drivers_process_runner" then DriversProcessRunnerTest.main
