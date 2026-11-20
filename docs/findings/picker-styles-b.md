@@ -17,3 +17,8 @@
 - Location: tools/run_state.sh escaped_paths (main_scan of the main checkout's build/), check of picker-styles-b at 272ead28c383
 - Why: an agent of the concurrent lane metrics-header-fix redirected its make output to build/scratch-lane-build.log, scratch-lane-metrics.log, scratch-base-build.log, and scratch-base-measure.log in the main checkout while this check ran, so every passed stage was discarded as an escape though no stage wrote them, costing a fix round with no code to change.
 - Fix: have agents write scratch output under their own lane or the session scratchpad, never the main checkout's build/, or have escaped_paths ignore files whose writer is outside the check's process tree (for example by scanning only paths the stages can reach, or by refusing only with a stage's pid recorded).
+
+### A token span on a float's selected row leaves a NormalFloat hole in the PmenuSel bar
+- Location: carat/adapters/frame_presenter.rb:682 (paint_tokens on the float layer), carat/domain/themes.rb:657
+- Why: a syntax or file-icon span on a plugin float's selected row is painted as its group on the float layer, whose background is NormalFloat's when the group has none of its own, so an icon or Comment span breaks the PmenuSel bar and loses PmenuSel's REVERSE in 16 colors; the picker's icons on its selected row will show it. Not fixed in picker-styles-b: it changes painting, new behavior beyond a fix round.
+- Fix: on a menu's selected row give a token group without its own background the row's PmenuSel background (a selected-row layer or a background override in paint_tokens), with a test reading a Comment span's background on the selected row.
