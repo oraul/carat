@@ -27,6 +27,8 @@ ok   e switches the report off
 ok   n counts
 ok   i ignores case and I matches it
 ok   p prints and # numbers
+ok   i ignores case
+ok   p prints the line
 ok   the first match
 ok   every match
 ok   no match
@@ -66,6 +68,14 @@ ok   a plain string
 ok   an expression
 ok   a NUL
 ok   an escaped backslash before n
+ok   an ampersand is the match
+ok   a backslash and zero is the match
+ok   a backslash and a digit is its group
+ok   an escaped ampersand is no group
+ok   a case escape is no group
+ok   a backslash last is no group
+ok   a digit alone is no group
+ok   recase answers the text itself when nothing is recased
 ok   a string whose tildes could pass a mebibyte is too long
 ok   replacement text past the budget stops it and changes nothing
-domain_substitute: 70 passed, 0 failed
+domain_substitute: 80 passed, 0 failed

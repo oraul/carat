@@ -47,6 +47,8 @@ ok   count only
 ok   one match
 ok   no error
 ok   confirm
+ok   A refused flag keeps the last string
+ok   The list flag is refused
 ok   print
 ok   print with the number
 ok   many substitutions
@@ -68,5 +70,7 @@ ok   one undo step
 ok   undo a line break
 ok   dot does not repeat it
 ok   n searches the pattern
+ok   n after the i flag matches case by the options
+ok   N after the I flag ignores case by the options
 ok   the search register holds it
-editor_substitute: 71 passed, 0 failed
+editor_substitute: 75 passed, 0 failed

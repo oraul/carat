@@ -19,13 +19,15 @@ module Carat
     # give (LastSubstitute keeps what the next one reuses). The pattern is
     # compiled as a search pattern with capturing groups and becomes the
     # last search pattern, the "/" register, and, when typed, a search
-    # history entry. Every line is substituted under one budget before
-    # anything changes; the changed rows are then replaced in one splice,
-    # which is one undo state inside the dispatcher's transaction, and the
-    # cursor goes to the first non-blank of the last line changed. The
-    # messages are Vim's: E33, E35, E486 (not with "e"), E939, E363 when
-    # the budget ran out, the count above two substitutions, the count of
-    # "n", or the last line with "p" or "#".
+    # history entry; n and N read it with the case options, not the i or
+    # I flag. The c and l flags are refused before anything is kept. Every
+    # line is substituted under one budget before anything changes; the
+    # changed rows are then replaced in one splice, which is one undo
+    # state inside the dispatcher's transaction, and the cursor goes to
+    # the first non-blank of the last line changed. The messages are
+    # Vim's: E33, E35, E486 (not with "e"), E939, E363 when the budget ran
+    # out, the count above two substitutions, the count of "n", or the
+    # last line with "p" or "#".
     class SubstituteLines
       attr_reader :last_substitute #: Domain::LastSubstitute
       attr_reader :last_search #: Domain::LastSearch
@@ -50,14 +52,12 @@ module Carat
       def call(state, first, last, args)
         return Outcome.failure(args.error) unless args.ok?
         memory = @last_substitute
-        if args.fresh
-          memory.keep_replacement(args.replacement)
-        elsif !memory.replacement_kept
-          return Outcome.failure(NO_SUBSTITUTE)
-        end
+        return Outcome.failure(NO_SUBSTITUTE) unless args.fresh || memory.replacement_kept
         flags = args.flags
+        # Refused before anything is kept, so a later repeat is unchanged.
         return Outcome.success("Not implemented: :s flag c") if flags.include?("c")
         return Outcome.success("Not implemented: :s flag l") if flags.include?("l")
+        memory.keep_replacement(args.replacement) if args.fresh
         memory.apply_flags(flags)
         if args.count == 0
           return memory.report ? Outcome.failure("E939: Positive count required") : Outcome.none
@@ -72,7 +72,7 @@ module Carat
         return Outcome.failure(use_search ? Domain::Search::NO_PREVIOUS : NO_SUBSTITUTE) if source.empty?
         compiled = compile(state, source)
         return Outcome.failure(compiled.error) unless compiled.ok?
-        remember(compiled, args)
+        remember(state, compiled, args)
         return Outcome.failure(Domain::Replacement::TOO_LONG) if Domain::Replacement.too_long?(memory.replacement, memory.previous)
         text = Domain::Replacement.tilde(memory.replacement, memory.previous, memory.previous_kept)
         memory.keep_previous(text)
@@ -99,20 +99,25 @@ module Carat
         memory = @last_substitute
         ignorecase = state.options.ignorecase
         smartcase = state.options.smartcase
-        if memory.case_mode == 1
+        if memory.case_mode == :ignore
           ignorecase = true
           smartcase = false
-        elsif memory.case_mode == 2
+        elsif memory.case_mode == :match
           ignorecase = false
         end
         Domain::VimPattern.compile_substitute(source, ignorecase, smartcase, memory.previous, memory.previous_kept)
       end
 
-      #: (Domain::SearchPattern, Domain::SubstituteArgs) -> void
-      def remember(compiled, args)
+      # The pattern becomes the last substitute's and the last search's;
+      # n and N match it with the case the options give, as Vim's do, so a
+      # pattern the i or I flag compiled is compiled again for the search.
+      #: (Domain::EditorState, Domain::SearchPattern, Domain::SubstituteArgs) -> void
+      def remember(state, compiled, args)
         source = compiled.source
-        @last_substitute.pattern = source
+        memory = @last_substitute
+        memory.pattern = source
         @last_search.remember(compiled, @last_search.forward)
+        @last_search.recompile(state.options, memory) unless memory.case_mode == :options
         @registers.search = source
         @search_history.add(source) if args.fresh && !args.pattern.empty?
       end
@@ -144,7 +149,7 @@ module Carat
         return Outcome.success("#{plural(total, "match", "matches")} on #{plural(rows.length, "line", "lines")}") if memory.count_only
         landed = apply(buffer, rows, texts)
         state.cursor.move_to(landed, buffer.first_nonblank(landed))
-        return Outcome.success(printed(buffer, landed, memory.print == 2)) if memory.print > 0
+        return Outcome.success(printed(buffer, landed, memory.print == :number)) unless memory.print == :none
         return Outcome.none if total <= Domain::Messages::REPORT
         Outcome.success("#{plural(total, "substitution", "substitutions")} on #{plural(rows.length, "line", "lines")}")
       end

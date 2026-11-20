@@ -20,7 +20,11 @@ module Carat
     # normal_depth raised, so the dispatcher and LeaveInsert join the
     # transaction open here (or the caller's) instead of closing it. A
     # bang runs the same keys, every Carat key being a keymap binding.
-    # E471 without an argument, E192 past MAX_DEPTH nested commands.
+    # E471 without an argument, E192 past MAX_DEPTH nested commands; an
+    # E192 stops every :normal running, which feeds no further key or
+    # line, so a binding that runs :%normal with its own key ends at once
+    # instead of running the range at each of the MAX_DEPTH levels. The
+    # outermost call clears the stop.
     class NormalCommandHandler < LineCommandHandler
       MAX_DEPTH = 100
       ARGUMENT_REQUIRED = "E471: Argument required"
@@ -32,10 +36,13 @@ module Carat
 
       attr_reader :handle_key #: HandleKey
 
+      # @rbs @stopping: bool
+
       #: (spec: String, handle_key: HandleKey) -> void
       def initialize(spec:, handle_key:)
         super(spec: spec)
         @handle_key = handle_key
+        @stopping = false
       end
 
       # True: the bang is accepted and changes nothing.
@@ -50,7 +57,10 @@ module Carat
         lines = lines_of(state, command)
         return Outcome.failure(lines.error) unless lines.ok?
         return Outcome.failure(ARGUMENT_REQUIRED) if command.args.empty?
-        return Outcome.failure(TOO_DEEP) if state.normal_depth >= MAX_DEPTH
+        if state.normal_depth >= MAX_DEPTH
+          @stopping = true
+          return Outcome.failure(TOO_DEEP)
+        end
         codes = codes_of(command.literal)
         buffer = state.buffer
         opened = buffer.begin_transaction(state.cursor.position)
@@ -59,7 +69,7 @@ module Carat
         state.normal_depth += 1
         if lines.given
           row = lines.first
-          while row <= lines.last && row < buffer.line_count && state.buffer.equal?(buffer)
+          while !@stopping && row <= lines.last && row < buffer.line_count && state.buffer.equal?(buffer)
             state.cursor.move_to(row, 0)
             run(state, codes)
             row += 1
@@ -68,6 +78,7 @@ module Carat
           run(state, codes)
         end
         state.normal_depth -= 1
+        @stopping = false if state.normal_depth == 0
         buffer.commit_transaction(state.cursor.position) if opened
         Outcome.none
       end
@@ -90,12 +101,13 @@ module Carat
         codes
       end
 
-      # Feeds the keys, then ends what they left unfinished.
+      # Feeds the keys until a nested :normal is too deep, then ends what
+      # they left unfinished.
       #: (Domain::EditorState, Array[Integer]) -> void
       def run(state, codes)
         keys = @handle_key
         i = 0
-        while i < codes.length
+        while i < codes.length && !@stopping
           keys.call(state, codes[i].to_i)
           i += 1
         end

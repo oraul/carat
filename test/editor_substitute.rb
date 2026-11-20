@@ -83,6 +83,10 @@ module EditorSubstituteTest
       ["one match", ["a\n", [0, 0], ":s/a//n<CR>"], [[0, 0], "1 match on 1 line", "a"]],
       ["no error", ["abc\n", [0, 0], ":s/z/y/e<CR>"], [[0, 0], "", "abc"]],
       ["confirm", ["a\n", [0, 0], ":s/a/b/c<CR>"], [[0, 0], "Not implemented: :s flag c", "a"]],
+      # A refused flag keeps no string a repeat reuses (scenarios: A
+      # refused flag keeps the last string, The list flag is refused).
+      ["A refused flag keeps the last string", ["a\na\n", [0, 0], ":s/a/b/<CR>j:s/a/z/c<CR>&"], [[1, 0], "", "b|b"]],
+      ["The list flag is refused", ["a\na\n", [0, 0], ":s/a/b/<CR>j:s/a/z/l<CR>:&&<CR>"], [[1, 0], "", "b|b"]],
       ["print", ["ab\n", [0, 0], ":s/a/x/p<CR>"], [[0, 0], "xb", "xb"]],
       ["print with the number", ["q\nab\n", [1, 0], ":s/a/x/#<CR>"], [[1, 0], "  2 xb", "q|xb"]],
       ["many substitutions", ["aa\na\n", [0, 0], ":%s/a/b/g<CR>"], [[1, 0], "3 substitutions on 2 lines", "bb|b"]],
@@ -106,6 +110,13 @@ module EditorSubstituteTest
       ["undo a line break", ["a,b\n", [0, 0], ":s/,/\\r/<CR>u"], [[0, 0], "1 line less; before #1  0 seconds ago", "a,b"]],
       ["dot does not repeat it", ["ab\nab\n", [0, 0], "x:s/b/c/<CR>j."], [[1, 0], "", "c|b"]],
       ["n searches the pattern", ["abc b\n", [0, 0], ":s/b/x/<CR>n"], [[0, 4], "/b", "axc b"]],
+      # The search the substitute leaves; the row above proves the
+      # scenario: n repeats the pattern. n and N take case from the
+      # options, not the flag (scenarios:
+      # n after the i flag matches case by the options,
+      # N after the I flag ignores case by the options).
+      ["n after the i flag matches case by the options", ["abc a A\n", [0, 0], ":s/A/x/i<CR>n"], [[0, 6], "/A", "xbc a A"]],
+      ["N after the I flag ignores case by the options", ["a A b\n", [0, 0], ":set ic<CR>:s/a/x/I<CR>N"], [[0, 2], "search hit TOP, continuing at BOTTOM", "x A b"]],
       ["the search register holds it", ["ab\n", [0, 0], ":s/b/x/<CR>\"/P"], [[0, 0], "", "bax"]]
     ]) do |input|
       run(input[0], input[1], input[2])

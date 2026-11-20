@@ -5,8 +5,8 @@ module Carat
     # & reuse, the string after "~" was expanded, which the next "~"
     # inserts, and the flags that "&" keeps: every match (all), whether a
     # pattern not found is reported (report), counting only (count_only),
-    # case (0 by the options, 1 ignored, 2 matched), and printing (0 none,
-    # 1 the line, 2 with its number). A Struct record: mutable, with a
+    # case (:options, :ignore, or :match), and printing (:none, :line, or
+    # :number, the line with its number). A Struct record: mutable, with a
     # reader and a writer per member.
     class LastSubstitute < Struct.new(:pattern, :replacement, :replacement_kept, :previous, :previous_kept, :all, :report, :count_only, :case_mode, :print, keyword_init: true)
       # @rbs @pattern: String
@@ -17,12 +17,12 @@ module Carat
       # @rbs @all: bool
       # @rbs @report: bool
       # @rbs @count_only: bool
-      # @rbs @case_mode: Integer
-      # @rbs @print: Integer
+      # @rbs @case_mode: Symbol
+      # @rbs @print: Symbol
 
       #: () -> void
       def initialize
-        super(pattern: "", replacement: "", replacement_kept: false, previous: "", previous_kept: false, all: false, report: true, count_only: false, case_mode: 0, print: 0)
+        super(pattern: "", replacement: "", replacement_kept: false, previous: "", previous_kept: false, all: false, report: true, count_only: false, case_mode: :options, print: :none)
       end
 
       # Reads the flags as Vim does: without a leading "&" they start again
@@ -34,8 +34,8 @@ module Carat
           self.all = false
           self.report = true
           self.count_only = false
-          self.case_mode = 0
-          self.print = 0
+          self.case_mode = :options
+          self.print = :none
         end
         i = 0
         while i < flags.length
@@ -43,10 +43,10 @@ module Carat
           when "g" then self.all = !all
           when "e" then self.report = !report
           when "n" then self.count_only = true
-          when "i" then self.case_mode = 1
-          when "I" then self.case_mode = 2
-          when "p" then self.print = 1 if print == 0
-          when "#" then self.print = 2
+          when "i" then self.case_mode = :ignore
+          when "I" then self.case_mode = :match
+          when "p" then self.print = :line if print == :none
+          when "#" then self.print = :number
           end
           i += 1
         end

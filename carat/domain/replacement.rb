@@ -92,19 +92,15 @@ module Carat
         i = 0
         while i < n
           byte = text.getbyte(i).to_i
-          if byte == 92 && i + 1 < n
+          # Only "&" and a backslash can name a group.
+          k = byte == 38 || byte == 92 ? group_at(text, i, n) : -1
+          if k >= 0
+            group = group_text(line, found, k)
+            out << recase(group, one, all)
+            one = 0 unless group.empty?
+            i += byte == 38 ? 1 : 2
+          elsif byte == 92 && i + 1 < n
             code = text.getbyte(i + 1).to_i
-            if code >= 48 && code <= 57
-              group = group_text(line, found, code - 48)
-              if one == 0 && all == 0
-                out << group
-              else
-                out << recase(group, one, all)
-                one = 0 unless group.empty?
-              end
-              i += 2
-              next
-            end
             case code
             when 117 then one = 1
             when 108 then one = 2
@@ -122,15 +118,6 @@ module Carat
               next
             end
             i += 2
-          elsif byte == 38
-            group = group_text(line, found, 0)
-            if one == 0 && all == 0
-              out << group
-            else
-              out << recase(group, one, all)
-              one = 0 unless group.empty?
-            end
-            i += 1
           elsif byte == 13
             out << BREAK
             i += 1
@@ -142,6 +129,17 @@ module Carat
           end
         end
         out
+      end
+
+      # The group the item at byte i of text names: 0 for "&", 0 to 9 for
+      # a backslash and a digit, -1 for any other item; n is text's size.
+      #: (String, Integer, Integer) -> Integer
+      def self.group_at(text, i, n)
+        byte = text.getbyte(i).to_i
+        return 0 if byte == 38
+        return -1 unless byte == 92 && i + 1 < n
+        code = text.getbyte(i + 1).to_i
+        code >= 48 && code <= 57 ? code - 48 : -1
       end
 
       # The text of group k of the match in line, "" when the pattern has
@@ -157,9 +155,11 @@ module Carat
       end
 
       # text with its first character recased by one and every character
-      # by all (0 none, 1 upper, 2 lower), one first.
+      # by all (0 none, 1 upper, 2 lower), one first; text itself when
+      # neither recases.
       #: (String, Integer, Integer) -> String
       def self.recase(text, one, all)
+        return text if one == 0 && all == 0
         out = +""
         n = text.bytesize
         i = 0
