@@ -85,8 +85,8 @@
 #   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
 #                rm restore, git merge origin/main; make -s -k TARGET with
 #                the variables of MAKE_VARS, no shell character in a value;
-#                openspec and npx @fission-ai/openspec@2.1.1, the
-#                Makefile's OPENSPEC_PACKAGE; mkdir rm cp
+#                openspec and npx of the Makefile's OPENSPEC_PACKAGE
+#                alone; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
 #                get budget history groom plan-apply merge-main
 #                reviewed-edits, push CHANGE

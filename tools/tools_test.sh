@@ -244,7 +244,7 @@ printf '#!/bin/sh\necho run=false: skip everything\n' > tools/ci_scope.sh
 echo code >> tools/base.sh
 commit "chore: a scope that skips"
 mkdir -p "$work/runner"
-expect "ci workflows: the scope step runs the base's scope script over a head that replaces it" 0 "^run=true: tools/(base|ci_scope)[.]sh is code" \
+expect "ci workflows: the scope step runs the base's scope script over a head that replaces it" 0 "^run=true: tools/base[.]sh is code" \
   env RUNNER_TEMP="$work/runner" GITHUB_OUTPUT="$work/runner/out" PR= HEAD_SHA= EVENT=pull_request REPO=owner/carat SHA="$(git rev-parse HEAD)" sh -e -c "$(step_run "$pr_flow" Scope)"
 cd "$work/push" || exit 1
 
@@ -3669,17 +3669,18 @@ chmod +x "$work/npxbin/npx"
 : > specv.log
 (cd "$work/specv" && env -u OPENSPEC_CMD PATH="$work/npxbin:$PATH" STUB_LOG="$work/specv.log" sh "$here/spec_validate.sh" > /dev/null)
 expect "spec_validate: runs the pinned OpenSpec when no command is given" 0 "^npx -y @fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+ validate --all --strict --no-interactive$" head -n 1 specv.log
-# pins: the OpenSpec package of the Makefile, of the script's default, and
-# of the guard's npx case, one per line.
+# pins: the OpenSpec package of the Makefile, of the script's default, of
+# the guard's npx case, and of CLAUDE.md's OpenSpec line, one per line.
 pins() {
   sed -n 's/^OPENSPEC_PACKAGE := //p' "$here/../Makefile"
   sed -n 's/^openspec=[$]{OPENSPEC_CMD:-npx -y \(.*\)}$/\1/p' "$here/spec_validate.sh"
   sed -n 's/^ *case "[$]pkg" in \(@fission-ai[^)]*\)).*/\1/p' "$here/agent_guard.sh"
+  sed -n 's/^- Run it with `npx \(@fission-ai[^ `]*\) .*/\1/p' "$here/../CLAUDE.md"
 }
 one_pin() {
-  [ "$(pins | wc -l)" -eq 3 ] && [ "$(pins | sort -u | wc -l)" -eq 1 ] && pins | head -n 1
+  [ "$(pins | wc -l)" -eq 4 ] && [ "$(pins | sort -u | wc -l)" -eq 1 ] && pins | head -n 1
 }
-expect "spec_validate: the Makefile, the script, and the guard pin one OpenSpec version" 0 "^@fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+$" one_pin
+expect "spec_validate: the Makefile, the script, the guard, and CLAUDE.md pin one OpenSpec version" 0 "^@fission-ai/openspec@[0-9]+[.][0-9]+[.][0-9]+$" one_pin
 
 # ---------------------------------------------------------------- gates.sh
 

@@ -133,9 +133,9 @@ CHECK_SKIP   := behavior,build,inference,advice
 # The generated files make config-current checks.
 GENERATED    := carat/domain/default_config.rb carat/plugins/registry.rb
 # OpenSpec at one exact version, never a tag the registry moves: it runs
-# beside the push credentials. tools/spec_validate.sh and the contributor's
-# npx case in tools/agent_guard.sh name the same package, which a tools
-# test case keeps equal; a bump edits all three.
+# beside the push credentials. tools/spec_validate.sh, the contributor's
+# npx case in tools/agent_guard.sh, and CLAUDE.md's OpenSpec line name the
+# same package, which a tools test case keeps equal; a bump edits all four.
 OPENSPEC_PACKAGE := @fission-ai/openspec@2.1.1
 OPENSPEC   := OPENSPEC_TELEMETRY=0 npx -y $(OPENSPEC_PACKAGE)
 
