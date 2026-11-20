@@ -128,6 +128,20 @@ function securityLine(r, blocking, disputed) {
   const left = r.not_reviewed.slice(0, 5).join(', ') + (r.not_reviewed.length > 5 ? ', ...' : '')
   return `partial, ${r.not_reviewed.length} file(s) not reviewed (${left}); ${counts}; run /sprint again`
 }
+// The report's sweep line from periodic-review.js's result: its counts,
+// the security and quality areas a partial sweep left, and whether its
+// results were recorded, without which the planner does not start.
+function sweepLine(on, r) {
+  if (!on) return 'not this sprint'
+  if (!r || !r.ran) return 'did not run; run /sprint again'
+  const counts = `security ${r.security.length} finding(s), ${r.security_blocking} blocking; quality ${r.quality_blocking.length} blocking`
+  const left = [
+    r.security_not_reviewed.length ? `security partial, not reviewed: ${r.security_not_reviewed.join(', ')}` : '',
+    r.quality_not_reviewed.length ? `quality partial, areas not reviewed: ${r.quality_not_reviewed.join(', ')}` : '',
+  ].filter(Boolean)
+  const unrecorded = r.recorded ? [] : ['its results were not recorded; run /sprint again']
+  return [counts].concat(left, unrecorded).join('; ')
+}
 
 // The sprint's records change: a delivery of its own, started through
 // deliver-change.js as the sweep starts periodic-review.js, whose
@@ -270,7 +284,7 @@ const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
   `Security: ${securityLine(security, blocking.length, skeptical ? skeptic.disputed : null)}${ran && !noted ? '; its findings were not recorded' : ''}`,
   `Quality: ${skeptical ? `${skeptic.kept_blocking} blocking and ${skeptic.kept_advisory} advisory kept, ${skeptic.dropped} dropped, ${skeptic.missed} missed by both` : 'the skeptic returned no result; nothing recorded'}`,
-  `Sweep: ${sprint.sweep ? (sweep && sweep.ran ? `security ${sweep.security.length} finding(s), ${sweep.security_blocking} blocking; quality ${sweep.quality_blocking.length} blocking` : 'did not run; run /sprint again') : 'not this sprint'}`,
+  `Sweep: ${sweepLine(sprint.sweep, sweep)}`,
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
   recorded && recorded.ok ? '' : `The results were not recorded: ${recorded ? recorded.output : 'no result'}`,
