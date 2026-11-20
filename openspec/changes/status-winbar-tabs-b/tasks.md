@@ -18,3 +18,4 @@
 - [x] 4.2 Group assertion for the winbar with symbols held and none spanning the cursor row in `test/editor_breadcrumbs.rb`
 - [x] 4.3 Winbar requirement of the breadcrumbs delta spec reworded so the current window's last name is the one exception
 - [x] 4.4 `top_row` of `test/editor_tab_flows.rb` strips only the gem and separator cells at tab boundaries
+- [x] 4.5 `strip_tab_cells` of `test/editor_tab_flows.rb` takes a "|" as a separator only before a tab boundary and starts a tab after an overflow counter

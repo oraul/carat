@@ -108,7 +108,12 @@ module EditorTabFlowsTest
     while i < chars.length
       c = chars[i]
       after_space = i > 0 && chars[i - 1] == " "
-      if (c == "|" || c == "│") && after_space
+      if c == "<" && after_space && counter_end(chars, i) > 0
+        out += chars[i, counter_end(chars, i) - i].join
+        i = counter_end(chars, i)
+        start = true
+        next
+      elsif (c == "|" || c == "│") && after_space && tab_boundary?(chars, i + 1)
         start = true
       elsif start && (c == "*" || c == "◆") && i + 1 < chars.length && chars[i + 1] == " "
         start = false
@@ -119,6 +124,23 @@ module EditorTabFlowsTest
       i += 1
     end
     out
+  end
+
+  # Where the cells of an overflow counter " <N " that starts at i end
+  # (past its space), 0 when no counter starts there.
+  def self.counter_end(chars, i)
+    j = i + 1
+    j += 1 while j < chars.length && chars[j] >= "0" && chars[j] <= "9"
+    return 0 if j == i + 1 || j >= chars.length || chars[j] != " "
+    j + 1
+  end
+
+  # True when the cells from i begin a tab, a gem or a space and then a
+  # space, or the row's end: what follows a tab's separator, which a name
+  # starting with "|" is not followed by.
+  def self.tab_boundary?(chars, i)
+    return true if i >= chars.length
+    (chars[i] == " " || chars[i] == "*" || chars[i] == "◆") && (i + 1 >= chars.length || chars[i + 1] == " ")
   end
 
   # What a step checks, as strings.
