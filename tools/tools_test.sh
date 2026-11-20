@@ -4522,9 +4522,12 @@ calib=$(table CALIBRATION)
 profile_of() {
   printf '%s\n' "$calib" | sed -n "s/^$1://p"
 }
+# PROFILE: the workflow's one pattern of a profile, read as CLOSABLE is.
+profile_re=$(sed -n 's/^const PROFILE = \/\(.*\)\/$/\1/p' "$wf" | sed 's#\\/#/#g')
+expect "calibration: the workflow's PROFILE pattern reads as an anchored pattern" 0 '^\^[(]agent[|].+\$$' printf '%s\n' "$profile_re"
 missing=""
 for kind in resume planner areas scout contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
-  profile_of "$kind" | grep -q -E '^(agent|session)/(low|high|session)$' || missing="$missing $kind"
+  profile_of "$kind" | grep -q -E "${profile_re:-^unread$}" || missing="$missing $kind"
 done
 expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missing:-none}"
 expect "calibration: every agent start takes its options from the table" 0 "^same$" \
@@ -4542,7 +4545,7 @@ expect "calibration: the security reviewer keeps the session's tier and effort" 
 # The contributor tier trial (docs/goals.md, Calibration): the contributor
 # alone runs on its agent file's tier; the planner, quality, security, and
 # close starts keep the session's, by the user's decision.
-expect "calibration: the contributor runs on its agent file's tier at high effort" 0 "^agent/high$" profile_of contributor
+expect "calibration: the contributor runs on its agent file's tier at medium effort" 0 "^agent/medium$" profile_of contributor
 judged=""
 for kind in planner quality security close; do
   judged="$judged $kind=$(profile_of "$kind" | cut -d/ -f1)"
@@ -4568,18 +4571,18 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
+  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
-expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/high calib[.]security=session/session"$' \
+expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/medium calib[.]security=session/session"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('contributor', {}); calibrate('security', {}); return metricLine() })()"
-expect "workflow: a restart restores the recorded profiles of the kinds not used yet" 0 '^[{]"planner":"session/session","scout":"agent/low"[}]$' \
-  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'agent/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/max', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1' }, calibrated) })()"
+expect "workflow: a restart restores the recorded profiles of the kinds not used yet, a medium effort among them" 0 '^[{]"planner":"session/session","scout":"agent/low","bench":"agent/medium"[}]$' \
+  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'agent/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/max', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1', 'metric.calib.bench': 'agent/medium' }, calibrated) })()"
 # Tier routing (contributor-tier-routing): a normal contributor start carries
-# the high effort, a critical one (the plan's rule, or a large estimate) and one
+# the medium effort, a critical one (the plan's rule, or a large estimate) and one
 # after an escalation take the session's model and effort, none passed.
-expect "routing: a normal contributor start carries the high effort and no model, a critical or escalated one the session model and effort" 0 '^\["high",null,null,"agent/high","session/session",null,"inherit","inherit",null\]$' \
+expect "routing: a normal contributor start carries the medium effort and no model, a critical or escalated one the session model and effort" 0 '^\["medium",null,null,"agent/medium","session/session",null,"inherit","inherit",null\]$' \
   calib_js "(() => { estimate = 'medium'; const a = calibrate('contributor', {}); critical = 'b'; const b = calibrate('contributor', {}); const pb = calibrated.contributor; critical = ''; estimate = 'large'; const d = calibrate('contributor', {}); estimate = 'medium'; const x = calibrate('contributor', {}); const px = calibrated.contributor; escalated = true; const e = calibrate('contributor', {}); escalated = false; const q = calibrate('quality', {}); return [a.effort, b.effort === undefined ? null : b.effort, d.effort === undefined ? null : d.effort, px, pb, x.model === undefined ? null : x.model, b.model, e.model, q.model === undefined ? null : q.model] })()"
 expect "routing: escalate runs once and notes once, moving the contributor to the session's model" 0 '^\[false,true,"session/session",1\]$' \
   calib_js "(() => { estimate = 'medium'; critical = ''; escalated = false; globalThis.notes = []; globalThis.head = 'a'; globalThis.state = { change: 'c' }; globalThis.note = (l) => {}; globalThis.queue = (l) => notes.push(l); const before = escalated; escalate('a self-check mismatch'); escalate('a start returned no result'); return [before, escalated, calibrate('contributor', {}) && calibrated.contributor, notes.length] })()"
@@ -4807,7 +4810,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
 }
 close_back=$PWD
 fresh closes
@@ -4969,7 +4972,7 @@ selfcheck_js() {
     $1
   })()"
 }
-expect "self-check: a match the next check contradicts is noted self-check-mismatch and moves later contributor starts to the session's model" 0 '^\{"before":"agent/high","queued":\["sh tools/run_state.sh note c self-check-mismatch \\"contributor fix self-check said match, the check failed at stage gates\\"","sh tools/run_state.sh note c escalation \\"a self-check the check contradicted\\""\],"closable":true,"escalated":true,"after":"session/session","model":"inherit","kept":null\}$' \
+expect "self-check: a match the next check contradicts is noted self-check-mismatch and moves later contributor starts to the session's model" 0 '^\{"before":"agent/medium","queued":\["sh tools/run_state.sh note c self-check-mismatch \\"contributor fix self-check said match, the check failed at stage gates\\"","sh tools/run_state.sh note c escalation \\"a self-check the check contradicted\\""\],"closable":true,"escalated":true,"after":"session/session","model":"inherit","kept":null\}$' \
   selfcheck_js "calibrate('contributor', {}); const before = calibrated.contributor; selfCheck = { mode: 'fix', said: 'match' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); const closable = $(sed -n 's/^const CLOSABLE = //p' "$wf").test(queued[0]); const o = calibrate('contributor', {}); return { before, queued, closable, escalated, after: calibrated.contributor, model: o.model, kept: selfCheck }"
 expect "self-check: a mismatch, a passed check, or no recorded self-check writes no note and escalates nothing" 0 '^\[0,0,0,false,null\]$' \
   selfcheck_js "const n = []; selfCheck = { mode: 'implement', said: 'mismatch' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); selfCheck = { mode: 'implement', said: 'match' }; compareSelfCheck({ kind: 'passed', at: head, stage: '', log: '' }); n.push(queued.length); compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); return n.concat([escalated, selfCheck])"
