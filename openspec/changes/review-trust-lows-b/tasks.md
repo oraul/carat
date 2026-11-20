@@ -24,4 +24,9 @@
 
 - [x] 6.1 `.claude/agents/merger.md` step 1 names the head commit, head repository, head branch, and title, and requires the head repository and head branch to be the input's; test "repository: the merger merges only a pull request of this repository and branch" matches both phrases
 - [x] 6.2 `tools/open_pr.sh open` reads the list once: one awk refuses a malformed line and prints the same-repository numbers, the count taken from its output; tests "open_pr: a list line without a number and repository flag is refused", "open_pr: a malformed list line after a same-repository one is refused"
-- [x] 6.3 CLAUDE.md's `open_pr.sh` Commands line keeps its wording and only adds `rule`
+- [x] 6.3 CLAUDE.md's `open_pr.sh` Commands line keeps "opens or updates", adds `rule`, and says "the archived `pr.md`" for "the archived change's `pr.md`" to stay within its budget
+
+## 7. Closing advisories
+
+- [x] 7.1 `.claude/agents/merger.md` step 1 requires "its head repository and head branch the input's" again, step 7 says `main` "is checked out only there" for the budget, and test "repository: the merger merges only a pull request of this repository and branch" matches that phrase, so task 6.1 holds as written
+- [x] 7.2 Task 6.3 states what CLAUDE.md's `open_pr.sh` Commands line says
