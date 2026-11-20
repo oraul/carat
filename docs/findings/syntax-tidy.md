@@ -7,3 +7,4 @@
 - Location: `carat/domain/highlight.rb` (`CURSOR_LINE_LAYER`, `FLOAT_LAYER`, `LIMIT`), `carat/domain/themes.rb` (`from_palette`), `carat/adapters/sgr_table.rb` (`from_theme`), `carat/domain/frame.rb` (`lift`); split off from syntax-tidy.
 - Why: every group id has a cursor-line and a float copy, so each theme array and the SGR table hold three times `COUNT` entries and each new layer multiplies the space again; no frame id reaches `LIMIT` today, so no test fails, and shrinking it is a design change of how frames carry layers.
 - Fix: carry the layer in the frame as its own small number beside the group id (or resolve only the groups a layer can reach), building the layered SGR sequences on demand, and keep `test/domain_theme.rb` and `test/adapters_screen_presenter.rb` rows on the layered colors.
+None
