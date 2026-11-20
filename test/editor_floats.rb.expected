@@ -34,6 +34,14 @@ ok   the plugin closes its current float with 0
 ok   the window under it is current
 ok   a file opened in the layout window while a float is focused goes to that window
 ok   the float it left is still the plugin's
+ok   Refilled in place: the float keeps its window id and box
+ok   the refilled float holds the new lines and title
+ok   the refilled float shows the new title and lines and equals a full repaint
+ok   The current float refilled with 0 shows the line, stays current, and its cursor goes to its first line
+ok   the current float draws its new line
+ok   Refilled with no lines, the float shows one empty line
+ok   Another plugin's float is not refilled, nor an unknown id or a layout window
+ok   the float keeps its lines and title and the layout window its text
 ok   a float reopened at the same box shows its own text and equals a full repaint
 ok   a float loads a file and goes to its last line
 ok   lines deleted in the layout window pull the float's cursor onto the last line
@@ -42,7 +50,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.10
+ok   the plugin API is 2.11
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
@@ -64,4 +72,4 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 66 passed, 0 failed
+editor_floats: 74 passed, 0 failed

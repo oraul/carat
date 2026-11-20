@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 10
-    VERSION = "2.10"
+    MINOR = 11
+    VERSION = "2.11"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -749,6 +749,19 @@ module Carat
       # @rbs col: Integer
       def move_float(window, row, col)
         raise NotImplementedError, "Host#move_float"
+      end
+
+      # Replaces every line of the plugin's float with the window id, 0
+      # for the current window, with the lines, and its title with the
+      # title, and returns a Response (from 2.11); the window id, box, z
+      # order, and focus stay, and the float's cursor goes back to its
+      # first line. Fails with "No float N" for another plugin's float or
+      # an unknown id.
+      # @rbs window: Integer
+      # @rbs lines: Array[String]
+      # @rbs title: String
+      def set_float_lines(window, lines, title)
+        raise NotImplementedError, "Host#set_float_lines"
       end
 
       # Returns a FloatFrame (from 2.6): the frame a float the plugin opens

@@ -40,6 +40,12 @@ module Carat
         FloatSpec.new(anchor: anchor, row: to_row, col: to_col, height: height, width: width, border: border, title: title, z: z)
       end
 
+      # The same spec with another title.
+      #: (String) -> FloatSpec
+      def titled(to_title)
+        FloatSpec.new(anchor: anchor, row: row, col: col, height: height, width: width, border: border, title: to_title, z: z)
+      end
+
       # Why the values cannot make a float, "" when they can.
       #: (String, Integer, Integer, Integer, Integer, Integer) -> String
       def self.refusal(anchor, row, col, height, width, z)

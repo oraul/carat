@@ -204,6 +204,44 @@ module EditorFloatsTest
     t.assert_equal([true, 1, "b.txt", "pick"], [opened.ok, h.state.window.id, h.state.buffer.path_text, float_window.buffer.line(0)], "a file opened in the layout window while a float is focused goes to that window")
     t.assert_equal(true, h.plugins.window_requests.close_float("test", id).ok, "the float it left is still the plugin's")
 
+    # Scenario: Refilled in place.
+    h = editor
+    id = open(h, options("editor", 2, 4, 2, 10, true, "old", 50, false), ["first", "rows"])
+    h.redraw
+    refilled = h.plugins.window_requests.set_float_lines("test", id, ["other"], "new")
+    h.redraw
+    float = h.state.tab.floats.at(0)
+    t.assert_equal([true, 1, id, 2, 4, 2, 10], [refilled.ok, h.state.tab.floats.count, float.id, float.spec.row, float.spec.col, float.spec.height, float.spec.width], "Refilled in place: the float keeps its window id and box")
+    t.assert_equal(["new", "new", "other"], [float.spec.title, float.window.buffer.title, float.window.buffer.lines.join("|")], "the refilled float holds the new lines and title")
+    refilled_rows = rows(h, 2, 5)
+    shown = h.screen
+    h.resize(12, 40)
+    t.assert_equal([true, true, false, shown], [refilled_rows[0].include?("new"), refilled_rows[1].include?("other"), refilled_rows.join("\n").include?("rows"), h.screen], "the refilled float shows the new title and lines and equals a full repaint")
+
+    # Scenario: The current float refilled with 0.
+    h = editor
+    id = open(h, options("editor", 1, 2, 3, 8, false, "", 50, true), ["a", "b", "c"])
+    h.type("j")
+    before = h.state.window.cursor.row
+    refilled = h.plugins.window_requests.set_float_lines("test", 0, ["only"], "")
+    h.redraw
+    t.assert_equal([1, true, id, true, 0, "only"], [before, refilled.ok, h.state.window.id, h.state.tab.floats.focused?, h.state.window.cursor.row, h.state.window.buffer.lines.join("|")], "The current float refilled with 0 shows the line, stays current, and its cursor goes to its first line")
+    t.assert_equal("only", h.row(1)[3, 4], "the current float draws its new line")
+
+    # Scenario: Refilled with no lines.
+    refilled = h.plugins.window_requests.set_float_lines("test", id, strings([]), "")
+    t.assert_equal([true, 1, ""], [refilled.ok, h.state.window.buffer.lines.length, h.state.window.buffer.line(0)], "Refilled with no lines, the float shows one empty line")
+
+    # Scenario: Another plugin's float is not refilled.
+    h = editor
+    id = open(h, options("editor", 2, 4, 1, 10, true, "mine", 50, false), ["kept"])
+    other = h.plugins.window_requests.set_float_lines("other", id, ["taken"], "theirs")
+    unknown = h.plugins.window_requests.set_float_lines("test", 999, ["taken"], "theirs")
+    layout = h.plugins.window_requests.set_float_lines("test", 1, ["taken"], "theirs")
+    float = h.state.tab.floats.at(0)
+    t.assert_equal([false, "No float #{id}", "No float 999", "No float 1"], [other.ok, other.message, unknown.message, layout.message], "Another plugin's float is not refilled, nor an unknown id or a layout window")
+    t.assert_equal(["kept", "mine", "line 1"], [float.window.buffer.lines.join("|"), float.spec.title, h.state.buffer.line(0)], "the float keeps its lines and title and the layout window its text")
+
     # A float closed and replaced by another at the same box.
     h = editor
     open(h, options("editor", 2, 4, 2, 10, true, "one", 50, false), ["first", "rows"])
@@ -241,7 +279,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.10", API::VERSION, "the plugin API is 2.10")
+    t.assert_equal("2.11", API::VERSION, "the plugin API is 2.11")
 
     # Scenario: An offset out of range is refused.
     h = editor
