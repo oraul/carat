@@ -54,16 +54,16 @@ measure() {
   bin=${BENCH_BIN:-build/bench/keys-budget}
   run=${BENCH_RUN:-sh bench/run.sh}
   others=""
-  grep=""
+  with_grep=""
   for scenario in $scenarios; do
-    if [ "$scenario" = grep ]; then grep=grep; else others="$others $scenario"; fi
+    if [ "$scenario" = grep ]; then with_grep=yes; else others="$others $scenario"; fi
   done
   lines=""
   if [ -n "$others" ]; then
     # shellcheck disable=SC2086
     lines=$(BENCH_BIN=$bin $run $others) || die "the benchmark failed for:$others"
   fi
-  if [ -n "$grep" ]; then
+  if [ -n "$with_grep" ]; then
     # shellcheck disable=SC2086
     more=$(BENCH_BIN=$bin BENCH_SMALL=20 BENCH_LARGE=120 $run grep) || die "the benchmark failed for: grep"
     lines="$lines
