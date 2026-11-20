@@ -65,6 +65,7 @@ ok   a length of zero
 ok   Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style
 ok   An empty style clears it: every row in NormalFloat again
 ok   A refill drops the style: the rows are drawn in NormalFloat with no span
+ok   a span over a multi-byte line counts code points, and a span past the line's end is cut there
 ok   Another plugin's float is not styled, nor an unknown id or a layout window
 ok   the current float is styled with 0, and a float switched to a listed scratch buffer is not styled
 ok   a float reopened at the same box shows its own text and equals a full repaint
@@ -97,4 +98,4 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 99 passed, 0 failed
+editor_floats: 100 passed, 0 failed

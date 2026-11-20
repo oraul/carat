@@ -35,6 +35,10 @@ module Carat
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
     # the plugin is enabled.
     class WindowRequests
+      # The longest span a float row keeps: more than any line holds.
+      LONGEST_SPAN = 1 << 30
+      private_constant :LONGEST_SPAN
+
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -384,7 +388,9 @@ module Carat
 
       # A SyntaxLine per row of the buffer: for a row with spans, one made
       # for the row's own string holding them as (column, length, group)
-      # triples in their order; SyntaxLine::NONE for any other row. The
+      # triples in their order, a length cut to LONGEST_SPAN so the
+      # painter's column plus length stays small; SyntaxLine::NONE for any
+      # other row. The
       # spans are chained per row first, so the work is one pass over the
       # rows and one over the spans.
       #: (Domain::Buffer, Integer, Array[Integer]) -> Array[untyped]
@@ -410,8 +416,9 @@ module Carat
             while at >= 0
               group = spans[at + 3]
               group = Domain::Highlight::POPUP_MENU_MATCH_SELECTED if row == selected && group == Domain::Highlight::POPUP_MENU_MATCH
+              length = spans[at + 2]
               tokens << spans[at + 1]
-              tokens << spans[at + 2]
+              tokens << (length > LONGEST_SPAN ? LONGEST_SPAN : length)
               tokens << group
               at = after[at / 4]
             end

@@ -351,6 +351,12 @@ module EditorFloatsTest
     h.redraw
     t.assert_equal([[match, match], -1, false, [plain, plain], [plain, plain]], [styled_before, float.selected, float.window.buffer.styled?, float_groups(h, 0, 2), float_groups(h, 1, 2)], "A refill drops the style: the rows are drawn in NormalFloat with no span")
 
+    # A span counts code points, and one past the line's end is cut there.
+    h.plugins.window_requests.set_float_lines("test", id, ["äbc", "x"], "")
+    multi = h.plugins.window_requests.style_float("test", id, -1, ints([0, 1, 1, match, 1, 0, 1 << 40, match]))
+    h.redraw
+    t.assert_equal([true, [plain, match, plain, plain], [match, plain, plain]], [multi.ok, float_groups(h, 0, 4), float_groups(h, 1, 3)], "a span over a multi-byte line counts code points, and a span past the line's end is cut there")
+
     # Scenario: Another plugin's float is not styled.
     other = h.plugins.window_requests.style_float("other", id, 0, ints([]))
     unknown = h.plugins.window_requests.style_float("test", 999, 0, ints([]))
