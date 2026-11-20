@@ -45,4 +45,10 @@ The windows use cases move windows, tab pages, and cursors and read no line's te
 
 ## Measurements
 
-Filled in from the runs on main and on the branch.
+Main at 8a99bdd against the branch, on one machine, `make build`, `dev-build`, `test-build`, `bench-budget`, and `metrics` on each side, main in a detached worktree, each side run with no other build beside it:
+
+- Re-narrowing rounds: 2 and 2 for `bin/carat.rb` and for the test runner on both sides.
+- Analysis time: `bin/carat.rb` 43.4 s on main and 42.1 s on the branch; the test runner 107.0 s on main and 96.8 s on the branch, one run each, so the gap is within the machine's spread rather than a gain.
+- Release binary: 7,004,576 bytes on main, 7,006,736 on the branch (2,160 more, 0.03 percent: the 20 records, less the replace branch and the 20 readers).
+- Allocations per key: equal in all eight scenarios (lh 25, j 26, insert 25, ddp 57, undo 51, dot-ciw 65, lh-ruby 25, open-ruby 23).
+- Time per key, main then branch, in microseconds: lh 102.1 and 106.8, j 537.8 and 543.4, insert 124.9 and 127.7, ddp 940.0 and 911.3, undo 118.0 and 119.0, dot-ciw 114.6 and 115.7, lh-ruby 129.4 and 127.7, open-ruby 166.4 and 218.1; no key path changed (the ledger is written once at start), and open-ruby, which opens a file and starts a fake language server per key, showed the same spread in part a (156.8 and 226.2).

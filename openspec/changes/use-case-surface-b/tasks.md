@@ -21,4 +21,4 @@
 ## 4. Docs and measurements
 
 - [x] 4.1 `docs/examples.md` and `docs/codebase-map.md` describe the readerless golden use case and the rule (proved by `make docs-lint` and `make lint`)
-- [ ] 4.2 Measure analysis time and rounds of both compile roots, the binary's size, and time per key on main and on the branch for the pull request (`make metrics`)
+- [x] 4.2 Measure analysis time and rounds of both compile roots, the binary's size, and time per key on main and on the branch for the pull request (`make metrics`)
