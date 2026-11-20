@@ -64,6 +64,7 @@ measure() {
     lines=$(BENCH_BIN=$bin $run $others) || die "the benchmark failed for:$others"
   fi
   if [ -n "$grep" ]; then
+    # shellcheck disable=SC2086
     more=$(BENCH_BIN=$bin BENCH_SMALL=20 BENCH_LARGE=120 $run grep) || die "the benchmark failed for: grep"
     lines="$lines
 $more"
