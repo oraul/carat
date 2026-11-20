@@ -175,7 +175,14 @@ module EditorLineCommandsTest
       # one undo state of their own.
       ["an undo command among the keys undoes the keys before it", ["Q :undo<CR>", "abc\n", ":normal xQ<CR>"], ["1 change; before #1  0 seconds ago", "abc"]],
       ["the keys after an undo command are one undo state", ["Q :undo<CR>", "abc\n", ":normal xQxu<CR>"], ["1 change; before #2  0 seconds ago", "abc"]],
-      ["A remap per line of a long range", ["Q x", "ab\n" * 150, ":%normal<Space>Q<CR>"], ["", "b|" * 149 + "b"]]
+      ["A remap per line of a long range", ["Q x", "ab\n" * 150, ":%normal<Space>Q<CR>"], ["", "b|" * 149 + "b"]],
+      # An E192 stops every :normal running: the range's other lines
+      # are not run (scenario: Too deep stops the lines left), and a
+      # binding that runs :%normal with its own key ends instead of
+      # running both lines at each of the 100 levels (scenario: A
+      # recursive normal over a range ends).
+      ["Too deep stops the lines left", ["Q x:normal<Space>Q<CR>", "a" * 120 + "\n" + "b" * 120 + "\n" + "c" * 120 + "\n", ":%normal<Space>Q<CR>"], ["E192: Recursive use of :normal too deep", "a" * 20 + "|" + "b" * 120 + "|" + "c" * 120]],
+      ["A recursive normal over a range ends", ["Q :%normal<Space>Q<CR>", "a\nb\n", "Q"], ["E192: Recursive use of :normal too deep", "a|b"]]
     ]) do |input|
       run_bound(input[0], input[1], input[2])
     end

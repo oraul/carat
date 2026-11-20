@@ -2,8 +2,8 @@
 
 ## 1. :normal
 
-- [ ] 1.1 `carat/use_cases/ex/normal_command_handler.rb`: E192 sets a flag that stops every running `:normal`'s keys and lines, cleared by the outermost call (proved by "Too deep stops the lines left" and "A recursive normal over a range ends" in `test/editor_line_commands.rb`)
-- [ ] 1.2 `docs/compatibility.md`: the `:normal` difference names the stop (proved by `make docs-lint`)
+- [x] 1.1 `carat/use_cases/ex/normal_command_handler.rb`: E192 sets a flag that stops every running `:normal`'s keys and lines, cleared by the outermost call (proved by "Too deep stops the lines left" and "A recursive normal over a range ends" in `test/editor_line_commands.rb`)
+- [x] 1.2 `docs/compatibility.md`: the `:normal` difference names the stop (proved by `make docs-lint`)
 
 ## 2. Substitute
 

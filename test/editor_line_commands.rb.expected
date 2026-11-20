@@ -96,4 +96,6 @@ ok   A binding replaying itself after normal
 ok   an undo command among the keys undoes the keys before it
 ok   the keys after an undo command are one undo state
 ok   A remap per line of a long range
-editor_line_commands: 98 passed, 0 failed
+ok   Too deep stops the lines left
+ok   A recursive normal over a range ends
+editor_line_commands: 100 passed, 0 failed
