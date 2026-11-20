@@ -12,7 +12,7 @@
 
 ## 3. Sprint report
 
-- [ ] 3.1 Add `sweepLine` to `.claude/workflows/sprint-planning.js` and use it in the report; proved by "sprint: the sweep line names a partial sweep" and "sprint: the sweep line names unrecorded results" in `tools/tools_test.sh`
+- [x] 3.1 Add `sweepLine` to `.claude/workflows/sprint-planning.js` and use it in the report; proved by "sprint: the sweep line names a partial sweep" and "sprint: the sweep line names unrecorded results" in `tools/tools_test.sh`
 
 ## 4. Docs
 

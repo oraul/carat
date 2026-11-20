@@ -5272,6 +5272,15 @@ expect "sprint: the records line reads the run state's merged commit" 0 '^1$' gr
 # are reviewed with every other file.
 expect "sprint: the sprint review covers the whole combined diff, the record keepers included" 0 "^1$" \
   grep -c -E '^const scope = .the combined diff ..git diff [$][{]sprint[.]base[}] [$][{]sprint[.]tip[}].. of ' "$swf"
+# The sweep line says what a sweep left: the areas a partial one did not
+# review, and results not recorded, which hold the planner.
+expect "sprint: the sweep line names a partial sweep" 0 '^"security 1 finding[(]s[)], 0 blocking; quality 0 blocking; security partial, not reviewed: tools; quality partial, areas not reviewed: 3, 7"$' \
+  js "$swf" "sweepLine" "sweepLine(true, { ran: true, recorded: true, security: ['x'], security_blocking: 0, security_not_reviewed: ['tools'], quality_blocking: [], quality_not_reviewed: [3, 7] })"
+expect "sprint: the sweep line names unrecorded results" 0 '^"security 0 finding[(]s[)], 0 blocking; quality 0 blocking; its results were not recorded; run /sprint again"$' \
+  js "$swf" "sweepLine" "sweepLine(true, { ran: true, recorded: false, security: [], security_blocking: 0, security_not_reviewed: [], quality_blocking: [], quality_not_reviewed: [] })"
+expect "sprint: the sweep line reads a complete sweep, one not run, and an odd sprint" 0 '^\["security 0 finding[(]s[)], 0 blocking; quality 1 blocking","did not run; run /sprint again","not this sprint"\]$' \
+  js "$swf" "sweepLine" "[sweepLine(true, { ran: true, recorded: true, security: [], security_blocking: 0, security_not_reviewed: [], quality_blocking: ['q'], quality_not_reviewed: [] }), sweepLine(true, { ran: false }), sweepLine(false, null)]"
+expect "sprint: the report's sweep line is sweepLine's" 0 "^1$" grep -c -F '`Sweep: ${sweepLine(sprint.sweep, sweep)}`,' "$swf"
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
 # A sprint security review left at its cap gets one more start over the
