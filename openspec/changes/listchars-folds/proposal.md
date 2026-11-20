@@ -44,4 +44,4 @@ Nothing in Carat shows where a tab, a trailing blank, or a no-break space sits: 
 - Fresh `Options` hold Neovim's default `listchars`, and the shipped configuration Facet's Unicode marks, as the indent guides keep Neovim's behavior in fresh options and Carat's look in the shipped file; the ascii form is Neovim's default characters, chosen by the existing `option.icons ascii` switch.
 - A later key of the same name in one `listchars` value wins, as in Neovim; an empty value (`""`) draws no mark.
 - A no-break space is U+00A0 or U+202F, Neovim's two; a trailing space is a space after the line's last other character, so a line of spaces only is all trailing.
-- The marks are painted after the syntax tokens and before the indent guides, search matches, and the selection, so a guide keeps its cell and a match or selection colors the mark's cell as it colors text.
+- The marks are painted after the syntax tokens and the indent guides and before the search matches and the selection, so a tab's mark shows over a guide in its cell, as indent-blankline draws a tab's `listchars`, and a match or selection colors the mark's cell as it colors text.
