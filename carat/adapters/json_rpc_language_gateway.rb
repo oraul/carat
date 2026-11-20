@@ -114,6 +114,7 @@ module Carat
       # @rbs @servers: Array[untyped]
       # @rbs @refused: Array[String]
       # @rbs @saves: Array[Integer]
+      # @rbs @root: String
       # @rbs @trust: Symbol
       # @rbs @languages: Array[String]
       # @rbs @heads: Array[String]
@@ -153,6 +154,7 @@ module Carat
         @servers = []
         @refused = []
         @saves = []
+        @root = ""
         @trust = :unknown
         @languages = [""]
         @languages.clear
@@ -1310,10 +1312,12 @@ module Carat
         value.is_a?(Integer) ? [value.to_i, 0].max : 0
       end
 
-      # Tells a running server about the buffers of its file type.
+      # Tells a running server about the buffers of its file type; the
+      # working directory is read at most once a tick (inside_root?).
       #: (Domain::LanguageServer) -> void
       def sync(server)
         server.tick = server.tick + 1
+        @root = ""
         i = 0
         while i < @buffers.count
           buffer = @buffers.buffer_at(i)
@@ -1331,7 +1335,8 @@ module Carat
       # didChange when it changed, and didSave after a write, the first
       # sync included, so a save made while the server started follows
       # its didOpen. A buffer outside the working directory is never
-      # opened, so nothing names it.
+      # opened, so no document notification names it; a request made in
+      # it still names its URI (recorded in docs/findings/lsp-tidy.md).
       #: (Domain::LanguageServer, Domain::Buffer) -> void
       def sync_buffer(server, buffer)
         path = buffer.path_text
@@ -1353,11 +1358,14 @@ module Carat
       # directory with its . and .. segments resolved, lies under the
       # working directory: the root the server is given (rootUri), which
       # is under a trusted root whenever a server started on its own.
-      # Read lexically, as the definitions' project check is.
+      # Read lexically: the definitions' project check also resolves
+      # links, which this one does not, to keep the idle tick off the
+      # disk. The working directory is read once a sync and kept in
+      # @root, since an unopened buffer is checked again at every tick.
       #: (String) -> bool
       def inside_root?(path)
-        cwd = @files.cwd
-        Domain::PathPolicy.inside?(cwd, PluginApi::Paths.absolute(cwd, path))
+        @root = @files.cwd if @root.empty?
+        Domain::PathPolicy.inside?(@root, PluginApi::Paths.absolute(@root, path))
       end
 
       # Forgets the saves of the idle tick once the running servers were

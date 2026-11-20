@@ -30,7 +30,7 @@ None.
 
 - "DiskFiles#stat makes four system stats per path", "NO_COLOR leaves syntax, bars, and messages colored", "No test reads NO_COLOR through AnsiTerminal", and "The language server client repeats itself and names little of what it uses": queued as `lsp-tidy-c` by the plan and appended to `docs/findings/lsp-tidy.md`.
 - Requests (completion, hover, definition, signature help, document symbols) for a buffer outside the working directory are still sent, naming its URI but not its text; whether to skip them is recorded as a finding.
-- A link inside the working directory that leads out of it is judged by its lexical path, as the definitions' project check is; resolving links on every sync would read the disk at each idle tick.
+- A link inside the working directory that leads out of it is judged by its lexical path, unlike the definitions' project check, which also resolves links; resolving them on every sync would read the disk at each idle tick.
 - No `tools/rules.sh` edit; no file of the feature lane.
 
 ## Impact
@@ -41,4 +41,4 @@ None.
 - docs/architecture.md: section 8.4's language server paragraph gains the working-directory rule and the KILL after the stop's grace; no layer, port name, or rule changes.
 - docs/codebase-map.md: area 17's process runner and gateway entries name the new behavior; no file is added, moved, or removed.
 - CLAUDE.md: unchanged, no process changes.
-- Performance: the working-directory check runs only for a buffer the server has not opened, so an opened buffer's idle tick allocates nothing more; `stop` may wait up to 0.5 s, only for a server that has not ended on TERM.
+- Performance: the working-directory check runs only for a buffer the server has not opened, so an opened buffer's idle tick allocates nothing more, while a buffer outside it, never opened, is checked again at every tick, the working directory read once a sync and one absolute path built per such buffer; `stop` may wait up to 0.5 s, only for a server that has not ended on TERM.
