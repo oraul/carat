@@ -39,7 +39,7 @@ None.
 
 - README.md: unchanged, it describes neither the use cases' readers nor the shared-instance guard.
 - CLAUDE.md: unchanged, its sentence that every shared object is kept in a reader of `EditorAssembly` for the guard stays true.
-- docs/architecture.md: section 8's composition root sentence (finding 28); sections 5 and 10 already describe the readerless directories in general terms and stay.
+- docs/architecture.md: section 8's composition root sentence (finding 28), its other clauses shortened so the file stays within its docs-lint budget; sections 5 and 10 already describe the readerless directories in general terms and stay.
 - docs/codebase-map.md: area 4's guard sentence and the lint entry; area 11's entries name no reader and stay.
 - docs/examples.md: the golden use case paragraph.
 - Performance: no hot path changes (the ledger is written once at start); the pull request compares analysis time, rounds, binary size, and time per key with main's.
