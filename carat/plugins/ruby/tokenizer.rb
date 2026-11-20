@@ -161,9 +161,13 @@ module Carat
           LineState.pack(@mode, heredocs, first_heredoc, second_heredoc, frames, first_frame, second_frame)
         end
 
+        # The packed bits of frame i. Within a line every depth is counted;
+        # a depth past what the state encodes is held to its largest here.
         #: (Integer) -> Integer
         def frame_bits(i)
-          LineState.pack_frame(@closes[i], @interps[i], @kinds[i], @depths[i], @codes[i], @braces[i])
+          depth = @depths[i] > LineState::MAX_DEPTH ? LineState::MAX_DEPTH : @depths[i]
+          braces = @braces[i] > LineState::MAX_BRACES ? LineState::MAX_BRACES : @braces[i]
+          LineState.pack_frame(@closes[i], @interps[i], @kinds[i], depth, @codes[i], braces)
         end
 
         # ---------------------------------------------------------- columns
@@ -486,7 +490,7 @@ module Carat
               from = stop
               i = stop
             elsif open > 0 && b == open
-              @depths[f] += 1 if @depths[f] < LineState::MAX_DEPTH
+              @depths[f] += 1
               i += 1
             elsif b == close && close != 0
               if @depths[f] > 0
@@ -627,7 +631,7 @@ module Carat
             return pos + 1
           end
           if b == 123
-            @braces[f] += 1 if f >= 0 && @braces[f] < LineState::MAX_BRACES
+            @braces[f] += 1 if f >= 0
             operator
             return pos + 1
           end

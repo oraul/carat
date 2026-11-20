@@ -34,6 +34,9 @@ ok   short interpolation
 ok   interpolation across lines
 ok   a string across lines
 ok   words with brackets
+ok   nesting deeper than the state holds
+ok   braces nested deep in interpolation
+ok   a depth past seven is held to seven across lines
 ok   another delimiter
 ok   percent symbols
 ok   percent string with interpolation
@@ -73,4 +76,4 @@ ok   states stay within 58 bits
 ok   the manifest declares the ruby filetype
 ok   and breaks no rule
 ok   one id per group
-plugins_ruby: 75 passed, 0 failed
+plugins_ruby: 78 passed, 0 failed
