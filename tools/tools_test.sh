@@ -7,7 +7,7 @@
 # the records only the workflow writes, the history, the budget, and the
 # review areas), tools/agent_guard.sh (each profile's forms and refusals,
 # and the agents' hook lines), tools/docs_lint.sh (budgets, content, wraps,
-# paths, queue), tools/new.sh (every generator and its refusals),
+# paths, queue, histories), tools/new.sh (every generator and its refusals),
 # tools/spec_validate.sh (the archive preview, with a stub openspec),
 # tools/spinel_warnings.sh (the build targets on a stub toolchain), and
 # every gate of tools/gates.sh, each passing and refusing.
@@ -20,6 +20,9 @@ set -u
 
 here=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d "${TMPDIR:-/tmp}/carat-tools-test.XXXXXX")
+# The lane histories' line 1, run_state.sh's HEADER with its tabs, since
+# history refuses a lane file under any other (metrics-header-fix).
+HISTORY_HEADER=$(sed -n 's/^HEADER="\(.*\)"$/\1/p' "$here/run_state.sh" | sed "s/[$]{TAB}/$(printf '\t')/g")
 trap 'rm -rf "$work"' EXIT
 TRAILER='Co-Authored-By: Claude <noreply@anthropic.com>'
 SCHEME="https:"
@@ -1573,6 +1576,31 @@ expect "run_state: a change merged on BASE after the branch point is the newest 
 expect "run_state: a BASE that names no commit leaves the order to HEAD's ancestry, a row it holds the newest" 0 "^based$" \
   sh -c "env BASE=nothing sh '$here/run_state.sh' status | awk -F'\t' 'f { print \$1; exit } /^change\tdate/ { f = 1 }'"
 
+# A lane file whose line 1 is not HEADER: history appends no row under it,
+# as closing-loop's two columns were appended under the 22-column header
+# (metrics-header-fix); an empty lane file gets the header first.
+fresh headers
+state init first chore/first > /dev/null
+state set first merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+: > docs/metrics-backlog.tsv
+expect "run_state: history writes the header into an empty lane file" 0 "appended first" state history
+expect "run_state: the header written ends with HEADER's last column" 0 "^advisories_left$" awk -F'\t' 'NR == 1 { print $NF }' docs/metrics-backlog.tsv
+expect "run_state: the row under the header has its field count" 0 "^ok$" awk -F'\t' 'NR == 1 { n = NF } NR == 2 { print (NF == n && n == 24) ? "ok" : NF " " n }' docs/metrics-backlog.tsv
+full=$(head -1 docs/metrics-backlog.tsv)
+state init second chore/second > /dev/null
+state set second merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+cut -f 1-22 docs/metrics-backlog.tsv > short.tsv
+cp short.tsv docs/metrics-backlog.tsv
+expect "run_state: history refuses a lane file whose header is short of HEADER" 1 "docs/metrics-backlog[.]tsv's line 1 differs from HEADER" state history
+expect "run_state: history appends no row under a header short of HEADER" 0 "^$" cmp docs/metrics-backlog.tsv short.tsv
+{ printf '%s\r\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
+expect "run_state: history refuses a header ending in a carriage return" 1 "line 1 differs from HEADER" state history
+{ printf '%s\n' "$full"; tail -n +2 short.tsv; } > docs/metrics-backlog.tsv
+printf 'change\tdate\n' > docs/metrics-feature.tsv
+expect "run_state: history checks the other lane's header too" 1 "docs/metrics-feature[.]tsv's line 1 differs from HEADER" state history
+printf '%s\n' "$full" > docs/metrics-feature.tsv
+expect "run_state: history appends under a header equal to HEADER" 0 "appended second" state history
+
 # A run state whose first passes the workflow stored only in part: the
 # stage, review, and ci lines hold each gate's last result, not its first,
 # so the history leaves a gate without a stored verdict out.
@@ -1797,7 +1825,7 @@ expect "run_state: check on a documentation-only change runs only docs-lint and 
 expect "run_state: a scoped stage is recorded passed at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ scoped$" state get scoped stage.dev-build
 printf 'rounds.carat\t3\nallocs.lh\t99.0\n' > "$work/stale.tsv"
 mkdir -p build/metrics && cp "$work/stale.tsv" build/metrics/current.tsv
-{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/scoped-history-backlog.tsv"
+{ printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/scoped-history-backlog.tsv"
 scoped_bench() {
   env METRICS_PREFIX="$work/scoped-history" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" bench scoped
 }
@@ -1848,7 +1876,7 @@ expect "run_state: bench needs the metrics stage at HEAD" 1 "the metrics stage h
 state stage bench metrics true > /dev/null
 mkdir -p build/metrics
 printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t60.0\n' > build/metrics/current.tsv
-{ printf 'header\n'; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
 expect "run_state: bench passes the same figures" 0 "same allocations and rounds" bench
 expect "run_state: bench compares through make metrics-compare" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv$" bench
 expect "run_state: bench writes the last row as a base" 0 "^allocs[.]lh[[:space:]]27$" cat build/metrics/last.tsv
@@ -1957,7 +1985,7 @@ mrow() {
 fresh exception
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; mrow e1 c1 small 1 1 -; mrow e2 c2 small 1 1 -; mrow e3 c3 small 1 1 -; mrow e4 c4 small 1 1 -; } > docs/metrics-backlog.tsv
 printf '# Queue\n\n## Sprint 1\n\n1. `x1` (T2 user request, estimated small, user-approved beyond the sprint): one.\n2. `e5` (T1 pipeline, estimated small, the user-approved exception): review-due counts a change beyond the sprint toward the five.\n3. `x2` (T2 user request, estimated small, beyond the sprint): two.\n' > docs/queue-backlog.md
 commit "docs: the queue"
 echo x1 >> README.md
@@ -2019,7 +2047,7 @@ expect "run_state: review-due leaves out a change its merged commit's queue mark
 fresh sprintcount
 printf 'sprint\tlast\nsprint-16\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
 printf '# Queue: backlog\n\n## Sprint 17\n\nThe user-approved exception (a note): the three are the user%ss; `o1` and `o2`\n(Pool 1 and 2) run before `s1`, outside the 3, `o1` next.\n\n1. `s1` (T2 user request, estimated small): one.\n2. `t1` (T0 security High (9), estimated small): urgent.\n3. `t10` (T1 pipeline defect, estimated small): not T0.\n\n### Split\n\n4. `u1-b` (T2, estimated small, the first part of `u1`): a sprint item under a sub-heading.\n\n## Pool\n\n1. `o1` (T1 pipeline defect, estimated small): outside.\n2. `o2` (T1, estimated small): outside too.\n3. `s1-b` (T2, estimated small, the rest of `s1`, split): the rest.\n4. `p1` (T2, estimated small): a pool item.\n5. `u1-c` (T2, estimated small, the rest of `u1`, split): beside its counted sibling part.\n' "'" > docs/queue-backlog.md
 commit "docs: the queue"
 for c in s1-b o1 t1 u1-c t10 o2 s1 p1 u1-b; do
@@ -2056,7 +2084,7 @@ expect "run_state: review-due names each change left out by its reason" 1 "^not 
 fresh sprintsix
 printf 'sprint\tlast\nsprint-15\tseed\n' > docs/sprints.tsv
 printf '# Backlog\n' > docs/backlog.md
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; for i in 1 2 3 4 5; do mrow "p$i" "p$i" small 1 1 -; done; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; for i in 1 2 3 4 5; do mrow "p$i" "p$i" small 1 1 -; done; } > docs/metrics-backlog.tsv
 expect "run_state: review-due is due at sprint-16's fifth counted merge" 0 "^due: sprint-16 has 5 changes merged [(]p1, p2, p3, p4, p5[)]; combined diff bbb222[.][.]origin/main; sweep: yes\$" state review-due
 printf 'sprint-16\tp5\n' >> docs/sprints.tsv
 for i in 1 2 3 4 5; do mrow "q$i" "q$i" small 1 1 -; done >> docs/metrics-backlog.tsv
@@ -2077,7 +2105,7 @@ fresh sprint
 printf 'sprint\tlast\n' > docs/sprints.tsv
 expect "run_state: review-due needs a sprint row" 1 "ends with no sprint row" state review-due
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf 'header\n'; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow review-20261111 r1 - 9 9 -; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow old aaa111 small 1 1 -; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 400000 30 check:1,quality:0; mrow review-20261111 r1 - 9 9 -; mrow a2 c2 medium 1300000 50 check:1,quality:1; } > docs/metrics-backlog.tsv
 expect "run_state: review-due is not due before the fifth merge of the sprint, a review run not counted" 1 "^not due: sprint-1 has 2 of 5 changes merged [(]a1, a2[)]$" state review-due
 state init a3 chore/a3 > /dev/null
 state set a3 merged "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -3520,6 +3548,12 @@ doclint() {
 
 docs clean
 expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
+docs histories
+printf 'a\tb\n1\t2\n\n3\t\n' > docs/metrics-feature.tsv
+expect "docs_lint: passes histories whose rows have their header's field count" 0 "ok   histories: 1 file" doclint
+printf '4\n5\t6\t7\n' >> docs/metrics-feature.tsv
+expect "docs_lint: refuses a history row whose field count differs from its header's and names it" 1 "docs/metrics-feature[.]tsv:5: 1 fields, the header 2" doclint
+expect "docs_lint: names a history row longer than its header" 1 "docs/metrics-feature[.]tsv:6: 3 fields, the header 2" doclint
 docs budget
 # Short lines: one line of 30 KB takes the content checks seconds.
 head -c 30721 /dev/zero | tr '\0' x | fold -w 64 >> CLAUDE.md
@@ -4135,7 +4169,7 @@ fresh security
 # the review: sprint-0 ends at seed, a1 to a5 merged since, and the plan's
 # marker names sprint-1 (merge-record-check).
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
 mkdir -p build/plan
 echo sprint-1 > build/plan/sprint
 commit "docs: the sprint log and the history"
@@ -4267,7 +4301,7 @@ expect "gates: passed passes a clean tree" 0 "ok   passed" gates passed
 # helpers leave the gate's own names (want) alone (merge-record-check).
 fresh groomed
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf 'header\n'; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
 mkdir -p build/plan
 echo sprint-1 > build/plan/sprint
 echo code > tools/code.sh
