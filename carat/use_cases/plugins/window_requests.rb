@@ -276,13 +276,11 @@ module Carat
       # float's style, its rows new strings.
       #: (String, Integer, Array[String], String) -> PluginApi::Response
       def set_float_lines(name, id, lines, title)
-        index = own_float_tab(name, id)
+        index = unlisted_float_tab(name, id)
         return PluginApi::Response.failure("No float #{id}") if index < 0
-        floats = @tabs.tab_at(index).floats
-        float = floats.at(floats.index_of(window_or_current(id)))
+        float = float_in(index, id)
         window = float.window
         buffer = window.buffer
-        return PluginApi::Response.failure("No float #{id}") if @buffers.index_of(buffer) >= 0
         replace_lines(buffer, lines)
         shown = String.new(title)
         buffer.title = shown
@@ -292,7 +290,7 @@ module Carat
         window.top = 0
         window.left = 0
         float.selected = -1
-        buffer.styles = Array.new(0, nil)
+        buffer.styles = Array.new(0, nil) if buffer.styled?
         PluginApi::Response.success("", 0)
       end
 
@@ -305,12 +303,10 @@ module Carat
       # set_float_lines is refused.
       #: (String, Integer, Integer, Array[Integer]) -> PluginApi::Response
       def style_float(name, id, selected, spans)
-        index = own_float_tab(name, id)
+        index = unlisted_float_tab(name, id)
         return PluginApi::Response.failure("No float #{id}") if index < 0
-        floats = @tabs.tab_at(index).floats
-        float = floats.at(floats.index_of(window_or_current(id)))
+        float = float_in(index, id)
         buffer = float.window.buffer
-        return PluginApi::Response.failure("No float #{id}") if @buffers.index_of(buffer) >= 0
         why = style_refusal(buffer.line_count, selected, spans)
         return PluginApi::Response.failure(why) unless why.empty?
         float.selected = selected
@@ -366,6 +362,25 @@ module Carat
         floats.at(floats.index_of(target)).window.buffer.owner == name ? index : -1
       end
 
+      # The index of the tab page holding the plugin's float with the id,
+      # 0 for the current window, when it shows the unlisted buffer the
+      # float was opened with; -1 for another plugin's float, a missing
+      # one, or one switched to a buffer of the list.
+      #: (String, Integer) -> Integer
+      def unlisted_float_tab(name, id)
+        index = own_float_tab(name, id)
+        return -1 if index < 0
+        @buffers.index_of(float_in(index, id).window.buffer) >= 0 ? -1 : index
+      end
+
+      # The float with the id, 0 for the current window, in the tab page
+      # at index, which holds it.
+      #: (Integer, Integer) -> Domain::FloatWindow
+      def float_in(index, id)
+        floats = @tabs.tab_at(index).floats
+        floats.at(floats.index_of(window_or_current(id)))
+      end
+
       # Why a style of the selected row and the spans cannot go on a float
       # of count lines, "" when it can.
       #: (Integer, Integer, Array[Integer]) -> String
@@ -390,9 +405,8 @@ module Carat
       # for the row's own string holding them as (column, length, group)
       # triples in their order, a length cut to LONGEST_SPAN so the
       # painter's column plus length stays small; SyntaxLine::NONE for any
-      # other row. The
-      # spans are chained per row first, so the work is one pass over the
-      # rows and one over the spans.
+      # other row. The spans are chained per row first, so the work is one
+      # pass over the rows and one over the spans.
       #: (Domain::Buffer, Integer, Array[Integer]) -> Array[untyped]
       def row_styles(buffer, selected, spans)
         count = buffer.line_count
