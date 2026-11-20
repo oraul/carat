@@ -1446,7 +1446,8 @@ expect "open_pr: a body failing the pr-body gate is refused" 1 "fails the pr-bod
 # file in GH_DIR, pr create printing the new pull request's path, number
 # GH_NEW (9), last; pr view prints them back, the body with GH_FOOTER;
 # api prints the environment AI's rule, GH_POLICY ("false true": custom
-# refs, not protected branches), and its refs, GH_RULES ("branch main").
+# refs, not protected branches), and its refs, GH_RULES ("branch main"),
+# failing when GH_RULES_FAIL is set.
 mkdir -p "$work/openpr-bin" "$work/openpr-gh"
 cat > "$work/openpr-bin/gh" <<'GH'
 #!/bin/sh
@@ -1469,7 +1470,7 @@ case "$1 $2" in
       *) cat "$GH_DIR/body"; printf '%s' "${GH_FOOTER:-}" ;;
     esac ;;
   "api repos/o/r/environments/AI") printf '%s\n' "${GH_POLICY-false true}" ;;
-  "api repos/o/r/environments/AI/deployment-branch-policies") [ -z "${GH_RULES-branch main}" ] || printf '%s\n' "${GH_RULES-branch main}" | tr ';' '\n' ;;
+  "api repos/o/r/environments/AI/deployment-branch-policies") [ -z "${GH_RULES_FAIL:-}" ] || exit 1; [ -z "${GH_RULES-branch main}" ] || printf '%s\n' "${GH_RULES-branch main}" | tr ';' '\n' ;;
   *) exit 1 ;;
 esac
 GH
@@ -1535,6 +1536,12 @@ expect "open_pr: rule refuses custom refs naming none" 1 "admits no ref as" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES= sh "$here/open_pr.sh" rule
 expect "open_pr: rule refuses an environment it cannot read" 1 "cannot read the environment AI of x/y" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=x/y sh "$here/open_pr.sh" rule
+expect "open_pr: rule refuses deployment refs it cannot read" 1 "cannot read the deployment refs" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r GH_RULES_FAIL=1 sh "$here/open_pr.sh" rule
+expect "open_pr: rule takes no argument" 2 "open_pr.sh rule" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" rule main
+expect "open_pr: rule refuses without GH_REPO" 1 "GH_REPO is not set" \
+  env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO= sh "$here/open_pr.sh" rule
 cd "$work/openpr" || exit 1
 expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
