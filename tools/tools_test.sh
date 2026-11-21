@@ -3665,6 +3665,7 @@ docs() {
   cd "$1" || exit 1
   printf '# Rules\n\nSee `tools/x.sh`, `test/NAME.rb`, and `carat/<layer>/`.\n\n%s\n\n### Example\n\n```\n## Summary\n\nOne line.\n\n---\n\n- A bullet\n- Another\n```\n' "$TRAILER" > CLAUDE.md
   echo "# readme" > README.md
+  echo "# design" > docs/design.md
   echo "echo x" > tools/x.sh
   printf -- '---\nname: x\nmodel: %s\n---\n\nAn agent.\n' "$TIER" > .claude/agents/x.md
   printf '## Summary\n\n<!-- Guidance. -->\n\n---\n\n## Changes\n\n- \n' > .github/pull_request_template.md
@@ -3676,6 +3677,10 @@ doclint() {
 
 docs clean
 expect "docs_lint: passes a clean tree, the trailer, a tier alias in frontmatter, and placeholders" 0 "ok   paths: 1 path" doclint
+# docs_lint: requires docs/design.md
+expect "docs_lint: passes with docs/design.md present" 0 "ok   required: 1 file" doclint
+rm docs/design.md
+expect "docs_lint: refuses a tree without docs/design.md" 1 "FAIL required: docs/design.md is missing" doclint
 docs histories
 printf 'a\tb\n1\t2\n\n3\t\n' > docs/metrics-feature.tsv
 expect "docs_lint: passes histories whose rows have their header's field count" 0 "ok   histories: 1 file" doclint

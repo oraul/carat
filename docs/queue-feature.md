@@ -4,6 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 25
 
+The user-approved exception (2026-11-21, the user's design doc): `facet-design-doc` runs first in the feature lane, outside the 3.
+
 1. `showtabline` (T2 user request, Facet wave 2, split from status-winbar-tabs-b at 7208588, estimated large): the tab row shows only from two tabs or two files (`carat/domain/buffer_list.rb:223`, read at `carat/use_cases/arrange_view.rb:51`, `frame_presenter.rb:238`); `docs/compatibility.md:510` lists `showtabline` missing. Fix outline: `option.showtabline` 0, 1, 2, default 2. Accepted when a table-driven test and frame rows show each value with one and two files (the one-file row at the default fails at 7208588), a `.caratrc` row with `make gen-config` current, its compatibility row, and `lh` held. Backlog: none.
 
 ## Pool
