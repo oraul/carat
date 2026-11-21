@@ -470,6 +470,8 @@ Files:
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`, `test/editor_cmdline_complete.rb`.
 
+Bench: `cmdline-tab` (`<Tab>` and `<S-Tab>` stepping through the `:` prompt's completion popup, each key reopening its float).
+
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 
 Rules: CLAUDE.md Coding conventions (a new ex command is an `ExHandler` registered in the order of `docs/compatibility.md`; every Neovim command gets a row there and a table-driven test); `docs/architecture.md` section 5.2.
