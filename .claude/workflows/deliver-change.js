@@ -956,11 +956,12 @@ async function contributor(mode, detail) {
       }
       // Each refused kind, a head or a quality review, escalates, is noted,
       // and puts its own reason in the one restart; a kind refused once is
-      // restarted once, and its second refusal in this call stops the run.
+      // restarted once, and its second refusal in this call stops the run;
+      // each note says whether its own kind was refused twice.
       const repeated = problems.filter((p) => refused.has(p.kind))
       for (const p of problems) {
         escalate(`a refused ${REFUSED_WORDS[p.kind]}`)
-        note(`contributor (${mode}) result refused: ${p.text}${repeated.length ? '; refused twice, stopped' : '; restarted'}`)
+        note(`contributor (${mode}) result refused: ${p.text}${refused.has(p.kind) ? '; refused twice, stopped' : repeated.length ? '; stopped' : '; restarted'}`)
         queue(`sh tools/run_state.sh note ${state.change} ${p.kind}-refused "contributor ${mode} start ${count + 1}: ${p.text}"`, head)
       }
       if (repeated.length) {
