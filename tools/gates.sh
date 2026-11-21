@@ -35,7 +35,7 @@
 #              session link
 #   security   the security review is recorded as pass at a commit whose
 #              difference to HEAD touches only the records-only paths of
-#              tools/rules.sh: openspec/, docs/backlog.md, docs/findings/,
+#              tools/rules.sh: openspec/, docs/backlog/, docs/findings/,
 #              the lane queues docs/queue-feature.md and
 #              docs/queue-backlog.md, the lane histories
 #              docs/metrics-feature.tsv and docs/metrics-backlog.tsv, and

@@ -234,12 +234,21 @@
 #                               without its merged commit, naming each
 #   backlog-dups                print each location (file:line) that two or
 #                               more backlog headings name, with the headings
-#   backlog-pick FILE...        print the next PICK_BATCHES batches of the
+#   backlog-move FILE           file every entry of FILE into BACKLOG_DIR
+#                               (the backlog file of the first file it
+#                               names, else _general.md, with "- Also:",
+#                               "- Category:", and "- Added:" lines, dated
+#                               by the git blame of its heading), prove the
+#                               folder kept every heading and line of FILE
+#                               beside its own, and remove FILE
+#   backlog-pick PATH...        print the next PICK_BATCHES batches of the
 #                               backlog entries ("## title" or deeper,
 #                               "- Location:" or "- Where:", "- Why:" or
-#                               "- Why it matters:") of the FILEs, which it
+#                               "- Why it matters:") of the PATHs (a file,
+#                               or a directory: each Markdown file under
+#                               it), oldest "- Added:" first, which it
 #                               requires (only the sprint planner names
-#                               docs/backlog.md and docs/findings/*.md),
+#                               docs/backlog and docs/findings/*.md),
 #                               each of one docs/codebase-map.md area: the
 #                               areas of the entries naming security first,
 #                               then by their oldest entry; PICK_MIN or more
@@ -256,10 +265,11 @@
 #                               else by its heading's path:line; one no
 #                               mapped path holds printed "unmapped:"; exit
 #                               1 when no batch
-#   backlog-oldest FILE...      print the heading lines of the first
-#                               PRUNE_COUNT entries of the FILEs (50),
+#   backlog-oldest PATH...      print the heading lines of the first
+#                               PRUNE_COUNT entries of the PATHs (50), as
+#                               backlog-pick reads them,
 #                               which it requires (only the sprint planner names
-#                               docs/backlog.md and docs/findings/*.md), in
+#                               docs/backlog and docs/findings/*.md), in
 #                               order, the oldest first: a "## " or "### "
 #                               heading with a path:line in it or a
 #                               "- Location:" or "- Where:" line, each
@@ -308,11 +318,14 @@
 #                               of the backlog, and write nothing when one
 #                               fails; then copy queue-feature.md and
 #                               queue-backlog.md over their docs/ lane files,
-#                               fold each findings file (FINDINGS_DIR) into
-#                               the backlog and remove it,
+#                               file each findings file's entries (FINDINGS_DIR)
+#                               into the backlog file of its first named
+#                               path (backlog-move's filing) and remove it,
 #                               remove each entry, a merged one's lines
 #                               appended under KEPT after a "- Merged:
-#                               HEADING" line, append groomed.md (merged
+#                               HEADING" line, across every backlog file, a
+#                               file left with no entry removed, file
+#                               groomed.md's entries the same way (merged
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
 #                               rows, retiring the marker
@@ -410,7 +423,8 @@
 # unset), MAKE (make), METRICS_PREFIX (docs/metrics, the lane files
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
 # (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits),
-# BACKLOG_FILE (docs/backlog.md), FINDINGS_DIR (docs/findings),
+# BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
+# date groom files a findings entry with, else the UTC day),
 # SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR (build/plan).
 set -u
 
@@ -421,7 +435,7 @@ stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
 metrics_prefix=${METRICS_PREFIX:-docs/metrics}
 metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
-backlog_file=${BACKLOG_FILE:-docs/backlog.md}
+backlog_dir=${BACKLOG_DIR:-docs/backlog}
 findings_dir=${FINDINGS_DIR:-docs/findings}
 queue_files="docs/queue-feature.md docs/queue-backlog.md"
 # The pick's batches (backlog-pick): the sprint's three backlog items, each
@@ -2686,17 +2700,174 @@ review_due() {
 # headings name, each with those headings: the candidates of groom's
 # duplicate lines, which the model decides.
 backlog_dups() {
-  [ -f "$backlog_file" ] || die "no $backlog_file"
+  [ -d "$backlog_dir" ] || die "no $backlog_dir"
   folded_backlog | awk '/^#+ / && match($0, /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/) {
       at = substr($0, RSTART, RLENGTH); n[at]++; h[at] = h[at] (n[at] > 1 ? " | " : "") $0 }
     END { for (at in n) if (n[at] > 1) print at ": " h[at] }' | sort
 }
 
-# The backlog, then each findings file of FINDINGS_DIR in name order after
-# a blank line: the backlog as groom writes it, which the sprint planner
-# grooms.
+# The backlog files, every Markdown file under BACKLOG_DIR in name order,
+# one per line.
+backlog_files() {
+  [ -d "$backlog_dir" ] || return 0
+  find "$backlog_dir" -type f -name '*.md' | LC_ALL=C sort
+}
+
+# The files the FILE and DIRECTORY arguments name, a directory as each
+# Markdown file under it in name order, printed one after another with a
+# blank line after each; dies on a missing one before printing any.
+backlog_cat() {
+  for f in "$@"; do [ -e "$f" ] || die "no $f"; done
+  for f in "$@"; do
+    if [ -d "$f" ]; then find "$f" -type f -name '*.md' | LC_ALL=C sort; else printf '%s\n' "$f"; fi
+  done | while IFS= read -r f; do cat "$f"; echo; done
+}
+
+# The entries of the FILE and DIRECTORY arguments (backlog_cat), each a
+# "## " or deeper heading to the next heading, ordered by the date of
+# their "- Added:" line, an undated one (a findings entry) last, the input
+# order kept among equal dates: the oldest first across the backlog files,
+# which backlog-pick and backlog-oldest read. A "# " title and the text
+# before the first entry are left out.
+backlog_stream() {
+  backlog_cat "$@" | awk -v T="$TAB" '
+    function flush(   i, d) {
+      d = date == "" ? "9999-99-99" : date
+      for (i = 1; i <= nl; i++) print d T n T i T line[i]
+      nl = 0; date = ""
+    }
+    /^#+ / { flush(); on = /^##+ /; if (on) n++ }
+    !on { next }
+    date == "" && /^- Added: [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]/ { date = substr($0, 10, 10) }
+    { line[++nl] = $0 }
+    END { flush() }' | LC_ALL=C sort -t "$TAB" -k1,1 -k2,2n -k3,3n | cut -f4-
+}
+
+# The day groom files a findings entry with: TODAY, else the UTC date.
+today_date() {
+  printf '%s\n' "${TODAY:-$(date -u +%Y-%m-%d)}"
+}
+
+# Files every entry of standard input (a "## " or deeper heading to the
+# next heading; a "# " title and the text before the first entry left out)
+# into the backlog file of the first file it names, BACKLOG_DIR/PATH.md,
+# else BACKLOG_DIR/_general.md, a new file starting with a "# Backlog:"
+# title. A file it names is a token of its text, the heading first, that
+# git ls-files lists, the backlog and findings files left out. The entry's
+# lines go unchanged, its trailing blank lines cut, followed by "- Also:"
+# (the other files it names, left out when none), "- Category:", and
+# "- Added:" lines, unless it already holds a "- Category:" line. The
+# category is security when the joined entry matches SECURITY_MARK, else
+# by its first file, else by words of its text (design when none); the
+# date is the one the file DATES ($1, "LINE DATE" lines, LINE the heading's
+# line of the input) gives, else today_date. Prints "filed N".
+file_entries() {
+  listed=$(mktemp) || die "no temporary file"
+  git ls-files > "$listed" 2>/dev/null
+  mkdir -p "$backlog_dir" 2>/dev/null || { rm -f "$listed"; echo "run_state: no directory $backlog_dir" >&2; return 1; }
+  BD="$backlog_dir" LISTED="$listed" DATES="${1:-}" DAY="$(today_date)" S="$SECURITY_MARK" awk '
+    BEGIN {
+      while ((getline l < ENVIRON["LISTED"]) > 0) if (l !~ /^docs\/(backlog\/|backlog[.]md$|findings\/)/) known[l] = 1
+      if (ENVIRON["DATES"] != "") while ((getline l < ENVIRON["DATES"]) > 0) { split(l, p, " "); dated[p[1]] = p[2] }
+    }
+    function quoted(s) { gsub(/\047/, "\047\\\047\047", s); return "\047" s "\047" }
+    function category(text, first,   t) {
+      t = tolower(text)
+      if (t ~ ENVIRON["S"]) return "security"
+      if (first != "") {
+        if (first ~ /^(\.claude|\.github|tools|openspec)\// || first ~ /^(Makefile|CLAUDE[.]md)$/ || first ~ /^docs\/(queue-|metrics-|goals|sprints|contributor-notes)/) return "pipeline"
+        if (first ~ /plugin/) return "plugins"
+        if (first ~ /(language|lsp|json_rpc|diagnostic|completion|hover|rubocop)/) return "ide"
+        if (first ~ /^(test|bench)\//) return "code-quality"
+        if (first ~ /^docs\// || first == "README.md") return "design"
+        return "editor"
+      }
+      if (t ~ /(workflow|agent|planner|contributor|checker|merger|sprint|pull request|gate|stage|run state|queue|scout|deliver)/) return "pipeline"
+      if (t ~ /(language server|lsp|rubocop|diagnostic|completion|hover)/) return "ide"
+      if (t ~ /plugin/) return "plugins"
+      if (t ~ /(buffer|cursor|window|motion|operator|register|keymap|render|screen|insert mode|visual mode|ex command)/) return "editor"
+      if (t ~ /(test|lint|snapshot|duplicat|refactor|naming|spinel)/) return "code-quality"
+      return "design"
+    }
+    function flush(   i, text, s, t, np, also, file, d, filed) {
+      if (!inside) return
+      inside = 0
+      while (nl > 0 && line[nl] !~ /[^ \t\r]/) nl--
+      text = head; filed = 0; split("", got); np = 0
+      for (i = 1; i <= nl; i++) {
+        if (line[i] ~ /^- Category: /) filed = 1
+        if (line[i] !~ /^- (Also|Category|Added): /) text = text " " line[i]
+      }
+      for (s = text; match(s, /[A-Za-z0-9_.\/-]+/); s = substr(s, RSTART + RLENGTH)) {
+        t = substr(s, RSTART, RLENGTH); sub(/^[.]\//, "", t); sub(/[.]+$/, "", t)
+        if ((t in known) && !(t in got)) { got[t] = 1; path[++np] = t }
+      }
+      also = ""
+      for (i = 2; i <= np; i++) also = also (i > 2 ? ", " : "") path[i]
+      file = ENVIRON["BD"] "/" (np ? path[1] : "_general") ".md"
+      if (!(file in seen)) {
+        d = file; sub(/\/[^\/]*$/, "", d)
+        if (system("mkdir -p " quoted(d)) != 0) { print "no directory " d > "/dev/stderr"; exit 1 }
+        seen[file] = (system("test -s " quoted(file)) == 0)
+        if (!seen[file]) print "# Backlog: " (np ? path[1] : "entries naming no file") > file
+      }
+      print "" >> file
+      print head >> file
+      for (i = 1; i <= nl; i++) print line[i] >> file
+      if (!filed) {
+        if (also != "") print "- Also: " also >> file
+        print "- Category: " category(text, np ? path[1] : "") >> file
+        print "- Added: " ((at in dated) ? dated[at] : ENVIRON["DAY"]) >> file
+      }
+      close(file); seen[file] = 1; count++
+    }
+    /^#+ / { flush(); if (/^##+ /) { inside = 1; head = $0; at = NR; nl = 0 }; next }
+    inside { line[++nl] = $0 }
+    END { flush(); print "filed " count + 0 }'
+  status=$?
+  rm -f "$listed"
+  return $status
+}
+
+# The lines of the entries of the FILEs that are not blank, headings
+# included, an "- Also:", "- Category:", or "- Added:" line left out: what
+# backlog-move compares before and after the move.
+entry_lines() {
+  [ $# -eq 0 ] || cat "$@" | awk '/^#+ / { on = /^##+ / } on && /[^ \t\r]/ && !/^- (Also|Category|Added): /'
+}
+
+# Moves every entry of FILE into the backlog folder (file_entries), each
+# dated by the git blame of its heading line (today when FILE has none),
+# proves that the folder's sorted entry lines (entry_lines, headings
+# included) after the move equal those before plus FILE's, so the count
+# and set of headings and every line are kept, and only then removes FILE;
+# on a mismatch it keeps FILE and dies.
+backlog_move() {
+  src=$1
+  [ -f "$src" ] || die "backlog-move: no $src"
+  dates=$(mktemp) && before=$(mktemp) && after=$(mktemp) || die "backlog-move: no temporary file"
+  git blame --date=short -- "$src" 2>/dev/null |
+    awk 'match($0, /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] +[0-9]+\)/) { s = substr($0, RSTART, RLENGTH - 1); split(s, p, / +/); print p[2], p[1] }' > "$dates"
+  # shellcheck disable=SC2046
+  { entry_lines "$src"; entry_lines $(backlog_files); } | LC_ALL=C sort > "$before"
+  file_entries "$dates" < "$src" > /dev/null || { rm -f "$dates" "$before" "$after"; die "backlog-move: $src not filed"; }
+  # shellcheck disable=SC2046
+  entry_lines $(backlog_files) | LC_ALL=C sort > "$after"
+  headings=$(entry_lines "$src" | grep -c "^##")
+  lines=$(entry_lines "$src" | grep -c .)
+  if ! cmp -s "$before" "$after"; then
+    rm -f "$dates" "$before" "$after"
+    die "backlog-move: the folder's entries differ from those before plus $src's; $src kept"
+  fi
+  rm -f "$dates" "$before" "$after" "$src"
+  echo "backlog-move: moved $src into $backlog_dir, $headings headings and $lines lines kept, $src removed"
+}
+
+# The backlog files, then each findings file of FINDINGS_DIR in name order
+# after a blank line: the backlog as groom writes it, which the sprint
+# planner grooms.
 folded_backlog() {
-  cat "$backlog_file"
+  backlog_files | while IFS= read -r f; do cat "$f"; echo; done
   for f in "$findings_dir"/*.md; do
     [ -f "$f" ] || continue
     echo
@@ -2721,7 +2892,8 @@ security_entry() {
 
 # The pick of the backlog lane: the entries (a "## " or deeper heading, to
 # the next heading, with a "- Location:" or "- Where:" line or a path:line
-# in the heading; any other heading a section) of the FILEs in order, which
+# in the heading; any other heading a section) of the PATHs, files or
+# directories, oldest first (backlog_stream), which
 # it requires, never reading the backlog on its own, ranked into batches of
 # one docs/codebase-map.md area each (backlog-pick in the header). The first
 # token of a Location that the map places (its backticked tokens first, a
@@ -2740,8 +2912,8 @@ security_entry() {
 # wider than groom's SECURITY_MARK on purpose: a wider ranking only orders
 # the batches, while groom's guard decides what may leave.
 backlog_pick() {
-  for f in "$@"; do [ -f "$f" ] || die "no $f"; done
-  cat "$@" |
+  for f in "$@"; do [ -e "$f" ] || die "no $f"; done
+  backlog_stream "$@" |
     M=docs/codebase-map.md Q="$queue_files" G="$plan_dir/groom.txt" B=$PICK_BATCHES L=$PICK_MIN H=$PICK_MAX awk "$ENTRY_AWK"'
     BEGIN {
       while ((getline line < ENVIRON["M"]) > 0) {
@@ -2960,14 +3132,14 @@ entry_paths() {
 }
 
 # The heading lines of the first PRUNE_COUNT entries of the FILEs, in
-# order (backlog-oldest in the header): the oldest, since the backlog is
-# only appended and groom folds the findings files after it. An entry is
+# order (backlog-oldest in the header): the oldest, by their "- Added:"
+# date (backlog_stream), the findings entries, undated, last. An entry is
 # a "## " or "### " heading with a path:line in it or a "- Location:" or
 # "- Where:" line; one whose whole heading line ends a line of
 # PLAN_DIR/groom.txt is left out, as backlog-pick leaves it out.
 backlog_oldest() {
-  for f in "$@"; do [ -f "$f" ] || die "no $f"; done
-  cat "$@" | G="$plan_dir/groom.txt" N=$PRUNE_COUNT awk "$ENTRY_AWK"'
+  for f in "$@"; do [ -e "$f" ] || die "no $f"; done
+  backlog_stream "$@" | G="$plan_dir/groom.txt" N=$PRUNE_COUNT awk "$ENTRY_AWK"'
     BEGIN { load_groomed(ENVIRON["G"]) }
     function close_entry() {
       if (h != "" && backlog_entry_head(h, marked) && !(h in groomed) && !(h in shown) && count < ENVIRON["N"] + 0) {
@@ -3047,7 +3219,7 @@ groom() {
         *) die "groom: not a groom line: $line" ;;
       esac
       stands=$(folded_backlog | grep -c -x -F -e "$heading")
-      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file or a findings file: $heading"
+      [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_dir or a findings file: $heading"
       if security_entry "$heading"; then
         case "$kind" in
           gone|duplicate)
@@ -3081,14 +3253,14 @@ groom() {
           [ -n "$held" ] || die "groom: the entry names no path the history held, so nothing proves it gone: $line" ;;
         merged)
           folded_backlog | grep -q -x -F -e "$word" && valid '#{2,3} .+' "$word" ||
-            die "groom: not a heading line of $backlog_file or a findings file: $word"
+            die "groom: not a heading line of $backlog_dir or a findings file: $word"
           [ "$word" != "$heading" ] || die "groom: an entry merges into another, not into itself: $line"
           ! printf '%s' "$removals" | grep -q -x -F -e "$heading" ||
             die "groom: another line already removes $heading, so it merges once: $line"
           # Each line of merges carries its prefix: "@" before a kept
           # heading, "|" before a line to append under it, so no text of
           # a merged body redirects or drops the rest.
-          body=$(backlog_entry "$heading" | awk '/^#+ / { next } NF { for (; held > 0; held--) print "|"; print "|" $0; on = 1; next } on { held++ }')
+          body=$(backlog_entry "$heading" | awk '/^#+ / { next } /^- (Category|Added): / { next } NF { for (; held > 0; held--) print "|"; print "|" $0; on = 1; next } on { held++ }')
           merges="$merges@$word
 |- Merged: $heading
 ${body:+$body
@@ -3118,8 +3290,18 @@ EOF
     [ ! -f "$plan_dir/queue-$l.md" ] || cp "$plan_dir/queue-$l.md" "docs/queue-$l.md"
   done
   folded=$(ls "$findings_dir"/*.md 2>/dev/null | grep -c .)
-  tmp=$(mktemp "$backlog_file.XXXXXX") || die "groom: no temporary file"
-  folded_backlog | R="$removals" D="$repeats" A="$merges" awk '
+  # The findings files are filed first, so the removals and merges below
+  # reach their entries in the backlog files as well.
+  if [ "$folded" -gt 0 ]; then
+    for f in "$findings_dir"/*.md; do cat "$f"; echo; done | file_entries > /dev/null || die "groom: the findings files not filed into $backlog_dir"
+  fi
+  # One pass over every backlog file, each after a marker line naming it,
+  # so a repeated heading keeps its first entry across the folder and a
+  # merged entry reaches its kept heading in any file; each file's text
+  # goes to FILE.groom, then over FILE, a file left with no entry removed.
+  mark=$(printf '\001')
+  backlog_files | while IFS= read -r f; do printf '%s%s\n' "$mark" "$f"; cat "$f"; done |
+    M="$mark" R="$removals" D="$repeats" A="$merges" awk '
     BEGIN {
       n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1
       n = split(ENVIRON["D"], d, "\n"); for (i = 1; i <= n; i++) if (d[i] != "") repeat[d[i]] = 1
@@ -3131,9 +3313,15 @@ EOF
     # A merged entry goes after the last line of its kept entry, before
     # the blank lines that end it.
     function flush() {
-      if (into != "") printf "%s", add[into]
+      if (into != "") printf "%s", add[into] > out
       into = ""
-      for (; held > 0; held--) print ""
+      for (; held > 0; held--) print "" > out
+    }
+    index($0, ENVIRON["M"]) == 1 {
+      if (out != "") { flush(); close(out) }
+      out = substr($0, length(ENVIRON["M"]) + 1) ".groom"; skip = 0
+      printf "" > out
+      next
     }
     /^#+ / {
       flush(); seen[$0]++; skip = ($0 in gone) || (($0 in repeat) && seen[$0] > 1)
@@ -3141,10 +3329,13 @@ EOF
     }
     skip { next }
     into != "" && !NF { held++; next }
-    { for (; held > 0; held--) print ""; print }
-    END { flush() }' > "$tmp" && mv "$tmp" "$backlog_file" || { rm -f "$tmp"; die "groom: $backlog_file not rewritten"; }
+    { for (; held > 0; held--) print "" > out; print > out }
+    END { if (out != "") { flush(); close(out) } }' || { find "$backlog_dir" -name '*.md.groom' -exec rm -f {} +; die "groom: $backlog_dir not rewritten"; }
+  backlog_files | while IFS= read -r f; do
+    if grep -q '^##' "$f.groom"; then mv "$f.groom" "$f"; else rm -f "$f.groom" "$f"; fi
+  done
   [ "$folded" -eq 0 ] || rm -f "$findings_dir"/*.md
-  [ ! -f "$plan_dir/groomed.md" ] || cat "$plan_dir/groomed.md" >> "$backlog_file"
+  [ ! -f "$plan_dir/groomed.md" ] || file_entries < "$plan_dir/groomed.md" > /dev/null || die "groom: $plan_dir/groomed.md not filed into $backlog_dir"
   sprint_row >> "$sprints_file"
   mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
   echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, $folded findings file(s) folded, its row appended to $sprints_file"
@@ -3641,6 +3832,7 @@ case "$command" in
   history) [ $# -le 1 ] || usage; records_excluded history "${1:-}" || append_history "${1:-}"; exit 0 ;;
   review-due) [ $# -eq 0 ] || usage; review_due; exit $? ;;
   backlog-dups) [ $# -eq 0 ] || usage; backlog_dups; exit $? ;;
+  backlog-move) [ $# -eq 1 ] || usage; backlog_move "$1"; exit $? ;;
   backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   backlog-oldest) [ $# -ge 1 ] || usage; backlog_oldest "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
