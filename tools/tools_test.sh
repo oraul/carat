@@ -108,6 +108,8 @@ scope_case true .claude/settings.json
 scope_case false .claude/commands/x.md
 scope_case false docs/metrics-backlog.tsv
 scope_case false docs/findings/x.md
+scope_case false docs/backlog/_general.md
+scope_case false docs/backlog/carat/adapters/tab_bar.rb.md
 scope_case false docs/queue-feature.md
 scope_case true docs/codebase-map.md
 scope_case true docs/actions.md
@@ -426,6 +428,18 @@ rm carry.out
 echo "check again" > test/t.rb
 commit "test: t again"
 expect "run_state: check carries a stage carried from the backed commit" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
+# TEST_ONLY reads the Markdown files of the backlog folder as records
+# (backlog-records-rule), never another file under it.
+mkdir -p docs/backlog/carat/adapters
+echo "### an entry" > docs/backlog/_general.md
+echo "### an entry" > docs/backlog/carat/adapters/tab_bar.rb.md
+commit "docs: the backlog folder"
+expect "run_state: check carries a stage after a commit of the backlog folder's Markdown files" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
+echo "text" > docs/backlog/x.txt
+commit "docs: a text file in the backlog folder"
+expect "run_state: check reruns every stage after a file of the backlog folder other than Markdown" 0 "^stage a: exit 0" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
 echo "check once more" > test/t.rb
 commit "test: t once more"
@@ -926,6 +940,10 @@ mkdir -p docs/findings
 echo "### an advisory" >> docs/findings/settle.md
 commit "docs: answer an advisory in the records"
 expect "run_state: settled passes a records-only diff" 0 "^settled: only records changed from $settle_at to $(git rev-parse --short=12 HEAD): docs/findings/settle.md openspec/changes/c/tasks.md$" state settled state "$settle_at"
+mkdir -p docs/backlog/carat/adapters
+echo "### a settled entry" >> docs/backlog/carat/adapters/tab_bar.rb.md
+commit "docs: an entry in the backlog folder"
+expect "run_state: settled passes a records-only diff in the backlog folder" 0 "^settled: only records changed from $settle_at to $(git rev-parse --short=12 HEAD): docs/backlog/carat/adapters/tab_bar[.]rb[.]md docs/findings/settle.md openspec/changes/c/tasks.md$" state settled state "$settle_at"
 echo "more" >> openspec/changes/c/tasks.md
 expect "run_state: settled refuses a dirty tree" 1 "^unsettled: tracked files differ from HEAD" state settled state "$settle_at"
 git_q checkout -- openspec/changes/c/tasks.md
@@ -3619,6 +3637,18 @@ expect "guard: the squash trailer is the gates' trailer" 0 "^same$" \
 # The settle's instruction records, kept in both scripts (review-trust-lows).
 expect "rules: the instruction records are the gates'" 0 "^same$" \
   sh -c 'l=$(grep "^INSTRUCTION_RECORDS_RE=" "$1/gates.sh"); [ -n "$l" ] && [ "$l" = "$(grep "^INSTRUCTION_RECORDS_RE=" "$1/run_state.sh")" ] && echo same' _ "$here"
+# records_case WANT PATH: PATH matches RECORDS_RE as its readers anchor it
+# (yes) or not (no); the backlog folder's Markdown files are records
+# beside docs/backlog.md (backlog-records-rule).
+records_case() {
+  expect "rules: RECORDS_RE reads $2 as records: $1" 0 "^$1\$" \
+    sh -c '. "$1/rules.sh"; if printf "%s\n" "$2" | grep -q -E "^($RECORDS_RE)"; then echo yes; else echo no; fi' _ "$here" "$2"
+}
+records_case yes docs/backlog.md
+records_case yes docs/backlog/_general.md
+records_case yes docs/backlog/carat/adapters/tab_bar.rb.md
+records_case no docs/backlogs.md
+records_case no docs/backlog/x.txt
 # ci_scope reads it through documentation, in tools/rules.sh.
 expect "rules: the records-only list is named once" 0 "^tools/rules.sh,RECORDS_RE ci_scope gates run_state,\$" \
   sh -c 'cd "$1" && printf "%s," "$(grep -l -F "docs/(backlog" *.sh | grep -v -x tools_test.sh | sed "s|^|tools/|")"; for f in ci_scope gates run_state; do grep -q -E "RECORDS_RE|documentation \"[$]" "$f.sh" && printf " %s" "$f"; done | sed "s/^/RECORDS_RE/"; echo ,' _ "$here"
@@ -4332,6 +4362,19 @@ echo "## an entry" >> docs/backlog.md
 echo "### a finding" >> docs/findings/security.md
 commit "docs: record the backlog and a finding"
 expect "gates: security passes after the backlog and findings only" 0 "ok   security: pass" gates security
+# settled_at reads the Markdown files of the backlog folder as records
+# (backlog-records-rule), never another file under it.
+mkdir -p docs/backlog/carat/adapters
+echo "## an entry" > docs/backlog/_general.md
+echo "## an entry" > docs/backlog/carat/adapters/tab_bar.rb.md
+commit "docs: record the backlog folder"
+expect "gates: security passes after the backlog folder's Markdown files only" 0 "ok   security: pass" gates security
+echo "text" > docs/backlog/x.txt
+commit "docs: a text file in the backlog folder"
+expect "gates: security refuses after a file of the backlog folder other than Markdown" 1 "code changed since" gates security
+git_q rm -q docs/backlog/x.txt
+commit "docs: drop the text file"
+expect "gates: security passes after the backlog folder's other file is gone" 0 "ok   security: pass" gates security
 # docs/goals.md is a record agents act on as instructions: a pass before an
 # edit of it is stale, although RECORDS_RE lists it (review-trust-lows).
 echo "# goals" > docs/goals.md
