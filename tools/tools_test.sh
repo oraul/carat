@@ -2155,6 +2155,22 @@ expect "run_state: review-due counts an item under a sub-heading of its sprint" 
 expect "run_state: review-due counts a pool item split from a counted sibling part" 0 "^counted u1-c\$" counted u1-c
 expect "run_state: review-due leaves a pool item out of the count" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
 expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-17 has 5 of 6 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10, u1-b, u1-c[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
+# An exception paragraph of one line puts out the changes it names in
+# backticks before "run" (x1, x2); a name it leaves bare (x3) stays counted
+# as its sprint item (contributor-tier-high).
+fresh sprintoutside
+printf 'sprint\tlast\nsprint-16\tseed\n' > docs/sprints.tsv
+printf '# Backlog\n' > docs/backlog.md
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
+printf '# Queue: backlog\n\n## Sprint 17\n\nThe user-approved exception (a date, a decision): `x1` and `x2` run in the backlog lane, outside the 3.\n\nThe user-approved exception (bare names): x3 and x4 run in the backlog lane, outside the 3.\n\n1. `x3` (T2 user request, estimated small): one.\n' > docs/queue-backlog.md
+commit "docs: the queue"
+for c in x1 x2 x3; do
+  echo "$c" >> README.md
+  commit "feat: $c"
+  state init "$c" "chore/$c" > /dev/null
+  state set "$c" merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+done
+expect "run_state: review-due leaves out the changes a one-line exception paragraph names in backticks before run, not a bare name" 1 "^not due: sprint-17 has 1 of 6 changes merged [(]x1, x2, x3[)]; not counted, outside the 3: x1, x2\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
 # 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).
@@ -4705,9 +4721,9 @@ for kind in resume areas record; do
 done
 expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
 expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
-# The contributor tier trial (docs/goals.md, Calibration): the contributor
-# alone runs on its agent file's tier; the planner, quality, security, and
-# close starts keep the session's, by the user's decision.
+# By the user's decision (docs/goals.md, Calibration), the contributor alone
+# runs on its agent file's tier at high effort; the planner, quality,
+# security, and close starts keep the session's.
 expect "calibration: the contributor runs on its agent file's tier at high effort" 0 "^agent/high$" profile_of contributor
 judged=""
 for kind in planner quality security close; do
