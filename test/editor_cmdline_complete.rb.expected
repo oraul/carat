@@ -1,0 +1,41 @@
+ok   Tab completes a command name
+ok   Tab completes a command name: tabe
+ok   Tab completes a command name: Shift-Tab takes the last
+ok   Many matches
+ok   Cycling back
+ok   Cycling back: Shift-Tab from the typed text
+ok   Cycling back: through every match
+ok   A directory
+ok   A file
+ok   A file: the next match
+ok   A file: back to the typed text
+ok   A file: every entry of the working directory, no dot file
+ok   A file: a dot file for a typed dot
+ok   A file: after w, sp, vs, and tabe
+ok   A file: after a bang
+ok   A path with a space
+ok   A path with a space: completed past the space
+ok   A path outside the working directory as typed
+ok   A path outside the working directory as typed: absolute
+ok   A path outside the working directory as typed: home
+ok   A path outside the working directory as typed: not otherwise
+ok   No match
+ok   No match: Tab again keeps the line
+ok   No match: no command begins so
+ok   An argument of another command is not completed
+ok   Completing in the middle of the line
+ok   Escape closes the menu first
+ok   Escape closes the menu first: a second Escape leaves
+ok   Typing closes the menu
+ok   Typing closes the menu: a cursor move
+ok   Typing closes the menu: a deletion
+ok   Typing closes the menu: a Tab after it completes afresh
+ok   Tab at another prompt does nothing
+ok   Tab at another prompt does nothing: the palette
+ok   The bounded directory read offers 1000 of 1001 entries
+ok   The popup stands above the command line: bordered, ending above the status bar, its text under the word's last name
+ok   The popup stands above the command line: the match in PmenuSel, the others in Pmenu
+ok   The popup stands above the command line: the typed characters in PmenuMatch
+ok   The popup stands above the command line: the typed text keeps the rows a menu, none selected
+ok   Tab at another prompt does nothing: Ctrl-N moves the palette
+editor_cmdline_complete: 40 passed, 0 failed

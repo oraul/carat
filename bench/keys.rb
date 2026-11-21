@@ -105,7 +105,9 @@ COLS = 200
 # "noguides", no plugin and the indent guides turned off, or "grep", the
 # finder alone over GREP_FILES files of GREP_LINES lines of the generated
 # Ruby text, whose grep picker the setup keys open; the palette scenario
-# opens the command palette with <F1> in its setup keys)
+# opens the command palette with <F1> in its setup keys, and the
+# cmdline-tab scenario the `:` prompt's completion popup over the working
+# directory with :e <Tab>)
 SCENARIOS = [
   ["lh", "lh", 10_000, 10_000, "NG", "code", "none"],
   ["j", "j", 9_000, 10_000, "gg", "code", "none"],
@@ -145,6 +147,7 @@ SCENARIOS = [
   ["n", "n", 3_000, 100_000, "gg/0 end<CR>", "code", "none"],
   ["finder", "f<BS>", 2_000, 1_000, " ffd", "code", "finder"],
   ["palette", "e<BS>", 2_000, 1_000, "NG<F1>", "code", "none"],
+  ["cmdline-tab", "<Tab><S-Tab>", 2_000, 1_000, "NG:e <Tab>", "code", "none"],
   ["grep", "count<BS><BS><BS><BS><BS>", 100, 1_000, " fg", "code", "grep"]
 ]
 FINDER_FILES = 10_000

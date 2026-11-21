@@ -6,8 +6,6 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 The user-approved exception (2026-11-21, the design council): `comment-operator` runs first in the feature lane after `facet-design-doc`, outside the 3.
 
-1. `cmdline-completion` (T2 user request, estimated medium): Where: `config/default.caratrc:800` (no `<Tab>`), `carat/ports/file_port.rb:41` (`list` reads every entry), `follow_palette.rb` (the `>` popup), `docs/compatibility.md:259`. Why: the council's user types every path in full, 0 completions at `:`; cmdline-editing's part 2, split at c281c9b. Fix outline: `<Tab>` at `:` completes a command name at the start (the ExHandlers, compatibility.md's precedence) and a path for `:e`, `:w`, `:sp`, `:vs`, `:tabe`, `:r`, `:cd`, relative to the working directory by the file port, no shell, directories ending `/`, outside only when typed (`../`, `/`, `~`), a bounded count per directory named in the doc; the popup above the line (Pmenu, PmenuSel, PmenuMatch, docs/design.md); `<Tab>`, `<S-Tab>` cycle and insert; `<C-n>`, `<C-p>` keep `>`'s meaning; Esc closes the menu, then the line; keymap, `make gen-config`, actions.md, compatibility.md (no `wildmode`/`wildoptions`, only paths), README. Accepted when a table test covers a name, a directory, a file, no match, many, cycling back, a space in a path, the bounded read; the popup within the cursor scenario's allocations; `lh` 25.0; each ADDED scenario names its test. Backlog: none.
-
 ## Pool
 
 1. `set-options` (T2 user request, estimated medium): numeric options PENDING (`set_command_handler.rb:29`); `hidden` on by default, `:colorscheme`, `showtabline`/`stal`, boolean switches.
@@ -29,8 +27,9 @@ The user-approved exception (2026-11-21, the design council): `comment-operator`
 
 ## Decisions
 
-- Security first (T0): none; 0 review.periodic in 3 pending runs; sprint-24 High 0, Medium 0 at 8+.
-- Order (T2 user request, council decision 2 of 2026-11-21): `cmdline-editing` is Sprint 25 feature 2, ahead of `folded-row`; the basics, then `folded-row`, `float-painter`, `ui-groups`, `picker-speed`, then wave 3.
-- Split (T2): 2 testable parts (9 editing keys; completion, popup, bounded read); `cmdline-completion` is feature 3.
-- Size (T2): medium; mediums 1.23M to 2.19M; showtabline 1.37M over, comment-operator 1.29M not; critical none.
-- Retro (T1): showtabline 3 to 6, backlog-per-file 2 to 5, the backlog lane's: findings file.
+- Security first (T0): none; 0 review.periodic in 3 pending runs (cmdline-editing, lane-isolation, review-in-openspec); sprint-24 High 0, Medium 0 at 8+.
+- Deliver (T2 user request, council decision 2 of 2026-11-21): `cmdline-completion` as Sprint 25 item 1 wrote it; Sprint 25 drained, 0 of 3 left, waits for `/sprint`.
+- Split (T2): none; 2 testable parts sharing one popup (command names; paths with the bounded read), under 3.
+- Size (T2): large, one up; the lane's last two medium over 1.2M (showtabline 1,365,817; cmdline-editing 1,418,893 in 131 min); critical d carat/drivers/disk_files.rb (typed `../`, `/`, `~` paths).
+- Acceptance (T1, cmdline-editing note 3): its rework round came from bench, grep allocs 774.4 to 779.9 after the check passed; allocations compared before the check.
+- Retro (T1): cmdline-editing 3 to 6 to the findings file, 4 into `scout-prune`, 5, 6 into the medium-budget entry; lane-isolation 1, 2, review-in-openspec 9 to 11 in backlog Pool 11.

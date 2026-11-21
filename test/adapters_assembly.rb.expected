@@ -71,6 +71,14 @@ ok   the plugin UI, in the palette
 ok   the search prompt, in the palette
 ok   the open float use case, in the key hints and the palette
 ok   the close float use case, in the key hints and the palette
+ok   the command line's completion menu
+ok   the close command line menu use case, in the key handler
+ok   the close float use case, in the command line's completion
+ok   the open float use case, in the command line's completion
+ok   the ex table, in the command line's completion
+ok   the command palette, in the command line's completion
+ok   the search prompt, in the command line's completion
+ok   the plugin UI, in the command line's completion
 ok   the action table, in the key hints and the palette
 ok   the action table
 ok   the dispatcher
@@ -100,4 +108,4 @@ ok   the gateway reads the shipped defaults through the file port it was given
 ok   the assembly and the gateway hold the one file port
 ok   a configuration without lines falls back to Vim's defaults
 ok   a configuration problem names its file and line
-adapters_assembly: 102 passed, 0 failed
+adapters_assembly: 110 passed, 0 failed

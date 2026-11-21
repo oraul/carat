@@ -42,6 +42,15 @@ module Carat
         raise NotImplementedError, "FilePort#list"
       end
 
+      # Returns the sorted names of at most limit entries of the directory,
+      # the first limit the system gives, so a huge directory costs limit
+      # reads; raises when the path is not a directory.
+      # @rbs dir: String
+      # @rbs limit: Integer
+      def list_first(dir, limit)
+        raise NotImplementedError, "FilePort#list_first"
+      end
+
       # Returns the Domain::PathInfo of the path: size in bytes, mtime in
       # seconds, directory and regular (following a link), and symlink (the
       # path itself); PathInfo.missing when nothing is there, while a link to

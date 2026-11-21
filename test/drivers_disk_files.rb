@@ -119,6 +119,18 @@ module DriversDiskFilesTest
       flags(files, "#{base}/#{name}")
     end
 
+    # Scenario: The bounded directory read (the driver stops at the limit).
+    listed = files.list_first("#{base}/tree", 2)
+    t.assert_equal([2, true], [listed.length, (listed - files.list("#{base}/tree")).empty?], "list_first reads at most the limit")
+    t.assert_equal(files.list("#{base}/tree"), files.list_first("#{base}/tree", 100), "list_first under the limit lists every entry, sorted")
+    missing = "listed"
+    begin
+      files.list_first("#{base}/missing", 2)
+    rescue StandardError
+      missing = "raised"
+    end
+    t.assert_equal("raised", missing, "list_first of a missing directory raises")
+
     t.assert_equal(["#{base}/tree/lib", "#{base}/outside", "#{base}/tree"], [files.real_path("#{base}/tree/alias"), files.real_path("#{base}/tree/out"), files.real_path("#{base}/linkroot")], "real_path resolves every link")
 
     # Creates through links: rows are [label, [root, path, directory],

@@ -37,6 +37,7 @@ module AdaptersKeyDecoderTest
       ["Ctrl and Shift arrows decode to their own keys: shift right", "\e[1;2C", [K::SHIFT_RIGHT]],
       ["ctrl shift left is ctrl left", "\e[1;6D", [K::CTRL_LEFT]],
       ["shift alt right is shift right", "\e[1;4C", [K::SHIFT_RIGHT]],
+      ["Shift-Tab decodes to its own key", "\e[Z", [K::SHIFT_TAB]],
       ["ctrl page down", "\e[6;5~", [K::CTRL_PAGE_DOWN]],
       ["ctrl page up", "\e[5;5~", [K::CTRL_PAGE_UP]],
       ["ctrl shift page down is ctrl page down", "\e[6;6~", [K::CTRL_PAGE_DOWN]],
@@ -88,11 +89,12 @@ module AdaptersKeyDecoderTest
       ["ctrl page down", K::CTRL_PAGE_DOWN, "\e[6;5~"],
       ["ctrl left", K::CTRL_LEFT, "\e[1;5D"],
       ["shift right", K::SHIFT_RIGHT, "\e[1;2C"],
+      ["Shift-Tab decodes to its own key: encode", K::SHIFT_TAB, "\e[Z"],
       ["alt x", 120 | K::ALT, "\ex"],
       ["unicode", 0x65E5, "日"]
     ]) { |code| Decoder.encode(code) }
 
-    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, K::CTRL_PAGE_UP, K::CTRL_PAGE_DOWN, K::SHIFT_LEFT, K::SHIFT_RIGHT, K::CTRL_LEFT, K::CTRL_RIGHT, 233, 120 | K::ALT]
+    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, K::CTRL_PAGE_UP, K::CTRL_PAGE_DOWN, K::SHIFT_LEFT, K::SHIFT_RIGHT, K::CTRL_LEFT, K::CTRL_RIGHT, K::SHIFT_TAB, 233, 120 | K::ALT]
     decoded = []
     round.each do |code|
       d = Decoder.new

@@ -822,6 +822,8 @@ module Carat
       keymap.cmdline <Down> cmdline.history_newer
       keymap.cmdline <C-n> palette.next
       keymap.cmdline <C-p> palette.previous
+      keymap.cmdline <Tab> cmdline.complete_next
+      keymap.cmdline <S-Tab> cmdline.complete_previous
 
       # Language commands: language.<name>.lsp, the language server to run.
       # A server starts on its own only in a directory under a root of

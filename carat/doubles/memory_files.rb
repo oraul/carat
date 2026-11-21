@@ -141,6 +141,19 @@ module Carat
         children(k).sort
       end
 
+      # Returns the sorted names of at most limit entries of a directory,
+      # the first limit as children lists them (its files, then its
+      # directories), raising for a path that is not one.
+      # @rbs dir: String
+      # @rbs limit: Integer
+      def list_first(dir, limit)
+        k = key(dir)
+        raise ArgumentError, "no such directory: #{dir}" unless @dirs.key?(k)
+        names = children(k)
+        names = names[0, limit].to_a if names.length > limit
+        names.sort
+      end
+
       # Returns the PathInfo of the path: the size of a file's text, zero
       # for a directory, a zero mtime, and the flags; PathInfo.missing for
       # a path that was never made.
