@@ -6,7 +6,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every fix is
 
 The user-approved exception (2026-11-21, the self-check council): `lane-isolation` runs first in the backlog lane, outside the 3.
 
-The user-approved exception (2026-11-21, the user's tier decision): `contributor-harness` runs in the backlog lane, outside the 3.
+The user-approved exception (2026-11-21, the self-check council): `contributor-harness` runs in the backlog lane, outside the 3.
 
 The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside the 3, after groom-evidence-only, `metrics-row-format` (T2 user request, pipeline defect, estimated medium, critical b tools/run_state.sh): 9 rows hold 12-character merged commits, authoring-kit's has no date; accepted when the rows are fixed and history and docs-lint refuse a malformed date, merged, or pr, a tools-test case each.
 
@@ -19,13 +19,13 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 2. `pipeline-lows-a` (T1 pipeline defect, security Lows (3) to (6), Medium (6), estimated large, batch 1, area 1, pushed back 1, reason: one pipeline change a sprint, critical a tools/run_state.sh): batch 1's area 1 security entries (`merge_main`, the records merge past a blocking finding, lane-open, the shared toolchain, `run_state set`, the forged pass record), "### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))", "### A fork's pull request on the pushed commit still delays a first push's wait", "### ci, main, and scan workflows pin their actions by tag", "### Queue edits after a security pass reach the next brief unreviewed (sprint-24 review security Low (3))", "### moved_change carried reviews across a branch-side docs/goals.md edit (review-trust-lows security Low (6))".
 3. `render-tidy` (T3 security Low (5), estimated large, pushed back 1, reason: untrusted-project Lows first, critical a carat/adapters/screen_presenter.rb): its 10 headings in Sprint 24 item 2 at 7156f43; 3 sprint-24 entries (trailing marks at a tab, the guide local, the winbar test).
 4. `review-trust-lows-c` (T1 pipeline defect, security Lows (5), estimated medium, critical a .claude/workflows/sprint-planning.js): "## Security Lows of the periodic review at 186ddfb", "### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))", 3 more (quality-only re-read, serial continuations, the quality cap).
-5. `plan-apply-stale`, `plan-brief-amend` (T1 pipeline defects, estimated small each, pushed back 1, critical b tools/run_state.sh): #263 applied a plan older than its queue, losing 5 items; a plan amending the brief never reaches the contributor, a 157,564-output round (contributor-tier-high 7); #278 lost 3 Decisions lines (backlog-per-file 3).
+5. `plan-apply-stale`, `plan-brief-amend`, `plan-cut-first` (T1 pipeline defects, estimated small each, pushed back 1, critical b tools/run_state.sh): #263 applied a plan older than its queue, losing 5 items; a plan amending the brief never reaches the contributor, a 157,564-output round (contributor-tier-high 7); #278 lost 3 Decisions lines (backlog-per-file 3); a plan's red-main queue cut waits for the package step, so the first check fails docs-lint (showtabline 4, first.check 0).
 6. `skill-guard` (T1 defect, Medium (6), estimated small, pushed back 3, reason: one pipeline change a sprint, critical a tools/agent_guard.sh): `agent_guard.sh:1071`.
 7. `lane-name-guards`, `groom-findings-refs` (T1 pipeline defects, security Low (4), estimated small each, pushed back 3, same reason, critical a tools/run_state.sh): "### Lane worktree trusts a branch-controlled build/pipeline", "### Merger's lane-close and contributor's merge-main accept any change name", "### Two security entries stay open though #214 fixed them".
 8. `records-bench-skip`, `budget-recalibrate` (T1 pipeline efficiency, estimated small each, pushed back 4, same reason, critical b tools/run_state.sh): bench up to 21.4 percent of output, 17.0 in a records run (sprint-24-records 10); small records rows 983,348 to 2,599,323 total; overruns 1,433,807, 2,119,140.
 9. `merge-wait-bound`, `areas-in-plan` (T1 pipeline efficiency, estimated small each, pushed back 2, critical b .claude/workflows/deliver-change.js): merge 142,172 of 518,649 output, ci_wait_calls 10 (border-vocabulary 2), 85,414, 56,469; 22.8 percent (comment-operator 2).
 10. `merge-body-check`, `check-runner-safety-bench`, `push-merge-guards`, `check-runner-safety-b`, `plan-needed-reviews` (T1 defects, estimated medium each, pushed back 4, same reason, critical b tools/run_state.sh).
-11. `nonblocking-round`, `card-once`, `check-at-head`, `head-form-restart`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `pr-claims`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): a 1-advisory round 278,527 of 724,443 output (review-in-openspec 10, border-vocabulary 3); the card twice, 6,996 of 6,999 bytes (review-in-openspec 11); check 16.8 to 35.4 percent of output (review-in-openspec 9); package 20 calls (border-vocabulary 4); records reviews 40.2 percent; bookkeeping claims, pr_text_fixes 5 of 12 (comment-operator 1); 0 of 3 packs reused (comment-operator 3); 14 self-check mismatches (backlog-per-file 4).
+11. `nonblocking-round`, `stale-advisories`, `card-once`, `check-at-head`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `pr-claims`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): a 1-advisory round 278,527 of 724,443 output (review-in-openspec 10, border-vocabulary 3), 2 rounds at blocking=0 (lane-isolation 1); 2 advisories offered, 0 open at head (lane-isolation 2); the card twice, 6,996 of 6,999 bytes (review-in-openspec 11); check 16.8 to 35.4 percent of output (review-in-openspec 9); package 20 calls (border-vocabulary 4); records reviews 40.2 percent; pr_text_fixes 6 of 13 (comment-operator 1, showtabline 6); 0 of 3 packs reused (comment-operator 3); 14 self-check mismatches, a match beside a docs-lint FAIL (backlog-per-file 4, showtabline 5).
 12. `rules-instruction-records` (T6 advisory, estimated small, critical b tools/rules.sh): the INSTRUCTION_RECORDS_RE entry; alone, first.
 13. `tools-docs-tidy` (T6, 20 sprint-24 findings, estimated large, area 1, split in 2): its groomed entries, `Makefile:209`.
 14. `explorer-sweep` (T6, estimated medium, batch 3, area 16, 10 of 20); `motions-editing-tidy` (T6, estimated large, area 6, 19 entries).
@@ -36,9 +36,9 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 
 ## Decisions
 
-- Security first (T0): none; 0 review.periodic in the 3 pending runs; sprint-24 High 0, Medium 0 at 8+.
-- Exception (T2 user request of 2026-11-21): `lane-isolation` first, outside the 3, backticked for queue_class (tools/run_state.sh:2597); folds Pool 6 and `queue-fit` (main at 18,297 of 17,969 bytes cost backlog-per-file a round); `backlog-per-file` merged fa889a3, its line dropped.
-- Size (T2): large; pipeline mediums 1.36M to 2.07M total; the last two over 1.2M (2,119,140, 1,433,807), one up.
-- No split (T2): 5 parts in 2 areas; the user asked all; a plan split misses the contributor (Pool 5).
-- Critical (T2): b tools/run_state.sh; tools/rules.sh untouched.
-- Retro (T1): backlog-per-file 3 to 5, comment-operator 1 to 5 in Pool 5, 8, 9, 11.
+- Security first (T0): none; 0 review.periodic in 3 pending runs.
+- Exception (T2 user request of 2026-11-21): `contributor-harness`, the brief's line; folds Pool 11 `head-form-restart`, backticked for queue_class.
+- Size (T2): large; pipeline mediums 1.36M to 2.12M total, 6 of 6 over 1.2M.
+- No split (T2): 2 testable parts in area 1; a plan split misses the contributor (Pool 5).
+- Critical (T2): b .claude/workflows/deliver-change.js; tools/rules.sh untouched.
+- Retro (T1): lane-isolation 1, 2, showtabline 4 to 6 in Pool 5, 11.

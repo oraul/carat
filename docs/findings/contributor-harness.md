@@ -7,3 +7,9 @@
 - Location: tools/agent_guard.sh (the hook's working directory is never read), and the agents' starting directory, the main checkout's tmp/.spinel, which every lane links as its tmp/.spinel.
 - Why: the check of contributor-harness at 142649463415 passed every stage and was voided by writes to tmp/.spinel/.git (FETCH_HEAD, a pack, refs/remotes/origin/master), whose reflog records a plain `fetch -q origin` at 18:28:13 UTC, the form the reviewers' and planner's step 1 runs, made from the agents' starting directory while the stages ran; no stage and no line of this change fetches there, so a sound check counted as failed and cost a round.
 - Fix: have tools/agent_guard.sh refuse a git call whose hook working directory is neither the project nor a tmp/.NAME worktree of it (or make the workflow start agents in the project), with a tools-test case for a fetch from tmp/.spinel.
+
+### The merger profile can run a lane worktree's copies of run_state.sh and ci_wait.sh
+- Location: tools/agent_guard.sh:717 (script_form, merger profile)
+- Why: security Low, confidence 6, predating this change: after `cd tmp/.lane-CHANGE` the merger profile still allows tools/run_state.sh and tools/ci_wait.sh, so a branch, or code its checks run, that rewrites either script in the lane worktree runs arbitrary code with the merger's GitHub merge rights, outside every guard form; task 7.1 of the change named this entry.
+- Fix: in script_form, refuse every tools/*.sh form of the merger profile while cd_worktree is set, as the open_pr.sh message and lane_facts.sh cases already are, keeping MERGE_GATES exempt as main's copy in tmp/.merge-gates; add a tools_test case for each refusal.
+none
