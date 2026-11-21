@@ -4,9 +4,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every fix is
 
 ## Sprint 25
 
-The user-approved exception (2026-11-21, the user's tier decision): `contributor-harness` runs in the backlog lane, outside the 3.
+The user-approved exception (2026-11-21, the self-check council): `lane-isolation` runs first in the backlog lane, outside the 3.
 
-The user-approved exception (2026-11-21, the user's backlog layout): `backlog-per-file` runs in the backlog lane, outside the 3.
+The user-approved exception (2026-11-21, the user's tier decision): `contributor-harness` runs in the backlog lane, outside the 3.
 
 The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside the 3, after groom-evidence-only, `metrics-row-format` (T2 user request, pipeline defect, estimated medium, critical b tools/run_state.sh): 9 rows hold 12-character merged commits, authoring-kit's has no date; accepted when the rows are fixed and history and docs-lint refuse a malformed date, merged, or pr, a tools-test case each.
 
@@ -19,26 +19,26 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 2. `pipeline-lows-a` (T1 pipeline defect, security Lows (3) to (6), Medium (6), estimated large, batch 1, area 1, pushed back 1, reason: one pipeline change a sprint, critical a tools/run_state.sh): batch 1's area 1 security entries (`merge_main`, the records merge past a blocking finding, lane-open, the shared toolchain, `run_state set`, the forged pass record), "### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))", "### A fork's pull request on the pushed commit still delays a first push's wait", "### ci, main, and scan workflows pin their actions by tag", "### Queue edits after a security pass reach the next brief unreviewed (sprint-24 review security Low (3))", "### moved_change carried reviews across a branch-side docs/goals.md edit (review-trust-lows security Low (6))".
 3. `render-tidy` (T3 security Low (5), estimated large, pushed back 1, reason: untrusted-project Lows first, critical a carat/adapters/screen_presenter.rb): its 10 headings in Sprint 24 item 2 at 7156f43; 3 sprint-24 entries (trailing marks at a tab, the guide local, the winbar test).
 4. `review-trust-lows-c` (T1 pipeline defect, security Lows (5), estimated medium, critical a .claude/workflows/sprint-planning.js): "## Security Lows of the periodic review at 186ddfb", "### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))", 3 more (quality-only re-read, serial continuations, the quality cap).
-5. `plan-apply-stale`, `plan-brief-amend` (T1 pipeline defects, estimated small each, pushed back 1, critical b tools/run_state.sh): #263 applied a plan older than its queue, losing 5 items; a plan amending the brief never reaches the contributor, a 157,564-output round (contributor-tier-high 7).
-6. `check-lane-scratch` (T1 pipeline defect, estimated small, pushed back 2, critical b tools/run_state.sh): another lane's bench log and metrics write failing a check, 2 entries.
-7. `skill-guard` (T1 defect, Medium (6), estimated small, pushed back 3, reason: one pipeline change a sprint, critical a tools/agent_guard.sh): `agent_guard.sh:1071`.
-8. `lane-name-guards`, `groom-findings-refs` (T1 pipeline defects, security Low (4), estimated small each, pushed back 3, same reason, critical a tools/run_state.sh): "### Lane worktree trusts a branch-controlled build/pipeline", "### Merger's lane-close and contributor's merge-main accept any change name", "### Two security entries stay open though #214 fixed them".
-9. `records-bench-skip`, `budget-recalibrate` (T1 pipeline efficiency, estimated small each, pushed back 4, same reason, critical b tools/run_state.sh): bench up to 21.4 percent of output, 17.0 in a records run (sprint-24-records 10); small records rows 983,348 to 2,599,323 total.
-10. `merge-wait-bound`, `areas-in-plan` (T1 pipeline efficiency, estimated small each, pushed back 2, critical b .claude/workflows/deliver-change.js): merge 142,172 of 518,649 output, ci_wait_calls 10 (border-vocabulary 2), 85,414, 56,469.
-11. `merge-body-check`, `check-runner-safety-bench`, `push-merge-guards`, `check-runner-safety-b`, `plan-needed-reviews` (T1 defects, estimated medium each, pushed back 4, same reason, critical b tools/run_state.sh).
-12. `nonblocking-round`, `card-once`, `check-at-head`, `head-form-restart`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `queue-fit`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): a 1-advisory round 278,527 of 724,443 output (review-in-openspec 10, border-vocabulary 3); the card twice, 6,996 of 6,999 bytes (review-in-openspec 11); check 16.8 to 35.4 percent of output (review-in-openspec 9); package 20 calls (border-vocabulary 4); records reviews 40.2 percent.
-13. `rules-instruction-records` (T6 advisory, estimated small, critical b tools/rules.sh): the INSTRUCTION_RECORDS_RE entry; alone, first.
-14. `tools-docs-tidy` (T6, 20 sprint-24 findings, estimated large, area 1, split in 2): its groomed entries, `Makefile:209`.
-15. `explorer-sweep` (T6, estimated medium, batch 3, area 16, 10 of 20); `motions-editing-tidy` (T6, estimated large, area 6, 19 entries).
-16. `plugins-tidy` (T6, estimated large, 10 sprint-24 findings); `tests-tidy` (T6, estimated small, 4); `drivers-lsp-tidy-b` (T6, estimated medium, area 17's last 9).
-17. `use-case-surface-c`, `-d` (T2 user request, estimated medium each, pushed back 5, reason: the waves first).
-18. `ex-commands-tidy-b` (T4, estimated medium, pushed back 2): 5 entries (Ex ranges, ExRange, OpenFile, containment, 64 MiB strings).
-19. `visual-star-selection` (T5, estimated small, pushed back 1); `tokenizer-languages` (T5, estimated medium, feature lane).
+5. `plan-apply-stale`, `plan-brief-amend` (T1 pipeline defects, estimated small each, pushed back 1, critical b tools/run_state.sh): #263 applied a plan older than its queue, losing 5 items; a plan amending the brief never reaches the contributor, a 157,564-output round (contributor-tier-high 7); #278 lost 3 Decisions lines (backlog-per-file 3).
+6. `skill-guard` (T1 defect, Medium (6), estimated small, pushed back 3, reason: one pipeline change a sprint, critical a tools/agent_guard.sh): `agent_guard.sh:1071`.
+7. `lane-name-guards`, `groom-findings-refs` (T1 pipeline defects, security Low (4), estimated small each, pushed back 3, same reason, critical a tools/run_state.sh): "### Lane worktree trusts a branch-controlled build/pipeline", "### Merger's lane-close and contributor's merge-main accept any change name", "### Two security entries stay open though #214 fixed them".
+8. `records-bench-skip`, `budget-recalibrate` (T1 pipeline efficiency, estimated small each, pushed back 4, same reason, critical b tools/run_state.sh): bench up to 21.4 percent of output, 17.0 in a records run (sprint-24-records 10); small records rows 983,348 to 2,599,323 total; overruns 1,433,807, 2,119,140.
+9. `merge-wait-bound`, `areas-in-plan` (T1 pipeline efficiency, estimated small each, pushed back 2, critical b .claude/workflows/deliver-change.js): merge 142,172 of 518,649 output, ci_wait_calls 10 (border-vocabulary 2), 85,414, 56,469; 22.8 percent (comment-operator 2).
+10. `merge-body-check`, `check-runner-safety-bench`, `push-merge-guards`, `check-runner-safety-b`, `plan-needed-reviews` (T1 defects, estimated medium each, pushed back 4, same reason, critical b tools/run_state.sh).
+11. `nonblocking-round`, `card-once`, `check-at-head`, `head-form-restart`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `pr-claims`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): a 1-advisory round 278,527 of 724,443 output (review-in-openspec 10, border-vocabulary 3); the card twice, 6,996 of 6,999 bytes (review-in-openspec 11); check 16.8 to 35.4 percent of output (review-in-openspec 9); package 20 calls (border-vocabulary 4); records reviews 40.2 percent; bookkeeping claims, pr_text_fixes 5 of 12 (comment-operator 1); 0 of 3 packs reused (comment-operator 3); 14 self-check mismatches (backlog-per-file 4).
+12. `rules-instruction-records` (T6 advisory, estimated small, critical b tools/rules.sh): the INSTRUCTION_RECORDS_RE entry; alone, first.
+13. `tools-docs-tidy` (T6, 20 sprint-24 findings, estimated large, area 1, split in 2): its groomed entries, `Makefile:209`.
+14. `explorer-sweep` (T6, estimated medium, batch 3, area 16, 10 of 20); `motions-editing-tidy` (T6, estimated large, area 6, 19 entries).
+15. `plugins-tidy` (T6, estimated large, 10 sprint-24 findings); `tests-tidy` (T6, estimated small, 4); `drivers-lsp-tidy-b` (T6, estimated medium, area 17's last 9).
+16. `use-case-surface-c`, `-d` (T2 user request, estimated medium each, pushed back 5, reason: the waves first).
+17. `ex-commands-tidy-b` (T4, estimated medium, pushed back 2): 5 entries (Ex ranges, ExRange, OpenFile, containment, 64 MiB strings).
+18. `visual-star-selection` (T5, estimated small, pushed back 1); `tokenizer-languages` (T5, estimated medium, feature lane).
 
 ## Decisions
 
-- Security first (T0): none; pending border-vocabulary and review-in-openspec hold 0 review.periodic, sprint-24 High 0, Medium 0 at 8+.
-- Order (T2 user request of 2026-11-21): `backlog-records-rule` first, alone, outside Sprint 25's 3; `backlog-per-file` (stopped at 3102188) next by its line; `review-in-openspec` merged at 3102188 (#274).
-- Rules first (T2): `tools/rules.sh:69` RECORDS_RE matched only `docs/backlog.md`, so the merge gate holds docs/backlog/ before the move; `rules-instruction-records` (Pool 13) stays apart.
-- Names backticked (T1): queue_class (`tools/run_state.sh:2597`) counts an exception only for a backticked name (contributor-tier-high 1).
-- Retro (T1): border-vocabulary 2, 3, 4 and review-in-openspec 9, 10, 11 in Pool 10, 12; overruns (review-in-openspec 8, contributor-tier-high 12) in Pool 9 `budget-recalibrate`; tabs-only-dot's (border-vocabulary 5) the feature lane's.
+- Security first (T0): none; 0 review.periodic in the 3 pending runs; sprint-24 High 0, Medium 0 at 8+.
+- Exception (T2 user request of 2026-11-21): `lane-isolation` first, outside the 3, backticked for queue_class (tools/run_state.sh:2597); folds Pool 6 and `queue-fit` (main at 18,297 of 17,969 bytes cost backlog-per-file a round); `backlog-per-file` merged fa889a3, its line dropped.
+- Size (T2): large; pipeline mediums 1.36M to 2.07M total; the last two over 1.2M (2,119,140, 1,433,807), one up.
+- No split (T2): 5 parts in 2 areas; the user asked all; a plan split misses the contributor (Pool 5).
+- Critical (T2): b tools/run_state.sh; tools/rules.sh untouched.
+- Retro (T1): backlog-per-file 3 to 5, comment-operator 1 to 5 in Pool 5, 8, 9, 11.
