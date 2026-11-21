@@ -28,3 +28,8 @@
 ## 6. Checks
 
 - [ ] 6.1 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
+
+## 7. Quality review
+
+- [x] 7.1 The script header of `tools/run_state.sh` still gave `build/metrics/current.tsv` as METRICS_OUT's only default and said an escape fails the check: name the lane default and the escaped verdict. Fixed.
+- [x] 7.2 An escaped check also rewrites the derived passes it wrote (carried, scoped, compiled), which the next check derives again or runs: safe, recorded as a design note in `design.md`, no code change. Fixed in the design text.

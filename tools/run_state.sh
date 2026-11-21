@@ -57,8 +57,9 @@
 # clone for each check (TMPDIR) and removes on exit; every stage runs in
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
 # pipeline, stages, and plan) and METRICS_OUT gets its metrics. The clone
-# holds its own copy of the toolchain; a stage that wrote outside the clone
-# (escaped_paths) fails the check.
+# holds its own copy of the toolchain; files changed outside the clone
+# while every stage exited 0 (escaped_paths) void the check: its verdict
+# reads escaped and its passes are rewritten as not passing.
 #
 # History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
 # per merged change in its lane's file (lane), appended by history
@@ -427,7 +428,9 @@
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
 # unset), MAKE (make), METRICS_PREFIX (docs/metrics, the lane files
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
-# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits),
+# (build/metrics/current.tsv, under tmp/.lane-CHANGE/ when run from the
+# main checkout while that lane exists), CHECK_WAIT (540, seconds check
+# waits),
 # BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
 # date groom files a findings entry with, else the UTC day),
 # SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR (build/plan).
