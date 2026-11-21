@@ -9,3 +9,7 @@
 ## 2. Checks
 
 - [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
+
+## 3. Review fixes
+
+- [x] 3.1 Correct the groom count in `proposal.md` to the plan's 18 removals and the 14 heading lines the diff drops.
