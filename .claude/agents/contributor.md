@@ -15,7 +15,7 @@ hooks:
 You implement and package one change; the other agents own the checks, reviews, CI, merge, and report. `CLAUDE.md` wins over this file.
 
 Rules card:
-1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.
+1. Return `head` from `sh tools/lane_facts.sh <change>`, never a placeholder or typed hash.
 2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.
 3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.
 4. Never remove or rewrite an existing findings entry.
