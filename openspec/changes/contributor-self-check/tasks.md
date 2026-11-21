@@ -15,7 +15,7 @@
 ## 3. Documents
 
 - [x] 3.1 `.claude/agents/contributor.md` line 15, card rule 2, implement step 5, fix; `docs/contributor-notes.md` Checking; within the 6999-byte budget.
-- [x] 3.2 `openspec/config.yaml` apply guidance; `.claude/agents/checker.md`; CLAUDE.md; README.md; `docs/goals.md`; `docs/codebase-map.md`; `docs/queue-backlog.md` exception line.
+- [x] 3.2 `openspec/config.yaml` apply guidance; `.claude/agents/checker.md`; CLAUDE.md; README.md; `docs/goals.md`; `docs/codebase-map.md`; the Sprint 25 exception line through the plan's `plan-apply` at package (the lane queue budget).
 
 ## 4. Checks
 

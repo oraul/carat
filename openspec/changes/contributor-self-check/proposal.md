@@ -12,7 +12,7 @@ A workflow start cannot continue a finished agent, so every failed check sent ba
 - `deliver-change.js`: the contributor's schema gains `check` (the verdict line of its last check, verbatim) and `check_runs`; an implement or fix result whose `check` says every stage passed at its returned head, over a lane whose `machinery` is `no`, makes the checker's check back that head, so the stages passed there are skipped and the checker still runs spent, bench, the metric line, and moved; any other claim leaves the backed commit at `phase.check`, and a false claim only costs the stage run. A `self_fix` metric sums each start's check runs after its first. `CALL_CAPS` implement 90 to 110 and fix 40 to 60; the self-check prompt and the card's rule 2 ask for the check.
 - `.claude/agents/contributor.md`: maxTurns 140 to 170 (the caps formula), line 15 and card rule 2 reworded, implement step 5 and fix pointing at a new Checking section of `docs/contributor-notes.md`, within the file's budget.
 - `openspec/config.yaml` apply guidance orders the session: tasks, quality tasks and fixes, commit, docs-lint and gates, merge-main if behind, the check and its fixes, return.
-- `.claude/agents/checker.md`, CLAUDE.md (Git workflow and Agents), README.md (pipeline steps 3 to 5), `docs/goals.md`, and `docs/codebase-map.md` follow; `docs/queue-backlog.md` gets the Sprint 25 exception line.
+- `.claude/agents/checker.md`, CLAUDE.md (Git workflow and Agents), README.md (pipeline steps 3 to 5), `docs/goals.md`, and `docs/codebase-map.md` follow; the Sprint 25 exception line comes through this change's plan, whose `docs/queue-backlog.md` holds it verbatim and which the package step's `plan-apply` copies, since the line alone would put the lane queue over its budget before the plan removes the items this change folds.
 
 Out of scope: `tools/rules.sh` (untouched); the handling of security findings (security-advisories-record's); the feature lane's files, `docs/metrics-feature.tsv` included, so `self_fix` stays a run-state metric with no history column (recorded in the findings file); the guard is read from main, so this delivery runs the old path and its tools-test proves the new one.
 
@@ -34,7 +34,7 @@ None.
 
 ## Impact
 
-- `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/lane_facts.sh`, `tools/tools_test.sh`, `.claude/workflows/deliver-change.js`, `.claude/agents/contributor.md`, `.claude/agents/checker.md`, `docs/contributor-notes.md`, `openspec/config.yaml`, `docs/goals.md`, `docs/queue-backlog.md`.
+- `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/lane_facts.sh`, `tools/tools_test.sh`, `.claude/workflows/deliver-change.js`, `.claude/agents/contributor.md`, `.claude/agents/checker.md`, `docs/contributor-notes.md`, `openspec/config.yaml`, `docs/goals.md`.
 - CLAUDE.md: the Git workflow line names the check's stages, push counts unchanged; Agents says the contributor checks itself and the checker confirms from its passing head.
 - README.md: the pipeline steps 3 to 5 follow.
 - docs/codebase-map.md: area 1's entries of `lane_facts.sh`, `run_state.sh`, `agent_guard.sh`, and `deliver-change.js` follow.
