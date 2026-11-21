@@ -13,7 +13,8 @@ Adds `option.showtabline`, Neovim's 0, 1, or 2, so the top tab row never shows, 
 - Add `option.showtabline 2` to config/default.caratrc and its generated mirror, while an `Options` built in code keeps 1, the earlier rule.
 - Add `showtabline` and `stal` to the `:set` words that answer Not implemented, since `:set` handles no numeric option yet.
 - Change the test configuration `FixedConfig.defaults` to append `option.showtabline 1` so existing frame snapshots stay as they are, and add `FixedConfig.shipped` for the shipped defaults alone.
-- Add table-driven rows for each value with one and with two files in the options, arrange view, frame presenter, and editor tab tests, plus `:set showtabline` and `:set stal` rows in the syntax test.
+- Add table-driven rows for each value with one and with two files, the modified mark, and no file listed to the frame presenter test, and value, refusal, and shipped-default checks to the options test.
+- Add a table of values, tab pages, and files plus window position checks under 2 and 0 to the arrange view test, editor checks of 2 with one file, 0 with two files, and the shipped configuration with one file to the editor tab test, and `:set showtabline` and `:set stal` checks to the syntax test.
 - Change the smoke test's window-move cursor row and PageDown page lines for the tab row the shipped default now shows on one file.
 - Document the option in the buffer-tabs and config-files specs, docs/compatibility.md, the README option list, docs/architecture.md, docs/design.md, and the code map.
 
