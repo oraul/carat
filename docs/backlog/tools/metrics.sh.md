@@ -1,0 +1,66 @@
+# Backlog: tools/metrics.sh
+
+## metrics compare passes a strict metric missing from the run
+
+- Where: `compare` in `tools/metrics.sh` line 86 at 38628bb (periodic quality). Queued in `run-budgets-tidy`. Raised again at be4b63a, notes 23 and 43 (owner `run-budgets-tidy`).
+- Why it matters: only the current names are walked, so an `allocs.*` or `rounds.*` name of the base that the run lacks passes, against the header's rule.
+- Fix outline: fail each strict base name not seen, with a `tools/tools_test.sh` case.
+- Raised again at 6a0db20 (periodic quality, note 47): `tools/metrics.sh:86`. Owner: queue item `run-budgets-tidy`.
+- Also: tools/tools_test.sh
+- Category: pipeline
+- Added: 2026-11-09
+
+## metrics.sh ignores a failed field read
+
+- Where: `tools/metrics.sh` lines 55 and 57 at 3895e21 (`set --` from `analysis_budget.sh --fields`). Periodic quality advisory. Queue item `run-budgets-tidy`.
+- Why it matters: a failure stops on `set -u` with an unclear message and leaves the temporary output file.
+- Fix outline: read the fields into a variable with `|| die`, check both, and remove the temporary file on failure.
+- Category: pipeline
+- Added: 2026-11-09
+
+### metrics compare ignores a missing figure
+
+- Location: tools/metrics.sh:86 and :55 (sprint-4 sweep, quality).
+- Why: compare walks only CURRENT, so a base scenario with no current line passes; line 55 splits fields unquoted, so a ? field globs.
+- Fix: fail each strict base name not seen; read the fields with read.
+- Category: pipeline
+- Added: 2026-11-14
+
+### metrics.sh compare passes a base key the current run lacks
+- Location: tools/metrics.sh:86
+- Why: compare reads only CURRENT's names, so an allocs.* or rounds.* key in BASE that CURRENT lacks passes, though the header says a value not measured fails. Folded into tools-docs-tidy.
+- Fix: print FAIL in END for each strict base key never seen in CURRENT.
+- Category: pipeline
+- Added: 2026-11-17
+
+### metrics.sh compare passes a base name never measured
+
+- Location: tools/metrics.sh:85, :17 (sweep, quality).
+- Why: compare walks only the current file, so a strict base allocs or rounds name missing from the current run passes, against the header.
+- Fix outline: mark names seen and fail every unseen strict base name in END.
+- Category: pipeline
+- Added: 2026-11-17
+
+### Tools pass what their usage says fails (sprint-18 sweep quality)
+- Location: `tools/metrics.sh:86`; `tools/gates.sh:266`; `tools/run_state.sh:2538`; `tools/spec_validate.sh:25`; `tools/ci_scope.sh:80`.
+- Why it matters: compare passes a base name CURRENT lacks; `has()` matches paths as a regex; backlog-oldest skips `####` entries backlog-pick takes; only the last spec preview survives; the push path calls one endpoint twice.
+- Fix outline: fail every unseen strict base name; `grep -q -x -F`; one heading test in ENTRY_AWK; a preview directory per change; one gh call.
+- Also: tools/gates.sh, tools/run_state.sh, tools/spec_validate.sh, tools/ci_scope.sh
+- Category: pipeline
+- Added: 2026-11-18
+
+### tools/metrics.sh:110: compare walks only the names of CURRENT, so an (sprint-22 sweep quality)
+
+- Location: `tools/metrics.sh:110`
+- Why: compare walks only the names of CURRENT, so an allocs or rounds name present in BASE and missing from CURRENT passes silently, against the usage (fail when not measured) and unlike run_state.sh bench_compare, which reports it as none
+- Fix: in END, fail for each strict base name not seen
+- Category: pipeline
+- Added: 2026-11-20
+
+### metrics compare passes a strict base name the current run lacks (sprint-24 sweep quality)
+
+- Location: `tools/metrics.sh:104`
+- Why: compare walks only CURRENT's names, so an allocs or rounds name in BASE that the bench did not print passes, and an empty value counts as 0, though the usage says a value not measured fails.
+- Fix: fail in END for every unseen strict base name and treat an empty value as unmeasured.
+- Category: pipeline
+- Added: 2026-11-21

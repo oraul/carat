@@ -1,0 +1,143 @@
+# Backlog: tools/open_pr.sh
+
+## pr-on-push quality advisory at tools/open_pr.sh:43
+
+- Where: `tools/open_pr.sh:43`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: BRANCH_RE takes no dot or nested slash while branch-push.yml fires on every type/** push, so a push of release/1.2.0 (the example in CLAUDE.md) turns open-pr red.
+- Fix outline: have read print nothing to open and exit 0 for a branch it does not take, or narrow the branch-push filter to match.
+- Also: CLAUDE.md
+- Category: pipeline
+- Added: 2026-11-11
+
+## pr-on-push quality advisory at tools/open_pr.sh:112
+
+- Where: `tools/open_pr.sh:112`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: WAIT_STEP=0 passes the [0-9]{1,3} check and waited never grows, so wait polls origin forever.
+- Fix outline: match [1-9][0-9]{0,2}.
+- Category: pipeline
+- Added: 2026-11-11
+
+## pr-on-push quality advisory at tools/open_pr.sh:180
+
+- Where: `tools/open_pr.sh:180`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
+- Why it matters: the read-back looks the pull request up by branch name (gh pr view "$branch") instead of the URL gh pr create printed, so a branch with an earlier pull request can compare the wrong one.
+- Fix outline: keep the create output and pass that URL to both gh pr view calls.
+- Category: pipeline
+- Added: 2026-11-11
+
+## pr-on-push quality advisory at tools/open_pr.sh:126
+
+- Where: `tools/open_pr.sh:126`. Delivery review of `pr-on-push` (quality advisory) at a2d4b6c.
+- Why it matters: wait counts only its sleeps toward SECONDS, not the up to 55 git ls-remote reads of origin, so a slow origin pushes the 540 s poll past the 600000 ms Bash timeout contributor.md:51 now sets and the tool kills it before its refuse message.
+- Fix outline: stop on a deadline from date +%s, or lower MAX_WAIT to leave the reads room.
+- Category: pipeline
+- Added: 2026-11-11
+
+### The branch types are written in three places (`sprint-1` review quality)
+
+- Location: `tools/open_pr.sh:43` (BRANCH_RE), `tools/agent_guard.sh:101` (BRANCH), `.github/workflows/branch-push.yml:10` (branches).
+- Why it matters: adding a type to one list silently breaks the open-pr path.
+- Fix outline: a tools-test check that the three lists match, or one derived from another. Queue item `open-pr-tidy`.
+- Also: tools/agent_guard.sh, .github/workflows/branch-push.yml
+- Category: pipeline
+- Added: 2026-11-12
+
+### One title and body equality helper in open_pr.sh (quality advisory)
+
+- Where: `tools/open_pr.sh:186`
+- Why it matters: the title and body equality test is written twice, in the early exit and in the read-back loop, so the two can drift.
+- Fix outline: one `same_text DIR` helper used by both.
+- Category: pipeline
+- Added: 2026-11-14
+
+### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
+
+- Location: tools/open_pr.sh:180 (sprint-4 review and sweep, security Low (5)).
+- Why: `gh pr list --head` counts fork pull requests with the predictable head name while view and edit by branch resolve only the same-repository head, so any user can make the count wrong (open refused) or have the title and body edit target the wrong one with PR_TOKEN.
+- Fix: count only same-repository heads, resolve one number, pass it to view and edit; a tools_test case with a cross-repository stand-in.
+- Category: security
+- Added: 2026-11-14
+
+### open_pr.sh's wait step, double read, and branch pattern
+
+- Location: tools/open_pr.sh:121, :82, :45 (sprint-4 sweep, quality).
+- Why: WAIT_STEP=0 passes its check and wait polls forever; two gh pr view calls read title and body; BRANCH_RE copies agent_guard.sh:101 with no equality case.
+- Fix: require a step from 1; one view call; a tools_test equality case.
+- Category: pipeline
+- Added: 2026-11-14
+
+### checks-and-pr-lows security Low (3): open_pr wait records a lone matching pull request of unknown origin
+- Location: tools/open_pr.sh:135
+- Why: if a fork opens a pull request on the pushed commit before open-pr opens ours (a race the attacker has to automate), that fork's number is recorded with nothing earlier to compare it against, and the merger would read and squash-merge a pull request whose title the attacker controls.
+- Fix: have open-pr publish the number it opened where wait can read it (the workflow log, a commit status, or an artifact), or have the merger check that the pull request's head repository is this repository before merging.
+- Category: security
+- Added: 2026-11-17
+
+### checks-and-pr-lows correctness: open_pr wait can replace a recorded pull request number
+- Location: tools/open_pr.sh:135
+- Why: a single number on the pushed head is taken even when the run state already records a different pr, so a later push can overwrite the branch's pull request number with another one, a fork's included.
+- Fix: when pr is recorded, accept only that number and keep waiting otherwise.
+- Category: pipeline
+- Added: 2026-11-17
+
+### Scanner errors pass the text gates
+
+- Location: tools/open_pr.sh:76, tools/gates.sh:208, :520, tools/docs_lint.sh:95, tools/scan_text.sh:82, :90 (sweep, quality).
+- Why: the callers judge only the scanner's output, so an exit 2 with no output passes; --diff mode with a missing FILE scans nothing.
+- Fix outline: fail on an exit other than 0 or 1, as pr_scan.sh does, and check each --diff FILE exists.
+- Also: tools/gates.sh, tools/docs_lint.sh, tools/scan_text.sh
+- Category: pipeline
+- Added: 2026-11-17
+
+### Pull request finding counts are hand-written and checked after the push (closing-loop retro 11)
+- Location: `tools/open_pr.sh` (the body gate before the first push)
+- Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
+- Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
+- Category: pipeline
+- Added: 2026-11-19
+
+### Pull request finding counts are hand-written and checked after the push (closing-loop retro 11)
+- Location: `tools/open_pr.sh` (the body gate before the first push)
+- Why: two counts were wrong in closing-loop's body (Changes "two non-blocking advisories" against 5 entries, 4 distinct; Testing "one advisory"), costing a body round and a second push: prtext 5,495 output tokens / 11 calls, pr_text_fixes 1, pushes 2.
+- Fix: refuse before the first push a body whose finding counts differ from the run state's reviews or the findings file, or keep counts out of the body; accepted when the next runs record no prtext phase from a count.
+- Category: pipeline
+- Added: 2026-11-19
+
+### Gh pr list/view/edit --head BRANCH also match a fork's pull request of (sprint-20 sweep security Low (5), open_pr.sh:196)
+
+- Location: `tools/open_pr.sh:196`
+- Why: gh pr list/view/edit --head BRANCH also match a fork's pull request of the same branch name, so open-pr with PR_TOKEN can edit the fork's title and body instead of opening ours, or be blocked by it
+- Fix: list with --json number,isCrossRepository, keep only same-repository pull requests, and view or edit by number
+- Category: security
+- Added: 2026-11-19
+
+### A pull request's benchmark figure can compare different builds and sources
+
+- Location: tools/open_pr.sh (the Testing section) and the run state's us_per_key (no grep scenario figure recorded)
+- Why: the finder-grep-c body (retro 6) says 25.3 ms per key (dev budget build, bench-budget log) against about 45 ms before (release, the proposal's estimate), while its implement start measured 3.2 ms against main's 12.5 ms in release on the same scenario.
+- Fix: record the grep scenario figure in the run state and let the Testing section cite only recorded run-state or stage-log figures, any before figure main's at the same build and scenario; accepted when a body citing an unrecorded timing is refused.
+- Category: pipeline
+- Added: 2026-11-20
+
+### tools/open_pr.sh:132: WAIT_STEP=0 passes the [0-9]{1,3} check, and the wait loop (sprint-22 sweep quality)
+
+- Location: `tools/open_pr.sh:132`
+- Why: WAIT_STEP=0 passes the [0-9]{1,3} check, and the wait loop then never advances waited, so it spins until killed
+- Fix: refuse 0, accepting 1 to 999, with a tools-test case
+- Category: pipeline
+- Added: 2026-11-20
+
+### A fork's pull request on the pushed commit still delays a first push's wait
+- Location: `tools/open_pr.sh` `wait` (the several-numbers refusal)
+- Why: git shows no head repository, so a fork that opens a pull request on the pushed commit before the run state records a number makes the wait refuse; the merger now refuses a fork's pull request, but the delivery stops until the number is set by hand.
+- Fix: have the open-pr workflow publish the number it opened or edited where git can read it (for example a check run name on the head the wait reads through the merger), or let the merger resolve the number from the branch with the GitHub read tool.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
+- Location: tools/open_pr.sh:142-151 (several numbers on the pushed head refused)
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+- Also: docs/queue-backlog.md
+- Category: security
+- Added: 2026-11-21

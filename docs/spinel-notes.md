@@ -1,6 +1,6 @@
 # Spinel notes
 
-Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL_REF` in the `Makefile`). Each note gives the rule, why, and what enforces it; a note marked open has an item in `docs/backlog.md` and is rechecked when the pin is bumped. The notes are binding for all code under `carat/`, `bin/`, `test/`, and `bench/`: `CLAUDE.md` and `docs/architecture.md` state the rules and point here for the detail. Golden files that follow every note are listed in `docs/examples.md`.
+Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL_REF` in the `Makefile`). Each note gives the rule, why, and what enforces it; a note marked open has an item in `docs/backlog/` and is rechecked when the pin is bumped. The notes are binding for all code under `carat/`, `bin/`, `test/`, and `bench/`: `CLAUDE.md` and `docs/architecture.md` state the rules and point here for the detail. Golden files that follow every note are listed in `docs/examples.md`.
 
 ## Language and library
 
@@ -68,5 +68,5 @@ Every Spinel pitfall this project has met, once, at the pinned compiler (`SPINEL
 - `spin` treats every visible directory as project source (it reports foreign `.c` files and feeds every `.rbs` to the compiler), so the Spinel checkout and the toolchain live in the hidden `tmp/.spinel` and `tmp/.toolchain`, and generator templates live inside `tools/new.sh`, not as `.rb` files.
 - `spin test` compares a program without a snapshot against `ruby` from the `PATH`, and `--regen` writes snapshots from it. Every `make` target puts the refusing stub `tools/noruby/ruby` first, `make no-cruby` proves it, and tests and snapshots run only through `make`.
 - Spinel's build generates one header with a CRuby script; it is vendored as `tools/spinel/spinel_rt_responds_generated.h` and regenerated in the pull request that bumps `SPINEL_REF` with `make spinel-header`, whose `tools/spinel/gen_respond_to_tables.rb` ports the script's reading part to Spinel (it matched CRuby's output byte for byte at 001419ff). A bump whose generator scripts in Spinel's `tools/` changed ports the change there first.
-- Open: `make types` leaves `build/carat.rbs`, which later `spin` runs fail to parse and warn about; delete it after use (backlog: "make types leaves build/carat.rbs that a later spin build warns about").
+- Open: `make types` leaves `build/carat.rbs`, which later `spin` runs fail to parse and warn about; delete it after use (backlog, `docs/backlog/Makefile.md`: "make types leaves build/carat.rbs that a later spin build warns about").
 - `spinel-doctor` (`make diagnose`) must report clean; its behavior leg compares against a CRuby and is always skipped, and its advice lines show where a signature is worth tightening.
