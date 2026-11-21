@@ -290,6 +290,18 @@ module EditorTabsTest
     t.assert_equal(["  • [No Name]", "│"], [h.row(0)[13, 13], h.row(0)[-1, 1]], "the listed empty buffer keeps the row, without tab-page numbers")
     h = session("")
     t.assert_equal(["  1 one", [0, 0, 22, 80]], [h.row(0), h.windows[0][0, 4]], "one file in one tab page has no tabs row")
+    # option.showtabline through the editor ("One file has the row under 2"
+    # of buffer-tabs): a configuration line gives the one file its row, the
+    # cursor and the status bar one row down, and 0 hides two files' row.
+    h = session_with("option.showtabline 2\n", "")
+    t.assert_equal(["  • a.txt   │", "  1 one", [1, 0, 21, 80], [1, 4]], [h.row(0)[0, 14], h.row(1), h.windows[0][0, 4], [h.frame.cursor_row, h.frame.cursor_col]], "showtabline 2 gives one file its tab row, the window under it and the cursor on its row")
+    h = session_with("option.showtabline 0\n", ":e b.txt<CR>")
+    t.assert_equal(["  1 zz", [0, 0, 22, 80]], [h.row(0), h.windows[0][0, 4]], "showtabline 0 shows no row with two files")
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.shipped, rows: 24, cols: 80, plugins: [])
+    h.open("a.txt")
+    t.assert_equal(["  • a.txt   │", "  1 one"], [h.row(0)[0, 14], h.row(1)], "the shipped configuration alone, with no line for it, shows one file's tab row")
     files = Carat::Doubles::MemoryFiles.new
     files.put("dir/sub/deep.txt", "d\n")
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)

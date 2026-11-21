@@ -243,7 +243,7 @@ module Carat
         tabstop = options.tabstop > 0 ? options.tabstop : 8
         @ascii = @plain || options.icons == "ascii"
         @border = Domain::BorderStyle.glyphs(options.winborder, @ascii)
-        tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
+        tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count, options.showtabline) ? 1 : 0
         tab = state.tab
         layout = tab.layout
         ids = layout.leaves

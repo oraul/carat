@@ -41,6 +41,24 @@ module AdaptersFramePresenterTest
     Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
   end
 
+  # Rows 0 and 1, joined by a bar, of a frame of one buffer "one" in
+  # a.txt under showtabline, with that many files listed (a.txt, then b.txt),
+  # a.txt modified or not.
+  #: (Integer, Integer, Integer) -> String
+  def self.tabline_rows(showtabline, files, modified)
+    s = state_for(["one"], "a.txt")
+    s.options.icons = "unicode"
+    s.options.showtabline = showtabline
+    other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
+    s.buffer.mark_unsaved if modified == 1
+    LISTED.add(s.buffer) if files > 0
+    LISTED.add(other) if files > 1
+    f = draw(s, 7, 30)
+    LISTED.remove(other) if files > 1
+    LISTED.remove(s.buffer) if files > 0
+    "#{f.row_text(0)}|#{f.row_text(1)}"
+  end
+
   # Delete and the C1 controls show as <xx> markers and never reach a cell raw.
   def self.control_free?(frame)
     r = 0
@@ -656,6 +674,25 @@ module AdaptersFramePresenterTest
     t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 2).hl, f.cell(0, 13).hl], "the selected tab's icon is in the selected group, TabLineSel")
     LISTED.remove(other)
     LISTED.remove(s.buffer)
+
+    # Scenarios of buffer-tabs, each name on its own comment line:
+    # "A second file shows the row"
+    # "One file has no row" (under 1)
+    # "One file has the row under 2"
+    # "The open file's modified mark follows its name under 2"
+    # "Never hides the row"
+    # "Always shows the row with no file"
+    # Each row is [label, [showtabline, files listed, modified], rows 0 and 1].
+    t.cases([
+      ["0 shows no row with one file", [0, 1, 0], "  1 one|~"],
+      ["0 shows no row with two files", [0, 2, 0], "  1 one|~"],
+      ["1 shows no row with one file", [1, 1, 0], "  1 one|~"],
+      ["1 shows the row with two files, the current tab first", [1, 2, 0], "  • a.txt   │  • b.txt   │|  1 one"],
+      ["2 shows the row with one file", [2, 1, 0], "  • a.txt   │|  1 one"],
+      ["2 shows the row with two files", [2, 2, 0], "  • a.txt   │  • b.txt   │|  1 one"],
+      ["2 shows the modified mark after the name of the one file", [2, 1, 1], "  • a.txt ● │|  1 one"],
+      ["2 shows the row with no file listed", [2, 0, 0], "|  1 one"]
+    ]) { |input| tabline_rows(input[0].to_i, input[1].to_i, input[2].to_i) }
 
     # Scenarios "One sign", "No signs", and "The sign column is one cell"
     # (screen-rendering): one cell before the numbers while the buffer

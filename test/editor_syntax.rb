@@ -151,6 +151,11 @@ module EditorSyntaxTest
     t.assert_equal("Not implemented: :set list", h.message, "list is an option Carat has, read from configuration lines")
     h.type(":set lcs=trail:-<CR>")
     t.assert_equal("Not implemented: :set lcs=trail:-", h.message, "and listchars, by its short name too")
+    # Scenario ":set answers not implemented" (config-files).
+    h.type(":set showtabline=2<CR>")
+    t.assert_equal("Not implemented: :set showtabline=2", h.message, "showtabline is an option Carat has, read from configuration lines")
+    h.type(":set stal=0<CR>")
+    t.assert_equal("Not implemented: :set stal=0", h.message, "and by its short name too")
     h.type(":set bogus<CR>")
     t.assert_equal("E518: Unknown option: bogus", h.message, "an unknown option")
     h.type(":e notes.txt<CR>")
