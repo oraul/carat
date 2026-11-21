@@ -493,9 +493,9 @@ module LintTest
   # records, concerns, and the plugin host under use_cases/plugins/, whose
   # request families are the adapter of PluginApi::Host by design and
   # whose registry, entries, and events move out of use_cases with the
-  # host (docs/backlog/). Spinel compiles private_constant without
-  # enforcing it, so the lint keeps every constant of a use case file
-  # private and no file outside it reading one.
+  # host (docs/backlog/). Spinel enforces private_constant only when the
+  # read runs (NameError since ae6a3602), so the lint keeps every constant
+  # of a use case file private and no file outside it reading one.
   ONE_CALL_EXEMPT = [
     "carat/use_cases/actions/action_table.rb", "carat/use_cases/actions/action_handler.rb",
     "carat/use_cases/ex/ex_table.rb", "carat/use_cases/ex/ex_handler.rb", "carat/use_cases/ex/command_runner.rb",
