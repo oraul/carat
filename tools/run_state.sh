@@ -2734,10 +2734,9 @@ security_entry() {
 # longer word, is queued, and one whose whole heading line ends a line of
 # PLAN_DIR/groom.txt, a gone line's before its " -- REASON", is groomed:
 # the closed sprint's removals, which stay in the backlog until the
-# sprint's records change. Any entry naming
-# security ranks first here, wider than groom's SECURITY_MARK on purpose:
-# a wider ranking only orders the batches, while groom's guard decides
-# what may leave.
+# sprint's records change. Any entry naming security ranks first here,
+# wider than groom's SECURITY_MARK on purpose: a wider ranking only orders
+# the batches, while groom's guard decides what may leave.
 backlog_pick() {
   for f in "$@"; do [ -f "$f" ] || die "no $f"; done
   cat "$@" |
