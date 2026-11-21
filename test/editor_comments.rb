@@ -66,6 +66,7 @@ module EditorCommentsTest
       # Comment object.
       ["dgc deletes the comment block", ["a.rb", "a\n# b\n# c\nd\n", [1, 0], "dgc"], [["a", "d"], [1, 0], :normal]],
       ["dgc off a comment does nothing", ["a.rb", "a\n# b\n", [0, 0], "dgc"], [["a", "# b"], [0, 0], :normal]],
+      ["dgc on the last lines", ["a.rb", "a\n# b\n# c\n", [2, 0], "dgc"], [["a"], [0, 0], :normal]],
       ["a blank line ends the comment block", ["a.rb", "# a\n\n# b\n", [0, 0], "dgc"], [["", "# b"], [0, 0], :normal]],
       ["gcgc uncomments the comment block", ["a.rb", "x\n# a\n  # b\ny\n", [2, 0], "gcgc"], [["x", "a", "  b", "y"], [1, 0], :normal]]
     ]) do |input|

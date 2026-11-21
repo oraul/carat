@@ -35,10 +35,11 @@ ok   Visual block gc toggles whole lines
 ok   visual gc upward puts the cursor on the first line
 ok   dgc deletes the comment block
 ok   dgc off a comment does nothing
+ok   dgc on the last lines
 ok   a blank line ends the comment block
 ok   gcgc uncomments the comment block
 ok   ygc yanks the comment block
 ok   a toggle of blank lines does not modify the buffer
 ok   gcc in insert mode is text
 ok   the marker is the filetype's row, # by default
-editor_comments: 43 passed, 0 failed
+editor_comments: 44 passed, 0 failed
