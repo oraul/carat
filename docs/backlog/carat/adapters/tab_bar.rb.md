@@ -33,14 +33,6 @@
 - Category: editor
 - Added: 2026-11-20
 
-### The ascii gem and the ascii modified mark are both `*`
-- Location: carat/adapters/tab_bar.rb (ASCII_GEM) and the ascii `modified` icon in carat/domain/icons.rb
-- Why: under option.icons ascii a tab reads `* . a.txt * |` when it is both selected and modified, the two marks differing only by position, so the selection reads less clearly than with the unicode set.
-- Fix: choose another ascii gem (for example `>`) or an ascii modified mark such as `+`, with the tests of both rows, once the user picks the glyph.
-- Also: carat/domain/icons.rb
-- Category: editor
-- Added: 2026-11-21
-
 ### Comment lines left unwrapped in three files (sprint-24 sweep quality)
 
 - Location: `carat/adapters/tab_bar.rb:19`, `carat/use_cases/plugins/plugin_router.rb:60`, `carat/use_cases/plugins/file_requests.rb:28`

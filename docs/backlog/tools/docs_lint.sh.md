@@ -102,3 +102,11 @@
 - Also: docs/codebase-map.md, CLAUDE.md
 - Category: pipeline
 - Added: 2026-11-21
+
+### A plan's queue cut that greens a red main docs-lint waits for the package step
+
+- Location: `tools/docs_lint.sh:208` (QUEUE_BUDGET 17,969, both lanes together) and the package step's `plan-apply`; showtabline note 4, backlog-per-file note 2.
+- Why: showtabline's check at a3a1729 failed docs-lint on main's queue (18,297 of 17,969 bytes at 7f96588) though its plan cut the queue, first.check=0, rework 1 of 3, check 142,908 of 452,689 output (31.6 percent); backlog-per-file paid a fix round for the same base overrun (branch 18,295 bytes), check 36,159 output over three passes.
+- Fix: a change that does not grow the lane queues passes while its base is over budget, and the commit pushing them over is the one refused; accepted when a plan that records a Red main docs-lint decision passes docs-lint at its first check without a fix round.
+- Category: pipeline
+- Added: 2026-11-21

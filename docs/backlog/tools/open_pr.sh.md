@@ -141,3 +141,11 @@
 - Also: docs/queue-backlog.md
 - Category: security
 - Added: 2026-11-21
+
+### Pull request text claim check blocks a first pass (showtabline evidence for the package step's over-claim entry)
+
+- Location: `tools/open_pr.sh` gate and the contributor's package mode; showtabline notes 6, 7; near-same as "### The package step's pull request text over-claims its own bookkeeping commits", to be merged into it.
+- Why: showtabline pr-text-blocked round 1 (a table-driven claim true for 1 of 4 test files), prtext 4,347 output on 13 calls, pushes 2; pr_text_fixes in 6 of the 13 newest runs.
+- Fix: as that entry; accepted when pr-text-blocked appears in at most 1 of the next 6 runs.
+- Category: pipeline
+- Added: 2026-11-21

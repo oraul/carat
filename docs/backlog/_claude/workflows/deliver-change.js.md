@@ -17,14 +17,6 @@
 - Category: pipeline
 - Added: 2026-11-04
 
-## A test-only fix after a passing quality review gets the whole branch reviewed
-
-- Where: `.claude/workflows/deliver-change.js` line 375, the scope of a fix review. Quality advisory at d820b39 in `pipeline-speed-b`.
-- Why it matters: after a passing quality review followed by a bench or CI fix, `blockedAt` is not that commit, so `files` is null and a test-only fix gets the whole branch reviewed again, where the old `priorQuality` offered only the fix diff; the review costs tokens and rounds the fix does not need.
-- Fix outline: when the last quality review passed and no blocked files are recorded at it, give the scope command with no files (tests and records only), with a case in the workflow's tests. Queued in `implement-contracts`.
-- Category: pipeline
-- Added: 2026-11-04
-
 ## The merge-gates worktree is never removed
 
 - Where: the merge-gates worktree command in `.claude/workflows/deliver-change.js` (about line 476, beside `MERGE_GATES` at line 455), which now prunes first, and step 8 of `.claude/agents/merger.md`. Periodic quality advisory at e20c83c, again at 7711421 (note 23).
@@ -49,15 +41,6 @@
 - Why it matters: a flaky test or an infrastructure failure (a runner, a cache, a network fetch) would cost a contributor round and a push of the one-push budget for a commit that changes nothing. Low value now: CI passed first in 17 of 17 recorded runs, so no round has been lost to it yet.
 - Fix outline: have the CI result name its class (flaky, infrastructure, or code) from the failing step and log, retry the first two once without a fix round or a push, and count only a code failure as rework, with a `tools/tools_test.sh` case per class. Queue it when a CI first pass fails for a cause other than code.
 - Also: tools/tools_test.sh
-- Category: pipeline
-- Added: 2026-11-04
-
-## Changes are delivered one at a time in one tree
-
-- Where: `/deliver` and `.claude/workflows/deliver-change.js`, which run one change per checkout. From the user's insights review in the brief of `pipeline-speed-c`.
-- Why it matters: parallel delivery in separate git worktrees would cut wall time (`buffer-substitute` took 114.4 minutes) but not tokens, goal 1's first measure, and nearly every feature edits the same files (`config/default.caratrc`, `docs/actions.md`, `docs/compatibility.md`, `docs/codebase-map.md`, and `docs/queue.md`), so two parallel features would conflict at the merge and each would need its checks again.
-- Fix outline: first measure how often two consecutive queue items share no edited file; if enough do, run such pairs in separate worktrees with separate run states and serialize their merges, each rebuilt and checked against the merged `main`.
-- Also: config/default.caratrc, docs/actions.md, docs/compatibility.md, docs/codebase-map.md
 - Category: pipeline
 - Added: 2026-11-04
 
@@ -86,14 +69,6 @@
 - Also: tools/agent_guard.sh
 - Category: pipeline
 - Added: 2026-11-04
-
-## A security review after a quality-only fix reads the whole branch again
-
-- Where: the security review phase of `.claude/workflows/deliver-change.js` after a fix round, which reviews the whole branch whatever the fix touched. Retrospective proposal of `buffer-global`.
-- Why it matters: in `buffer-global` a quality-only fix that moved parser code into one domain reader got a second full security review that found 0 again; reviews took 60,085 of 244,038 output tokens (24.6%) and 56 calls over two rounds, and 87,179 of 403,796 (21.6%) in `buffer-substitute` with rework 2.
-- Fix outline: after a fix round, the security review covers only the fix diff unless the fix touches an input path (config loading, file access, plugin boundaries, terminal output, process spawning, the entry point, the guard and gates), recorded with its range, with a case in the workflow's tests. Queued in `implement-contracts`.
-- Category: pipeline
-- Added: 2026-11-05
 
 ## The checker reports a check's outcome both as passed and as a verdict
 
@@ -144,14 +119,6 @@
 - Where: `qualityReview` in `.claude/workflows/deliver-change.js` (line 581 at 594dd35) uses `more || scope`, so the continuation replaces the prior-review scope; the sentinel `the whole diff` is produced by `reviewLeft` (line 228) and compared in `reviewMore` (line 592). Quality advisories in `partial-results`.
 - Why it matters: a capped or empty fix-round quality review is continued over the whole committed diff instead of the fix diff, spending review tokens the `review-scope` item is meant to save, and the sentinel string has two owners.
 - Fix outline: append `more` to `scope` and say the files left are of that scope; name the sentinel once as a constant, or have `reviewLeft` signal a whole-diff rerun separately.
-- Category: pipeline
-- Added: 2026-11-07
-
-## The review continuations run one after the other
-
-- Where: the loop `for (const k of kinds) got[k] = await continueReview(k, scope, got[k])` in `.claude/workflows/deliver-change.js` (line 627 at 594dd35). Quality advisory in `partial-results`.
-- Why it matters: after the parallel first starts, a capped security review waits for the quality continuation to finish, lengthening the round.
-- Fix outline: run `continueReview` for each kind with `parallel`.
 - Category: pipeline
 - Added: 2026-11-07
 
@@ -1204,5 +1171,211 @@
 - Location: `.claude/workflows/deliver-change.js`, the bench phase; complements the queued records-bench-skip.
 - Why: 5144 of 63840 output tokens (8.1 percent) and 9 of 114 calls, allocations and rounds unchanged; sprint-22-records 5455/10 (11.6 percent), sprint-20-records 4548/5 (9.3 percent).
 - Fix: a records change with 0 files under `carat/` records the bench as carried with 0 calls and its pull request Testing line says so.
+- Category: pipeline
+- Added: 2026-11-21
+
+### The delivery prompts still name docs/backlog.md
+
+- Location: `.claude/workflows/deliver-change.js:1670` (the scout area prompt) and `:1706` (the package prompt), each telling an agent never to read `docs/backlog.md`.
+- Why: the file is gone, so the rule no longer covers the backlog folder in these prompts; backlog-per-file changed only the rules card line both copies share, and the read rules of every agent are `backlog-per-file-b`'s.
+- Fix: in backlog-per-file-b, name `docs/backlog/` in both prompts beside the guard's folder rule.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Advisories a delivery cannot fix are offered again in each round and the closing start (tabs-only-dot retro note 14)
+- Location: .claude/workflows/deliver-change.js, the advisory fix rounds and the closing start
+- Why: the MODIFIED-scenario rename strict spec validation refuses was offered three times (quality notes 2 and 9, closing advisories 1 and 3) and the docs/backlog.md stale entries a delivery may not read twice (notes 7 and 10, closing 2 and 4); closing closed 0 of 5 here (3,813 output, 5 calls), and 0 in background-detect (0/5), review-trust-lows (0/6), sprint-23-records (0/7), sprint-24-records (0/7); 4 of 11 quality advisories of the run were of these two kinds. Near `closing-loop-fold` (docs/queue-backlog.md Pool 9).
+- Fix: an advisory the contributor reported unfixable with its reason, or one located in a file the lane may not edit, goes straight to the findings file and is not offered again; accepted when a run with such an advisory shows it offered once.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### Advisory-only rounds count as rework and push a medium change over its budget (tabs-only-dot retro note 15)
+- Location: .claude/workflows/deliver-change.js, the fix rounds started on 0 blocking findings
+- Why: the first check pass stood at 143,829 of 200,000 output, then two rounds with 0 blocking raised it to 259,891 and 298,918 (overrun notes 12, 13): 155,089 output (39.5 percent of 392,701) for README, design, test-comment, and findings edits; rework 3 on 0 blocking in review-trust-lows-b, 2 in sprint-24-records, 2 here; quality first pass 135/227, the weakest gate. Adds evidence to `closing-loop-fold` (docs/queue-backlog.md Pool 9).
+- Fix: a run whose every review reports 0 blocking records rework 0 and its advisories cost one closing start at most; accepted when such a run shows rework 0 and one closing start.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### An allocation regression is found only at the bench phase, after the check passed
+
+- Location: the contributor's self-check and the check's stages before the bench phase (`make metrics-compare`, `.claude/workflows/deliver-change.js` bench phase); cmdline-editing note 3.
+- Why: cmdline-editing first.bench=0, allocs.grep 774.4 to 779.9 blocking at 065185360ef4 after the check passed there; the rework round took output from 299,373 to 406,940 (107,567, 22 percent of 481,005) through implement, check, security, and bench again; the contributor ran the metrics stage without comparing; picker-styles-b also had bench:0 with rework 3; bench first pass 234/236.
+- Fix: an allocation increase over main's recorded figures in any scenario fails before the bench phase; accepted when first.bench stays 1 and no rework round has an allocation cause across the next 10 runs.
+- Category: pipeline
+- Added: 2026-11-21
+
+### The check reruns stages that cannot change and confirms passing stages at a sixth to a third of a run (review-in-openspec retro note 9, merged with facet-design-doc retro note 18)
+- Location: .claude/workflows/deliver-change.js, the check phase; near the queued `check-at-head` (docs/queue-backlog.md Pool 11)
+- Why: review-in-openspec's check took 121,585 of 724,443 output (16.8 percent) over 3 passes, all passing; contributor-tier-high 56,453 of 260,867 (21.6 percent); groom-evidence-only 119,742 of 338,328 (35.4 percent); facet-design-doc's docs-only fix rounds reran the whole check (72,939 output, 14 calls, 4 passes plus 1 rerun recorded at the base 6bb8f2af76ff, not the head 9478b94e2686), test-run 66 s and metrics 32 s though no file under carat/, bin/, test/, bench/, or tools/ changed after 9c0fcdac9b73; check first pass 218/230.
+- Fix: accepted when, over the next three deliveries with first.check 1, the check stays under 8 percent of output with no stage failure CI finds that the check left out, a round touching only docs/ and openspec/ reruns no stage, and no check record names a commit other than the head it ran for.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### A non-blocking finding fixed in place still starts a full round (review-in-openspec retro note 10)
+- Location: .claude/workflows/deliver-change.js, the fix round; near `closing-loop-fold`, folded into review-in-openspec at 3102188f23a3
+- Why: review-in-openspec's round 2 fixed 1 advisory (a note's wording) and output went from 375,022 at the 9b4c63623c05 check pass to 653,549 at 8045d5552c96 (278,527, 38 percent of 724,443), over the large output budget 416,666; rework rounds 246 over 230 changes.
+- Fix: accepted when, over the next three deliveries, metric.rework equals the rounds started by a blocking finding or a red CI, a non-blocking finding being fixed inside a running round or recorded.
+- Category: pipeline
+- Added: 2026-11-21
+
+### check_runs is the contributor's own count
+- Location: .claude/workflows/deliver-change.js extraRuns and the WORK field check_runs
+- Why: self_fix sums the check runs the contributor reports; a start that misreports them skews the rework comparison, and nothing compares the count with the runner's verdicts.
+- Fix: have tools/run_state.sh count the check runs per change (a counter the runner bumps at each start, never an agent) and let the workflow read that figure instead of the reported one.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### security Low (6): the checker trusts stage records the contributor can write itself
+- Location: .claude/workflows/deliver-change.js:970 and :974 (claimFrom and backedCommit), tools/run_state.sh stage records (comments at lines 150-170, 339-349, and 643-651)
+- Why: claimFrom and backedCommit back the head on the contributor's own reported pass, so the checker skips every stage with a passing stage record at that head. A contributor misled by text in the tree could edit tools/run_state.sh or a Makefile recipe in its working tree without committing, run `sh tools/run_state.sh check <change>` so the edited runner writes passing stage records at HEAD into build/pipeline/<change>.json, then restore the file with git restore; the base..HEAD diff still leaves tools/ untouched, so lane_facts reports machinery no and the checker skips the forged stages. Reported twice by the security review: the second pass found the comments (tools/run_state.sh 150-170 and 643-651, deliver-change.js 965-972, the design's Risks) now state this trust correctly, so the false claim is gone, but the behavior is unchanged. Impact is limited: CI reruns docs-lint, the builds, test-run, bench-budget, metrics, and tools-test, and main's merge gates rerun gates, which leaves diagnose resting on the contributor session's trust. Before this change, records at HEAD counted only when HEAD was the phase.check the workflow recorded.
+- Fix: Stop trusting records an agent could have forged while keeping the speed-up: either the runner registers each run (its pid, start time, and HEAD) in a place outside the project the contributor's guard cannot reach, and the checker verifies it before skipping a stage; or a backed head skips only stages CI also runs, and diagnose and gates always rerun. Also widen the machinery test to the working tree at check time and to every commit since base, not only the base..HEAD diff.
+none
+- Also: tools/run_state.sh, Makefile
+- Category: security
+- Added: 2026-11-21
+
+### A plan decision amending the brief does not reach the contributor (contributor-tier-high retro note 7)
+- Location: .claude/workflows/deliver-change.js, the contributor's brief; docs/queue-backlog.md:11 at contributor-tier-high
+- Why: its planner amended the brief (backtick the exception line's names, as queue_class needs), the contributor got only the brief, wrote bare names, and quality blocked at 43228fb; the fix round cost 157,564 output tokens (31,138 to 188,702); quality first pass 137/229, the weakest gate.
+- Fix: hand the plan's amendments to the contributor with the brief; accepted when a run whose plan amends the brief has no quality-blocking finding on that amendment.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### An advisory confined to the change's own findings file costs a full round (contributor-tier-high retro note 8)
+- Location: .claude/workflows/deliver-change.js, the fix round; near the queued `closing-loop-fold` (docs/queue-backlog.md Pool)
+- Why: contributor-tier-high's second round was a two-line wording fix in its findings file, output 188,702 to 218,283 (29,581), over the medium 200,000 output budget, with a check rerun at f95b02af0634, not the head; review-trust-lows-b rework 3, sprint-24-records rework 2, on 0 blocking.
+- Fix: close such an advisory without a round; accepted when rework is unchanged and no check reruns. Merge into `closing-loop-fold` when groomed.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The check phase spends a large output share on runs whose stages pass first time (contributor-tier-high retro note 9)
+- Location: .claude/workflows/deliver-change.js, the check phase; tools/run_state.sh check
+- Why: contributor-tier-high check 56,453 of 260,867 output (21.6 percent) for 12 calls with first.check 1; groom-evidence-only 119,742 of 338,328 (35.4 percent); check first pass 217/229.
+- Fix: keep a first-pass check's output small; accepted when a run with first.check 1 spends at most 10 percent of its output in check.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### The merge phase cost grows with the merger's waiting, not with CI (border-vocabulary retro note 2)
+- Location: .claude/workflows/deliver-change.js, the merger; evidence for the queued `merge-wait-bound` (docs/queue-backlog.md Pool)
+- Why: border-vocabulary merge 142,172 of 518,649 output (27.4 percent), 18 calls, ci_wait_calls 10 at 11.4 CI minutes; the last 10 feature rows merge 18,467 to 85,414 output, ci_wait_calls 6 at 10.0 to 12.0 CI minutes.
+- Fix: bound the wait; accepted when over the next 5 runs with CI at most 12 minutes the merge phase stays at or under 40,000 output tokens and ci_wait_calls at or under 6.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### A round for one test-only advisory reran every phase with unchanged results (border-vocabulary retro note 3)
+- Location: .claude/workflows/deliver-change.js; evidence for the queued `closing-loop-fold` (docs/queue-backlog.md Pool)
+- Why: output at the check passes 204,095 then 348,268 (144,173, 27.8 percent of 518,649), rework 1 on 0 blocking, security 0 and bench equal on both passes; tabs-only-dot 155,089, groom-evidence-only 105,718, listchars-folds 107,710 on 0-blocking rounds.
+- Fix: accepted when over the next 3 runs whose first reviews report 0 blocking, rework is 0 or the round costs under 10 percent of the run's output.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### A plan decision amending the brief does not reach the contributor (contributor-tier-high retro note 7)
+- Location: .claude/workflows/deliver-change.js, the contributor's brief; docs/queue-backlog.md:11 at contributor-tier-high
+- Why: its planner amended the brief (backtick the exception line's names, as queue_class needs), the contributor got only the brief, wrote bare names, and quality blocked at 43228fb; the fix round cost 157,564 output tokens (31,138 to 188,702); quality first pass 137/229, the weakest gate.
+- Fix: hand the plan's amendments to the contributor with the brief; accepted when a run whose plan amends the brief has no quality-blocking finding on that amendment.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### An advisory confined to the change's own findings file costs a full round (contributor-tier-high retro note 8)
+- Location: .claude/workflows/deliver-change.js, the fix round; near the queued `closing-loop-fold` (docs/queue-backlog.md Pool)
+- Why: contributor-tier-high's second round was a two-line wording fix in its findings file, output 188,702 to 218,283 (29,581), over the medium 200,000 output budget, with a check rerun at f95b02af0634, not the head; review-trust-lows-b rework 3, sprint-24-records rework 2, on 0 blocking.
+- Fix: close such an advisory without a round; accepted when rework is unchanged and no check reruns. Merge into `closing-loop-fold` when groomed.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The check phase spends a large output share on runs whose stages pass first time (contributor-tier-high retro note 9)
+- Location: .claude/workflows/deliver-change.js, the check phase; tools/run_state.sh check
+- Why: contributor-tier-high check 56,453 of 260,867 output (21.6 percent) for 12 calls with first.check 1; groom-evidence-only 119,742 of 338,328 (35.4 percent); check first pass 217/229.
+- Fix: keep a first-pass check's output small; accepted when a run with first.check 1 spends at most 10 percent of its output in check.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### The merge phase cost grows with the merger's waiting, not with CI (border-vocabulary retro note 2)
+- Location: .claude/workflows/deliver-change.js, the merger; evidence for the queued `merge-wait-bound` (docs/queue-backlog.md Pool)
+- Why: border-vocabulary merge 142,172 of 518,649 output (27.4 percent), 18 calls, ci_wait_calls 10 at 11.4 CI minutes; the last 10 feature rows merge 18,467 to 85,414 output, ci_wait_calls 6 at 10.0 to 12.0 CI minutes.
+- Fix: bound the wait; accepted when over the next 5 runs with CI at most 12 minutes the merge phase stays at or under 40,000 output tokens and ci_wait_calls at or under 6.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### A round for one test-only advisory reran every phase with unchanged results (border-vocabulary retro note 3)
+- Location: .claude/workflows/deliver-change.js; evidence for the queued `closing-loop-fold` (docs/queue-backlog.md Pool)
+- Why: output at the check passes 204,095 then 348,268 (144,173, 27.8 percent of 518,649), rework 1 on 0 blocking, security 0 and bench equal on both passes; tabs-only-dot 155,089, groom-evidence-only 105,718, listchars-folds 107,710 on 0-blocking rounds.
+- Fix: accepted when over the next 3 runs whose first reviews report 0 blocking, rework is 0 or the round costs under 10 percent of the run's output.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The advisory-only settled round can no longer arise
+- Location: .claude/workflows/deliver-change.js (settleFrom, settleRound, settledTesting, the alone branch of rounds and closeAdvisories)
+- Why: fix in place and the closing loop now offer only security findings, and settleFrom returns no commit when a security finding is offered, so the review-lite path that stands on the earlier check, security, and bench passes is dead code with its tools-test cases.
+- Fix: remove settleFrom, settleRound, settledTesting, settleAfter, settleAt, and the settle line of checkLines with their tools-test cases, or offer a non-security finding again; keep tools/run_state.sh settled while main's merge gates read settled_at.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### A run resumed across review-in-openspec drops its earlier quality advisories
+- Location: .claude/workflows/deliver-change.js (seed)
+- Why: seed no longer reads quality-advisory notes into the findings the package step hands over, so a delivery that ran a quality reviewer before this change merged and is resumed after it writes those advisories to no findings file; they stay only as run state notes.
+- Fix: none needed once the deliveries in flight at the merge have finished; otherwise read quality-advisory notes into the backlog list in seed once more.
+none
+- Category: pipeline
+- Added: 2026-11-21
+
+### The merge phase costs more output than the check and security together
+
+- Location: the merger start in `.claude/workflows/deliver-change.js`; comment-operator note 2.
+- Why: merge 57,187 of 250,559 output (22.8 percent), 13 calls, ci_wait_calls 6, against check 9,886 and security 1,405; border-vocabulary 27.4 percent, listchars-folds 20.1, groom-evidence-only 16.7.
+- Fix: wait for CI without an agent turn per poll; accepted when the merge phase stays under 10 percent of a run's output in each of the next five metrics rows, ci_wait_calls not higher, the merge still at the run state's squash commit.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Scout pack reuse and pruning never changed a decision
+
+- Location: the scout phase in `.claude/workflows/deliver-change.js` and `tmp/scout/`; comment-operator note 3.
+- Why: scout 43,172 output, 42 calls (17.2 and 21.3 percent) for 3 areas, 0 of 3 packs reused, 0 pruned, while `tmp/scout` holds 398 packs (every configuration pack stale); border-vocabulary 45 scout calls, grep-long-files 39, listchars-folds 39.
+- Fix: remove the reuse step or make it reuse; accepted when the next five scouted runs average under 8 scout calls per area or record a reused pack, and `tmp/scout` holds no pack the reuse check would reject.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Records runs start advisory fix rounds and a closing start that change nothing (sprint-24-records retro note 11)
+- Location: .claude/workflows/deliver-change.js, the advisory fix round and closing start of a sprint-N-records run
+- Why: rework 2 on 0 blocking, 1 of 8 advisories fixed, the second fix round and the closing start made 0 commits (0 closed, 7 left); sprint-23-records rework 2, sprint-22-records 1, all with 0 blocking; the advisories target groom-written files or tools/, which a records change's Out of scope forbids. Near `closing-loop-fold` (docs/queue-backlog.md Pool 9).
+- Fix: a records run whose advisories all target groom-written files or tools/ starts no fix or closing contributor and sends them to its findings file; accepted when such a run records rework 0.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The reviews phase dominates a records-only run (sprint-24-records retro note 12)
+- Location: .claude/workflows/deliver-change.js, the reviews phase of a sprint-N-records run
+- Why: reviews 27,661 of 68,824 output tokens (40.2 percent) and 31 of 101 calls on a diff of only docs/ records and the archived change; security 0 findings, quality 0 blocking at both passes.
+- Fix: on a diff touching only docs/ records and the archived change, keep the reviews under 20 percent of output while the security review still runs on the committed diff; accepted when a records run shows it.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Records runs start advisory fix rounds and a closing start that change nothing (sprint-24-records retro note 11)
+- Location: .claude/workflows/deliver-change.js, the advisory fix round and closing start of a sprint-N-records run
+- Why: rework 2 on 0 blocking, 1 of 8 advisories fixed, the second fix round and the closing start made 0 commits (0 closed, 7 left); sprint-23-records rework 2, sprint-22-records 1, all with 0 blocking; the advisories target groom-written files or tools/, which a records change's Out of scope forbids. Near `closing-loop-fold` (docs/queue-backlog.md Pool 9).
+- Fix: a records run whose advisories all target groom-written files or tools/ starts no fix or closing contributor and sends them to its findings file; accepted when such a run records rework 0.
+- Also: docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The reviews phase dominates a records-only run (sprint-24-records retro note 12)
+- Location: .claude/workflows/deliver-change.js, the reviews phase of a sprint-N-records run
+- Why: reviews 27,661 of 68,824 output tokens (40.2 percent) and 31 of 101 calls on a diff of only docs/ records and the archived change; security 0 findings, quality 0 blocking at both passes.
+- Fix: on a diff touching only docs/ records and the archived change, keep the reviews under 20 percent of output while the security review still runs on the committed diff; accepted when a records run shows it.
 - Category: pipeline
 - Added: 2026-11-21

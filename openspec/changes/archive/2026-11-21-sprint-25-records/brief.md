@@ -1,0 +1,3 @@
+# Brief
+
+sprint-25-records: apply the plan of sprint-25 waiting in build/plan/, sprint-planning's records change (T0 records, estimated small). In your implement step run `sh tools/run_state.sh history sprint-25-records`, which appends every lane's pending rows, then `sh tools/run_state.sh groom sprint-25-records`, which files each findings entry into the backlog file of its first named path under docs/backlog/, copies the sprint's two lane queues, and appends the sprint's row to docs/sprints.tsv; commit them with this change's OpenSpec change (skip_specs: true), no code and no other file. When groom applies nothing (the plan waits or stands applied), stop and say so.

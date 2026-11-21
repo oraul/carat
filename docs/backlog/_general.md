@@ -390,3 +390,40 @@ none
 - Fix: in the grooming that folds this file in, add the blank line after the heading and name the path relative to the main checkout (build/metrics/current.tsv).
 - Category: design
 - Added: 2026-11-21
+
+### backlog.md repeats of earlier review-trust-lows-b headings
+
+- Location: the three review-trust-lows-b headings folded at the end of docs/backlog.md repeat earlier entries.
+- Why it matters: repeats inflate the backlog and the next grooming.
+- Fix outline: merge each into its earlier heading in the next grooming, or have groom merge an exact-heading repeat.
+- Category: design
+- Added: 2026-11-21
+
+### sprint-24-records repeats entry names no headings
+
+- Location: docs/findings/sprint-24-records.md, the repeats entry names only the three headings at the end of docs/backlog.md, not which headings they are nor the earlier entries they repeat (the review-trust-lows-b headings folded at the end of docs/backlog.md repeat the entries near lines 3905, 4026, and 4564).
+- Why it matters: the next grooming must rediscover the three headings and their earlier twins before merging them.
+- Fix outline: in the next grooming, list each folded review-trust-lows-b heading beside the earlier heading it repeats, and merge each pair.
+- Category: pipeline
+- Added: 2026-11-21
+
+### Backlog entries resolved by tabs-only-dot
+- Location: the backlog entries "The ascii gem and the ascii modified mark are both `*`" and "tab_boundary? takes a digit after a gem as a tab boundary"
+- Why: this change removes ASCII_GEM and tab_boundary?, so both entries are fixed
+- Fix: groom removes both as fixed by tabs-only-dot
+- Category: design
+- Added: 2026-11-21
+
+### Backlog entries resolved by tabs-only-dot remain listed
+- Location: the backlog entries 'The ascii gem and the ascii modified mark are both *' and 'tab_boundary? takes a digit after a gem'
+- Why: ASCII_GEM and tab_boundary? were removed by this change, so both entries are stale.
+- Fix: groom removes both as fixed by tabs-only-dot.
+- Category: design
+- Added: 2026-11-21
+
+### Findings file for tabs-only-dot repeats the scenario-title entry
+- Location: docs/findings/tabs-only-dot.md, the earlier entry about the scenario keeping a name that no longer fits and the later 'The MODIFIED scenario title still says gem'
+- Why: two entries share the location and fix; the proposed new title, spec path, and test line are folded into the entry above.
+- Fix: groom keeps one entry and drops the other as a repeat.
+- Category: code-quality
+- Added: 2026-11-21

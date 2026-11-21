@@ -1,8 +1,0 @@
-### An exception paragraph naming a change without backticks leaves it counted in the sprint
-- Location: tools/run_state.sh:2611, tools/docs_lint.sh:177; the groom-evidence-only line was docs/queue-backlog.md:7 at 01bee7b47329.
-- Why: the sprint count and the docs lint read a change out of the 3 only when the exception paragraph names it in backticks, so a paragraph naming it in plain words, as that line does, leaves the change counted toward the sprint's 3 backlog changes and can close or overfill the sprint early.
-- Fix: read a change name in an exception paragraph with or without backticks (a kebab-case word matching a merged or queued change), or have docs-lint refuse an exception paragraph that names a change without backticks; a tools-test case each.
-### An exception paragraph naming a change without backticks leaves it counted
-- Location: tools/run_state.sh:2611 (queue_class matches only a backticked name), tools/docs_lint.sh:177 (check_queue), docs/queue-backlog.md:7 at 01bee7b47329 (the groom-evidence-only line).
-- Why: the Sprint 25 line "groom-evidence-only runs first in the backlog lane, outside the 3" names the change bare, so queue_class at #270 finds no `groom-evidence-only` in the clause and the change is not classed outside, though the user put it outside the 3; the contributor-tier-high brief quoted its line bare too, and only the planner's backticks keep it outside; docs-lint passes either form.
-- Fix: docs-lint refuses a "The user-approved exception" paragraph holding "outside the 3" whose clause before " run "/" runs " names no backticked change, a tools-test case each for the bare and the backticked form; check how #270's history row was classed and correct its sprint count if it was counted.

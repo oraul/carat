@@ -347,3 +347,11 @@
 - Fix: fold the unmarked case of 4301 into the 4305 case and drop 4301.
 - Category: pipeline
 - Added: 2026-11-19
+
+### Sprint-row fixtures still write docs/backlog.md
+
+- Location: `tools/tools_test.sh`, the `printf '# Backlog\n' > docs/backlog.md` lines of the sprint-row and groom-refusal fixtures (four of them, near the "groomed sprint row" cases).
+- Why: groom no longer reads the file, so the lines are inert fixture noise that suggests the old layout.
+- Fix: drop them, or write `docs/backlog/_general.md` where a fixture needs a backlog file.
+- Category: pipeline
+- Added: 2026-11-21

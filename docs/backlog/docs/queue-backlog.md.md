@@ -38,3 +38,27 @@
 - Fix: add each heading to its item's Backlog list in the next plan.
 - Category: pipeline
 - Added: 2026-11-21
+
+### Feature scouts cost about a quarter of a run's tool calls (cmdline-editing evidence, near-same as the `scout-prune` pool item of docs/queue-backlog.md, to be merged into it)
+
+- Location: the scout and areas phases of `.claude/workflows/deliver-change.js`; cmdline-editing note 4.
+- Why: scout 51 of 219 calls (23.3 percent) and 72,557 of 481,005 output (15.1 percent) plus areas 5 calls, 5,750 output, for 3 packs, none reused; feature scouts 28 to 45 calls in the last 5; implement still 73 to 92 calls against 46 in the no-scout runs contributor-tier-high and backlog-records-rule.
+- Fix: as `scout-prune`; accepted when across the next 10 feature runs scout plus areas stays under 10 percent of tool calls (or is merged away) while implement calls do not rise above the no-scout runs' level.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-21
+
+### Backlog items check-at-head and self-check-drop
+- Location: docs/queue-backlog.md Pool 11 (check-at-head, self-check-drop), folded by the plan of contributor-self-check
+- Why: this change settles check-at-head as far as its brief names it: the checker's check backs the head the contributor's own passing check recorded (backedCommit), so the stages passed there are skipped; self-check-drop's text could not be read during the delivery (no agent reads the backlog), so it is not named as settled and is kept here to come back.
+- Fix: the sprint planner compares self-check-drop's entry with this change's diff and either closes it with this change as evidence or queues what is left.
+- Category: pipeline
+- Added: 2026-11-21
+
+### backlog.md stale queue reference for review-trust-lows-b
+
+- Location: the folded review-trust-lows-b entries say queued in review-trust-lows-b (docs/queue-backlog.md Sprint 24), but it merged as #268.
+- Why it matters: the reference points at a queue Sprint 24 left.
+- Fix outline: point them at review-trust-lows-c and pipeline-lows-a (Pool 3, Pool 1) when merged.
+- Category: pipeline
+- Added: 2026-11-21

@@ -355,3 +355,11 @@
 - Fix: reword to the one-case rule, or check per script.
 - Category: pipeline
 - Added: 2026-11-21
+
+### The gates accept a tracked symbolic link under the records-only paths
+- Location: tools/gates.sh, tools/rules.sh (RECORDS_RE, docs/backlog/.+\.md$)
+- Why: file_entries now refuses to write through a symbolic link under docs/backlog/, but a commit adding such a link still lands as records-only after the security review was recorded; another writer of those paths (plan-apply, history) could follow it.
+- Fix: have the merge gates refuse a tracked symbolic link (git ls-files -s mode 120000) under the RECORDS_RE paths, in a rules change of its own since it edits tools/rules.sh or the gate reading it.
+- Also: tools/rules.sh
+- Category: pipeline
+- Added: 2026-11-21

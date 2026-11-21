@@ -81,22 +81,6 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### The contributor self-check and the quality reviewer share no blocking checklist
-- Location: `.claude/agents/contributor.md` (self-check), `.claude/agents/quality-reviewer.md` (blocking rule)
-- Why: quality fails its first pass most often, 66 of 130 changes against check 128/130 and security 125/130; 5 of the last 11 feature rows quality:0; lsp-container-b's fix round (SIGPIPE ending carat on stop) cost implement 153,294 of 264,142 output (58.0%) and put the run over its 200,000 output budget at 229,659 (retro note 11).
-- Fix: one blocking checklist both read, or drop the self-check items that never caught a blocker; accepted when the feature lane's quality first pass over the next 10 rows reaches 8 of 10 with implement output no higher than its current median. Queued in `review-demotion`.
-- Also: .claude/agents/quality-reviewer.md
-- Category: pipeline
-- Added: 2026-11-17
-
-### The contributor's self-check and the quality reviewer use different blocking checklists (lsp-container-b retro note 11)
-- Location: `.claude/agents/contributor.md` self-check, `.claude/agents/quality-reviewer.md` blocking rules
-- Why: quality failed its first pass in lsp-container-b (SIGPIPE ending carat on stop), quality:0 in 5 of the last 11 feature rows and 66 of 130 over all changes against check 128/130 and security 125/130; the fix round cost implement 153,294 of 264,142 output (58.0%) and took the run over its 200,000 output budget (229,659). Adds evidence to "### Quality fails its first pass on about half the runs".
-- Fix: one blocking checklist both read, or drop the self-check items that never caught a blocker; accepted when the feature lane's quality first pass over the next 10 rows reaches 8 of 10 with implement output no higher than its current median.
-- Also: .claude/agents/quality-reviewer.md
-- Category: pipeline
-- Added: 2026-11-17
-
 ### Quality advisories still dropped at the package step (lsp-container-c retro)
 - Location: `.claude/agents/contributor.md` package step 2
 - Why: 3 of 3 lsp-container-c advisories (`carat/domain/config.rb:219`, `carat/domain/trusted_roots.rb:48`, `docs/codebase-map.md:100`) went only into the pull request Notes, now 14 of 23 dropped over the last 4 rows with advisories; quality first pass 71/136. For `review-demotion`.
@@ -154,5 +138,47 @@
 - Location: `.claude/agents/contributor.md` rule 10 (re-read the diff with the quality-reviewer instructions).
 - Why: both editing starts of status-winbar-tabs reported rule 10 skipped; the quality review then raised 5 advisories at 8573c94c2735, all on added lines, costing rework round 1; quality first pass 126/218 (57.8 percent) against check 206/218 and security 210/218.
 - Fix: remove rule 10, or make it bind; accepted when the next five deliveries average no more advisories on contributor-added lines than now (removed) or under 1 (bound).
+- Category: pipeline
+- Added: 2026-11-21
+
+### The contributor's self-check says match while a fast stage fails
+
+- Location: the contributor's implement result (`self_check`) in `.claude/agents/contributor.md` and `.claude/workflows/deliver-change.js`; showtabline notes 1, 2, 5, backlog-per-file notes 1, 4.
+- Why: showtabline reported match with docs-lint failing and missed a second FAIL (docs/architecture.md 36 bytes over budget), escalating to the session tier; backlog-per-file said match while quoting docs-lint failing; 14 self-check-mismatch notes across 9 run states; check first pass 222/234.
+- Fix: either return match only when every fast-stage FAIL line is gone or named, or drop the verdict that never changes the route; accepted when self-check-mismatch notes drop to 0 over the next 5 runs and check first pass stays at or above 221/233.
+- Also: .claude/workflows/deliver-change.js, docs/architecture.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The contributor rules card is kept twice word for word (review-in-openspec retro note 11)
+- Location: .claude/agents/contributor.md and CONTRIBUTOR_CARD at .claude/workflows/deliver-change.js:879
+- Why: contributor.md is 6,996 of its 6,999-byte docs-lint budget; review-in-openspec shortened its Context line and left quality_review's counts out of step 5, the gap its quality advisory note 5 flagged.
+- Fix: accepted when the card's text is in one tracked place, contributor.md keeps at least 500 bytes under its budget, and a tools-test case shows every implement start still receives each rule.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-21
+
+### The package step repeats a self-review of a diff the reviewers passed unchanged (border-vocabulary retro note 4)
+- Location: .claude/agents/contributor.md, the package step; evidence for the queued `contributor-rule-ten` (docs/queue-backlog.md Pool)
+- Why: the package self-review ran at 0e51012116a9 after security 0 and quality 0 at that commit, changing no decision; package 10,649 output, 20 calls; the relayed idea of the contributor reviewing itself goes against CLAUDE.md (reviewers never edit), so the duplicate goes instead.
+- Fix: accepted when the package step does no self-review of a diff reviewed-edits reports unchanged since the reviews, and package calls fall below 20.
+- Also: docs/queue-backlog.md, CLAUDE.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The package step repeats a self-review of a diff the reviewers passed unchanged (border-vocabulary retro note 4)
+- Location: .claude/agents/contributor.md, the package step; evidence for the queued `contributor-rule-ten` (docs/queue-backlog.md Pool)
+- Why: the package self-review ran at 0e51012116a9 after security 0 and quality 0 at that commit, changing no decision; package 10,649 output, 20 calls; the relayed idea of the contributor reviewing itself goes against CLAUDE.md (reviewers never edit), so the duplicate goes instead.
+- Fix: accepted when the package step does no self-review of a diff reviewed-edits reports unchanged since the reviews, and package calls fall below 20.
+- Also: docs/queue-backlog.md, CLAUDE.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### The package step's pull request text over-claims its own bookkeeping commits
+
+- Location: the contributor's package mode (`.claude/agents/contributor.md`) and `tools/open_pr.sh` gate; comment-operator note 1, backlog-records-rule notes 1 and 5.
+- Why: the text gate blocked round 1 and forced a second push in comment-operator (prtext 5,979 output, 16 calls, a bullet claiming its metrics row while history appended border-vocabulary's) and in backlog-records-rule (3 unasked cases claimed; prtext 8,118 output, 9 calls); pr_text_fixes 1 in 5 of the 12 newest run states against 11 of 286 overall.
+- Fix: write Changes from the diff of the change's own files, leaving plan-apply and history commits out, and keep the contributor's cases to those the brief asks; accepted when the next five runs reaching a pull request record no pr-text-blocked note and pr_text_fixes stays 0.
+- Also: tools/open_pr.sh
 - Category: pipeline
 - Added: 2026-11-21

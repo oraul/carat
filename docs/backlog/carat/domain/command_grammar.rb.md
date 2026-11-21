@@ -73,3 +73,12 @@
 - Fix: one private prelude returning the symbol or nil, both methods keeping only their mode-specific tail
 - Category: editor
 - Added: 2026-11-20
+
+### The last-key doubled rule could replace the g~~ guu gUU bindings
+
+- Location: `carat/domain/command_grammar.rb`, `LAST_KEY_DOUBLED`, and `config/default.caratrc`, the `keymap.operator_pending ~`, `u`, and `U` lines.
+- Why: two mechanisms give a multi-key operator its doubled form: the grammar's last-key rule for `gc` and operator_pending bindings of `~`, `u`, and `U` for the case operators; one rule would be simpler, but changing the case operators was outside the comment-operator brief (quality self-review).
+- Fix: add the case operators to `LAST_KEY_DOUBLED` (or make the rule hold for every operator of more than one key), drop the three operator_pending lines, and keep the `editor_case_operators` rows for `g~~`, `guu`, and `gUU` passing.
+- Also: config/default.caratrc
+- Category: editor
+- Added: 2026-11-21
