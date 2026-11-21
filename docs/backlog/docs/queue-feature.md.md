@@ -22,3 +22,36 @@
 - quality advisory docs/findings/tab-close-d.md:11 one clear way: the three new entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use; fix: backtick the locations and end each Location, Why, and Fix line with a period as above
 - Category: pipeline
 - Added: 2026-11-18
+
+### The feature lane queue names the retired docs/backlog.md
+
+- Location: `docs/queue-feature.md:3` ("folded findings are in `docs/backlog.md`"); `RETIRED_QUEUE` in `tools/docs_lint.sh`.
+- Why: a backlog-lane change may not edit the feature lane's files, so the line stays and docs-lint allows the retired path in a lane queue; the allowance should not outlive the line.
+- Fix: the next feature-lane plan writes `docs/backlog/`; then remove `RETIRED_QUEUE` and its grep from `check_paths`, with its two `docs_lint:` lane-queue cases.
+- Also: tools/docs_lint.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### The lane queues exceed QUEUE_BUDGET on main
+
+- Location: `docs/queue-feature.md` (6,884 bytes) and `docs/queue-backlog.md` (11,413 bytes) at 7f96588, against `QUEUE_BUDGET=17969` in `tools/docs_lint.sh`.
+- Why: `make docs-lint` fails its queue check on main itself (18,297 bytes), before and after this change, so every branch's docs-lint stage is red until a plan shortens the queues.
+- Fix: the next plan folds or shortens queue text (decisions of merged items first) to fit 17,969 bytes, never dropping a finding.
+- Also: docs/queue-backlog.md, tools/docs_lint.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### The lane queues exceeded their shared budget on main after #277
+- Location: `docs/queue-feature.md`, `docs/queue-backlog.md`, budget `tools/docs_lint.sh:62` (QUEUE_BUDGET 17969)
+- Why: at 7f96588 the two queues were 18,297 bytes together, so docs-lint fails on main and on every lane branch until one lane trims its queue; backlog-per-file trimmed only backlog-lane text (the merged backlog-records-rule's exception and three of its decisions), leaving the feature queue untouched as its brief requires.
+- Fix: have plan-apply or the merger's gate refuse a queue rewrite that leaves both lane queues over the shared budget, so a lane's merge cannot push the other lane over it.
+- Also: docs/queue-backlog.md, tools/docs_lint.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### The feature queue still points at docs/backlog.md after the per-file move
+- Location: `docs/queue-feature.md:3` ("folded findings are in `docs/backlog.md`").
+- Why: `backlog-per-file` removes `docs/backlog.md` for `docs/backlog/<path>.md` files, and the feature lane's file is outside the backlog lane, so its pointer names a path that no longer exists.
+- Fix: the next feature-lane plan or the sprint records change rewrites the line to name `docs/backlog/`.
+- Category: pipeline
+- Added: 2026-11-21

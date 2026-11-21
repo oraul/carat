@@ -1363,3 +1363,117 @@ None
 - Also: docs/sprints.tsv
 - Category: pipeline
 - Added: 2026-11-21
+
+### backlog-move's mismatch refusal has no test
+
+- Location: `tools/run_state.sh`, `backlog_move`, the `cmp -s "$before" "$after"` branch that keeps FILE and dies.
+- Why: `file_entries` appends every entry line unchanged, so no fixture makes the folder differ from before plus FILE; the branch guards a future change to the filing, and a regression there would go unseen.
+- Fix: let a test inject a filing that drops a line (for example an environment hook naming the filing command), then expect the refusal and FILE kept.
+- Category: pipeline
+- Added: 2026-11-21
+
+### A refused filing leaves the entries filed before it in the folder
+- Location: tools/run_state.sh file_entries (the linked and mkdir refusals), backlog_move
+- Why: file_entries writes each entry as it reads it, so when it refuses a symbolic link or a directory midway, the entries before it are already appended; backlog-move then keeps FILE, and running it again after removing the link files those entries twice (groom likewise keeps the findings files).
+- Fix: check every target file (linked, mkdir) in a first pass over the buffered entries and write only when all pass, or write into a copy of the folder and move it in place once the filing succeeded.
+- Category: pipeline
+- Added: 2026-11-21
+
+### plan-apply overwrote the lane queue with a plan older than the branch's queue
+- Location: `tools/run_state.sh` plan-apply; `build/plan/backlog-per-file/queue-backlog.md` (written 12:45 UTC, before #276 merged and before the branch's queue commits ec40276 and 9f981a9).
+- Why: in this change's package step it re-queued the merged `backlog-records-rule` as Pool 1, dropped the backticks `queue_class` needs around `backlog-per-file` in the Sprint 25 exception line, and dropped three Decisions lines; the contributor restored the branch's queue by hand. Same defect as the queued `plan-apply-stale` (#263 lost 5 items).
+- Fix: plan-apply refuses a plan whose files are older than the last commit touching the lane queue, or one naming a change already in the lane's metrics file, and says so; a tools-test case each.
+- Category: pipeline
+- Added: 2026-11-21
+
+### plan-apply copies a plan older than the branch's queue
+
+- Location: the package step's `plan-apply` in `tools/run_state.sh`; backlog-per-file note 3.
+- Why: second occurrence: #263 lost 5 items; #278's plan predated #276 and branch commits ec40276, 9f981a9, re-adding merged backlog-records-rule and dropping 3 Decisions lines; the contributor restored it by hand, package 62,305 output on 20 calls (11.3 percent of 551,639).
+- Fix: leave untouched, or refuse, a queue whose plan predates the queue's last commit; accepted when packaging needs no manual restore over the next three deliveries.
+- Category: pipeline
+- Added: 2026-11-21
+
+### A change named only in a lane exception line resolves to the wrong lane (facet-design-doc retro note 16)
+- Location: tools/run_state.sh:1907 lane_of and plan-apply; docs/queue-feature.md Sprint 25 exception line at 4a84ecee96f8
+- Why: facet-design-doc, named in backticks only in the feature lane's exception line and merged with a docs subject, got a backlog-lane history row the contributor reverted by hand; the merged commit holds no docs/metrics-feature.tsv row (15 files) and plan-apply skipped its feature queue plan, so `one-accent` and `glyph-audit` (16 of 20 Known drift rows of docs/design.md section 7) were in 0 lines of docs/queue-feature.md.
+- Fix: resolve a change named in a lane's exception line to that lane; accepted when a tools-test case does so and its package step writes only that lane's history row and applies only that lane's queue plan.
+- Also: docs/queue-feature.md, docs/metrics-feature.tsv, docs/design.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### Plan notes reach the findings file twice (facet-design-doc retro note 17)
+- Location: tools/run_state.sh plan-apply, the implement step's findings append; docs/findings/facet-design-doc.md at 4a84ecee96f8
+- Why: the file holds 13 headings, the 6 plan retro notes each written twice (implement appended them, package plan-apply again) plus 1 lane note; the miscount fed a blocked pull request text round (prtext 4,870 output, 10 tool calls, a second push).
+- Fix: append each plan note once; accepted when a run whose implement step appends the plan notes and whose package step runs plan-apply ends with each heading once, a tools-test case or docs-lint refusing a repeated heading in a findings file.
+- Category: pipeline
+- Added: 2026-11-21
+
+### self_fix has no history column
+- Location: tools/run_state.sh HEADER and history_row; .claude/workflows/deliver-change.js metricLine
+- Why: the keep rules of docs/goals.md read rework plus self_fix, but self_fix lives only in the run state (metric.self_fix), so the planner comparing history rows cannot see the rework a contributor fixed in its own session; adding a column means rewriting line 1 and padding every row of both lane histories, and this change may not touch the feature lane's docs/metrics-feature.tsv.
+- Fix: a sprint records change appends a self_fix column 25 to HEADER, pads both lane files with -, writes metric.self_fix in history_row, and points docs/goals.md at the column.
+- Also: .claude/workflows/deliver-change.js, docs/goals.md, docs/metrics-feature.tsv
+- Category: pipeline
+- Added: 2026-11-21
+
+### An exception paragraph naming a change without backticks leaves it counted in the sprint
+- Location: tools/run_state.sh:2611, tools/docs_lint.sh:177; the groom-evidence-only line was docs/queue-backlog.md:7 at 01bee7b47329.
+- Why: the sprint count and the docs lint read a change out of the 3 only when the exception paragraph names it in backticks, so a paragraph naming it in plain words, as that line does, leaves the change counted toward the sprint's 3 backlog changes and can close or overfill the sprint early.
+- Fix: read a change name in an exception paragraph with or without backticks (a kebab-case word matching a merged or queued change), or have docs-lint refuse an exception paragraph that names a change without backticks; a tools-test case each.
+- Also: tools/docs_lint.sh, docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### An exception paragraph naming a change without backticks leaves it counted
+- Location: tools/run_state.sh:2611 (queue_class matches only a backticked name), tools/docs_lint.sh:177 (check_queue), docs/queue-backlog.md:7 at 01bee7b47329 (the groom-evidence-only line).
+- Why: the Sprint 25 line "groom-evidence-only runs first in the backlog lane, outside the 3" names the change bare, so queue_class at #270 finds no `groom-evidence-only` in the clause and the change is not classed outside, though the user put it outside the 3; the contributor-tier-high brief quoted its line bare too, and only the planner's backticks keep it outside; docs-lint passes either form.
+- Fix: docs-lint refuses a "The user-approved exception" paragraph holding "outside the 3" whose clause before " run "/" runs " names no backticked change, a tools-test case each for the bare and the backticked form; check how #270's history row was classed and correct its sprint count if it was counted.
+- Also: tools/docs_lint.sh, docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-21
+
+### lane_of puts a docs change briefed to the feature lane in the backlog lane, so its history step writes a backlog file
+- Location: tools/run_state.sh lane_of (line 1905); docs/queue-feature.md:7 names the exception line but no numbered item
+- Why: facet-design-doc runs first in the feature lane by the user's exception, yet no queue item names it, so lane_of falls to its chore branch type and answers backlog; its package step's history then appended review-in-openspec to docs/metrics-backlog.tsv against the brief's "touch no file of the backlog lane", reverted here, the row left to the backlog lane's next package step
+- Fix: let a change named by an exception line under a queue heading take that queue's lane; accepted when lane facet-design-doc prints feature with the line in place and history appends to no other lane's file.
+
+none
+- Also: docs/queue-feature.md, docs/metrics-backlog.tsv
+- Category: pipeline
+- Added: 2026-11-21
+
+### The escaped verdict lets any write under the main checkout's build/ through (security Medium (5))
+- Location: tools/run_state.sh:826 (lane_written)
+- Why: any escaped path under the main checkout's build/ reads escaped, including build/bin/carat (the release binary the README tells the user to alias as their editor), build/dev/carat, build/test/run_all, build/spinel/gen_respond_to_tables, and build/metrics/base.tsv, though no lane writes any of these: LANE_LINKS shares only build/pipeline, build/stages, build/plan, and build/spinel-cache, and tree_scan already skips all four. Branch code that makes one write planting a trojaned build/bin/carat (or a forged base.tsv) reads escaped, the check reruns with no fix round, the rerun's escape_mark takes the planted file into its baseline, the rerun passes, and only a security-escape note is left.
+- Fix: keep the escaped verdict (rerun with no fix round) only for an explicit allowlist of paths another lane is known to write in the main checkout's build/, not the whole build/ prefix, which may well be empty since every LANE_LINKS build/ directory is already skipped; any write to build/bin, build/dev, build/test, build/spinel, build/bench, build/metrics, or anywhere else under build/ reads stage none failed with a fix round; add tools_test cases for a write to build/bin/carat from a lane.
+- Category: security
+- Added: 2026-11-21
+
+### A write outside the check clone is detected but never reverted (security Low (4))
+- Location: tools/run_state.sh:1060
+- Why: the next check takes a planted file into its baseline. Branch code plants a trojaned build/bin/carat in the main checkout; that check fails and leaves a security-escape note, but the fix round's next check baselines the planted binary and can pass, and nothing in the merge gate reads the note, so the trojan stays where the README tells the user to alias their editor.
+- Fix: when a check reads failed with escaped paths under the main checkout's build/bin, build/dev, build/test, or build/spinel, delete or quarantine those outputs so the next build regenerates them, or have the merge gate or the workflow refuse a run whose security-escape note has no matching resolution; add a tools_test case that runs a second check after a planted build/bin/carat.
+none
+- Category: security
+- Added: 2026-11-21
+
+### The merger reported a merged commit that is not the squash commit on main (sprint-24-records note 13)
+- Location: the merger's merged-commit report and its run state record (tools/run_state.sh, the merge-disagreement note)
+- Why: sprint-24-records reported 50d8a3c00ee6 while the squash commit on main is 24df30ea9c94, recorded instead; a wrong merged commit would reach the history row's merged column without the check.
+- Fix: the merger reports the commit `git rev-parse` gives for main after the merge; accepted when a tools-test case records a mismatched report as a disagreement and keeps main's commit.
+- Category: pipeline
+- Added: 2026-11-21
+
+### The merger reported a merged commit that is not the squash commit on main (sprint-24-records note 13)
+- Location: the merger's merged-commit report and its run state record (tools/run_state.sh, the merge-disagreement note)
+- Why: sprint-24-records reported 50d8a3c00ee6 while the squash commit on main is 24df30ea9c94, recorded instead; a wrong merged commit would reach the history row's merged column without the check.
+- Fix: the merger reports the commit `git rev-parse` gives for main after the merge; accepted when a tools-test case records a mismatched report as a disagreement and keeps main's commit.
+- Category: pipeline
+- Added: 2026-11-21
+
+### backlog-move is a one-shot migration left in run_state.sh (sprint-25 review quality)
+- Location: `tools/run_state.sh:3044` (header lines 273 and 359), `tools/rules.sh:70`
+- Why: `backlog_move` and its tools-test cases remain with nothing left to move since docs/backlog.md was removed, and RECORDS_RE and its comment still name docs/backlog.md.
+- Fix: remove backlog-move with its tests and map text; drop the docs/backlog.md alternative from RECORDS_RE in the next rules.sh edit, alone, keeping docs_lint's RETIRED entry; accepted when tools-test passes and `grep -c backlog_move tools/run_state.sh` prints 0.
+- Category: pipeline

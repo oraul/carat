@@ -81,3 +81,21 @@
 - Also: docs/metrics-feature.tsv
 - Category: pipeline
 - Added: 2026-11-21
+
+### Medium-estimate feature runs overrun their 1.2M budget (cmdline-editing evidence, near-same, to be merged into that entry)
+
+- Location: `docs/goals.md` The rubric (sizes), `sh tools/run_state.sh budget`, and the mid-run overrun note at each check pass; cmdline-editing notes 5, 6, 1, 2.
+- Why: 12 of 12 medium rows in the last 10 of each lane exceed 1,200,000 total tokens (feature 1,226,138 to 2,192,549; backlog 1,362,861 to 2,119,140); cmdline-editing 1,418,893 total in 131 minutes wrote 2 overrun notes (299,373 and 406,940 output against 200,000) and continued unchanged both times.
+- Fix: as that entry; accepted when a majority of the next 10 medium rows end under their size's budget, or no mid-run overrun note is written that no phase acts on.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21
+
+### Medium-estimate feature runs overrun their 1.2M budget
+
+- Location: `docs/goals.md` The rubric (sizes) and `sh tools/run_state.sh budget`; showtabline note 3, backlog-per-file note 5.
+- Why: showtabline 1,365,817 total tokens, 247,686 output against the medium output budget 200,000; backlog-records-rule 1,433,807 in 75 minutes; feature mediums in the last 10 rows 1,226,138 to 2,192,549, 5 of 5 over 1.2M.
+- Fix: recalibrate the medium budget from the lane histories or estimate such features large; accepted when at most 1 of the next 5 medium runs overruns.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-21

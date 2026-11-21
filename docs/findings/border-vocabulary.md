@@ -1,9 +1,0 @@
-### Advisories a delivery cannot fix are offered again in each round and the closing start (tabs-only-dot retro note 14)
-- Location: .claude/workflows/deliver-change.js, the advisory fix rounds and the closing start
-- Why: the MODIFIED-scenario rename strict spec validation refuses was offered three times (quality notes 2 and 9, closing advisories 1 and 3) and the docs/backlog.md stale entries a delivery may not read twice (notes 7 and 10, closing 2 and 4); closing closed 0 of 5 here (3,813 output, 5 calls), and 0 in background-detect (0/5), review-trust-lows (0/6), sprint-23-records (0/7), sprint-24-records (0/7); 4 of 11 quality advisories of the run were of these two kinds. Near `closing-loop-fold` (docs/queue-backlog.md Pool 9).
-- Fix: an advisory the contributor reported unfixable with its reason, or one located in a file the lane may not edit, goes straight to the findings file and is not offered again; accepted when a run with such an advisory shows it offered once.
-
-### Advisory-only rounds count as rework and push a medium change over its budget (tabs-only-dot retro note 15)
-- Location: .claude/workflows/deliver-change.js, the fix rounds started on 0 blocking findings
-- Why: the first check pass stood at 143,829 of 200,000 output, then two rounds with 0 blocking raised it to 259,891 and 298,918 (overrun notes 12, 13): 155,089 output (39.5 percent of 392,701) for README, design, test-comment, and findings edits; rework 3 on 0 blocking in review-trust-lows-b, 2 in sprint-24-records, 2 here; quality first pass 135/227, the weakest gate. Adds evidence to `closing-loop-fold` (docs/queue-backlog.md Pool 9).
-- Fix: a run whose every review reports 0 blocking records rework 0 and its advisories cost one closing start at most; accepted when such a run shows rework 0 and one closing start.

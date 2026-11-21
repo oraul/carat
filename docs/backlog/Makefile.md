@@ -297,3 +297,11 @@ none
 - Also: docs/architecture.md
 - Category: pipeline
 - Added: 2026-11-21
+
+### The command-line popup's allocation budget is measured, not gated
+- Location: Makefile `bench-budget`, bench/keys.rb `cmdline-tab`
+- Why: `bench-budget` fails only on `lh`; the popup scenario measured 79.5 objects per key, under the budget of 100, but a later change could raise it unnoticed.
+- Fix: add `sh bench/run.sh --budget cmdline-tab $(ALLOC_BUDGET)` to `bench-budget`, with the CLAUDE.md line the Makefile rule asks for.
+- Also: bench/keys.rb, bench/run.sh, CLAUDE.md
+- Category: pipeline
+- Added: 2026-11-21

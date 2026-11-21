@@ -68,3 +68,12 @@
 - Also: CLAUDE.md
 - Category: pipeline
 - Added: 2026-11-20
+
+### RECORDS_RE still names the removed docs/backlog.md
+
+- Location: `tools/rules.sh:70`, the `docs/(backlog|queue-feature|queue-backlog|goals)\.md$` alternative of `RECORDS_RE`, and its comment at `tools/rules.sh:63`.
+- Why: backlog-per-file removed `docs/backlog.md`; the alternative now matches no file, and the brief left the merge gate's rules untouched, so a later rules change removes it alone.
+- Fix: drop `backlog|` from the alternative and the file from the comment, with the `records_case yes docs/backlog.md` case of `tools/tools_test.sh` turned to `no`.
+- Also: tools/tools_test.sh
+- Category: pipeline
+- Added: 2026-11-21

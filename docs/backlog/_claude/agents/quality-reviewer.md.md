@@ -1,26 +1,5 @@
 # Backlog: .claude/agents/quality-reviewer.md
 
-### Quality advisories the package step drops as style (same proposal as review-demotion)
-- Location: `.claude/agents/quality-reviewer.md` (check-parallel note 10).
-- Why: check-parallel dropped 4 of 7 advisories as style-only, 1 fixed, 2 appended; sprint-security dropped 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
-- Fix: the reviewer does not report a class the contributor then drops unchanged; accepted when over the next 5 runs the package step drops none of the advisories reported.
-- Category: pipeline
-- Added: 2026-11-17
-
-### The quality reviewer reports advisory classes the package step drops
-- Location: `.claude/agents/quality-reviewer.md` (advisory classes)
-- Why: of sprint-security's 6 advisories, 3 naming or duplication ones (RAN, the repeated prompts, the findingLine format) were dropped, changing no decision; the reviews phase took 15,732 output and 28 of 126 calls (22.2%) (sprint-security note 9).
-- Fix: stop reporting the classes the package step drops by rule; accepted when over the next five runs the package step drops no advisory class the reviewer reported, with blocking findings unchanged. Queued in `review-demotion`.
-- Category: pipeline
-- Added: 2026-11-17
-
-### The quality reviewer reports advisory classes the package step always drops (sprint-security retro note 9)
-- Location: `.claude/agents/quality-reviewer.md` advisory rules, the package step's advisory triage
-- Why: 3 of sprint-security's 6 advisories (naming, repeated prompts, a duplicated format) were dropped as changing no decision; reviews 15,732 output and 28 of 126 calls (22.2%).
-- Fix: accepted when over the next five runs the package step drops no advisory class the reviewer reported, the reviewer no longer reporting that class, with first-pass blocking findings unchanged.
-- Category: pipeline
-- Added: 2026-11-17
-
 ### The skeptic's disputed-note command double-quotes the finding text (`sprint-security` security Low (4))
 - Location: .claude/agents/quality-reviewer.md:41
 - Why: the skeptic is told to record a disputed security finding as a double-quoted shell argument, so `$(...)` or backticks in the finding text, which can echo attacker-controlled diff content, would be expanded when the skeptic runs the note command; the shape existed before, and sprint-security narrows it to disputed findings only.
@@ -33,13 +12,6 @@
 - Why: "Record what both missed the same way" now follows the disputed-only form, so a security finding both missed may be noted with a disputed: prefix or not at all.
 - Fix: say a missed finding is noted as note CHANGE security "FINDING" (quality as in Periodic mode step 4).
 - Category: security
-- Added: 2026-11-17
-
-### Quality advisories the package step drops as style (check-parallel retro note 10)
-- Location: .claude/agents/quality-reviewer.md, the advisory classes; queued in `review-demotion`
-- Why: check-parallel's package dropped 4 of 7 advisories as style, sprint-security 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
-- Fix: the reviewer stops reporting the classes the contributor drops unchanged; accepted when over the next five runs the package step drops none of the advisories reported.
-- Category: pipeline
 - Added: 2026-11-17
 
 ### The skeptic records a disputed security finding as a double-quoted shell argument (sprint-13 security Low (4))
@@ -99,3 +71,16 @@
 - Also: tools/agent_guard.sh
 - Category: pipeline
 - Added: 2026-11-20
+
+### The quality reviewer's steps 5 to 7 describe a delivery review no workflow starts
+- Location: .claude/agents/quality-reviewer.md:22 (steps 5 to 7)
+- Why: after review-in-openspec no delivery starts the quality reviewer on its diff; only the pull request text check, the sprint, skeptic, and periodic modes use the agent, and the contributor applies steps 1 to 4 itself, so steps 5 to 7 (quality-blocking and quality-advisory notes, fix in place, the hand-over) describe a path that no longer runs and could lead the text check to record notes nobody reads.
+- Fix: decide whether the pull request text check records anything; then reduce steps 5 to 7 to that and to the sprint and periodic modes, and say the contributor's step records findings as tasks.
+- Category: pipeline
+- Added: 2026-11-21
+
+### The quality reviewer's steps still describe the per-delivery review (sprint-25 review quality)
+- Location: `.claude/agents/quality-reviewer.md:16`, `tools/run_state.sh:1652`
+- Why: since review-in-openspec no delivery starts the quality reviewer for a fix round, yet its steps describe fix rounds, the scope command, fixed_in_place, and the quality-blocking and quality-advisory notes; `fix_scope` (`run_state.sh scope`) is reached only by `tools/tools_test.sh`.
+- Fix: trim the agent file to its sprint, periodic, skeptic, pull request text, and self-review uses; remove `scope` with its tests and its codebase-map mention; accepted when tools-test passes and no workflow names `scope`.
+- Category: pipeline
