@@ -876,7 +876,7 @@ const SELF_CHECK = '\nBefore returning, check yourself: every behavior the chang
 // The rules card at the top of the contributor's agent file, word for word
 // (tools/tools_test.sh compares them): the mid tier forgets a rule of a long
 // file, and each start is fresh, so every start carries it.
-const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded; then archive."
+const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded, before packaging."
 
 // Card rule 1 made mechanical: a done contributor result's head is the
 // lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters,
@@ -908,6 +908,15 @@ function qualityReviewProblem(r) {
   if (n.every((x) => Number.isInteger(x) && x >= 0) && q.fixed + q.recorded === q.added) return ''
   return `quality review counts ${n.map((x) => safeText(String(x))).join('/')} are not added, fixed, and recorded with fixed plus recorded equal to added`
 }
+// What a done result is refused for, each a kind (the note's KIND-refused
+// and the words of its escalation and stop) and its reason: the head of any
+// mode, and the quality review of an implement start.
+const REFUSED_WORDS = { head: 'head', quality: 'quality review' }
+function resultProblems(mode, r, lane) {
+  const found = [{ kind: 'head', text: headProblem(r.head, lane) }]
+  if (mode === 'implement') found.push({ kind: 'quality', text: qualityReviewProblem(r) })
+  return found.filter((p) => p.text)
+}
 async function laneHead() {
   const command = `git -C ${laneDir(state.change)} rev-parse --short=12 HEAD`
   const r = await recordStart(command, 'record: lane head')
@@ -922,7 +931,7 @@ async function contributor(mode, detail) {
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : capKind === 'closing' ? 'closing' : 'package'
   let result = null
   let more = ''
-  let refused = false
+  const refused = new Set()
   for (let count = 0; ; count++) {
     result = await measured(key, () => agent(
       `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(capKind)}`,
@@ -934,8 +943,8 @@ async function contributor(mode, detail) {
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') {
       const lane = await laneHead()
-      const problem = headProblem(result.head, lane) || (mode === 'implement' ? qualityReviewProblem(result) : '')
-      if (!problem) {
+      const problems = resultProblems(mode, result, lane)
+      if (!problems.length) {
         // An unread lane head is also a run-state note in fixed words, so a
         // reader that always fails, turning the wrong-head refusal off, shows.
         if (!lane) {
@@ -945,20 +954,23 @@ async function contributor(mode, detail) {
         if (mode === 'implement') { const q = result.quality_review; qualityReview = `${q.added}/${q.fixed}/${q.recorded}` }
         break
       }
-      // A refused head or quality review escalates, is noted, and is
-      // restarted once; a second refusal in this call stops the run.
-      const what = problem.startsWith('head ') ? 'head' : 'quality'
-      escalate(what === 'head' ? 'a refused head' : 'a refused quality review')
-      note(`contributor (${mode}) result refused: ${problem}${refused ? '; refused twice, stopped' : '; restarted'}`)
-      queue(`sh tools/run_state.sh note ${state.change} ${what}-refused "contributor ${mode} start ${count + 1}: ${problem}"`, head)
-      if (refused) {
-        stopped = `contributor (${mode}) returned a refused ${what === 'head' ? 'head' : 'quality review'} twice: ${problem}`
+      // Each refused kind, a head or a quality review, escalates, is noted,
+      // and puts its own reason in the one restart; a kind refused once is
+      // restarted once, and its second refusal in this call stops the run.
+      const repeated = problems.filter((p) => refused.has(p.kind))
+      for (const p of problems) {
+        escalate(`a refused ${REFUSED_WORDS[p.kind]}`)
+        note(`contributor (${mode}) result refused: ${p.text}${repeated.length ? '; refused twice, stopped' : '; restarted'}`)
+        queue(`sh tools/run_state.sh note ${state.change} ${p.kind}-refused "contributor ${mode} start ${count + 1}: ${p.text}"`, head)
+      }
+      if (repeated.length) {
+        stopped = `contributor (${mode}) returned a refused ${repeated.map((p) => REFUSED_WORDS[p.kind]).join(' and ')} twice: ${repeated.map((p) => p.text).join('; ')}`
         return false
       }
-      refused = true
-      more = what === 'head'
-        ? `\nThis restarts a start whose result was refused: its ${problem}. Return as head the output of \`git rev-parse --short=12 HEAD\` run in the worktree, copied, never typed or a placeholder; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
-        : `\nThis restarts a start whose result was refused: ${problem}. ${QUALITY_STEP}`
+      for (const p of problems) refused.add(p.kind)
+      more = problems.map((p) => p.kind === 'head'
+        ? `\nThis restarts a start whose result was refused: its ${p.text}. Return as head the output of \`git rev-parse --short=12 HEAD\` run in the worktree, copied, never typed or a placeholder; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
+        : `\nThis restarts a start whose result was refused: ${p.text}. ${QUALITY_STEP}`).join('')
       continue
     }
     if (step.next === 'stop') {
@@ -1180,7 +1192,7 @@ function priorSecurity() {
 function securityReview(more) {
   return agent(more
     ? `${intro()} ${continuedSecurity(more)}${capLine('security')}`
-    : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${inPlaceCheck('security')}${capLine('security')}`,
+    : `${intro()} Run the security review on the committed diff and return the result.${priorSecurity()}${inPlaceCheck()}${capLine('security')}`,
   calibrate('security', { agentType: 'security-reviewer', schema: withCalls(SECURITY), phase: 'Security', label: more ? 'security-reviewer: continued' : 'security-reviewer' }))
 }
 // The continued security request, its closing sentence on a line of its
@@ -1195,15 +1207,15 @@ function reviewMore(r, left) {
 }
 // A review continued while it left files or returned nothing, at most
 // CONTINUES more starts, the findings of every start kept.
-async function continueReview(kind, first) {
+async function continueReview(first) {
   let all = first
   let r = first
   for (let count = 0; ; count++) {
     const step = continuation(r, r ? reviewLeft(r) : null, count)
     if (step.next !== 'continue') return all
-    note(`${kind} review ${r ? 'reached its cap' : 'returned no result'}; continued`)
+    note(`security review ${r ? 'reached its cap' : 'returned no result'}; continued`)
     const more = reviewMore(r, step.left)
-    r = await measured(kind, () => securityReview(more), callCap(kind))
+    r = await measured('security', () => securityReview(more), callCap('security'))
     all = r && all && (!('ran' in all) || all.ran) ? combineReviews(all, r) : r || all
   }
 }
@@ -1263,7 +1275,7 @@ async function reviews() {
   const first = await measured('security', () => securityReview(''), callCap('security'))
   // A review that left files or returned nothing is continued over what it
   // left; a security review never passes with anything left.
-  const s = await continueReview('security', first)
+  const s = await continueReview(first)
   if (!s || reviewLeft(s).length) { stopped = `the security review did not ${s && s.ran ? `cover ${reviewLeft(s).join(', ')}` : 'run'}; it cannot be skipped`; return null }
   // Every High or Medium in the change at confidence 8 or above blocks,
   // a re-rating of an earlier non-blocking finding included.
@@ -1274,7 +1286,7 @@ async function reviews() {
     addBacklog(line)
     if (f.in_change) reviewFindings.push(line)
   }
-  confirmInPlace('security', s.fixed_in_place)
+  confirmInPlace(s.fixed_in_place)
   note(`security at ${s.head}: ${s.findings.length} finding(s), ${blocking.length} blocking`)
   const count = (severity) => s.findings.filter((f) => f.severity === severity).length
   reviewed('security', !blocking.length, s.head, { high: count('High'), medium: count('Medium'), low: count('Low'), blocking: blocking.length })
@@ -1318,7 +1330,7 @@ function resumePush(pushed, head, used) {
 let reviewFindings = []
 const offered = new Set()
 const fixedInPlace = new Set()
-let awaiting = { security: [] }
+let awaiting = []
 // The findings a round offers for a fix in place: those not offered before,
 // none while the closing loop runs (its advisories go to the findings file).
 function freshOffers(fixes) {
@@ -1332,19 +1344,18 @@ function inPlaceRound(blocked, count, used, limit) {
 function inPlaceTask(list) {
   return `Fix in place, in this round, each finding below that lies in a file the change edits when its fix stays in those files and adds no behavior: each one a task of the change's tasks.md, marked done with its fix, its delta spec updated when specified behavior moves. Leave any other; it stays recorded for docs/findings/${state.change}.md.\n- ${list.join('\n- ')}`
 }
-// What a reviewer after an in-place round is asked: the findings of its
-// kind offered then, to confirm fixed.
-function inPlaceCheck(kind) {
-  const list = awaiting[kind]
-  return list.length ? `\nFindings fixed in place since the last review, to check: list in fixed_in_place, verbatim as written here, each one the fix removed; one still present is a finding as before.\n- ${list.join('\n- ')}` : ''
+// What the security reviewer after an in-place round is asked: the
+// security findings offered then, to confirm fixed.
+function inPlaceCheck() {
+  return awaiting.length ? `\nFindings fixed in place since the last review, to check: list in fixed_in_place, verbatim as written here, each one the fix removed; one still present is a finding as before.\n- ${awaiting.join('\n- ')}` : ''
 }
-function confirmInPlace(kind, listed) {
-  for (const f of listed || []) if (awaiting[kind].includes(f)) fixedInPlace.add(f)
-  awaiting[kind] = []
+function confirmInPlace(listed) {
+  for (const f of listed || []) if (awaiting.includes(f)) fixedInPlace.add(f)
+  awaiting = []
 }
 function offer(list, awaited) {
   for (const f of list) offered.add(f)
-  if (awaited) awaiting = { security: list.filter((f) => f.startsWith('security ')) }
+  if (awaited) awaiting = list.filter((f) => f.startsWith('security '))
 }
 
 // The closing loop (closing-loop, the user's exception of 2026-11-19): once
@@ -1398,7 +1409,7 @@ async function closeAdvisories() {
   settleAt = settleAfter(from, before, head)
   // Nothing committed: the offered findings were not touched, so no later
   // review is asked to confirm them.
-  if (head === before) awaiting = { security: [] }
+  if (head === before) awaiting = []
   // Held and flushed at once, so a run stopped during the re-review (and a
   // resume before the push) has the loop recorded as run; the final figures
   // follow it.

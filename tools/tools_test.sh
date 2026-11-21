@@ -4836,7 +4836,7 @@ expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '
 # spare, are re-reviewed at the new head, and leave the hand-over only when
 # a reviewer confirms them fixed.
 place_js() {
-  js "$wf" "inPlaceRound inPlaceTask inPlaceCheck confirmInPlace offer findings handOver passedAt" "(() => { globalThis.state = { change: 'c' }; globalThis.offered = new Set(); globalThis.fixedInPlace = new Set(); globalThis.awaiting = { security: [] }; globalThis.handed = new Set(); globalThis.backlog = ['security Low (6) a.sh:3 t; fix: f', 'security Low (5) b.sh:1 u; fix: g']; return $1 })()"
+  js "$wf" "inPlaceRound inPlaceTask inPlaceCheck confirmInPlace offer findings handOver passedAt" "(() => { globalThis.state = { change: 'c' }; globalThis.offered = new Set(); globalThis.fixedInPlace = new Set(); globalThis.awaiting = []; globalThis.handed = new Set(); globalThis.backlog = ['security Low (6) a.sh:3 t; fix: f', 'security Low (5) b.sh:1 u; fix: g']; return $1 })()"
 }
 expect "workflow: findings in place ride with the blocking ones" 0 '^"with"$' place_js "inPlaceRound(true, 2, 2, 3)"
 expect "workflow: findings in place get a round of their own only with a round to spare" 0 '^\["alone","alone","record","none"\]$' \
@@ -4844,9 +4844,9 @@ expect "workflow: findings in place get a round of their own only with a round t
 expect "workflow: each finding fixed in place is a task of tasks.md" 0 '^\[true,true,true\]$' \
   place_js "(t => [t.includes(\"a task of the change's tasks.md\"), t.includes('adds no behavior'), t.endsWith('- security Low (6) a.sh:3 t; fix: f')])(inPlaceTask(['security Low (6) a.sh:3 t; fix: f']))"
 expect "workflow: a fix-in-place round runs the check and security again at its head" 0 '^\[true,true,false,false,true\]$' \
-  place_js "(() => { const ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234' }; offer(findings(), true); const keys = ['phase.check', 'review.security']; return keys.map((k) => passedAt(ran, k, 'abc1234')).concat(keys.map((k) => passedAt(ran, k, 'def5678')), [inPlaceCheck('security').includes('- security Low (5) b.sh:1 u; fix: g')]) })()"
+  place_js "(() => { const ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234' }; offer(findings(), true); const keys = ['phase.check', 'review.security']; return keys.map((k) => passedAt(ran, k, 'abc1234')).concat(keys.map((k) => passedAt(ran, k, 'def5678')), [inPlaceCheck().includes('- security Low (5) b.sh:1 u; fix: g')]) })()"
 expect "workflow: a finding confirmed fixed in place leaves the hand-over" 0 '^\["security Low [(]5[)] b[.]sh:1 u; fix: g"\]$' \
-  place_js "(() => { offer(findings(), true); confirmInPlace('security', ['security Low (6) a.sh:3 t; fix: f', 'not offered']); return handOver() })()"
+  place_js "(() => { offer(findings(), true); confirmInPlace(['security Low (6) a.sh:3 t; fix: f', 'not offered']); return handOver() })()"
 # Each delivery runs in its own worktree, its merge gates a worktree under
 # the lane's own tmp/, so two never share one (parallel-lanes-b).
 lane_js() {
@@ -5061,7 +5061,7 @@ closing_js() {
     globalThis.state = { change: 'c' }; globalThis.head = 'aaaaaaa'; globalThis.fixedInPlace = new Set(); globalThis.closingLoop = false
     globalThis.ran = { 'phase.check': 'aaaaaaa', 'review.security': 'pass aaaaaaa', 'review.bench': 'pass aaaaaaa' }; globalThis.qualityReview = '0/0/0'
     globalThis.note = () => {}; globalThis.phase = () => {}; globalThis.offer = () => {}; globalThis.flushes = []; globalThis.flush = async (force) => { flushes.push(JSON.stringify(closingFigures) + (force ? ' forced' : '')); return true }
-    globalThis.awaiting = { security: ['security Low (5) a.rb:1 t; fix: f'] }
+    globalThis.awaiting = ['security Low (5) a.rb:1 t; fix: f']
     globalThis.contributor = async (mode, detail) => { calls.push(mode); globalThis.head = commits.shift() || head; return { head } }
     globalThis.verify = async () => { verifies++; fixedInPlace.add(open[0]); open.push('quality advisory raised by the closing review'); return true }
     $1
@@ -5087,7 +5087,7 @@ expect "closing loop: a records-only closing commit stands on the earlier check 
 # left), and the lane-head start, labelled record, the lane value, its
 # prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem qualityReviewProblem QUALITY_STEP recordStart laneHead contributor" "(async () => {
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead contributor" "(async () => {
     globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
     globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'
     globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1; globalThis.qualityReview = ''
@@ -5110,7 +5110,7 @@ expect "head guard: a head at the lane's HEAD is taken, with no note and no esca
 expect "head guard: the lane-head start runs git rev-parse --short=12 HEAD in the change's worktree, once per done result" 0 '^\[1,true\]$' \
   contributor_js "await contributor('implement', 'd'); return [headPrompts.length, headPrompts[0].includes('\n\ngit -C tmp/.lane-c rev-parse --short=12 HEAD\n\n')]"
 expect "head guard: a placeholder head is refused, noted head-refused, escalated, and restarted once with the reason" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":2,"queued":\["sh tools/run_state.sh note c escalation \\"a refused head\\"","sh tools/run_state.sh note c head-refused \\"contributor implement start 1: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD\\""\],"escalated":true,"told":true,"closable":true\}$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
 expect "head guard: a well-formed head other than the lane's HEAD, or a typed short one, is refused" 0 '^\[\["head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb; restarted"\],"head bbbbbbb is not the 12-character form of git rev-parse --short=12 HEAD",""\]$' \
   contributor_js "results = [{ status: 'done', head: 'cccccccccccc', summary: 's' }]; await contributor('fix', 'd'); return [notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .fix. result refused: /, '')), headProblem('bbbbbbb', 'bbbbbbbbbbbb'), headProblem('bbbbbbbbbbbb', 'bbbbbbbbbbbb')]"
 # Card rule 10 made mechanical (review-in-openspec): the implement start
@@ -5123,6 +5123,10 @@ expect "quality step: a second implement result without a quality review stops t
   contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 2, fixed: 1, recorded: 0 } }]; const r = await contributor('implement', 'd'); return [!!r, prompts.length, stopped.startsWith('contributor (implement) returned a refused quality review twice: quality review counts 2/1/0 are not added, fixed, and recorded'), qualityReview]"
 expect "quality step: counts that add up pass, and a fix or package result needs no quality review" 0 '^\["",true,2,""\]$' \
   contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; await contributor('fix', 'd'); await contributor('package', 'd'); return [qualityReviewProblem({ quality_review: { status: 'done', added: 3, fixed: 2, recorded: 1 } }), qualityReviewProblem({ quality_review: { status: 'done', added: -1, fixed: 0, recorded: -1 } }).startsWith('quality review counts -1/0/-1'), prompts.length, qualityReview]"
+expect "quality step: a result refused for its head and its quality review together is noted twice and restarted once with both reasons and the step" 0 '^\{"ok":true,"starts":2,"kinds":\["head-refused","quality-refused"\],"head":true,"step":true\}$' \
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, starts: prompts.length, kinds: queued.filter((l) => l.includes('-refused')).map((l) => / ([a-z]+-refused) /.exec(l)[1]), head: prompts[1].includes('refused: its head placeholder is not'), step: prompts[1].includes('refused: no quality review of status done') && prompts[1].includes('Run the quality step of card rule 10 now') }"
+expect "quality step: a quality review refused after a refused head is restarted once more, and a second refusal of a kind stops the run naming that kind" 0 '^\[true,3,"",false,"contributor \(implement\) returned a refused head and quality review twice: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD; no quality review of status done: the quality step of card rule 10 did not run"\]$' \
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, prompts.length, stopped]; results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }]; const second = await contributor('implement', 'd'); return a.concat([!!second, stopped])"
 expect "head guard: a second refused head in one call stops the run, unmerged" 0 '^\{"ok":false,"starts":2,"stopped":"contributor \(package\) returned a refused head twice: head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb","refusals":2\}$' \
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'cccccccccccc', summary: 's' }]; const r = await contributor('package', 'd'); return { ok: !!r, starts: prompts.length, stopped, refusals: queued.filter((l) => l.includes('head-refused')).length }"
 expect "head guard: an unread lane head takes a well-formed head with a note and a closable head-unread note, never a placeholder" 0 '^\[true,"dddddddddddd",1,\["sh tools/run_state.sh note c head-unread \\"contributor implement start 1: lane head not read\\""\],true,false\]$' \
@@ -5163,7 +5167,7 @@ expect "quality step: the archive and package step runs the quality step first w
   closing_js "const order = []; globalThis.qualityReview = ''; globalThis.contributor = async (mode, d) => { order.push(mode + (d.startsWith('Every task of tasks.md is done. Run the quality step of card rule 10 now') ? ' quality' : '')); return false }; globalThis.verify = async () => { order.push('verify'); return true }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; const ok = await readyToPackage(); const first = order.splice(0); qualityReview = '1/1/0'; await readyToPackage(); return [first, ok, order]"
 expect "quality step: a restart reads the recorded quality review back, a malformed one dropped" 0 '^\["3/2/1",""\]$' \
   closing_js "globalThis.usage = {}; globalThis.firstPass = {}; globalThis.calibrated = {}; globalThis.restoreCalibration = () => {}; globalThis.restoreRouting = () => {}; globalThis.heldFindings = () => []; globalThis.addBacklog = () => {}; globalThis.handed = new Set(); globalThis.qualityReview = ''; globalThis.state = { change: 'c', 'metric.quality_review': '3/2/1' }; seed(); const a = qualityReview; qualityReview = ''; state = { change: 'c', 'metric.quality_review': '3/2' }; seed(); return [a, qualityReview]"
-expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
+expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\[\],"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
   closing_js "globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; await closeAdvisories(); return { awaiting, flushes }"
 expect "closing loop: a restart restores the recorded figures and closeAdvisories then starts nothing" 0 '^\{"calls":\[\],"figures":\{"closed":2,"left":3\}\}$' \
   closing_js "globalThis.usage = {}; globalThis.firstPass = {}; globalThis.calibrated = {}; globalThis.restoreCalibration = () => {}; globalThis.restoreRouting = () => {}; globalThis.heldFindings = () => []; globalThis.addBacklog = () => {}; globalThis.handed = new Set(); globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; globalThis.state = { change: 'c', 'metric.advisories_closed': '2', 'metric.advisories_left': '3' }; seed(); await closeAdvisories(); return { calls, figures: closingFigures }"
@@ -5530,7 +5534,7 @@ expect "delivery: no quality-reviewer start but the pull request text check, no 
 review_js() {
   js "$wf" "COMMIT passedAt SETTLES settledAtHead reviewedAtHead securityBlocking reviewLeft combineReviews CONTINUES continuation continueReview reviewMore continuedSecurity priorSecurity narrowedFrom securityReview inPlaceCheck confirmInPlace reviews" "(async () => {
     globalThis.head = 'abc1234'; globalThis.ran = {}; globalThis.stopped = ''; globalThis.settledRound = null; globalThis.reviewFixRounds = 0
-    globalThis.starts = []; globalThis.records = []; globalThis.kept = []; globalThis.reviewFindings = []; globalThis.awaiting = { security: [] }; globalThis.fixedInPlace = new Set()
+    globalThis.starts = []; globalThis.records = []; globalThis.kept = []; globalThis.reviewFindings = []; globalThis.awaiting = []; globalThis.fixedInPlace = new Set()
     globalThis.intro = () => ''; globalThis.capLine = () => ''; globalThis.withCalls = (x) => x; globalThis.calibrate = (k, o) => o; globalThis.phase = () => {}; globalThis.note = () => {}; globalThis.verdict = () => {}
     globalThis.measured = async (k, fn) => fn(); globalThis.callCap = () => 9; globalThis.SECURITY = 1; globalThis.addBacklog = (l) => kept.push(l)
     globalThis.reviewed = (k, p, c) => { records.push(k + ' ' + (p ? 'pass' : 'blocked') + ' ' + c); ran['review.' + k] = (p ? 'pass ' : 'blocked ') + c }
