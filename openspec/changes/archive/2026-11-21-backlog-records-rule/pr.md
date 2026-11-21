@@ -10,7 +10,7 @@ Widens the merge gate's records rule so the Markdown files under docs/backlog/ c
 
 - Change RECORDS_RE in tools/rules.sh to also match docs/backlog/ followed by any path ending in .md, keeping docs/backlog.md until the move removes it, and name the backlog folder in its comment
 - Add tools-test cases proving docs/backlog.md, docs/backlog/_general.md, and docs/backlog/carat/adapters/tab_bar.rb.md are records while docs/backlogs.md and docs/backlog/x.txt are not
-- Add tools-test cases proving settled_at in tools/gates.sh, TEST_ONLY in tools/run_state.sh, the settled check, and ci_scope read the backlog folder's Markdown files as records and a non-Markdown file there as code
+- Add tools-test cases proving settled_at in tools/gates.sh and TEST_ONLY in tools/run_state.sh read the backlog folder's Markdown files as records and a non-Markdown file there as code, that the settled check passes a records-only diff in the folder, and that ci_scope skips the full CI for the folder's Markdown files
 - Add the user-approved exception line for this change under Sprint 25 of the backlog lane queue, with the plan and the metrics history row
 
 ---
