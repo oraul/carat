@@ -11,7 +11,7 @@
 - `backlog-oldest` and backlog-pick's groomed set (`ENTRY_AWK`'s `load_groomed`) read a gone line's heading before its ` -- REASON`, so an entry a gone line removes is still left out.
 - Removed, used only by `stale` and `closed`: `entry_added`, `stale_mark`, `named_history`, `named_since`, `sprint_next`, `PRUNE_ALL_SPRINT` and the whole-backlog scan it switched on. `backlog-oldest` stays, `PRUNE_COUNT` entries (50), since `tools/agent_guard.sh` (the planner's read profile) and the sprint planner's prompt read it: the planner checks those entries against HEAD for evidence (`fixed` in the sprint, `gone` with a reason).
 - Kept unchanged: `listed`, `fixed`, `merged`, and `duplicate`.
-- The `tools/run_state.sh` header and comments, `.claude/agents/planner.md` step 1, CLAUDE.md's Agents Backlog line, README.md pipeline step 11, `docs/codebase-map.md` (`tools/run_state.sh`), and `.claude/workflows/sprint-planning.js` (the prompt line naming the oldest entries) name the evidence kinds and no pruning by age.
+- The `tools/run_state.sh` header and comments, `.claude/agents/planner.md` step 1, CLAUDE.md's Agents Backlog line, README.md pipeline step 11, and `docs/codebase-map.md` (`tools/run_state.sh`) name the evidence kinds and no pruning by age; the planner's triage decision reads `Backlog triage: N removed`. `.claude/workflows/sprint-planning.js` keeps its prompt, which asks only to check the oldest entries against HEAD.
 - `tools/tools_test.sh`: the `stale` and `closed` cases become refusals, the gone cases carry reasons, a gone line without a reason and one with a blank reason are refused, the whole-backlog scan cases are removed, and the sprint plan's accepted lines (listed, fixed, merged, duplicate, gone with a reason) still apply.
 - `docs/queue-backlog.md`: the Sprint 25 heading carries the user-approved exception line for this change, from the plan's queue, applied at the package step by `plan-apply`.
 
@@ -29,7 +29,7 @@ None: the delivery pipeline is described by no spec under `openspec/specs/` (`sk
 
 ## Impact
 
-- `tools/run_state.sh` (`groom`, `backlog_oldest`, `ENTRY_AWK`, the header, the pruning constant, five helpers removed), `tools/tools_test.sh`, `.claude/agents/planner.md`, `.claude/workflows/sprint-planning.js`.
+- `tools/run_state.sh` (`groom`, `backlog_oldest`, `ENTRY_AWK`, the header, the pruning constant, five helpers removed), `tools/tools_test.sh`, `.claude/agents/planner.md`.
 - README.md: changed, the grooming sentence of pipeline step 11.
 - CLAUDE.md: changed, the Backlog line names the evidence kinds.
 - docs/codebase-map.md: changed, the `backlog-oldest` and `groom` descriptions of `tools/run_state.sh`; no file is added, moved, or removed.

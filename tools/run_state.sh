@@ -254,17 +254,17 @@
 #                               mapped path holds printed "unmapped:"; exit
 #                               1 when no batch
 #   backlog-oldest FILE...      print the heading lines of the first
-#                               PRUNE_COUNT entries of the FILEs (50;
-#                               every entry while PRUNE_ALL_SPRINT is the
-#                               sprint in progress), which it
-#                               requires (only the sprint planner names
+#                               PRUNE_COUNT entries of the FILEs (50),
+#                               which it requires (only the sprint planner names
 #                               docs/backlog.md and docs/findings/*.md), in
 #                               order, the oldest first: a "## " or "### "
 #                               heading with a path:line in it or a
 #                               "- Location:" or "- Where:" line, each
 #                               once, one whose whole heading line ends a
-#                               line of PLAN_DIR/groom.txt left out; the
+#                               line of PLAN_DIR/groom.txt, a gone line's
+#                               before its " -- REASON", left out; the
 #                               entries the planner checks against HEAD
+#                               for evidence (groom's fixed and gone)
 #   groom [CHANGE]              nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
@@ -284,28 +284,20 @@
 #                               holds HEADING), "fixed COMMIT HEADING"
 #                               (COMMIT in the sprint's range, after its
 #                               base up to HEAD, changing a file the entry
-#                               names), "closed COMMIT HEADING" (COMMIT in
-#                               HEAD after the commit first adding HEADING,
-#                               changing a file the entry names: an old
-#                               entry pruned), "gone HEADING" (every path
-#                               the entry names that the history held, at
-#                               least one, absent at HEAD), "stale HEADING"
-#                               (a title after the "#" marks; the commit
-#                               first adding HEADING strictly before the
-#                               one adding the third-last row of the
-#                               sprints file, found by its sprint name; no
-#                               later commit adding a line holding its
-#                               title, unless it removes that line too, to
-#                               the backlog, a findings file, or
-#                               docs/queue-*.md, a "- Merged:" line among
-#                               them; and no lane queue, nor the plan's,
-#                               holding it now), "merged KEPT <=
+#                               names), "gone HEADING -- REASON" (REASON,
+#                               after the line's last " -- ", not blank,
+#                               saying why the problem no longer applies,
+#                               and every path the entry names that the
+#                               history held, at least one, absent at
+#                               HEAD), "merged KEPT <=
 #                               HEADING" (KEPT another heading no line
 #                               removes, HEADING removed by no other line;
 #                               a security entry only into one), or
-#                               "duplicate HEADING" ("closed", "gone",
-#                               "stale", and "duplicate" never a security
-#                               entry
+#                               "duplicate HEADING" ("gone" and
+#                               "duplicate" never a security
+#                               entry; an entry leaves only with evidence,
+#                               never for its age, so a "stale" or
+#                               "closed" line is refused
 #                               (security_entry: security and a severity
 #                               in any wording, such as security Low or
 #                               a Low finding of the security review),
@@ -435,13 +427,9 @@ PICK_BATCHES=3
 PICK_MIN=5
 PICK_MAX=10
 # The entries the sprint planner checks against HEAD each sprint
-# (backlog-oldest), closing those fixed, gone, or stale (groom's closed,
-# gone, and stale): PRUNE_COUNT of them, and every entry while
-# PRUNE_ALL_SPRINT is the sprint in progress, the one whole-backlog scan
-# at its close (the user's decision of 2026-11-20), whose removal after
-# that close docs/findings/groom-stale-prune.md records.
+# (backlog-oldest) for evidence that one left (groom's fixed and gone),
+# never for its age (the user's rule of 2026-11-21): PRUNE_COUNT of them.
 PRUNE_COUNT=50
-PRUNE_ALL_SPRINT=sprint-24
 metrics_out=${METRICS_OUT:-build/metrics/current.tsv}
 # The stage records the check runner wrote (stage_record).
 runner_records=''
@@ -523,13 +511,20 @@ SECURITY_SEVERITY='(critical|high|medium|low|disputed)s?'
 SECURITY_MARK="(^|[^a-z])security[^a-z](.*[^a-z])?$SECURITY_SEVERITY([^a-z]|\$)|(^|[^a-z])$SECURITY_SEVERITY[^a-z](.*[^a-z])?security([^a-z]|\$)|(^|[^a-z])(critical|high|medium|low) \\([0-9]+\\)"
 # The awk functions backlog-pick and backlog-oldest share: load_groomed
 # fills groomed with every whole heading line a line of the plan's
-# groom.txt ends in, and backlog_entry_head is true for a heading that
+# groom.txt ends in, a gone line cut at its last " -- " first, before its
+# reason, and backlog_entry_head is true for a heading that
 # makes an entry, one with a path:line in it or a "- Location:" or
 # "- Where:" line (marked).
 ENTRY_AWK='
-    function load_groomed(file,   line, j) {
-      while ((getline line < file) > 0)
+    function load_groomed(file,   line, j, k) {
+      while ((getline line < file) > 0) {
+        if (line ~ /^gone /) {
+          k = 0
+          for (j = 1; j + 3 <= length(line); j++) if (substr(line, j, 4) == " -- ") k = j
+          if (k) line = substr(line, 1, k - 1)
+        }
         for (j = 1; j < length(line); j++) if (substr(line, j, 2) == " #") groomed[substr(line, j + 1)] = 1
+      }
     }
     function backlog_entry_head(h, marked) {
       return marked || h ~ /[A-Za-z0-9_.\/-]+[.][A-Za-z]+:[0-9]+/
@@ -2961,82 +2956,18 @@ entry_paths() {
     }'
 }
 
-# The oldest commit whose diff changes how often the heading line $1
-# stands, as a whole line, in the backlog or a findings file: the commit
-# adding the entry, which groom's closed line requires its fixing commit
-# to follow. The heading is matched escaped and anchored at both ends of
-# a line, so an older heading it only prefixes is not taken for it.
-entry_added() {
-  added_re=$(printf '%s\n' "$1" | sed 's/[][\\.*^$+?(){}|]/\\&/g')
-  git log --reverse --format=%H --pickaxe-regex -S"^$added_re\$" -- "$backlog_file" "$findings_dir" 2>/dev/null | head -1
-}
-
-# The sprint in progress, one after the sprints file's last row, or
-# nothing when the file or a sprint row is missing: backlog-oldest's
-# check for PRUNE_ALL_SPRINT, which needs no history as sprint_state does.
-sprint_next() {
-  [ -f "$sprints_file" ] || return 0
-  awk -F'\t' 'NR > 1 && NF { r = $1 } END { if (r ~ /^sprint-[0-9]+$/) print "sprint-" (substr(r, 8) + 1) }' "$sprints_file"
-}
-
-# The newest commit whose diff changes how often a line starting with
-# the sprint name of the third-last row of the sprints file (its header
-# left out) and a tab stands in it, the commit adding that row as it
-# stands, so a later correction of the row's other fields does not move
-# it, nor an older row of that name since removed; nothing
-# when the file has fewer than three rows: an entry groom's stale line
-# removes was added strictly before it, so it has outlived three sprints.
-stale_mark() {
-  [ -f "$sprints_file" ] || return 0
-  mark_name=$(awk -F'\t' 'NR > 1 && NF { r[++n] = $1 } END { if (n >= 3) print r[n - 2] }' "$sprints_file")
-  valid 'sprint-[0-9]+' "$mark_name" || return 0
-  git log -1 --format=%H --pickaxe-regex -S"^$mark_name$(printf '\t')" -- "$sprints_file" 2>/dev/null
-}
-
-# The history named_since reads, every commit of HEAD changing the
-# backlog, a findings file, or a lane queue with its diff, walked once
-# per groom run into named_log (named_read set) at the first stale line.
-named_history() {
-  git log -p --reverse --format='@%H' HEAD -- "$backlog_file" "$findings_dir" 'docs/queue-*.md' 2>/dev/null
-}
-
-# The first commit after COMMIT ($1) up to HEAD that adds a line holding
-# the title $2 (a heading less its "#" marks) to the backlog, a findings
-# file, or a lane queue (docs/queue-*.md), the "- Merged:" lines groom
-# writes into the backlog among them, or nothing, read from named_log,
-# only the commits of $1..HEAD taken. A line the same commit also
-# removes, as groom's fold moves a findings file into the backlog or a
-# queue item moves unchanged, does not count; merge commits show no
-# diff. A title inside a longer heading counts, which only keeps an
-# entry. Groom's proof that a stale entry was never named again.
-named_since() {
-  { git rev-list "$1..HEAD" -- "$backlog_file" "$findings_dir" 'docs/queue-*.md' 2>/dev/null; echo @@; printf '%s\n' "$named_log"; } | T="$2" awk '
-    BEGIN { t = ENVIRON["T"] }
-    function verdict(   l) { for (l in added) if (!(l in removed)) { print c; found = 1; exit } }
-    !body { if ($0 == "@@") body = 1; else range[$0] = 1; next }
-    /^@[0-9a-f]+$/ { verdict(); c = substr($0, 2); keep = (c in range); split("", added); split("", removed); next }
-    !keep { next }
-    /^\+\+\+ (b\/|\/dev\/null)/ || /^--- (a\/|\/dev\/null)/ { next }
-    /^\+/ { l = substr($0, 2); if (index(l, t)) added[l] = 1; next }
-    /^-/ { removed[substr($0, 2)] = 1 }
-    END { if (!found) verdict() }'
-}
-
 # The heading lines of the first PRUNE_COUNT entries of the FILEs, in
 # order (backlog-oldest in the header): the oldest, since the backlog is
 # only appended and groom folds the findings files after it. An entry is
 # a "## " or "### " heading with a path:line in it or a "- Location:" or
 # "- Where:" line; one whose whole heading line ends a line of
-# PLAN_DIR/groom.txt is left out, as backlog-pick leaves it out. Every
-# entry while PRUNE_ALL_SPRINT is the sprint in progress (sprint_next).
+# PLAN_DIR/groom.txt is left out, as backlog-pick leaves it out.
 backlog_oldest() {
-  n=$PRUNE_COUNT
-  [ "$(sprint_next)" != "$PRUNE_ALL_SPRINT" ] || n=-1
   for f in "$@"; do [ -f "$f" ] || die "no $f"; done
-  cat "$@" | G="$plan_dir/groom.txt" N=$n awk "$ENTRY_AWK"'
+  cat "$@" | G="$plan_dir/groom.txt" N=$PRUNE_COUNT awk "$ENTRY_AWK"'
     BEGIN { load_groomed(ENVIRON["G"]) }
     function close_entry() {
-      if (h != "" && backlog_entry_head(h, marked) && !(h in groomed) && !(h in shown) && (ENVIRON["N"] + 0 < 0 || count < ENVIRON["N"] + 0)) {
+      if (h != "" && backlog_entry_head(h, marked) && !(h in groomed) && !(h in shown) && count < ENVIRON["N"] + 0) {
         print h; shown[h] = 1; count++
       }
       h = ""; marked = 0
@@ -3052,13 +2983,13 @@ backlog_oldest() {
 # sprint's range, sprint_base..HEAD, changing a file the entry names,
 # touches_entry) loses every entry under it; a duplicate heading that
 # stands more than once keeps its first entry, one that stands once needs
-# another heading at its location (backlog-dups). The pruning of old
-# entries: a closed heading's commit follows the commit adding the entry
-# (entry_added) and changes a file it names, in any sprint; a gone one
-# names at least one path the history held and none of them stands at
-# HEAD (entry_paths); a stale one was added (entry_added) strictly before
-# the third-last sprint row (stale_mark) and no later commit names its
-# title again (named_since). The intake: a merged heading's lines are appended
+# another heading at its location (backlog-dups). A gone heading carries
+# its reason after the line's last " -- ", why the problem no longer
+# applies, and names at least one path the history held, none of them
+# standing at HEAD (entry_paths). An entry leaves only with evidence,
+# never for its age (the user's rule of 2026-11-21): a stale line (an
+# entry old and unnamed) and a closed one (a later commit touching a file
+# it names, fix or not) are refused. The intake: a merged heading's lines are appended
 # under its kept heading after a "- Merged:" line, so both reasons and
 # locations stay, each line passed on under its own prefix so no text in
 # it redirects the rest; the kept heading must stand and no line may
@@ -3066,8 +2997,7 @@ backlog_oldest() {
 # A security entry (security and a severity in any wording, security_entry,
 # judged once per line before the proofs) leaves only by
 # a merged item's listed heading or its fixing commit in the sprint
-# (fixed), never closed, gone, stale, or duplicate, since a later commit
-# touching its file proves no fix, nor does its age, and merges only into
+# (fixed), never gone or duplicate, and merges only into
 # another security entry. A heading merges once: no other line may
 # already remove it.
 # A plan is applied once: the marker is the clone's and the sprints file
@@ -3094,15 +3024,20 @@ groom() {
   merges=""
   kept=""
   base_ok=""
-  named_read=""
   if [ -f "$plan_dir/groom.txt" ]; then
     while IFS= read -r line || [ -n "$line" ]; do
       [ -n "$line" ] || continue
       kind=${line%% *}
       rest=${line#* }
       case "$kind" in
-        listed|fixed|closed) word=${rest%% *}; heading=${rest#* } ;;
-        duplicate|gone|stale) word=""; heading=$rest ;;
+        listed|fixed) word=${rest%% *}; heading=${rest#* } ;;
+        duplicate) word=""; heading=$rest ;;
+        gone)
+          word=""; heading=${rest% -- *}; reason=${rest##* -- }
+          [ "$heading" != "$rest" ] && [ -n "$(printf '%s' "$reason" | tr -d ' \t')" ] ||
+            die "groom: a gone line carries its reason, gone HEADING -- REASON, why the problem no longer applies: $line" ;;
+        stale|closed)
+          die "groom: an entry leaves only with evidence (listed, fixed, gone with its reason, merged, or duplicate), never for its age or a later commit touching its file, so no $kind line: $line" ;;
         merged)
           word=${rest%% <= *}; heading=${rest#* <= }
           [ "$word" != "$rest" ] || die "groom: not a merged line, merged KEPT <= HEADING: $line" ;;
@@ -3112,7 +3047,7 @@ groom() {
       [ "$stands" -ge 1 ] && valid '#{2,3} .+' "$heading" || die "groom: not a heading line of $backlog_file or a findings file: $heading"
       if security_entry "$heading"; then
         case "$kind" in
-          closed|gone|duplicate|stale)
+          gone|duplicate)
             die "groom: a security entry leaves only by a merged item's heading or its fixing commit in the sprint (listed or fixed), never $kind: $heading" ;;
           merged)
             security_entry "$word" || die "groom: a security entry merges only into another security entry: $line" ;;
@@ -3133,30 +3068,6 @@ groom() {
             die "groom: $word is outside the range of sprint-$sprint_n, $sprint_base..HEAD: $line"
           touches_entry "$word" "$heading" ||
             die "groom: $word changes no file the entry names: $line" ;;
-        closed)
-          valid '[0-9a-f]{7,40}' "$word" && git merge-base --is-ancestor "$word" HEAD 2>/dev/null ||
-            die "groom: $word is not a commit of HEAD: $line"
-          added=$(entry_added "$heading")
-          [ -n "$added" ] || die "groom: no commit adds the entry, so no fix follows it: $line"
-          git merge-base --is-ancestor "$added" "$word" 2>/dev/null && ! git merge-base --is-ancestor "$word" "$added" 2>/dev/null ||
-            die "groom: $word does not follow $added, the commit adding the entry: $line"
-          touches_entry "$word" "$heading" ||
-            die "groom: $word changes no file the entry names: $line" ;;
-        stale)
-          title=${heading#"${heading%%[!#]*}"}; title=${title#"${title%%[! ]*}"}
-          [ -n "$title" ] || die "groom: the heading has no title, so nothing proves it unnamed: $line"
-          mark=$(stale_mark)
-          [ -n "$mark" ] || die "groom: $sprints_file has no third-last row a commit added, so no entry is three sprints old: $line"
-          added=$(entry_added "$heading")
-          [ -n "$added" ] || die "groom: no commit adds the entry, so nothing proves its age: $line"
-          git merge-base --is-ancestor "$added" "$mark" 2>/dev/null && [ "$added" != "$mark" ] ||
-            die "groom: $added, the commit adding the entry, does not precede $mark, the commit adding the third-last row of $sprints_file: $line"
-          [ -n "$named_read" ] || { named_log=$(named_history); named_read=1; }
-          again=$(named_since "$added" "$title")
-          [ -z "$again" ] || die "groom: $again names the entry again after $added, the commit adding it: $line"
-          for q in $queue_files "$plan_dir/queue-feature.md" "$plan_dir/queue-backlog.md"; do
-            [ ! -f "$q" ] || ! grep -q -F -e "$title" "$q" || die "groom: $q still names the entry: $line"
-          done ;;
         gone)
           held=""
           for p in $(entry_paths "$heading"); do

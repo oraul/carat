@@ -1316,20 +1316,9 @@ expect "run_state: backlog-pick maps every path of a bullet and skips a section 
 { cat bk4.md; printf '\n## w1 quoting\n\n- Where: tools/t.sh:8\n'; i=1; while [ $i -le 52 ]; do printf '\n### e%s\n\n- Location: tools/e.sh:%s\n' $i $i; i=$((i + 1)); done; } > bk9.md
 expect "run_state: backlog-oldest prints the oldest entries in order, at most PRUNE_COUNT" 0 "^50 ## w1 quoting,## w2 at tools/t_test[.]sh:3,## w4 test,## w5 plain,## w6 target,## w7 at [.]github/workflows/ci[.]yml:5,### e1, ### e44$" \
   sh -c 'o=$(sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | head -7 | tr "\n" ",") $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
-# The whole-backlog scan (groom-stale-prune): the close of
-# PRUNE_ALL_SPRINT, sprint-24, the sprint in progress after a sprints
-# file ending at sprint-23, lists the entries past the 50th; any other
-# sprint keeps 50.
-printf 'sprint\tlast\nsprint-22\ta\nsprint-23\tb\n' > sp23.tsv
-printf 'sprint\tlast\nsprint-23\tb\nsprint-24\tc\n' > sp24.tsv
-expect "run_state: backlog-oldest lists every entry at the close of PRUNE_ALL_SPRINT" 0 "^58 ### e52$" \
-  sh -c 'o=$(SPRINTS_FILE=sp23.tsv sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
-expect "run_state: backlog-oldest keeps 50 in another sprint" 0 "^50 ### e44$" \
-  sh -c 'o=$(SPRINTS_FILE=sp24.tsv sh "$1" backlog-oldest bk9.md); echo "$(printf "%s\n" "$o" | grep -c .) $(printf "%s\n" "$o" | tail -1)"' _ "$here/run_state.sh"
-rm sp23.tsv sp24.tsv
 mkdir -p build/plan
-printf 'gone ## w2 at tools/t_test.sh:3\nmerged ## w4 test <= ### e1\n' > build/plan/groom.txt
-expect "run_state: backlog-oldest leaves out an entry the plan's groom.txt removes" 0 "^## w1 quoting,## w4 test,## w5 plain,## w6 target,## w7 at [.]github/workflows/ci[.]yml:5,### e2,$" \
+printf 'gone ## w2 at tools/t_test.sh:3 -- its harness was removed\nmerged ## w4 test <= ### e1\n' > build/plan/groom.txt
+expect "run_state: backlog-oldest leaves out an entry the plan's groom.txt removes, a gone line's reason cut" 0 "^## w1 quoting,## w4 test,## w5 plain,## w6 target,## w7 at [.]github/workflows/ci[.]yml:5,### e2,$" \
   sh -c 'sh "$1" backlog-oldest bk9.md | head -6 | tr "\n" ","' _ "$here/run_state.sh"
 rm build/plan/groom.txt
 expect "run_state: backlog-oldest requires its files" 1 "no nope[.]md" state backlog-oldest nope.md
@@ -2486,25 +2475,28 @@ printf 'merged ## y quality advisory at tools/a.sh:3 <= ## j near-same at tools/
 expect "run_state: groom refuses a merge into an entry another line removes" 1 "## y quality advisory at tools/a[.]sh:3 takes a merged entry, so no line may remove it" state groom sprint-2-records
 printf 'merged ## y quality advisory at tools/a.sh:3 <= ## o gone security entry\n' > build/plan/groom.txt
 expect "run_state: groom refuses a security entry merged into a plain one" 1 "a security entry merges only into another security entry" state groom sprint-2-records
-printf 'closed %s ## h prefixed at tools/c.sh:1\n' "$old" > build/plan/groom.txt
-expect "run_state: groom refuses a closing commit before the entry, an older heading it only prefixes not taken for it" 1 "$old does not follow $(git rev-parse "$noted"), the commit adding the entry" state groom sprint-2-records
-printf 'closed %s ## x security Low at tools/c.sh:5\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing a security entry, though a later commit touches its file" 1 "a security entry leaves only by .*never closed: ## x security Low at tools/c[.]sh:5" state groom sprint-2-records
 printf 'merged ### Kept entry at tools/b.sh:9 <= ## j near-same at tools/b.sh:10\nmerged ## y quality advisory at tools/a.sh:3 <= ## j near-same at tools/b.sh:10\n' > build/plan/groom.txt
 expect "run_state: groom refuses merging one heading twice" 1 "another line already removes ## j near-same at tools/b[.]sh:10, so it merges once" state groom sprint-2-records
-printf 'closed %s ### Fa finding at tools/f.sh:1\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing an entry no commit added" 1 "no commit adds the entry" state groom sprint-2-records
-printf 'closed %s ## l old entry\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses a closing commit touching no file of the entry" 1 "$fixer changes no file the entry names" state groom sprint-2-records
-printf 'closed 0123456789ab ## l old entry\n' > build/plan/groom.txt
-expect "run_state: groom refuses a closing commit not in HEAD" 1 "is not a commit of HEAD" state groom sprint-2-records
-printf 'gone ## o gone security entry\n' > build/plan/groom.txt
+# An entry leaves only with evidence, never for its age (groom-evidence-only):
+# a stale line and a closed one are refused by name, a later commit
+# touching the entry's file proving no fix; a valid line before either
+# writes nothing.
+printf 'listed b1 ## y quality advisory at tools/a.sh:3\nstale ## n never a path\n' > build/plan/groom.txt
+expect "run_state: groom refuses a stale line, which removes an entry only for its age" 1 "^run_state: groom: an entry leaves only with evidence .*never for its age.*, so no stale line: stale ## n never a path$" state groom sprint-2-records
+printf 'listed b1 ## y quality advisory at tools/a.sh:3\nclosed %s ## l old entry\n' "$fixer2" > build/plan/groom.txt
+expect "run_state: groom refuses a closed line, which removes an entry a later commit only touched" 1 "^run_state: groom: an entry leaves only with evidence .*a later commit touching its file, so no closed line: closed $fixer2 ## l old entry$" state groom sprint-2-records
+# A gone line carries its reason after its last " -- ", not blank.
+printf 'gone ## p gone entry\n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone line with no reason" 1 "a gone line carries its reason, gone HEADING -- REASON, why the problem no longer applies: gone ## p gone entry$" state groom sprint-2-records
+printf 'gone ## p gone entry -- \t \n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone line with a blank reason" 1 "a gone line carries its reason" state groom sprint-2-records
+printf 'gone ## p gone entry --its file went\n' > build/plan/groom.txt
+expect "run_state: groom refuses a gone line whose reason is not set off by spaces" 1 "a gone line carries its reason" state groom sprint-2-records
+printf 'gone ## o gone security entry -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone security entry" 1 "a security entry leaves only by" state groom sprint-2-records
 # A security entry in other words: a severity and security apart, on
 # no "security Low" or "Low (N)" pattern (groom-security-mark).
-printf 'closed %s ## k periodic low entry\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing an entry marked only by a Low finding of the periodic security review" 1 "a security entry leaves only by .*never closed: ## k periodic low entry" state groom sprint-2-records
-printf 'gone ## k periodic low entry\n' > build/plan/groom.txt
+printf 'gone ## k periodic low entry -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry marked only by a Low finding of the periodic security review" 1 "a security entry leaves only by .*never gone: ## k periodic low entry" state groom sprint-2-records
 printf 'duplicate ## k periodic low entry\n' > build/plan/groom.txt
 expect "run_state: groom refuses a duplicate entry marked only by a Low finding of the periodic security review" 1 "a security entry leaves only by .*never duplicate: ## k periodic low entry" state groom sprint-2-records
@@ -2512,91 +2504,20 @@ printf 'merged ## y quality advisory at tools/a.sh:3 <= ## k periodic low entry\
 expect "run_state: groom refuses a merge into a plain entry of an entry marked only by a Low finding of the periodic security review" 1 "a security entry merges only into another security entry" state groom sprint-2-records
 # Security on one line and its severity only on another: the entry's
 # lines are judged joined.
-printf 'closed %s ## f periodic security note at tools/q.sh:8\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing an entry naming security in its heading and a severity only in its body" 1 "a security entry leaves only by .*never closed: ## f periodic security note at tools/q[.]sh:8" state groom sprint-2-records
 printf 'duplicate ## f periodic security note at tools/q.sh:8\n' > build/plan/groom.txt
 expect "run_state: groom refuses a duplicate entry naming security in its heading and a severity only in its body" 1 "a security entry leaves only by .*never duplicate: ## f periodic security note at tools/q[.]sh:8" state groom sprint-2-records
 # Security, then other words, then the severity; and the severity
 # critical, in words and in a severity and confidence pair.
-printf 'closed %s ## e rated entry at tools/q.sh:9\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing an entry worded security review finding, rated Medium" 1 "a security entry leaves only by .*never closed: ## e rated entry at tools/q[.]sh:9" state groom sprint-2-records
-printf 'gone ## e rated entry at tools/q.sh:9\n' > build/plan/groom.txt
+printf 'gone ## e rated entry at tools/q.sh:9 -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry worded security review finding, rated Medium" 1 "a security entry leaves only by .*never gone: ## e rated entry at tools/q[.]sh:9" state groom sprint-2-records
-printf 'closed %s ## d critical entry at tools/q.sh:10\n' "$fixer" > build/plan/groom.txt
-expect "run_state: groom refuses closing an entry worded security review finding, rated Critical" 1 "a security entry leaves only by .*never closed: ## d critical entry at tools/q[.]sh:10" state groom sprint-2-records
-printf 'gone ## d critical entry at tools/q.sh:10\n' > build/plan/groom.txt
+printf 'gone ## d critical entry at tools/q.sh:10 -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry worded security review finding, rated Critical" 1 "a security entry leaves only by .*never gone: ## d critical entry at tools/q[.]sh:10" state groom sprint-2-records
-printf 'gone ## c critical pair at tools/q.sh:11\n' > build/plan/groom.txt
+printf 'gone ## c critical pair at tools/q.sh:11 -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry carrying a Critical severity and confidence pair" 1 "a security entry leaves only by .*never gone: ## c critical pair at tools/q[.]sh:11" state groom sprint-2-records
-printf 'gone ## n never a path\n' > build/plan/groom.txt
+printf 'gone ## n never a path -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry naming no path the history held" 1 "names no path the history held" state groom sprint-2-records
-printf 'gone ## m standing entry\n' > build/plan/groom.txt
+printf 'gone ## m standing entry -- r\n' > build/plan/groom.txt
 expect "run_state: groom refuses a gone entry whose path still stands" 1 "tools/c[.]sh, which the entry names, still stands at HEAD" state groom sprint-2-records
-# A stale line (groom-stale-prune): never a security entry, and refused
-# while the sprints file holds fewer than three rows, as here.
-printf 'stale ## o gone security entry\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale security entry" 1 "a security entry leaves only by .*never stale: ## o gone security entry" state groom sprint-2-records
-printf 'stale ## n never a path\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale line before three sprint rows" 1 "docs/sprints[.]tsv has no third-last row a commit added" state groom sprint-2-records
-# In a copy of the fixture, a finding is committed and folded into the
-# backlog, then the sprints file gains an older row, its third-last,
-# then an entry is appended: every entry before that row is three
-# sprints old. "## t near miss" is named again by b5's queue item, the
-# appended entry is too new, and the fold's move names nothing again.
-rm -rf "$work/stale"
-cp -R "$work/sprint" "$work/stale"
-cd "$work/stale" || exit 1
-printf '### Fs folded at tools/s.sh:1\n\n- Why: s.\n' > docs/findings/fs.md
-commit "docs: a finding"
-{ echo; cat docs/findings/fs.md; } >> docs/backlog.md
-git_q rm -q docs/findings/fs.md
-commit "docs: fold a finding"
-printf '\n## sa merged later\n\n- Why: a.\n\n## sb moved item\n\n- Why: b.\n\n## sc queued with it\n\n- Why: c.\n\n##  \n' >> docs/backlog.md
-printf -- '- sb moved item\n- sc queued with it\n' >> docs/queue-feature.md
-commit "docs: entries queued in the commit adding them"
-awk 'NR == 2 { printf "sprint-0\tmark\n" } 1' docs/sprints.tsv > "$work/sp" && mv "$work/sp" docs/sprints.tsv
-commit "docs: an older sprint row"
-mark=$(git rev-parse HEAD)
-printf '\n## i new entry at tools/i.sh:1\n\n- Why: i.\n' >> docs/backlog.md
-commit "docs: a new entry"
-printf 'stale ## i new entry at tools/i.sh:1\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale entry added at or after the third-last sprint row" 1 "the commit adding the entry, does not precede $mark, the commit adding the third-last row" state groom sprint-2-records
-# The third-last row corrected after the entry: the mark stays the
-# commit adding the row, found by its sprint name.
-awk '{ sub(/^sprint-0\tmark$/, "sprint-0\tcorrected") } 1' docs/sprints.tsv > "$work/sp" && mv "$work/sp" docs/sprints.tsv
-commit "docs: correct the older sprint row"
-expect "run_state: groom refuses a stale entry added after the third-last sprint row, the row corrected since" 1 "the commit adding the entry, does not precede $mark, the commit adding the third-last row" state groom sprint-2-records
-# Later: a "- Merged:" line naming "## sa merged later", and the queue
-# line of "## sb moved item" moved unchanged to the other lane queue,
-# then drained; "## sc queued with it" stays queued.
-printf -- '- Merged: ## sa merged later\n' >> docs/backlog.md
-commit "docs: merge a note"
-awk '!/^- sb moved item$/' docs/queue-feature.md > "$work/q" && mv "$work/q" docs/queue-feature.md
-printf -- '- sb moved item\n' >> docs/queue-backlog.md
-commit "docs: move a queue item"
-awk '!/^- sb moved item$/' docs/queue-backlog.md > "$work/q" && mv "$work/q" docs/queue-backlog.md
-commit "docs: drain the moved item"
-merged_note=$(git rev-parse HEAD~2)
-printf 'stale ## sa merged later\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale entry a later - Merged: line names" 1 "groom: $merged_note names the entry again after" state groom sprint-2-records
-printf 'stale ## sc queued with it\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale entry a lane queue still names, though queued in the commit adding it" 1 "docs/queue-feature[.]md still names the entry: stale ## sc queued with it$" state groom sprint-2-records
-# The plan's queue, untracked, holding a title blocks it too; the line
-# is taken out again so the removal case below still applies.
-printf -- '- n never a path\n' >> build/plan/queue-backlog.md
-printf 'stale ## n never a path\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale entry the plan's queue still names" 1 "build/plan/queue-backlog[.]md still names the entry: stale ## n never a path$" state groom sprint-2-records
-awk '!/^- n never a path$/' build/plan/queue-backlog.md > "$work/q" && mv "$work/q" build/plan/queue-backlog.md
-printf 'stale ##  \n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale heading with no title" 1 "the heading has no title" state groom sprint-2-records
-printf 'stale ## t near miss\n' > build/plan/groom.txt
-expect "run_state: groom refuses a stale entry named again since" 1 "^run_state: groom: $(git rev-parse "$b5c") names the entry again after $(git rev-parse "$noted"), the commit adding it: stale ## t near miss$" state groom sprint-2-records
-printf 'stale ## n never a path\nstale ### Fs folded at tools/s.sh:1\nstale ## sb moved item\n' > build/plan/groom.txt
-expect "run_state: groom removes a stale entry, a folded one, and one whose queue item moved unchanged" 0 "^groom: applied sprint-2: 3 headings groomed" state groom sprint-2-records
-expect "run_state: groom's stale lines leave the other entries" 0 "^0 1$" \
-  sh -c 'echo "$(grep -c -x -e "## n never a path" -e "### Fs folded at tools/s.sh:1" -e "## sb moved item" docs/backlog.md) $(grep -c -x "## t near miss" docs/backlog.md)"'
-cd "$work/sprint" || exit 1
-rm -rf "$work/stale"
 cp docs/metrics-backlog.tsv "$work/rows.before"
 awk -F'\t' -v OFS='\t' '$1 == "a5" { $3 = "0123456789ab" } 1' "$work/rows.before" > docs/metrics-backlog.tsv
 printf 'fixed %s ## x security Low at tools/c.sh:5\n' "$fixer" > build/plan/groom.txt
@@ -2610,7 +2531,7 @@ cp docs/sprints.tsv "$work/sprints.before"
 expect "run_state: groom refuses a delivery's change, leaving the plan to its records change" 1 "applied once, by its records change sprint-2-records, which sprint-planning delivers; not by b6" state groom b6
 expect "run_state: groom refuses a run with no change" 1 "not by a run with no change" state groom
 expect "run_state: a groom a delivery ran writes neither the fold nor the sprint row" 0 "" sh -c "cmp docs/backlog.md backlog.before && cmp docs/sprints.tsv '$work/sprints.before' && [ -f build/plan/sprint ]"
-printf 'listed b1 ## y quality advisory at tools/a.sh:3\nlisted b5 ## s dotted near miss\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\nduplicate ## v retro entry at tools/h.sh:4\nfixed %s ## Findings of z after its package step\nfixed %s ## u quoting\nclosed %s ## l old entry\ngone ## p gone entry\nmerged ### Kept entry at tools/b.sh:9 <= ## j near-same at tools/b.sh:10\nmerged ## r skeptic entry at tools/k.sh:1 <= ## q periodic note at tools/m.sh:2\nmerged ## m standing entry <= ## g marker in a body at tools/n.sh:2\n' "$fixer" "$fixer2" "$fixer3" "$fixer2" > build/plan/groom.txt
+printf 'listed b1 ## y quality advisory at tools/a.sh:3\nlisted b5 ## s dotted near miss\nfixed %s ## x security Low at tools/c.sh:5\nduplicate ## w quality advisory at tools/e.sh:2\nduplicate ## v retro entry at tools/h.sh:4\nfixed %s ## Findings of z after its package step\nfixed %s ## u quoting\nfixed %s ## l old entry\ngone ## p gone entry -- its only file, tools/p.sh, was dropped\nmerged ### Kept entry at tools/b.sh:9 <= ## j near-same at tools/b.sh:10\nmerged ## r skeptic entry at tools/k.sh:1 <= ## q periodic note at tools/m.sh:2\nmerged ## m standing entry <= ## g marker in a body at tools/n.sh:2\n' "$fixer" "$fixer2" "$fixer3" "$fixer2" > build/plan/groom.txt
 printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/groomed.md
 expect "run_state: groom applies the sprint plan" 0 "^groom: applied sprint-2: 12 headings groomed, 2 findings file[(]s[)] folded" state groom sprint-2-records
 expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## w quality advisory at tools/e[.]sh:2,## v retro entry at tools/h[.]sh:4,## t near miss,## y quality advisory,## r skeptic entry at tools/k[.]sh:1,## o gone security entry,## n never a path,## m standing entry,## h prefixed at tools/c[.]sh:1,## k periodic low entry,## f periodic security note at tools/q[.]sh:8,## e rated entry at tools/q[.]sh:9,## d critical entry at tools/q[.]sh:10,## c critical pair at tools/q[.]sh:11,### Fa finding at tools/f[.]sh:1,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,$" sh -c "grep '^##' docs/backlog.md | tr '\n' ','"
@@ -2629,8 +2550,8 @@ expect "run_state: groom keeps a merged body line starting @@kept under its kept
   sh -c "grep -A8 -x -F '## m standing entry' docs/backlog.md | tr '\n' '|'"
 expect "run_state: groom sends no merged line to a heading a body line names" 0 "^## y quality advisory[|][|]- Why: shorter[.][|][|]## r skeptic" \
   sh -c "grep -A4 -x -F '## y quality advisory' docs/backlog.md | tr '\n' '|'"
-expect "run_state: groom closes an old entry with a commit after it" 1 "" grep -q 'l old entry' docs/backlog.md
-expect "run_state: groom removes an entry whose location is gone" 1 "" grep -q 'p gone entry' docs/backlog.md
+expect "run_state: groom removes an old entry fixed by a commit of the sprint" 1 "" grep -q 'l old entry' docs/backlog.md
+expect "run_state: groom removes an entry whose location is gone, with its reason" 1 "" grep -q 'p gone entry' docs/backlog.md
 expect "run_state: groom removes a listed heading whose item first stands at its merged commit" 1 "" grep -q 'dotted near miss' docs/backlog.md
 expect "run_state: groom removes a duplicate whose text only mentions security" 0 "^Security first$" sh -c "grep -o -E 'Security first|again' docs/backlog.md"
 expect "run_state: groom keeps the first of a repeated heading" 0 "^once$" sh -c "grep -o -E 'once|twice' docs/backlog.md"
@@ -5597,8 +5518,8 @@ expect "agents: the package step applies its own plan and rows, never groom" 0 "
 expect "agents: a delivery's planner writes its own plan directory" 0 "^1$" grep -c -F 'build/plan/<change>/` for a delivery' "$agents/planner.md"
 expect "agents: the planner writes self-contained items" 0 "^[1-9][0-9]* 0$" \
   sh -c 'echo "$(grep -c "self-contained" "$1") $(grep -c "Locations go in the" "$1")"' _ "$agents/planner.md"
-expect "agents: the sprint planner merges near-same notes and prunes the entries backlog-oldest lists against HEAD, stale ones too" 0 "^1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md. lists against HEAD: .closed <commit> <heading>. (fixed later), .gone <heading>. (paths gone), or .stale <heading>. (unnamed 3 sprints)") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed.; a disputed one stays")"' _ "$agents/planner.md"
+expect "agents: the sprint planner merges near-same notes and checks the entries backlog-oldest lists against HEAD for evidence, never age" 0 "^1 1$" \
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "merged <kept heading> <= <heading>. (a near-same note, kept whole: drop no note).*backlog-oldest docs/backlog[.]md docs/findings/[*][.]md. lists against HEAD: .gone <heading> -- <reason>. (paths gone; why it no longer applies). Never prune by age.") $(printf "%s\n" "$s" | grep -c "leaves only by .listed. or .fixed.; a disputed one stays")"' _ "$agents/planner.md"
 expect "workflow: sprint-planning hands the planner the oldest entries and the merge of near-same notes" 0 "^1 1$" \
   sh -c 'echo "$(grep -c -F "(a near-same note merged, never dropped), the oldest entries to check against HEAD from" "$1") $(grep -c -F "run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md" "$1")"' _ "$swf"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
