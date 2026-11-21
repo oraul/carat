@@ -17,6 +17,7 @@ ok   home end del
 ok   page keys and insert
 ok   control page keys
 ok   Ctrl and Shift arrows decode to their own keys: notation
+ok   Shift-Tab decodes to its own key: parse
 ok   function keys
 ok   lt and bar
 ok   unicode character
@@ -31,6 +32,7 @@ ok   up
 ok   control page down
 ok   control page up
 ok   shift left
+ok   Shift-Tab decodes to its own key: notation
 ok   ctrl right
 ok   enter
 ok   escape
@@ -62,4 +64,4 @@ ok   a named control keeps its name
 ok   Esc keeps its name
 ok   a letter is itself
 ok   F1 keeps its name
-domain_keys: 64 passed, 0 failed
+domain_keys: 66 passed, 0 failed
