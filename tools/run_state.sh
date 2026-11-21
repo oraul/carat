@@ -148,14 +148,23 @@
 #                               its last pass with its outputs unchanged.
 #                               Whoever started it, the contributor (CHANGE
 #                               alone, its own head) or the checker, a check
-#                               writes its stage records only from the
-#                               runner, which no agent's set writes; the
-#                               workflow accepts a pass only from those
-#                               records: it backs the contributor's passing
-#                               head as COMMIT unless the change touches the
-#                               check's own machinery (tools/lane_facts.sh
+#                               writes its stage records from the runner,
+#                               which no agent's set writes; the workflow
+#                               accepts a pass only from those records: it
+#                               backs the contributor's passing head as
+#                               COMMIT unless the change touches the check's
+#                               own machinery (tools/lane_facts.sh
 #                               machinery), and records phase.check from the
-#                               checker's verdict alone. The
+#                               checker's verdict alone. The runner is the
+#                               contributor's working tree's copy, so an
+#                               uncommitted edit of it or of the Makefile,
+#                               restored before the commit, could write
+#                               records at HEAD that machinery no does not
+#                               see: a backed head trusts the contributor's
+#                               session; CI reruns docs-lint, the builds,
+#                               test-run, bench-budget, metrics, and
+#                               tools-test, main's merge gates rerun gates,
+#                               and diagnose rests on it as before. The
 #                               stages run in a runner (check-run, no agent's)
 #                               detached from the caller, rejoined by a check
 #                               at the same HEAD and stopped by one at another;
@@ -630,9 +639,11 @@ commit_at() {
 
 # The twelve-digit form of a check's COMMIT (contributor-self-check): only
 # the recorded phase.check, the last check the workflow passed, or HEAD,
-# where the stage records the check skips are the runner's own at that
-# very commit; dies on any other commit, which would carry records no
-# check the workflow recorded passed.
+# where the stage records the check skips are the runner's at that very
+# commit (the working tree's runner, so at HEAD they are only as trusted
+# as the session that ran it: the header's check entry); dies on any
+# other commit, which would carry records no check the workflow recorded
+# passed.
 backed_commit() {
   backed_at=$(commit_at "$1") || exit 1
   if [ "$backed_at" = "$(head_commit)" ]; then

@@ -2,7 +2,7 @@
 
 ## Context
 
-The check runs detached (`check_run`), its stage records written only by the runner, which no agent's `set` may write (`tools/agent_guard.sh` refuses `stage.*`). `check_stages` skips a stage passed at BACKED only when BACKED is HEAD, and carries a stage from BACKED when only tests changed. The workflow passes `phase.check` as BACKED, so a pass at a head the workflow never recorded reruns.
+The check runs detached (`check_run`), its stage records written by the runner, which no agent's `set` may write (`tools/agent_guard.sh` refuses `stage.*`). `check_stages` skips a stage passed at BACKED only when BACKED is HEAD, and carries a stage from BACKED when only tests changed. The workflow passes `phase.check` as BACKED, so a pass at a head the workflow never recorded reruns.
 
 ## Decisions
 
@@ -15,5 +15,5 @@ The check runs detached (`check_run`), its stage records written only by the run
 
 ## Risks
 
-- The skip widens from the workflow's record to a runner record at a contributor's head; the machinery rule and CI cover a branch that edits the runner.
+- The skip widens from the workflow's record to a runner record at a contributor's head; the machinery rule and CI cover a branch that edits the runner. The runner is the working tree's copy, so a session that edits it or the Makefile without committing, then restores it, could write passing records at HEAD that `machinery no` does not see; a backed head therefore trusts the contributor's session. CI reruns docs-lint, the builds, test-run, bench-budget, metrics, and tools-test and main's merge gates rerun gates, so only diagnose rests on that trust, as it already did through its compiled file. Signing the runner's records outside the guard's reach, or always rerunning diagnose and gates, is new behavior left recorded (security review, Low).
 - A longer contributor start; the caps rise by the measured need.

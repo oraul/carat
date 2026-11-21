@@ -965,7 +965,11 @@ async function laneHead() {
 // head, over a lane whose diff leaves the check's machinery alone
 // (tools/lane_facts.sh machinery no), is a claim the checker's check backs
 // (backedCommit); any other result claims nothing. A claim the run state
-// does not hold costs only the stages, which the runner then runs.
+// does not hold costs only the stages, which the runner then runs. The
+// records at a backed head come from the contributor's working tree's
+// runner, so they trust its session: an uncommitted, restored edit of
+// tools/ or the Makefile escapes machinery no; CI and main's merge gates
+// rerun every stage but diagnose (tools/run_state.sh, the check entry).
 let claimedPass = null
 function claimFrom(r, lane) {
   const v = checkVerdict(r && r.check)
