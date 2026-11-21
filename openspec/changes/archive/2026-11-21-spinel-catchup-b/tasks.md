@@ -1,0 +1,26 @@
+# Tasks
+
+## 1. Baseline and bump
+
+- [x] 1.1 Measure main at 0d1a7ca3 in this worktree before the checkout moves: `make dev-build test-build bench-budget metrics` (rounds, analysis, allocations and time per key into `build/metrics/current.tsv`, kept as the base), `make build` (release binary size), and `make bench` (time per key).
+  - Result: rounds 2 (carat) and 2 (runner); analysis 55,782.0 ms (carat) and 142,185.6 ms (runner); allocations per key lh 25, j 26, insert 25, ddp 57, undo 51, dot-ciw 65, lh-ruby 25, open-ruby 23, grep 774.4; release `build/bin/carat` 7,235,368 bytes; `make bench` total per key lh 24.3 us, j 119.5 us, insert 24.6 us, w 38.9 us, ddp 250.0 us, undo 34.3 us, ciw 62.5 us, dot-ciw 26.2 us, lh-ruby 24.5 us, open-ruby 31.7 us, G-ruby 617.3 us, finder 2,136.2 us.
+- [x] 1.2 Set `SPINEL_REF` in the `Makefile` to the new commit and regenerate `tools/spinel/spinel_rt_responds_generated.h` with `make spinel-header` using the 0d1a7ca3 toolchain; verify the diff is the generator's output only and `make -s spinel-rev` prints the new commit.
+  - Result: `make -s spinel-rev` prints 2f6c24864127a5609533a786a6af120b7438de08 (2026-11-22), upstream `master`'s head (the remote's `HEAD`) when the change started, 654 commits after 0d1a7ca3 (229 first-parent; the old pin an ancestor), counted on a history fetched back to 2026-09-01. The brief's 5,476 does not hold: its 2b080f6cad is 635 commits after the old pin and 19 before the new one. Spinel's `tools/gen_respond_to_tables.rb` and `tools/builtin_row_gen.rb` have no commit between the pins; the regenerated header is byte-identical to the vendored one, so the file is unchanged.
+- [x] 1.3 Build the new toolchain with `make toolchain`; verify it installs `spinel`, `spin`, and `spinel-doctor`, the header the build used is the vendored one, and `make doctor` reports `ruby: refused (stub)`.
+  - Result: installed under `tmp/.toolchain/bin` in 11 min 4 s; `spinel --version` reports 2f6c248641; the checkout's header compares equal to the vendored one; `make doctor` reports `ruby: refused (stub)`.
+
+## 2. Carat at the new pin
+
+- [x] 2.1 Run every stage of `make check` on the new toolchain, fixing in carat's code only what fails at the new pin and is small and local, each fix named here with the test that proves it; verify `make check` passes and `make diagnose` is clean.
+  - Result: the first run passed every stage in 15 min 42 s: 123 of 123 tests, 2,103 of 2,103 tool tests, `make diagnose` clean for all three roots with no Spinel warning, `no-cruby` refused by the stub. No carat code needed a fix and no earlier commit was needed, so none was skipped.
+- [x] 2.2 Compare with the baseline: `make metrics-compare BASE_METRICS=` the 1.1 measurement (allocations per key and rounds), `make bench` (time per key), the analysis lines, and the release binary size.
+  - Result: `metrics-compare` reports no regression: rounds 2 and 2, every allocation figure equal (lh 25, j 26, insert 25, ddp 57, undo 51, dot-ciw 65, lh-ruby 25, open-ruby 23, grep 774.4), so the accepted lh 26, j 27, insert 26 hold. Analysis 63,605.5 ms (carat) and 146,444.5 ms (runner) in the measuring run and 59,228.6 ms and 139,573.7 ms in `make check`'s, against 55,782.0 ms and 142,185.6 ms: the runner is within noise, the editor 6 to 14 percent over in two samples. Release binary 7,959,488 bytes, 724,120 (10.0 percent) more. `make bench` total per key lh 43.4 us, j 129.8 us, insert 40.5 us, w 41.5 us, ddp 209.0 us, undo 31.4 us, ciw 70.3 us, dot-ciw 39.3 us, lh-ruby 27.1 us, open-ruby 30.0 us, G-ruby 910.7 us, finder 2,413.8 us; two reruns of the outliers measured lh 24.2 and 23.5 us, insert 27.6 and 30.1 us, dot-ciw 28.6 and 32.4 us, G-ruby 663.7 and 583.6 us, so lh and G-ruby match the baseline and insert and dot-ciw sit about 10 to 20 percent over it, inside `metrics-compare`'s 20 percent tolerance.
+
+## 3. Notes
+
+- [x] 3.1 Recheck the open notes of `docs/spinel-notes.md` (Known miscompilations and the other `Open:` notes) with reduced probes at the new pin and record each result there; each workaround the pin makes unnecessary whose removal is not trivial and tested goes to `docs/findings/spinel-catchup-b.md`; verify with `make docs-lint`, `make gates`, and `make spec-validate`.
+  - Result: `private_constant` is enforced since Spinel ae6a3602 (the probe read `Owner::NAME` from another class at 0d1a7ca3 and raised `NameError` at 2f6c2486): its note is no longer open, `docs/architecture.md` section 5 and the `test/lint.rb` comment no longer say Spinel does not enforce it, the `lint` rule stays as carat's own layering rule, and the backlog entry goes to the planner as a finding. The `when CONST` folding still reproduces; the one-character slice is still quadratic (28 ms over 10,000 `é`, 359 ms over 40,000); the destructuring probe, now the size of the f34005bf one, the string-return, empty-array, and versioned-entry probes answer correctly, so only reverting carat's rewrites decides them; the slab release is unchanged in `lib/sp_slab.c`.
+
+## Quality review
+
+- [x] 4.1 Move the `private_constant` note of `docs/spinel-notes.md` from Known miscompilations to Language and library, since the pin no longer miscompiles it (quality advisory on the note's section).
