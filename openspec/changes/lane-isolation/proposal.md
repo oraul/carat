@@ -10,7 +10,7 @@ Most extra contributor starts since #274 came from lane cross-talk, not from the
 - `plan-apply` fits the lane's queue within its budget as it copies it: when over, it drops the queue's `## Decisions` bullets from the last up until it fits, naming each count, and refuses with the overage, the queue left as it was, when dropping every one is not enough. `push` refuses a lane queue at HEAD over its budget, so CI never meets an over-budget queue the check did not see.
 - The check's and bench's metrics stay in the change's lane: run from the main checkout while `tmp/.lane-<change>` exists, `run_state.sh` writes `build/metrics/current.tsv` and `last.tsv` under the lane, never the main checkout's shared `build/`, and `bench` passes that file to `make metrics-compare`. The benchmark agent runs its `make` targets in the lane. The check's own scratch already lives in `build/stages/<change>/` and its clone under `TMPDIR`.
 - A check whose stages all exited 0 but which found files outside its clone changed ends in `check: stage none escaped at HEAD; read LOG`, rewrites every stage record it wrote as `escaped` and clears their compile records, so no later check reuses them. `deliver-change.js` reads `escaped` as a check that did not finish: a rerun counted by `RERUNS`, with no checker log start and no contributor fix round.
-- The README's budget sentence, CLAUDE.md's Lanes bullet, the planner's budget line, the benchmark agent's steps, and the code map's entries for `docs_lint.sh`, `run_state.sh`, and `deliver-change.js` follow.
+- The README's budget, planner, checker, and benchmark sentences, the planner's budget line, the checker's verdict list, the benchmark agent's steps, and the code map's entries for `docs_lint.sh`, `run_state.sh`, and `deliver-change.js` follow.
 - The Sprint 25 exception line and the removal of the folded backlog names come in through this change's plan, which the package step's `plan-apply` copies over `docs/queue-backlog.md`; the change adds no second, differently spelled exception line.
 
 Out of scope: `tools/rules.sh` (untouched), the feature lane's queue and history (read only for the budget split), the backlog's `plan-apply-stale` (plan notes: not folded), and the CHECK_JOBS refusal, which stays a refusal the contributor fixes.
@@ -32,8 +32,8 @@ None.
 
 ## Impact
 
-- `tools/docs_lint.sh`, `tools/run_state.sh`, `.claude/workflows/deliver-change.js`, `tools/tools_test.sh`, `.claude/agents/planner.md`, `.claude/agents/benchmark.md`.
+- `tools/docs_lint.sh`, `tools/run_state.sh`, `.claude/workflows/deliver-change.js`, `tools/tools_test.sh`, `.claude/agents/planner.md`, `.claude/agents/benchmark.md`, `.claude/agents/checker.md`.
 - README.md: the docs-lint budget sentence names the per-lane budgets.
-- CLAUDE.md: the Lanes bullet names the per-lane budgets and the lane-local check files.
+- CLAUDE.md: unchanged, it names neither the queue budget nor the check's metrics or verdicts, and the paths it names (`build/pipeline/<change>.json`, `build/stages/<change>/`) stay true; it stands at its 30,720-byte budget.
 - docs/codebase-map.md: the entries of `tools/docs_lint.sh`, `tools/run_state.sh`, and `.claude/workflows/deliver-change.js` name the new functions; no file is added, moved, or removed.
 - docs/architecture.md: unchanged, section 10 names neither the queue budget nor the check's `build/` paths; no layer, port, or roadmap item changes.
