@@ -1292,6 +1292,35 @@ expect "run_state: backlog-move keeps the file when it cannot file its entries" 
 expect "run_state: a refused backlog-move keeps the file" 0 "" cmp docs/backlog.md move.before
 expect "run_state: backlog-move refuses a missing file" 1 "backlog-move: no nope[.]md" state backlog-move nope.md
 
+# A leading dot of a path part becomes "_" in the backlog file's name, so
+# no backlog folder is named like a configuration folder; a symbolic link
+# on the way to a backlog file is refused before anything is written.
+fresh movedot
+mkdir -p .claude/agents
+echo c > .claude/agents/c.md
+printf '# Backlog\n\n## c entry\n\n- Location: .claude/agents/c.md\n' > docs/backlog.md
+commit "docs: a dotted path"
+expect "run_state: backlog-move moves an entry naming a dotted path" 0 "^backlog-move: moved" state backlog-move docs/backlog.md
+expect "run_state: backlog-move files a dotted path's entry with an underscore for each leading dot" 0 "^# Backlog: [.]claude/agents/c[.]md[|][|]## c entry[|]" \
+  sh -c "tr '\n' '|' < docs/backlog/_claude/agents/c.md.md"
+expect "run_state: backlog-move makes no dotted backlog folder" 1 "" test -e docs/backlog/.claude
+fresh movelink
+mkdir -p carat elsewhere docs/backlog
+echo b > carat/b.rb
+echo target > elsewhere/t.json
+ln -s ../../elsewhere docs/backlog/carat
+printf '# Backlog\n\n## b entry\n\n- Location: carat/b.rb\n' > docs/backlog.md
+commit "docs: a linked backlog folder"
+cp docs/backlog.md move.before
+expect "run_state: backlog-move refuses a symbolic link on the way to a backlog file" 1 "symbolic link on the way to docs/backlog/carat/b[.]rb[.]md" state backlog-move docs/backlog.md
+expect "run_state: a refused link writes nothing through it" 1 "" test -e elsewhere/b.rb.md
+expect "run_state: a refused link keeps the moved file" 0 "" cmp docs/backlog.md move.before
+rm docs/backlog/carat
+mkdir -p docs/backlog/carat
+ln -s ../../../elsewhere/t.json docs/backlog/carat/b.rb.md
+expect "run_state: backlog-move refuses a backlog file that is a symbolic link" 1 "symbolic link on the way to docs/backlog/carat/b[.]rb[.]md" state backlog-move docs/backlog.md
+expect "run_state: a refused linked file leaves its target unchanged" 0 "^target$" cat elsewhere/t.json
+
 # The backlog pick over a fixture map, queue, and backlogs: area 3 holds 3
 # entries, area 1 eleven unqueued with the newest naming security, area 2
 # six, and one entry names a path only the delivered changes list.

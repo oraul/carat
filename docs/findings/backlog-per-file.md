@@ -38,3 +38,8 @@
 - Location: `docs/queue-feature.md`, `docs/queue-backlog.md`, budget `tools/docs_lint.sh:62` (QUEUE_BUDGET 17969)
 - Why: at 7f96588 the two queues were 18,297 bytes together, so docs-lint fails on main and on every lane branch until one lane trims its queue; backlog-per-file trimmed only backlog-lane text (the merged backlog-records-rule's exception and three of its decisions), leaving the feature queue untouched as its brief requires.
 - Fix: have plan-apply or the merger's gate refuse a queue rewrite that leaves both lane queues over the shared budget, so a lane's merge cannot push the other lane over it.
+
+### The gates accept a tracked symbolic link under the records-only paths
+- Location: tools/gates.sh, tools/rules.sh (RECORDS_RE, docs/backlog/.+\.md$)
+- Why: file_entries now refuses to write through a symbolic link under docs/backlog/, but a commit adding such a link still lands as records-only after the security review was recorded; another writer of those paths (plan-apply, history) could follow it.
+- Fix: have the merge gates refuse a tracked symbolic link (git ls-files -s mode 120000) under the RECORDS_RE paths, in a rules change of its own since it edits tools/rules.sh or the gate reading it.

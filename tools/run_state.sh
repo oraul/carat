@@ -2750,9 +2750,12 @@ today_date() {
 
 # Files every entry of standard input (a "## " or deeper heading to the
 # next heading; a "# " title and the text before the first entry left out)
-# into the backlog file of the first file it names, BACKLOG_DIR/PATH.md,
-# else BACKLOG_DIR/_general.md, a new file starting with a "# Backlog:"
-# title. A file it names is a token of its text, the heading first, that
+# into the backlog file of the first file it names, BACKLOG_DIR/PATH.md
+# with a leading dot of each part of PATH written as "_" (.claude/x as
+# _claude/x), else BACKLOG_DIR/_general.md, a new file starting with a
+# "# Backlog:" title; it fails, writing nothing more, when BACKLOG_DIR, a
+# directory under it on the way to that file, or the file is a symbolic
+# link. A file it names is a token of its text, the heading first, that
 # git ls-files lists, the backlog and findings files left out. The entry's
 # lines go unchanged, its trailing blank lines cut, followed by "- Also:"
 # (the other files it names, left out when none), "- Category:", and
@@ -2771,6 +2774,22 @@ file_entries() {
       if (ENVIRON["DATES"] != "") while ((getline l < ENVIRON["DATES"]) > 0) { split(l, p, " "); dated[p[1]] = p[2] }
     }
     function quoted(s) { gsub(/\047/, "\047\\\047\047", s); return "\047" s "\047" }
+    # The backlog name of a tracked path: each part starting with a dot
+    # written with an underscore instead, so no folder of the backlog is
+    # named like a configuration folder of a tool (.claude, .github).
+    function backlog_name(p,   n, part, i, out) {
+      n = split(p, part, "/"); out = ""
+      for (i = 1; i <= n; i++) { if (part[i] ~ /^[.]/) part[i] = "_" substr(part[i], 2); out = out (i > 1 ? "/" : "") part[i] }
+      return out
+    }
+    # True when BACKLOG_DIR, a directory between it and FILE, or FILE is a
+    # symbolic link, which a write would follow out of the folder.
+    function linked(file,   rel, n, part, i, p, cmd) {
+      rel = substr(file, length(ENVIRON["BD"]) + 2); p = ENVIRON["BD"]; cmd = "test -L " quoted(p)
+      n = split(rel, part, "/")
+      for (i = 1; i <= n; i++) { p = p "/" part[i]; cmd = cmd " || test -L " quoted(p) }
+      return system(cmd) == 0
+    }
     function category(text, first,   t) {
       t = tolower(text)
       if (t ~ ENVIRON["S"]) return "security"
@@ -2804,10 +2823,11 @@ file_entries() {
       }
       also = ""
       for (i = 2; i <= np; i++) also = also (i > 2 ? ", " : "") path[i]
-      file = ENVIRON["BD"] "/" (np ? path[1] : "_general") ".md"
+      file = ENVIRON["BD"] "/" (np ? backlog_name(path[1]) : "_general") ".md"
       if (!(file in seen)) {
+        if (linked(file)) { print "run_state: a symbolic link on the way to " file ", nothing written to it" > "/dev/stderr"; bad = 1; exit 1 }
         d = file; sub(/\/[^\/]*$/, "", d)
-        if (system("mkdir -p " quoted(d)) != 0) { print "no directory " d > "/dev/stderr"; exit 1 }
+        if (system("mkdir -p " quoted(d)) != 0) { print "no directory " d > "/dev/stderr"; bad = 1; exit 1 }
         seen[file] = (system("test -s " quoted(file)) == 0)
         if (!seen[file]) print "# Backlog: " (np ? path[1] : "entries naming no file") > file
       }
@@ -2823,7 +2843,7 @@ file_entries() {
     }
     /^#+ / { flush(); if (/^##+ /) { inside = 1; head = $0; at = NR; nl = 0 }; next }
     inside { line[++nl] = $0 }
-    END { flush(); print "filed " count + 0 }'
+    END { if (bad) exit 1; flush(); print "filed " count + 0 }'
   status=$?
   rm -f "$listed"
   return $status
