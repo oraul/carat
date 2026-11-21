@@ -40,10 +40,10 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 ## Decisions
 
 - Security first (T0): none; pending border-vocabulary and review-in-openspec hold 0 review.periodic, sprint-24 High 0, Medium 0 at 8+.
-- Order (T2 user request of 2026-11-21): `backlog-records-rule` first, alone, outside Sprint 25's 3; `backlog-per-file`, stopped at 3102188, next by its line; `review-in-openspec` merged at 3102188 (#274), its line gone.
-- Rules first (T2): `tools/rules.sh:69` RECORDS_RE matches only `docs/backlog.md`, so main's merge gate must hold docs/backlog/ before the move; `rules-instruction-records` (Pool 13) stays apart, the brief editing nothing else there.
-- Names backticked (T1): queue_class (`tools/run_state.sh:2597`) counts an exception only for a backticked name (contributor-tier-high note 1).
-- Size (T1): medium; base small (1 pattern, 1 comment, 5 tools-test cases), one up: last two over (1,372,173 against 1.2M; 653,549 output against 416,666); backlog rows 979,374 to 2,445,172.
-- No split (T1): the pattern and its tools-test cases are one testable part, the comment its documentation.
+- Order (T2 user request of 2026-11-21): `backlog-records-rule` first, alone, outside Sprint 25's 3; `backlog-per-file` (stopped at 3102188) next by its line; `review-in-openspec` merged at 3102188 (#274).
+- Rules first (T2): `tools/rules.sh:69` RECORDS_RE matched only `docs/backlog.md`, so the merge gate holds docs/backlog/ before the move; `rules-instruction-records` (Pool 13) stays apart.
+- Names backticked (T1): queue_class (`tools/run_state.sh:2597`) counts an exception only for a backticked name (contributor-tier-high 1).
+- Size (T1): medium; base small (1 pattern, 1 comment, 5 tools-test cases), one up: last two over (1,372,173 against 1.2M; 653,549 output against 416,666).
+- No split (T1): 1 pattern, its 5 tools-test cases, and its comment are one testable part.
 - Critical (T1): b tools/rules.sh.
 - Retro (T1): border-vocabulary 2, 3, 4 and review-in-openspec 9, 10, 11 in Pool 10, 12; overruns (review-in-openspec 8, contributor-tier-high 12) in Pool 9 `budget-recalibrate`; tabs-only-dot's (border-vocabulary 5) the feature lane's.
