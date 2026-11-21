@@ -47,6 +47,9 @@ option.jumptab replace
 # What gt and gT move between: buffers (the buffer tabs of the top row)
 # or tabpages (Vim's); <C-PageDown> and <C-PageUp> move tab pages.
 option.gt buffers
+# When the tab row shows, as Neovim's showtabline: 0 never, 1 only with
+# two or more tab pages or files, 2 always.
+option.showtabline 2
 # The border of floats, as Neovim's winborder: none, single, double,
 # rounded, or solid; +, -, and | with option.icons ascii.
 option.winborder rounded

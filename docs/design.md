@@ -141,7 +141,7 @@ The element notes of the decided design, for a change that touches one.
 
 - Start screen. The gem is drawn with `▀`, two colored halves per cell, from a small table in Ruby; no image. The sparkle is sapphire; the six-step reveal stays; the version is dim; the hints sit in two columns; the triangles stay at 16 colors.
 - Editor and explorer. The explorer is 36 columns by default and sits on a darker panel, with no line beside it. Rows keep one cell of padding, long names end in `…`, tree guides are faint, the current row is a full-width highlight with the sapphire `▎`, and git state is right-aligned. The tab row heads the explorer's column with the project and branch.
-- Tab row. The open file always has a tab (the queued `showtabline` may hide the row itself), the active tab takes the editor's background, the modified `●` follows the name.
+- Tab row. The open file always has a tab (`option.showtabline` may hide the row itself), the active tab takes the editor's background, the modified `●` follows the name.
 - Gutter. A sign column that is always there, the line number right-aligned and faint (the cursor's bold; relative mode brightens every fifth), then two cells before the code. The cursor line runs from column 0 across the gutter in the focused window only; a selection wins over it.
 - Winbar. The path and the symbol, separators dimmed, the file bright when focused, dim when not; the lower window's winbar is the edge of a horizontal split.
 - Status bar. The file name and the position lead; folder, branch, server, type, and encoding step back in PANEL_DIM; zero counts are hidden; warnings show `▲`; groups are three cells apart with no separator glyphs; the server state is one dot.

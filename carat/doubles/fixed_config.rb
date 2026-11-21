@@ -8,7 +8,9 @@ module Carat
     # reads the shipped defaults as the editor does; with reads lines a
     # test gives after them, as the project file .caratrc, and with_user as
     # the user file, so a test sets options and bindings with the lines a
-    # user would write.
+    # user would write. The test configuration keeps option.showtabline 1,
+    # the tab row's rule before the option, so a test with one file in one
+    # tab page sees no tab row; shipped is the defaults alone.
     class FixedConfig < Ports::ConfigPort
       # @rbs @value: Domain::Config
 
@@ -17,11 +19,20 @@ module Carat
         @value = value
       end
 
-      # The shipped defaults, a new configuration on every call.
+      # The shipped defaults alone, a new configuration on every call.
       #: () -> Domain::Config
-      def self.defaults
+      def self.shipped
         config = Domain::Config.new
         config.read_defaults("config/default.caratrc", Domain::DEFAULT_CARATRC)
+        config
+      end
+
+      # The shipped defaults with option.showtabline 1, the test
+      # configuration, a new configuration on every call.
+      #: () -> Domain::Config
+      def self.defaults
+        config = shipped
+        config.read_defaults("test showtabline", "option.showtabline 1\n")
         config
       end
 

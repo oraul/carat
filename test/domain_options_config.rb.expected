@@ -77,6 +77,14 @@ ok   never is stored
 ok   a later line wins
 ok   an unknown mode is refused and keeps auto
 ok   the shipped configuration shows breadcrumbs with two or more file windows
+ok   1 by default for an Options built in code
+ok   0 is stored
+ok   2 is stored
+ok   a later line wins
+ok   3 is refused and keeps the value before it
+ok   a negative number is refused
+ok   a word is refused
+ok   The shipped default is 2: the shipped configuration always shows the tab row
 ok   rounded by default
 ok   single is stored
 ok   double is stored
@@ -94,4 +102,4 @@ ok   buffers is stored
 ok   tabpages is stored after buffers
 ok   An unknown gt mode is refused and keeps the earlier value
 ok   the shipped configuration moves gt and gT between the buffer tabs
-domain_options_config: 96 passed, 0 failed
+domain_options_config: 104 passed, 0 failed

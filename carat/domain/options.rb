@@ -34,12 +34,14 @@ module Carat
     # border style of floats, Neovim's option (BorderStyle). jumptab is
     # "replace" when a jump takes the tab of the buffer it leaves, or
     # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
-    # the buffer tabs, or "tabpages", Vim's behavior. list draws the marks
+    # the buffer tabs, or "tabpages", Vim's behavior. showtabline is 0
+    # when the tab row never shows, 1 when it shows with two or more tab
+    # pages or files, 2 when it always does, Neovim's option. list draws the marks
     # of listchars over the tabs, trailing spaces, and no-break spaces of
     # file windows, Neovim's options and default. All but syntax_on
     # come from option lines of the configuration. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :list, :listchars, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :showtabline, :list, :listchars, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -71,6 +73,7 @@ module Carat
       # @rbs @winborder: String
       # @rbs @jumptab: String
       # @rbs @gt: String
+      # @rbs @showtabline: Integer
       # @rbs @list: bool
       # @rbs @listchars: String
 
@@ -82,7 +85,7 @@ module Carat
       # draws no guides.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES, list: false, listchars: LISTCHARS)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES, showtabline: SHOWTABLINE_ONLY, list: false, listchars: LISTCHARS)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -92,7 +95,7 @@ module Carat
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
         "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool", "list" => "bool",
-        "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer",
+        "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer", "showtabline" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
         "clipboard" => "string", "icons" => "string", "theme" => "string", "background" => "string", "breadcrumbs" => "string", "indentguides.char" => "string", "winborder" => "string", "jumptab" => "string", "gt" => "string", "listchars" => "string"
       }
@@ -117,6 +120,15 @@ module Carat
       GT_BUFFERS = "buffers"
       GT_TAB_PAGES = "tabpages"
       GTS = [GT_BUFFERS, GT_TAB_PAGES]
+
+      # The values of showtabline, Neovim's option: the tab row never
+      # shows, shows only with two or more tab pages or files, or always.
+      # An Options built in code keeps the middle one, the rule before the
+      # option; the shipped configuration says 2, as Neovim's tabline
+      # plugins do.
+      SHOWTABLINE_NEVER = 0
+      SHOWTABLINE_ONLY = 1
+      SHOWTABLINE_ALWAYS = 2
 
       # The indent guides' default character and the one drawn in its
       # place with the ascii icon set.
@@ -336,6 +348,9 @@ module Carat
         when "jumptab"
           value = named(config, line, word, JUMPTABS.include?(word), "jumptab mode")
           self.jumptab = value unless value.empty?
+        when "showtabline"
+          value = bounded(config, line, word, SHOWTABLINE_NEVER, SHOWTABLINE_ALWAYS)
+          self.showtabline = value if value >= 0
         when "gt"
           value = named(config, line, word, GTS.include?(word), "gt mode")
           self.gt = value unless value.empty?
