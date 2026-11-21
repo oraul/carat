@@ -2155,6 +2155,22 @@ expect "run_state: review-due counts an item under a sub-heading of its sprint" 
 expect "run_state: review-due counts a pool item split from a counted sibling part" 0 "^counted u1-c\$" counted u1-c
 expect "run_state: review-due leaves a pool item out of the count" 0 "^not due: sprint-17 has 5 of 6 changes merged .*; not counted, not a sprint item: p1\$" echo "$count_line"
 expect "run_state: review-due names each change left out by its reason" 1 "^not due: sprint-17 has 5 of 6 changes merged [(]o1, o2, p1, s1-b, s1, t1, t10, u1-b, u1-c[)]; not counted, outside the 3: o1, o2; not counted, T0: t1; not counted, not a sprint item: p1\$" state review-due
+# An exception paragraph of one line puts out the changes it names in
+# backticks before "run" (x1, x2); a name it leaves bare (x3) stays counted
+# as its sprint item (contributor-tier-high).
+fresh sprintoutside
+printf 'sprint\tlast\nsprint-16\tseed\n' > docs/sprints.tsv
+printf '# Backlog\n' > docs/backlog.md
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; } > docs/metrics-backlog.tsv
+printf '# Queue: backlog\n\n## Sprint 17\n\nThe user-approved exception (a date, a decision): `x1` and `x2` run in the backlog lane, outside the 3.\n\nThe user-approved exception (bare names): x3 and x4 run in the backlog lane, outside the 3.\n\n1. `x3` (T2 user request, estimated small): one.\n' > docs/queue-backlog.md
+commit "docs: the queue"
+for c in x1 x2 x3; do
+  echo "$c" >> README.md
+  commit "feat: $c"
+  state init "$c" "chore/$c" > /dev/null
+  state set "$c" merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+done
+expect "run_state: review-due leaves out the changes a one-line exception paragraph names in backticks before run, not a bare name" 1 "^not due: sprint-17 has 1 of 6 changes merged [(]x1, x2, x3[)]; not counted, outside the 3: x1, x2\$" state review-due
 # From sprint-17 a sprint is six counted changes, three features and three
 # backlog changes (SPRINT_SIZE, SPRINT_SIZE_FROM, the user's decision of
 # 2026-11-17); sprint-16 and earlier close at five (SPRINT_SIZE_BEFORE).
@@ -4705,10 +4721,10 @@ for kind in resume areas record; do
 done
 expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
 expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
-# The contributor tier trial (docs/goals.md, Calibration): the contributor
-# alone runs on its agent file's tier; the planner, quality, security, and
-# close starts keep the session's, by the user's decision.
-expect "calibration: the contributor runs on its agent file's tier at medium effort" 0 "^agent/medium$" profile_of contributor
+# By the user's decision (docs/goals.md, Calibration), the contributor alone
+# runs on its agent file's tier at high effort; the planner, quality,
+# security, and close starts keep the session's.
+expect "calibration: the contributor runs on its agent file's tier at high effort" 0 "^agent/high$" profile_of contributor
 judged=""
 for kind in planner quality security close; do
   judged="$judged $kind=$(profile_of "$kind" | cut -d/ -f1)"
@@ -4738,14 +4754,14 @@ calib_js() {
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
-expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/medium calib[.]security=session/session"$' \
+expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/high calib[.]security=session/session"$' \
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('contributor', {}); calibrate('security', {}); return metricLine() })()"
 expect "workflow: a restart restores the recorded profiles of the kinds not used yet, a medium effort among them" 0 '^[{]"planner":"session/session","scout":"agent/low","bench":"agent/medium"[}]$' \
   calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'agent/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/max', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1', 'metric.calib.bench': 'agent/medium' }, calibrated) })()"
 # Tier routing (contributor-tier-routing): a normal contributor start carries
-# the medium effort, a critical one (the plan's rule, or a large estimate) and one
+# the high effort, a critical one (the plan's rule, or a large estimate) and one
 # after an escalation take the session's model and effort, none passed.
-expect "routing: a normal contributor start carries the medium effort and no model, a critical or escalated one the session model and effort" 0 '^\["medium",null,null,"agent/medium","session/session",null,"inherit","inherit",null\]$' \
+expect "routing: a normal contributor start carries the high effort and no model, a critical or escalated one the session model and effort" 0 '^\["high",null,null,"agent/high","session/session",null,"inherit","inherit",null\]$' \
   calib_js "(() => { estimate = 'medium'; const a = calibrate('contributor', {}); critical = 'b'; const b = calibrate('contributor', {}); const pb = calibrated.contributor; critical = ''; estimate = 'large'; const d = calibrate('contributor', {}); estimate = 'medium'; const x = calibrate('contributor', {}); const px = calibrated.contributor; escalated = true; const e = calibrate('contributor', {}); escalated = false; const q = calibrate('quality', {}); return [a.effort, b.effort === undefined ? null : b.effort, d.effort === undefined ? null : d.effort, px, pb, x.model === undefined ? null : x.model, b.model, e.model, q.model === undefined ? null : q.model] })()"
 expect "routing: escalate runs once and notes once, moving the contributor to the session's model" 0 '^\[false,true,"session/session",1\]$' \
   calib_js "(() => { estimate = 'medium'; critical = ''; escalated = false; globalThis.notes = []; globalThis.head = 'a'; globalThis.state = { change: 'c' }; globalThis.note = (l) => {}; globalThis.queue = (l) => notes.push(l); const before = escalated; escalate('a self-check mismatch'); escalate('a start returned no result'); return [before, escalated, calibrate('contributor', {}) && calibrated.contributor, notes.length] })()"
@@ -5135,7 +5151,7 @@ selfcheck_js() {
     $1
   })()"
 }
-expect "self-check: a match the next check contradicts is noted self-check-mismatch and moves later contributor starts to the session's model" 0 '^\{"before":"agent/medium","queued":\["sh tools/run_state.sh note c self-check-mismatch \\"contributor fix self-check said match, the check failed at stage gates\\"","sh tools/run_state.sh note c escalation \\"a self-check the check contradicted\\""\],"closable":true,"escalated":true,"after":"session/session","model":"inherit","kept":null\}$' \
+expect "self-check: a match the next check contradicts is noted self-check-mismatch and moves later contributor starts to the session's model" 0 '^\{"before":"agent/high","queued":\["sh tools/run_state.sh note c self-check-mismatch \\"contributor fix self-check said match, the check failed at stage gates\\"","sh tools/run_state.sh note c escalation \\"a self-check the check contradicted\\""\],"closable":true,"escalated":true,"after":"session/session","model":"inherit","kept":null\}$' \
   selfcheck_js "calibrate('contributor', {}); const before = calibrated.contributor; selfCheck = { mode: 'fix', said: 'match' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); const closable = $(sed -n 's/^const CLOSABLE = //p' "$wf").test(queued[0]); const o = calibrate('contributor', {}); return { before, queued, closable, escalated, after: calibrated.contributor, model: o.model, kept: selfCheck }"
 expect "self-check: a mismatch, a passed check, or no recorded self-check writes no note and escalates nothing" 0 '^\[0,0,0,false,null\]$' \
   selfcheck_js "const n = []; selfCheck = { mode: 'implement', said: 'mismatch' }; compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); selfCheck = { mode: 'implement', said: 'match' }; compareSelfCheck({ kind: 'passed', at: head, stage: '', log: '' }); n.push(queued.length); compareSelfCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); n.push(queued.length); return n.concat([escalated, selfCheck])"
