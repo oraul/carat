@@ -11,6 +11,6 @@ Each tab SHALL read a space, a space, the file's icon, a space, the last segment
 - **WHEN** "a.rb" is current among two listed files
 - **THEN** every cell of its tab but the separator, the leading space and the icon included, is in `TabLineSel`, and the separator and the other tab are in `TabLine`
 
-#### Scenario: The ascii icons give the ascii gem and separator
+#### Scenario: The ascii icons give the ascii separator and no gem
 - **WHEN** "a.txt" is current among "a.txt" and "b.txt", with the ascii icons
 - **THEN** row 0 reads "  . a.txt   |  . b.txt   |" from column 0, with no gem and no `*`

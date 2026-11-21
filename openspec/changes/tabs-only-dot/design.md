@@ -12,4 +12,4 @@ The first cell becomes a space for every tab, in the tab's group. The width, `FR
 
 ### Tab-flow rows
 
-Without a gem the separators are the only tab marks left in row 0. `top_row` replaces each separator character that follows a space with a space and squeezes, so names keep their own `|` (a name starting with `|` is preceded by the icon and a space, which the replacement would also touch; no flow names such a file, and the separator test lives in `adapters_tab_bar`).
+Without a gem the separators are the only tab marks left in row 0. `top_row` blanks every separator character (`|` and `│`) in the row and squeezes, so a name holding its own `|` would lose it (no flow names such a file, and the separator test lives in `adapters_tab_bar`).

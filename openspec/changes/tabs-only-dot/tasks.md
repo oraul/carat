@@ -2,7 +2,7 @@
 
 ## 1. The tab bar
 
-- [x] 1.1 `carat/adapters/tab_bar.rb` writes no gem; `GEM` and `ASCII_GEM` removed (proved by `test/adapters_tab_bar.rb` "The ascii icons give the ascii gem and separator" and "Two tabs, one modified")
+- [x] 1.1 `carat/adapters/tab_bar.rb` writes no gem; `GEM` and `ASCII_GEM` removed (proved by `test/adapters_tab_bar.rb` "The ascii icons give the ascii separator and no gem" and "Two tabs, one modified")
 - [x] 1.2 Selected group and bold (proved by `test/adapters_tab_bar.rb` "The selected tab's icon is in the selected group" and `test/domain_theme.rb` "the selected tab reads at a glance")
 
 ## 2. The tests

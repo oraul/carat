@@ -99,9 +99,7 @@ module EditorTabFlowsTest
   end
 
   def self.blank_separators(text)
-    out = ""
-    text.each_char { |c| out += (c == "|" || c == "│") ? " " : c }
-    out
+    text.tr("|│", "  ")
   end
 
   # What a step checks, as strings.

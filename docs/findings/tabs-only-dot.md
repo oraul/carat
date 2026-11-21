@@ -17,3 +17,8 @@
 - Location: test/editor_tab_flows.rb, blank_separators
 - Why: row 0 of a tab row has its `|` and `│` blanked to compare names, so a file named with a pipe would read differently; no flow names one.
 - Fix: read the tab names from the buffer list and compare them with the row cells by column from the tab widths, or add a flow with such a name once the helper reads columns.
+
+### Backlog entries resolved by tabs-only-dot
+- Location: the backlog entries "The ascii gem and the ascii modified mark are both `*`" and "tab_boundary? takes a digit after a gem as a tab boundary"
+- Why: this change removes ASCII_GEM and tab_boundary?, so both entries are fixed
+- Fix: groom removes both as fixed by tabs-only-dot

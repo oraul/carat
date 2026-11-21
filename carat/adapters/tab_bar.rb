@@ -125,8 +125,7 @@ module Carat
       def paint_tab(frame, x, limit, buffer, selected, set)
         hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
         ascii = set == "ascii"
-        x = frame.put_within(0, x, " ", hl, limit)
-        x = frame.put_within(0, x, " ", hl, limit)
+        x = frame.put_within(0, x, "  ", hl, limit)
         x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), hl, limit)
         x = frame.put_within(0, x, " ", hl, limit)
         path = buffer.path
