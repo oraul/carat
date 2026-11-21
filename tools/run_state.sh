@@ -58,8 +58,10 @@
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
 # pipeline, stages, and plan) and METRICS_OUT gets its metrics. The clone
 # holds its own copy of the toolchain; files changed outside the clone
-# while every stage exited 0 (escaped_paths) void the check: its verdict
-# reads escaped and its passes are rewritten as not passing.
+# while every stage exited 0 (escaped_paths) void the check: its passes
+# are rewritten as not passing, the paths kept as a security-escape note,
+# and its verdict reads escaped when every path lies under the main
+# checkout's build/, which another lane writes (lane_written), else failed.
 #
 # History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
 # per merged change in its lane's file (lane), appended by history
@@ -151,9 +153,12 @@
 #                               failed|killed|superseded at C; read LOG" (S
 #                               none before a stage), "check: stage none
 #                               escaped at C; read LOG" when every stage
-#                               exited 0 but files outside the clone changed
-#                               (its records rewritten escaped, rerun with no
-#                               fix round), or "check: still running"
+#                               exited 0 but files changed outside the clone,
+#                               each under the main checkout's build/ seen
+#                               from a lane (rerun with no fix round; any
+#                               other path reads "stage none failed"; both
+#                               rewrite its records escaped and note the
+#                               paths), or "check: still running"
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -788,8 +793,8 @@ stage_record() {
 # The stage records this runner wrote as passing (runner_records), each
 # rewritten as escaped and its compile record cleared, so no later check
 # reuses a pass that files changed outside the clone voided (compiled_same
-# would skip a compile stage on it); the workflow reruns such a check with
-# no fix round (lane-isolation). Records of an earlier check stand.
+# would skip a compile stage on it), whether the check reads escaped or
+# failed (lane_written). Records of an earlier check stand.
 escaped_records() {
   for key in $(printf '%s' "$runner_records" | awk '$2 == "0" { print $1 }' | sort -u); do
     s=${key#stage.}
@@ -799,6 +804,28 @@ escaped_records() {
         ! one_of "$s" "$COMPILE_STAGES" || compiled_set "$s" "" ;;
     esac
   done
+}
+
+# escaped_note PATHS: records the escaped paths, one per line, as a
+# security-escape note of the run state, so they outlive the check log a
+# rerun rewrites; every byte but a printable one is written "?", so no
+# path a stage names can make write_key refuse the note and the check
+# end with no verdict.
+escaped_note() {
+  add_note security-escape "escaped check at $head: $(printf '%s\n' "$1" | head -n 20 |
+    LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
+}
+
+# lane_written PATHS: true when every escaped path, one per line, lies
+# under the main checkout's build/ seen from a lane, which another lane's
+# tools write, so the workflow reruns the check with no fix round; a write
+# anywhere else (the shared toolchain or Spinel's checkout, the user's git
+# configuration, the git directory, the main checkout's other files, the
+# delivery clone, or its run state) fails the check, its fix round as
+# before (lane-isolation).
+lane_written() {
+  [ -n "$main_tree" ] || return 1
+  printf '%s\n' "$1" | BUILD="$main_tree/build/" awk 'index($0, ENVIRON["BUILD"]) != 1 { other = 1 } END { exit other }'
 }
 
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
@@ -1013,8 +1040,13 @@ check_stages() {
   if [ -n "$escaped" ]; then
     echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
     printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
+    escaped_note "$escaped"
     escaped_records
-    echo "check: stage none escaped at $head; read $(check_log)"
+    if lane_written "$escaped"; then
+      echo "check: stage none escaped at $head; read $(check_log)"
+    else
+      echo "check: stage none failed at $head; read $(check_log)"
+    fi
     exit 1
   fi
   # The workflow records phase.check from the checker's result, so a check

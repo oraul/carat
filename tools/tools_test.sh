@@ -542,6 +542,10 @@ case "$REACH" in
   ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
   gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-untracked) : > "$MAIN/forged" ;;
+  main-build) mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" ;;
+  main-build-gitconfig)
+    mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" &&
+      git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-reset) git -C "$MAIN" reset -q --hard "$(git -C "$TOP" rev-parse HEAD)" ;;
   concurrent)
     touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
@@ -562,12 +566,14 @@ expect "run_state: a stage writing its clone's toolchain leaves the shared one" 
   sh -c 'cat tmp/.toolchain/lib/spin tmp/.toolchain/bin/spinel | tr "\n" " "'
 expect "run_state: check leaves Spinel's checkout out of its clone" 0 "every stage passed" reach no-spinel
 expect "run_state: a stage that changes the shared toolchain by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]toolchain/lib/spin$" reach toolchain
-# lane-isolation: files outside the clone changed while every stage
-# exited 0 is an escaped check, which the workflow reruns with no fix
-# round; the passes it wrote read as not passing, so no later check
-# reuses them.
-expect "run_state: a check voided by a write outside its clone ends in an escaped verdict line" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
-expect "run_state: an escaped check's stage records read as not passing" 0 "^escaped [0-9]+s [0-9a-f]{12} " state get isolated stage.reach
+# lane-isolation: a write outside the clone while every stage exited 0
+# that no other lane makes (the shared toolchain here) still fails the
+# check, its fix round as before; the passes it wrote read as not passing,
+# so no later check reuses them, and its paths stay in a security-escape
+# note, which a rerun's log does not rewrite.
+expect "run_state: a check voided by a write to the shared toolchain ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a voided check's stage records read as not passing" 0 "^escaped [0-9]+s [0-9a-f]{12} " state get isolated stage.reach
+expect "run_state: a voided check records its escaped paths in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/tmp/[.]toolchain/lib/spin" cat build/pipeline/isolated.json
 echo spin > tmp/.toolchain/lib/spin
 expect "run_state: a later check backed at the head reuses no stage record of an escaped check" 0 "^stage reach: exit 0" \
   env STAGES=reach MAKE="$work/bin/reach-make" TOP="$iso_top" REACH=inside REACH_OUT="$work/reach.out" \
@@ -698,6 +704,18 @@ git_q update-ref -d refs/heads/forged
 mkdir -p "$work/home"
 REACH_HOME="$work/home"
 expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
+expect "run_state: a write to HOME's git configuration from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+rm "$work/home/.gitconfig"
+# lane-isolation: from a lane, files changed only under the main
+# checkout's build/, which another lane's tools write, end in an escaped
+# verdict, which the workflow reruns with no fix round; one more path
+# elsewhere fails the check.
+expect "run_state: a write only under the main checkout's build/ from a lane voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write only under the main checkout's build/ from a lane ends in an escaped verdict line" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: an escaped check from a lane records its paths in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/build/metrics/current[.]tsv" cat build/pipeline/isolated.json
+expect "run_state: a write under the main checkout's build/ and to HOME's git configuration from a lane fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach main-build-gitconfig
+expect "run_state: a write under the main checkout's build/ beside one elsewhere ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+rm -r "$iso_top/build/metrics"
 REACH_HOME=
 rm -r "$work/home"
 # The lane's commit the main checkout fast-forwards to adds a tracked file
