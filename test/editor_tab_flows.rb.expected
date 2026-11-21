@@ -1,4 +1,3 @@
-ok   an overflow row ending in a counter drops the last separator
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 1: <Space>e
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 2: 3Gl
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 3: <Space>e4Gl
@@ -178,4 +177,4 @@ ok   tab pages: closing down to the editor quitting, step 5: :bd<CR>
 ok   tab pages: closing down to the editor quitting, step 6: x:q<CR>
 ok   tab pages: closing down to the editor quitting, step 7: :q!<CR>
 ok   tab pages: closing down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-editor_tab_flows: 180 passed, 0 failed
+editor_tab_flows: 179 passed, 0 failed

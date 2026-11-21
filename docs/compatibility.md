@@ -505,7 +505,7 @@ One status bar on the row above the message row serves every window, as `laststa
 | File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
 | Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |
 | Narrow bar | Whole segments dropped, lowest priority first and the later of equals first, until the rest fit | `adapters_status_bar` |
-| Buffer tabs | From two listed file buffers or two tab pages: a tab per file buffer with its icon, name, and modified icon and a thin `│` (`|` under ascii) after it, the current window's led by the gem `◆` (`*` under ascii) and in `TabLineSel`; the tabs that do not fit counted as ` <N ` and ` N> `; the tab-page numbers at the right end | `adapters_tab_bar`, `editor_tabs` |
+| Buffer tabs | From two listed file buffers or two tab pages: a tab per file buffer with its icon, name, and modified icon and a thin `│` (`|` under ascii) after it, the current window's in `TabLineSel` (accent background and bold, no gem); the tabs that do not fit counted as ` <N ` and ` N> `; the tab-page numbers at the right end | `adapters_tab_bar`, `editor_tabs` |
 
 Differences from Neovim: there is no `laststatus`, `showtabline`, `statusline`, or `tabline` option, no winbar, and no per-window status line; tabs are not clickable and equal file names are not told apart; the encoding is always `utf-8`.
 

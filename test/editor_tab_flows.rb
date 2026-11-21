@@ -89,62 +89,19 @@ module EditorTabFlowsTest
     true
   end
 
-  # Row 0 squeezed, without the selected tab's gem and the tabs'
-  # separators when it is the tab row (they have their own tests): only
-  # the cell at a tab's start that is a gem followed by a space, and a
-  # separator that follows a space and precedes a tab boundary go, so a
-  # name or the modified mark keeps its own "|" and "*", and an overflow
-  # counter " <N " is kept whole (see strip_tab_cells).
+  # Row 0 squeezed, the tabs' separators (the only cells of the tab row
+  # that are not a name, an icon, a mark, or a counter) blanked when it is
+  # the tab row; they have their own test in adapters_tab_bar.
   def self.top_row(h)
     text = h.row(0)
-    text = strip_tab_cells(text) if files(h).length > 1 || h.tab_count > 1
+    text = blank_separators(text) if files(h).length > 1 || h.tab_count > 1
     text.strip.squeeze(" ")
   end
 
-  def self.strip_tab_cells(text)
-    chars = text.chars
+  def self.blank_separators(text)
     out = ""
-    start = true
-    i = 0
-    while i < chars.length
-      c = chars[i]
-      after_space = i > 0 && chars[i - 1] == " "
-      counter_stop = c == "<" && after_space ? counter_end(chars, i) : 0
-      if counter_stop > 0
-        out += chars[i, counter_stop - i].join
-        i = counter_stop
-        start = true
-        next
-      elsif (c == "|" || c == "│") && after_space && tab_boundary?(chars, i + 1)
-        start = true
-      elsif start && (c == "*" || c == "◆") && i + 1 < chars.length && chars[i + 1] == " "
-        start = false
-      else
-        out += c
-        start = false
-      end
-      i += 1
-    end
+    text.each_char { |c| out += (c == "|" || c == "│") ? " " : c }
     out
-  end
-
-  # Where the cells of an overflow counter " <N " that starts at i end
-  # (past its space), 0 when no counter starts there.
-  def self.counter_end(chars, i)
-    j = i + 1
-    j += 1 while j < chars.length && chars[j] >= "0" && chars[j] <= "9"
-    return 0 if j == i + 1 || j >= chars.length || chars[j] != " "
-    j + 1
-  end
-
-  # True when the cells from i begin a tab, a gem or a space and then a
-  # space, a digit (a trailing counter " N> "), or the row's end: what
-  # follows a tab's separator, which a name starting with "|" is not
-  # followed by.
-  def self.tab_boundary?(chars, i)
-    return true if i >= chars.length
-    return false unless chars[i] == " " || chars[i] == "*" || chars[i] == "◆"
-    i + 1 >= chars.length || chars[i + 1] == " " || (chars[i + 1] >= "0" && chars[i + 1] <= "9")
   end
 
   # What a step checks, as strings.
@@ -170,9 +127,6 @@ module EditorTabFlowsTest
   def self.main
     t = Carat::Testing.new("editor_tab_flows")
     tabpages = "option.gt tabpages\n"
-
-    # A trailing overflow counter keeps its digits and loses the separator before it.
-    t.assert_equal("a.txt b.txt 8>", strip_tab_cells("◆ a.txt │  b.txt │ 8> ").strip.squeeze(" "), "an overflow row ending in a counter drops the last separator")
 
     # Opening.
     flow(t, "l from the explorer onto the startup buffer, then a new and a listed file", "", [
