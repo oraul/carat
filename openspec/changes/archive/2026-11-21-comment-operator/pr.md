@@ -17,7 +17,7 @@ Adds Neovim's built-in comment operator: `gc{motion}`, `[count]gcc`, visual `gc`
 - Add the table-driven `test/editor_comments.rb` covering comment, uncomment, a mixed range, blank lines, indent, counts, a text object, the visual modes, undo, dot repeat, the last line, and the old bug where `gcc` deleted text
 - Add the operators and text-objects spec requirements and archive the OpenSpec change
 - Document the operator in README.md, `docs/actions.md`, `docs/compatibility.md` (no `commentstring` option yet listed as a difference), `docs/architecture.md`, and `docs/codebase-map.md`
-- Record the planner's feature queue, with the Sprint 25 exception line and the `one-accent` and `glyph-audit` pool entries, and this run's metrics row
+- Record the planner's feature queue, with the Sprint 25 exception line and the `one-accent` and `glyph-audit` pool entries, and the border-vocabulary run's metrics row
 
 ---
 
