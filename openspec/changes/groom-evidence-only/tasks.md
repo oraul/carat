@@ -10,3 +10,9 @@
 
 - [x] 2.1 The `tools/run_state.sh` header and comments, `.claude/agents/planner.md` step 1 (its test in `tools/tools_test.sh`), CLAUDE.md's Backlog line, README.md pipeline step 11, and `docs/codebase-map.md`
 - [x] 2.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+
+## 3. Review advisories
+
+- [x] 3.1 backlog-pick's header and `backlog_pick`'s comment (`tools/run_state.sh`), `docs/codebase-map.md`'s groomed set, and `.claude/agents/planner.md` step 1 say a gone line's heading comes before its ` -- REASON`
+- [x] 3.2 The dead fixture of the removed closed proof (the older `## h` heading's commit and its comment) dropped from `tools/tools_test.sh`
+- [x] 3.3 A gone line whose heading holds ` -- ` split at its last ` -- `; proved by "run_state: groom removes a gone entry whose heading holds ' -- ', its line split at the last ' -- '" and "run_state: backlog-oldest leaves out a gone entry whose heading holds ' -- '"

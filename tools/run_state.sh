@@ -245,7 +245,8 @@
 #                               oldest; fewer give their security entries
 #                               alone, or none; an entry a queue file names,
 #                               or whose whole heading line ends a line of
-#                               PLAN_DIR/groom.txt, is skipped; one placed by
+#                               PLAN_DIR/groom.txt, a gone line's before its
+#                               " -- REASON", is skipped; one placed by
 #                               the first path of its Location line the map
 #                               holds (a bare backticked word only when the
 #                               map names it and the tree holds it as a file
@@ -2731,8 +2732,9 @@ security_entry() {
 # ending in "/", or is a directory holding one (the first in name order);
 # an entry whose heading text a queue file holds, not as the start of a
 # longer word, is queued, and one whose whole heading line ends a line of
-# PLAN_DIR/groom.txt is groomed: the closed sprint's removals, which stay
-# in the backlog until the sprint's records change. Any entry naming
+# PLAN_DIR/groom.txt, a gone line's before its " -- REASON", is groomed:
+# the closed sprint's removals, which stay in the backlog until the
+# sprint's records change. Any entry naming
 # security ranks first here, wider than groom's SECURITY_MARK on purpose:
 # a wider ranking only orders the batches, while groom's guard decides
 # what may leave.
