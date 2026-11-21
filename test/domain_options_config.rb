@@ -213,10 +213,11 @@ module DomainOptionsConfigTest
     end
     t.assert_equal("auto", options.breadcrumbs, "the shipped configuration shows breadcrumbs with two or more file windows")
 
-    # option.showtabline: when the tab row shows; scenarios "A value from a
-    # line" and "A value out of range" (config-files). Rows are [label,
-    # project lines, [value, problems]]; Options.new keeps 1, the shipped
-    # file says 2.
+    # option.showtabline: when the tab row shows (config-files scenarios):
+    # "A value from a line"
+    # "A value out of range"
+    # Rows are [label, project lines, [value, problems]]; Options.new keeps
+    # 1, the shipped file says 2.
     t.table([
       ["1 by default for an Options built in code", "", [1, []]],
       ["0 is stored", "option.showtabline 0\n", [0, []]],

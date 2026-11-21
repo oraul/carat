@@ -675,11 +675,14 @@ module AdaptersFramePresenterTest
     LISTED.remove(other)
     LISTED.remove(s.buffer)
 
-    # Scenarios "A second file shows the row", "One file has no row under
-    # 1", "One file has the row under 2", "The open file's modified mark
-    # follows its name under 2", "Never hides the row", and "Always shows
-    # the row with no file" (buffer-tabs): each row is [label, [showtabline,
-    # files listed, modified], rows 0 and 1].
+    # Scenarios of buffer-tabs, each name on its own comment line:
+    # "A second file shows the row"
+    # "One file has no row under 1"
+    # "One file has the row under 2"
+    # "The open file's modified mark follows its name under 2"
+    # "Never hides the row"
+    # "Always shows the row with no file"
+    # Each row is [label, [showtabline, files listed, modified], rows 0 and 1].
     t.cases([
       ["0 shows no row with one file", [0, 1, 0], "  1 one|~"],
       ["0 shows no row with two files", [0, 2, 0], "  1 one|~"],
