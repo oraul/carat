@@ -5350,7 +5350,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.qualityReview = ''; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.selfFix = 0; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.qualityReview = ''; return $1 })()"
 }
 close_back=$PWD
 fresh closes
@@ -5374,7 +5374,8 @@ expect "workflow: a close record line with one refused phase reports its refusal
 expect "workflow: a close record line with one refused phase reports only that line" 0 "^1\$" sh -c 'printf "%s\n" "$1" | grep -c "^refused: "' _ "$close_out"
 expect "workflow: a close record line with one refused phase still records the rest and every metric field" 0 "^$close_head  ok\$" \
   sh -c 'pairs=$(printf "%s" "$2" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//"); bad=""; for p in $pairs; do [ "$(sh "$1" get closes "metric.${p%%=*}")" = "${p#*=}" ] || bad="$bad $p"; done; echo "$(sh "$1" get closes phase.package) $(sh "$1" get closes phase.ci)$bad ok"' _ "$here/run_state.sh" "$close_line"
-expect "workflow: the close's metric line carries every figure" 0 "^8\$" sh -c 'printf "%s" "$1" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//" | tr " " "\n" | grep -c "="' _ "$close_line"
+# Nine figures since contributor-self-check added self_fix.
+expect "workflow: the close's metric line carries every figure, self_fix among them" 0 "^9\$" sh -c 'printf "%s" "$1" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//" | tr " " "\n" | grep -c "="' _ "$close_line"
 expect "workflow: the refused close lines are noted by their text" 0 '^"refused at the close, the other lines recorded: b; output: x"$' \
   close_js "refusedNote(['a', 'b', 'c'], { refused: [2, 9], record_output: 'x' })"
 expect "workflow: a close with no refused line writes no refused note" 0 '^""$' close_js "refusedNote(['a'], { refused: [] })"
@@ -5562,6 +5563,10 @@ expect "self-check: a settled round clears the last self-check" 0 '^null$' \
   settle_js "(() => { globalThis.selfCheck = { mode: 'fix', said: 'match' }; settleRound('abc1234'); return selfCheck })()"
 expect "self-check: rounds hands a check that finished at the head to finishCheck after reading its outcome" 0 '^true$' \
   js "$wf" "rounds" "(() => { const r = rounds.toString(); return r.indexOf('checkOutcome(c.verdict') > -1 && r.indexOf('finishCheck(v)') > r.indexOf('checkOutcome(c.verdict') })()"
+# contributor-self-check: the checker's check backs what backedCommit gives
+# over the contributor's claim, the head, and phase.check.
+expect "self-check: rounds builds the check line on backedCommit over the claim, the head, and phase.check" 0 '^true$' \
+  js "$wf" "rounds" "(() => { const r = rounds.toString(); const b = r.indexOf(\"const backed = backedCommit(claimedPass, head, state['phase.check'])\"); return b > -1 && r.indexOf('checkLines(state.change, backed,') > b })()"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
 expect "quality step: the archive and package step runs the quality step first when none is recorded, refused without one, and not again once recorded" 0 '^\[\["implement quality"\],false,\["verify","close"\]\]$' \

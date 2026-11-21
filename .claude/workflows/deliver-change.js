@@ -130,6 +130,8 @@ let qualityReview = ''
 // start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
+// Implement and fix hold the contributor's own check of its head, up to
+// three runs with their fixes, about 18 calls (contributor-self-check).
 const CALL_CAPS = { planner: 20, scout: 30, implement: 110, fix: 60, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10, run: 8 }
