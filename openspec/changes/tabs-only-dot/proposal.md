@@ -29,7 +29,7 @@ None.
 
 ## Impact
 
-- README.md: unchanged, it does not describe the tab row's selected marker.
+- README.md: changed, the winbar paragraph no longer says the selected tab starts with a gem.
 - docs/architecture.md: unchanged, it does not name the gem of a tab.
 - docs/codebase-map.md: area 13, the `tab_bar.rb` line.
 - docs/compatibility.md: the Buffer tabs row.
