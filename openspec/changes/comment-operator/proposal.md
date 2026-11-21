@@ -29,7 +29,7 @@ None.
 
 - No `commentstring` option: the marker table is fixed; an option to set it per buffer is a later change.
 - Markers with a right part (`/* %s */`) are not needed by any filetype carat detects today; the table holds a left marker only.
-- The doubled last-key form is enabled for `gc` only; `g~~`, `guu`, and `gUU` stay as they are.
+- The doubled last-key form is enabled for `gc` only: `g~~`, `guu`, and `gUU` already work by binding `~`, `u`, and `U` in operator_pending, which `gcc` cannot do since `c` there is `cc`.
 - The Sprint 25 exception line and the `one-accent` and `glyph-audit` placements in `docs/queue-feature.md` come with the planner's queue through `plan-apply` at the package step, so this change does not write them by hand. No file of the backlog lane and no `tools/rules.sh` edit.
 - Assumption: after a toggle the cursor goes to the first non-blank of the range's first line, as after `>`.
 - Assumption: uncommenting a line holding only the marker (and blanks) leaves an empty line, so no trailing blanks remain.
@@ -37,7 +37,7 @@ None.
 ## Impact
 
 - README.md: changed, the editing feature list names the comment operator.
-- docs/architecture.md: changed, the operators paragraph of section 5 names `gc` and the `Comments` domain module.
+- docs/architecture.md: changed, its operator list names `gc` and its visual use cases `CommentSelection`; the `Comments` module is described in the code map, since the document is at its byte budget.
 - docs/codebase-map.md: area 7 names `carat/domain/comments.rb`, `carat/use_cases/visual/comment_selection.rb`, and `test/editor_comments.rb`.
 - docs/compatibility.md: rows for `gc`, `gcc`, visual `gc`, and the `gc` text object, the missing `commentstring` option listed as a difference.
 - docs/actions.md: rows for `operator.comment` and `textobject.comment`.

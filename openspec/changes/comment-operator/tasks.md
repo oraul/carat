@@ -4,7 +4,7 @@
 
 - [ ] 1.1 `carat/domain/comments.rb`: the marker table, `commented?`, `toggle`, and `block` (proved by `test/editor_comments.rb` "Uncomment removes the marker and one space", "A mixed range is commented", "Blank lines are untouched", "The marker goes at the smallest indent", "A line of only the marker becomes empty", "An unknown filetype uses the default marker")
 - [ ] 1.2 `carat/domain/operator_kind.rb` `COMMENT`, `carat/use_cases/operate.rb` comment branch, `carat/use_cases/actions/operator_handler.rb` registration (proved by `test/editor_comments.rb` "gcc comments the line", "gc with a motion and a count", "gc with a text object", "gcc never deletes text", "One undo restores the toggled lines", "Dot repeats the toggle")
-- [ ] 1.3 `carat/domain/command_grammar.rb` doubled last key for `gc` (proved by `test/editor_comments.rb` "gcc with a count" and `test/domain_grammar.rb` row "the last key of gc doubles it")
+- [ ] 1.3 `carat/domain/command_grammar.rb` doubled last key for `gc` (proved by `test/editor_comments.rb` "gcc with a count", "gc then another operator cancels", and "another g operator then c still cancels")
 
 ## 2. Visual and the text object
 
