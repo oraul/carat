@@ -10,3 +10,4 @@
 - Location: .claude/workflows/deliver-change.js (seed)
 - Why: seed no longer reads quality-advisory notes into the findings the package step hands over, so a delivery that ran a quality reviewer before this change merged and is resumed after it writes those advisories to no findings file; they stay only as run state notes.
 - Fix: none needed once the deliveries in flight at the merge have finished; otherwise read quality-advisory notes into the backlog list in seed once more.
+none
