@@ -144,7 +144,7 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/medium', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 // A profile's form, the one pattern restoreCalibration and the metric line
 // accept and tools-test reads (an effort added here only).
 const PROFILE = /^(agent|session)\/(low|medium|high|session)$/
