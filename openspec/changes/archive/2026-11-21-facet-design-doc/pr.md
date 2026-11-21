@@ -12,7 +12,7 @@ Adds docs/design.md, the one binding description of carat's look, written from t
 - Name docs/design.md in CLAUDE.md, docs/architecture.md, README.md, and docs/codebase-map.md, stating that the look is binding for every UI change.
 - Add a required-file check for docs/design.md to tools/docs_lint.sh with a passing and a failing case in tools/tools_test.sh.
 - Add the user-approved exception line under the Sprint 25 heading of docs/queue-feature.md so this change runs first in the feature lane, outside the three.
-- Archive the OpenSpec change with skip_specs, since no behavior changes, and record the plan's notes and the advisories in docs/findings/facet-design-doc.md.
+- Archive the OpenSpec change with skip_specs, since no behavior changes, and record the plan's six notes and the lane lookup note in docs/findings/facet-design-doc.md.
 
 ---
 
