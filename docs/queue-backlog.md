@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix 
 
 ## Sprint 25
 
-The user-approved exception (2026-11-21, the user's groom fix): groom-evidence-only runs first in the backlog lane, outside the 3.
+The user-approved exception (2026-11-21, the user's tier decision): `contributor-tier-high` and `contributor-harness` run in the backlog lane, outside the 3.
 
 The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside the 3, after groom-evidence-only, `metrics-row-format` (T2 user request, pipeline defect, estimated medium, critical b tools/run_state.sh): 9 rows hold 12-character merged commits, authoring-kit's has no date; accepted when the rows are fixed and history and docs-lint refuse a malformed date, merged, or pr, a tools-test case each.
 
@@ -20,10 +20,10 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 5. `check-lane-scratch` (T1 pipeline defect, estimated small, pushed back 2, critical b tools/run_state.sh): 2 entries, another lane's bench log and metrics write failing a check.
 6. `skill-guard` (T1 defect, Medium (6), estimated small, pushed back 3, reason: one pipeline change a sprint, critical a tools/agent_guard.sh): `agent_guard.sh:1071`.
 7. `lane-name-guards`, `groom-findings-refs` (T1 pipeline defects, security Low (4), estimated small each, pushed back 3, same reason, critical a tools/run_state.sh): "### Lane worktree trusts a branch-controlled build/pipeline", "### Merger's lane-close and contributor's merge-main accept any change name", "### Two security entries stay open though #214 fixed them".
-8. `records-bench-skip`, `budget-recalibrate` (T1 pipeline efficiency, estimated small each, pushed back 4, same reason, critical b tools/run_state.sh): bench up to 21.4 percent of output; small records rows 983,348 and 2,599,323; a records run too (sprint-24-records note 10: bench 11,706 of 68,824 output, 17.0 percent).
-9. `closing-loop-fold`, `merge-wait-bound`, `areas-in-plan` (T1 pipeline efficiency, estimated small each, pushed back 2, critical b .claude/workflows/deliver-change.js): advisory rounds 107,710 of 425,119 output, rework 3 on 0 blocking (review-trust-lows-b 9); merge 85,414 output against 32,630; records advisories straight to findings (sprint-24-records note 11: rework 2 on 0 blocking, 0 fix commits).
+8. `records-bench-skip`, `budget-recalibrate` (T1 pipeline efficiency, estimated small each, pushed back 4, same reason, critical b tools/run_state.sh): bench up to 21.4 percent of output; small records rows 983,348, 2,599,323, 1,471,416 (groom-evidence-only note 8); a records run too (sprint-24-records note 10: bench 11,706 of 68,824 output, 17.0 percent).
+9. `closing-loop-fold`, `merge-wait-bound`, `areas-in-plan` (T1 pipeline efficiency, estimated small each, pushed back 2, critical b .claude/workflows/deliver-change.js): advisory rounds 107,710 of 425,119 output, rework 3 on 0 blocking (review-trust-lows-b 9); merge 85,414 output against 32,630; records advisories straight to findings (sprint-24-records note 11: rework 2 on 0 blocking, 0 fix commits); groom-evidence-only notes 6, 7: advisory round 105,718 of 338,328, merge 56,469 at 10.5 CI minutes.
 10. `merge-body-check`, `check-runner-safety-bench`, `push-merge-guards`, `check-runner-safety-b`, `plan-needed-reviews` (T1 defects, estimated medium each, pushed back 4, same reason, critical b tools/run_state.sh).
-11. `check-at-head`, `head-form-restart`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `queue-fit`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): self-check said match before 7 failures (review-trust-lows-b 10); records reviews 27,661 of 68,824 output, 40.2 percent (sprint-24-records note 12).
+11. `check-at-head`, `head-form-restart`, `self-found-fix`, `self-check-drop`, `plan-queued-lite`, `scout-prune`, `split-proof`, `contributor-rule-ten`, `queue-fit`, `arch-doc-budget`, `records-review-scope` (T1 pipeline efficiency, estimated small each, pushed back 2): self-check said match before 7 failures (review-trust-lows-b 10); records reviews 27,661 of 68,824 output, 40.2 percent (sprint-24-records note 12); check 119,742 of 338,328, a run at main (groom-evidence-only 4, 5).
 12. `rules-instruction-records` (T6 advisory, estimated small, critical b tools/rules.sh): the INSTRUCTION_RECORDS_RE entry; alone, first.
 13. `tools-docs-tidy` (T6, 20 sprint-24 findings, estimated large, area 1, split in 2): its groomed entries, `Makefile:209`.
 14. `explorer-sweep` (T6, estimated medium, batch 3, area 16, 10 of 20); `motions-editing-tidy` (T6, estimated large, area 6, 19 entries).
@@ -34,9 +34,10 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 
 ## Decisions
 
-- Security first (T0): none; sprint-24 review and sweep High 0, Medium 0; the Medium (6) below confidence 8, Pool 1.
-- Sprint 25 (T3): 3 features, 3 backlog: review-trust-lows-b (#268), config-guards-b, drivers-lsp-lows; 2 user requests outside (listchars-folds notes 16, 17).
-- Delivered (T2 user request of 2026-11-21): groom-evidence-only first, outside the 3; the withdrawn sprint-24 prune marked 1,322 of 1,772 entries stale.
-- Size (T2): medium, like groom-security-mark 995,203 and groom-proof 1,444,297 total; one of the last two over (sprint-24-records 1,471,416 of 500k), no size up.
-- Critical (T2): b tools/run_state.sh and .claude/agents/planner.md; rule a needs a security finding, none here.
-- Retro (T1): sprint-24-records notes 10, 11, 12 into Pool 8, 9, 11; its notes 1 to 8 are in docs/findings/sprint-24-records.md.
+- Security first (T0): none; groom-evidence-only, sprint-24 High 0, Medium 0 at 8+; the Medium (6) in Pool 1.
+- Delivered (T2 user request of 2026-11-21): contributor-tier-high, outside the 3, groom-evidence-only (#270) and its exception line removed; names backticked, queue_class reads only `NAME` (tools/run_state.sh:2611).
+- Trial end (T2): 2 of 6 rows, #262 1.23M with a fix round, #265 2.19M escalated; quality first pass 135/227.
+- Size (T2): medium, like contributor-tier-trial 636,664, -medium 1,520,265; one of the last two over (sprint-24-records), no size up.
+- Critical (T2): b .claude/workflows/deliver-change.js; tools/rules.sh untouched.
+- Retro (T1): groom-evidence-only notes 4 to 8 into Pool 8, 9, 11.
+- Sprint 25 (T3): 3 features, 3 backlog: review-trust-lows-b (#268), config-guards-b, drivers-lsp-lows.
