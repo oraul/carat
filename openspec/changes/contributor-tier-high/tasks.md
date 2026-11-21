@@ -13,3 +13,4 @@
 - [x] 3.1 Write the Sprint 25 exception line's names in backticks (`docs/queue-backlog.md`), so queue_class puts `contributor-tier-high` and `contributor-harness` outside the 3; proven by the tools-test case that a one-line exception paragraph puts out the changes it names in backticks before run, not a bare name
 - [x] 3.2 Say in tools-test's calibration comment that the contributor runs on its agent file's tier at high effort by the user's decision, no trial open
 - [x] 3.3 End the routing trial line of `docs/goals.md` Calibration at its close, no trial left for the planner to judge
+- [x] 3.4 Leave the groom-evidence-only line as the one example in the exception paragraph finding (`docs/findings/contributor-tier-high.md`), the Sprint 25 line now naming its changes in backticks; checked by `make docs-lint`
