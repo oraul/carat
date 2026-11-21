@@ -29,7 +29,7 @@ module Carat
 
       #: (Domain::EditorState) -> Outcome
       def call(state)
-        state.cmdline = ""
+        state.replace_cmdline("")
         state.mode = Domain::Mode::NORMAL
         prompt = @search_prompt
         if prompt.active

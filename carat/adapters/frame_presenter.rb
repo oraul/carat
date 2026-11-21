@@ -762,7 +762,8 @@ module Carat
       def place_cursor(frame, state, options, tabstop, visual, rows, cols)
         if state.mode == Domain::Mode::CMDLINE
           frame.cursor_row = rows - 1
-          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(state.cmdline, tabstop), cols - 1)
+          before = state.cmdline[0, state.cmdline_position].to_s
+          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(before, tabstop), cols - 1)
         else
           window = state.window
           cursor = window.cursor

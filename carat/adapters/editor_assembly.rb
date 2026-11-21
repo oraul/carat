@@ -168,6 +168,7 @@ require_relative "../use_cases/actions/palette_handler"
 require_relative "../use_cases/actions/layout_handler"
 require_relative "../use_cases/windows/change_folds"
 require_relative "../use_cases/actions/fold_handler"
+require_relative "../use_cases/actions/command_line_edit_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -556,6 +557,8 @@ module Carat
         UseCases::PaletteHandler.register(@actions, open_palette: @open_palette, palette: @palette)
         UseCases::LayoutHandler.register(@actions, toggle_slot: @toggle_slot)
         UseCases::FoldHandler.register(@actions, operate: @operate, change_folds: UseCases::ChangeFolds.new)
+        delete_command_line_text = UseCases::DeleteCommandLineText.new(erase_command_line: erase_command_line, preview_search: @preview_search)
+        UseCases::CommandLineEditHandler.register(@actions, move_command_line_cursor: UseCases::MoveCommandLineCursor.new, delete_command_line_text: delete_command_line_text)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)

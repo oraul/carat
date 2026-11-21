@@ -41,7 +41,7 @@ The command line, the `/` and `?` prompts, the command palette's prompt, and a p
 
 #### Scenario: Left and Right move the cursor
 - **WHEN** ":", "a", "b", "c", `<Left>`, `<Left>`, "X" are pressed
-- **THEN** the bottom row shows ":aXbc" and `<Right>` then "Y" gives ":aXYbc"
+- **THEN** the bottom row shows ":aXbc" and `<Right>` then "Y" gives ":aXbYc"
 
 #### Scenario: The cursor stays inside the line
 - **WHEN** ":", "a", `<Right>`, `<Left>`, `<Left>`, `<Left>`, "X" are pressed
@@ -56,22 +56,22 @@ The command line, the `/` and `?` prompts, the command palette's prompt, and a p
 - **THEN** the bottom row shows ":abcd"
 
 #### Scenario: Words move by blank-separated word
-- **WHEN** ":", "e", " ", "a/b.rb", " ", "c", `<S-Left>`, `<C-Left>`, "X" are pressed
-- **THEN** the bottom row shows ":e Xa/b.rb c", and after `<S-Right>`, `<C-Right>`, "Y" it shows ":e Xa/b.rb Yc"
+- **WHEN** ":", "e a/b.rb c", `<S-Left>`, `<C-Left>`, "X" are pressed
+- **THEN** the bottom row shows ":e Xa/b.rb c", and with `<Home>`, `<C-Right>`, `<S-Right>`, "Y" instead it shows ":e a/b.rb Yc"
 
 #### Scenario: Movement over multi-byte and wide text
-- **WHEN** ":", "é", a wide character, "z", `<Left>`, `<Left>`, "X" are pressed
-- **THEN** the text is "éXWz" with the wide character W
+- **WHEN** ":", "é", "日", "z", `<Left>`, `<Left>`, "X" are pressed
+- **THEN** the bottom row shows ":éX日z", and with one `<Left>` it shows ":é日Xz"
 
 ### Requirement: The cursor is drawn as the bar at its cell
 The terminal cursor of the command line SHALL be the bar at the display column of the prompt's width plus the width of the text before the cursor, a wide character counting two cells.
 
 #### Scenario: The bar is at the cursor cell
 - **WHEN** ":", "a", "b", `<Left>` are pressed
-- **THEN** the cursor is the bar one cell after the ":" and the "a"
+- **THEN** the cursor is the bar at column 2, after the ":" and the "a"
 
 #### Scenario: The bar counts wide characters and the prompt
-- **WHEN** a plugin prompt with the text "Rename to: " holds a wide character, "a", and the cursor moves left once
+- **WHEN** a plugin prompt with the text "Rename to: " holds "日" and "a" and the cursor is between them
 - **THEN** the cursor column is the width of the prompt plus the two cells of the wide character
 
 ### Requirement: Backspace and Delete remove one character

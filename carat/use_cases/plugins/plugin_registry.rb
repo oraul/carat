@@ -376,7 +376,7 @@ module Carat
         state = @state
         buffers = @buffers
         if @plugin_ui.prompt_owner == name
-          state.cmdline = ""
+          state.replace_cmdline("")
           state.mode = Domain::Mode::NORMAL if state.mode == Domain::Mode::CMDLINE
         end
         @plugin_ui.drop(name)

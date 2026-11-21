@@ -771,6 +771,19 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 40)
     t.assert_equal(["Rename to: a.rb", 5, 15], [f.row_text(5), f.cursor_row, f.cursor_col], "the prompt row and the cursor after it")
     t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM, D::Highlight::NORMAL, D::Highlight::NORMAL], [f.cell(5, 0).hl, f.cell(5, 10).hl, f.cell(5, 11).hl, f.cell(5, 14).hl], "a plugin's prompt is dim and its text is Normal")
+    # Scenario: The bar counts wide characters and the prompt.
+    s.cmdline = "日a"
+    s.cmdline_position = 1
+    f = draw(s, 6, 40)
+    t.assert_equal([13, :bar], [f.cursor_col, f.cursor_shape], "The bar counts wide characters and the prompt: after a wide character")
+    s.cmdline = "é日"
+    s.cmdline_position = 1
+    f = draw(s, 6, 40)
+    t.assert_equal(12, f.cursor_col, "The bar counts wide characters and the prompt: after a one-cell character")
+    s.cmdline_position = 0
+    f = draw(s, 6, 40)
+    t.assert_equal(11, f.cursor_col, "The bar counts wide characters and the prompt: at the start, after the prompt")
+    s.replace_cmdline("a.rb")
     UI.close_prompt
     f = draw(s, 6, 40)
     t.assert_equal([":a.rb", 5], [f.row_text(5), f.cursor_col], "an ex command line keeps its colon")

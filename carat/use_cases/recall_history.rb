@@ -39,7 +39,7 @@ module Carat
           history.newer(state.cmdline)
         end
         return Outcome.none unless history.moved
-        state.cmdline = history.recalled
+        state.replace_cmdline(history.recalled)
         @preview_search.call(state)
       end
     end

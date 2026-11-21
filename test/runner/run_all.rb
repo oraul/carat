@@ -13,6 +13,7 @@ require_relative "../adapters_hover"
 require_relative "../adapters_definitions"
 require_relative "../adapters_indent_guides"
 require_relative "../adapters_whitespace_marks"
+require_relative "../domain_command_line_text"
 require_relative "../domain_folds"
 require_relative "../domain_jump_list"
 require_relative "../adapters_key_decoder"
@@ -68,6 +69,7 @@ require_relative "../drivers_process_runner"
 require_relative "../editor_buffers"
 require_relative "../editor_case_operators"
 require_relative "../editor_cmdline"
+require_relative "../editor_cmdline_edit"
 require_relative "../editor_comments"
 require_relative "../editor_completion"
 require_relative "../editor_explorer"
@@ -135,6 +137,7 @@ when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_definitions" then AdaptersDefinitionsTest.main
 when "adapters_indent_guides" then AdaptersIndentGuidesTest.main
 when "adapters_whitespace_marks" then AdaptersWhitespaceMarksTest.main
+when "domain_command_line_text" then DomainCommandLineTextTest.main
 when "domain_folds" then DomainFoldsTest.main
 when "domain_jump_list" then DomainJumpListTest.main
 when "adapters_key_decoder" then AdaptersKeyDecoderTest.main
@@ -190,6 +193,7 @@ when "drivers_process_runner" then DriversProcessRunnerTest.main
 when "editor_buffers" then EditorBuffersTest.main
 when "editor_case_operators" then EditorCaseOperatorsTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
+when "editor_cmdline_edit" then EditorCmdlineEditTest.main
 when "editor_comments" then EditorCommentsTest.main
 when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main

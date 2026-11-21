@@ -61,6 +61,10 @@ module Carat
         when Domain::Key::DELETE then "\e[3~"
         when Domain::Key::PAGE_UP then "\e[5~"
         when Domain::Key::PAGE_DOWN then "\e[6~"
+        when Domain::Key::SHIFT_LEFT then "\e[1;2D"
+        when Domain::Key::SHIFT_RIGHT then "\e[1;2C"
+        when Domain::Key::CTRL_LEFT then "\e[1;5D"
+        when Domain::Key::CTRL_RIGHT then "\e[1;5C"
         when Domain::Key::CTRL_PAGE_UP then "\e[5;5~"
         when Domain::Key::CTRL_PAGE_DOWN then "\e[6;5~"
         when Domain::Key::F1 then "\eOP"
@@ -143,14 +147,15 @@ module Carat
       end
 
       # The key of a CSI sequence; modifier is the second parameter, 1
-      # plus the Shift, Alt, and Ctrl bits, which only the page keys read.
+      # plus the Shift, Alt, and Ctrl bits, which only the page keys and
+      # Left and Right read.
       #: (Integer, Integer, Integer) -> Integer
       def csi_key(final, number, modifier)
         case final
         when 65 then Domain::Key::UP
         when 66 then Domain::Key::DOWN
-        when 67 then Domain::Key::RIGHT
-        when 68 then Domain::Key::LEFT
+        when 67 then arrow_key(modifier, Domain::Key::RIGHT, Domain::Key::SHIFT_RIGHT, Domain::Key::CTRL_RIGHT)
+        when 68 then arrow_key(modifier, Domain::Key::LEFT, Domain::Key::SHIFT_LEFT, Domain::Key::CTRL_LEFT)
         when 72 then Domain::Key::HOME
         when 70 then Domain::Key::END_KEY
         when 80 then Domain::Key::F1
@@ -160,6 +165,16 @@ module Carat
         when 126 then tilde_key(number, modifier > 1 && ((modifier - 1) & 4) != 0)
         else Domain::Key::UNKNOWN
         end
+      end
+
+      # Left or Right: the Ctrl key when the modifier holds Ctrl, else the
+      # Shift key when it holds Shift, else the plain arrow.
+      #: (Integer, Integer, Integer, Integer) -> Integer
+      def arrow_key(modifier, plain, shift, control)
+        return plain if modifier < 2
+        bits = modifier - 1
+        return control if (bits & 4) != 0
+        (bits & 1) != 0 ? shift : plain
       end
 
       # The key of a tilde sequence; control says the modifier holds Ctrl,

@@ -260,13 +260,23 @@ Neovim shows signature help on request (`vim.lsp.buf.signature_help()`, `<C-s>` 
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |
-| printable | none | Append to the command line | `editor_cmdline` |
-| `<BS>` | `cmdline.backspace` | Remove the last character; leave when empty | `editor_cmdline` |
+| printable | none | Insert at the cursor of the command line, which moves after the text | `editor_cmdline`, `editor_cmdline_edit` |
+| `<BS>` | `cmdline.backspace` | Remove the character before the cursor; nothing at the start of a line with text; leave when empty | `editor_cmdline`, `editor_cmdline_edit` |
+| `<Del>` | `cmdline.delete` | Remove the character under the cursor; at the end of the line as `<BS>`, leaving when empty | `editor_cmdline_edit` |
+| `<C-w>` | `cmdline.delete_word` | Remove the word before the cursor: the blanks before it, then one run of word characters or one run of other non-blank characters; nothing on an empty line | `editor_cmdline_edit`, `domain_command_line_text` |
+| `<C-u>` | `cmdline.delete_line` | Remove everything before the cursor; nothing on an empty line | `editor_cmdline_edit` |
+| `<Left>`, `<Right>` | `cmdline.left`, `cmdline.right` | Move the cursor one character, never past either end of the text; a wide character is one move | `editor_cmdline_edit` |
+| `<Home>`, `<C-b>` | `cmdline.home` | Move the cursor to the start of the line | `editor_cmdline_edit` |
+| `<End>`, `<C-e>` | `cmdline.end` | Move the cursor to the end of the line | `editor_cmdline_edit` |
+| `<S-Left>`, `<C-Left>` | `cmdline.word_left` | Move the cursor to the start of the blank-separated word before it | `editor_cmdline_edit`, `domain_command_line_text` |
+| `<S-Right>`, `<C-Right>` | `cmdline.word_right` | Move the cursor to the start of the next blank-separated word, or the end | `editor_cmdline_edit`, `domain_command_line_text` |
 | `<Esc>` | `mode.normal` | Discard the command line | `editor_cmdline` |
 | `<CR>` | `cmdline.execute` | Run the command, or search at a `/` or `?` prompt | `editor_cmdline`, `editor_search` |
-| `<Up>` | `cmdline.history_older` | The next older entry of the prompt's history (`:` or search) that starts with the text typed before the first recall | `editor_cmdline`, `editor_search` |
+| `<Up>` | `cmdline.history_older` | The next older entry of the prompt's history (`:` or search) that starts with the text typed before the first recall, the cursor at its end | `editor_cmdline`, `editor_search` |
 | `<Down>` | `cmdline.history_newer` | The next newer entry, or the typed text after the newest | `editor_cmdline`, `editor_search` |
 | `<C-n>`, `<C-p>` | `palette.next`, `palette.previous` | At the command palette's `>` prompt, select the next or previous entry; nothing elsewhere (Neovim's history keys are `<Up>` and `<Down>` here) | `editor_palette` |
+
+Differences from Neovim: the cursor, the keys above, and the bar drawn at the cursor's cell serve the `:` line, the `/` and `?` prompts, the command palette's `>` prompt, and a plugin's prompt alike; `<S-Left>` and `<S-Right>` are bound as `<C-Left>` and `<C-Right>` are, by blank-separated word, as Neovim has them; a `<S-Left>`, `<S-Right>`, `<C-Left>`, or `<C-Right>` a mode does not bind acts as the plain arrow, so only the command line gives them a word move; the terminal's Shift and Ctrl arrows are decoded from the xterm modifier forms (`ESC [ 1 ; 2 D`, `ESC [ 1 ; 5 D`) only; there is no `<C-r>` register insert, `<C-v>` literal insert, `<C-k>` digraph, `<S-Insert>` paste, `<Insert>` overstrike, `<C-f>` command-line window, `<C-h>`, or `<C-d>` list; there is no Tab completion yet, nor `wildmode` or `wildoptions`; there is no `<C-g>` or `<C-t>` search match stepping.
 
 ## Ex commands
 
