@@ -142,8 +142,8 @@ module Carat
       end
 
       # Returns the sorted names of at most limit entries of a directory,
-      # the first limit in the order they were made, raising for a path
-      # that is not one.
+      # the first limit as children lists them (its files, then its
+      # directories), raising for a path that is not one.
       # @rbs dir: String
       # @rbs limit: Integer
       def list_first(dir, limit)
