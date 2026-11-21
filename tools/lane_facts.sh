@@ -14,6 +14,11 @@
 #             build/stages/CHANGE/check.log: passed, failed, killed,
 #             superseded, or escaped, or none without one
 #   check_at  the commit that check ran at, or none
+#   machinery yes when a path changed from base to HEAD lies under tools/,
+#             is the Makefile, or lies under test/runner/, the check's own
+#             machinery, whose stage records the branch's runner wrote, so
+#             the workflow backs no contributor's pass; no otherwise;
+#             unknown without a base or when git diff fails
 # Runs from the main checkout or any worktree of it: the lane and the check
 # log are the main checkout's. Exits 2, printing nothing on stdout, for a
 # bad change name, no repository, or no lane worktree.
@@ -59,6 +64,13 @@ if porcelain=$(lane_git status --porcelain 2>/dev/null); then
   dirty=$(printf '%s\n' "$porcelain" | grep -c .)
 fi
 
+# The check's own machinery: the scripts and recipes that run the stages.
+machinery=unknown
+if [ -n "${merge_base:-}" ] && changed=$(lane_git diff --no-renames --name-only "$merge_base" HEAD 2>/dev/null); then
+  machinery=no
+  ! printf '%s\n' "$changed" | grep -q -E '^(tools/|Makefile$|test/runner/)' || machinery=yes
+fi
+
 # The verdict line: "check: every stage passed at C[; ...]" or
 # "check: stage S WORD at C[; read LOG]".
 check=none
@@ -85,5 +97,5 @@ case "$word" in
     esac ;;
 esac
 
-printf 'head %s\nbranch %s\nbase %s\npushed %s\ndirty %s\ncheck %s\ncheck_at %s\n' \
-  "$head" "$branch" "$base" "$pushed" "$dirty" "$check" "$check_at"
+printf 'head %s\nbranch %s\nbase %s\npushed %s\ndirty %s\ncheck %s\ncheck_at %s\nmachinery %s\n' \
+  "$head" "$branch" "$base" "$pushed" "$dirty" "$check" "$check_at" "$machinery"

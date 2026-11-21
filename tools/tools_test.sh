@@ -415,6 +415,9 @@ expect "run_state: check refuses a backed commit that is not one" 1 "not a commi
 # every stage.
 env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 before_tests=$(git rev-parse --short=12 HEAD)
+# The workflow records the check it passed: only that commit or the head
+# backs a check (contributor-self-check).
+state phase state check "$before_tests" > /dev/null
 echo "check" > test/t.rb
 commit "test: t"
 env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests" > carry.out 2>&1
@@ -429,6 +432,10 @@ echo "check again" > test/t.rb
 commit "test: t again"
 expect "run_state: check carries a stage carried from the backed commit" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
+# contributor-self-check: a commit that is neither the recorded phase.check
+# nor the head backs nothing, so it carries no record a check never passed.
+expect "run_state: check refuses a backed commit other than phase.check or the head" 1 "check: refused: [0-9a-f]{12} is neither the recorded phase.check \($before_tests\) nor HEAD" \
+  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD~1)"
 # TEST_ONLY reads the Markdown files of the backlog folder as records
 # (backlog-records-rule), never another file under it.
 mkdir -p docs/backlog/carat/adapters
@@ -3147,9 +3154,9 @@ facts_base=$(git rev-parse --short=12 HEAD)
 git_q worktree add -q -b chore/lf tmp/.lane-lf
 (cd tmp/.lane-lf && echo one > one.txt && commit "chore: one")
 facts_head=$(git -C tmp/.lane-lf rev-parse --short=12 HEAD)
-expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
   facts lf
-expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
   sh -c "cd tmp/.lane-lf && sh '$here/lane_facts.sh' lf | tr '\n' ' '"
 git -C tmp/.lane-lf push -q origin chore/lf 2>/dev/null
 expect "lane_facts: a lane whose origin branch is its head reads pushed yes" 0 " pushed yes " facts lf
@@ -3160,18 +3167,30 @@ expect "lane_facts: dirty counts the uncommitted paths, untracked ones included"
 expect "lane_facts: a commit past origin's branch reads pushed no and a new head" 0 "^head $(git -C tmp/.lane-lf rev-parse --short=12 HEAD) .* pushed no dirty 0 " facts lf
 mkdir -p build/stages/lf
 printf 'stage a: passed\ncheck: stage test-run failed at abc1234def56; read build/stages/lf/test-run.log\n' > build/stages/lf/check.log
-expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 $" facts lf
+expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 machinery no $" facts lf
 echo "check: every stage passed at 0123456789ab; the workflow records the check" >> build/stages/lf/check.log
-expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab $" facts lf
+expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab machinery no $" facts lf
 echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
-expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none $" facts lf
+expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none machinery no $" facts lf
 echo "stage a: running" >> build/stages/lf/check.log
-expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none $" facts lf
+expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none machinery no $" facts lf
 idx=$(git -C tmp/.lane-lf rev-parse --path-format=absolute --git-path index)
 cp "$idx" "$work/facts.index"
 echo broken > "$idx"
 expect "lane_facts: a lane git status cannot read reads dirty unknown, never 0" 0 " dirty unknown " facts lf
 cp "$work/facts.index" "$idx"
+# contributor-self-check: a change to the check's own machinery, tools/, the
+# Makefile, or test/runner/, reads machinery yes; no base reads unknown.
+for p in tools/x.sh Makefile test/runner/x.rb; do
+  (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
+  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes $" facts lf
+  (cd tmp/.lane-lf && git_q revert -q --no-edit HEAD > /dev/null)
+done
+expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no $" facts lf
+facts_main=$(git rev-parse refs/remotes/origin/main)
+git_q update-ref -d refs/remotes/origin/main
+expect "lane_facts: a lane with no base reads machinery unknown" 0 " base none .* machinery unknown $" facts lf
+git_q update-ref refs/remotes/origin/main "$facts_main"
 expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
 expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
 expect "lane_facts: no argument is refused with the usage" 2 "usage: sh tools/lane_facts.sh CHANGE" sh "$here/lane_facts.sh"

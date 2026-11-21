@@ -137,13 +137,25 @@
 #                               failure, its log's last lines printed and
 #                               the stages still running recorded killed (the
 #                               workflow records phase.check); a stage record
-#                               counts only at COMMIT, the last check the
-#                               workflow passed, or carried from it: skipped
-#                               when COMMIT is HEAD, carried to HEAD for a
+#                               counts only at COMMIT, refused unless it is
+#                               the recorded phase.check, the last check the
+#                               workflow passed, or HEAD, or carried from it:
+#                               skipped when COMMIT is HEAD, carried to HEAD
+#                               for a
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT; a stage of
 #                               COMPILE_STAGES is skipped on the code key of
-#                               its last pass with its outputs unchanged. The
+#                               its last pass with its outputs unchanged.
+#                               Whoever started it, the contributor (CHANGE
+#                               alone, its own head) or the checker, a check
+#                               writes its stage records only from the
+#                               runner, which no agent's set writes; the
+#                               workflow accepts a pass only from those
+#                               records: it backs the contributor's passing
+#                               head as COMMIT unless the change touches the
+#                               check's own machinery (tools/lane_facts.sh
+#                               machinery), and records phase.check from the
+#                               checker's verdict alone. The
 #                               stages run in a runner (check-run, no agent's)
 #                               detached from the caller, rejoined by a check
 #                               at the same HEAD and stopped by one at another;
@@ -616,6 +628,24 @@ commit_at() {
   git rev-parse --verify -q --short=12 "$1^{commit}" || die "not a commit: $1"
 }
 
+# The twelve-digit form of a check's COMMIT (contributor-self-check): only
+# the recorded phase.check, the last check the workflow passed, or HEAD,
+# where the stage records the check skips are the runner's own at that
+# very commit; dies on any other commit, which would carry records no
+# check the workflow recorded passed.
+backed_commit() {
+  backed_at=$(commit_at "$1") || exit 1
+  if [ "$backed_at" = "$(head_commit)" ]; then
+    echo "$backed_at"
+    return
+  fi
+  checked=$(read_key phase.check)
+  [ -z "$checked" ] || checked=$(git rev-parse --verify -q --short=12 "$checked^{commit}" 2>/dev/null) || checked=""
+  [ -n "$checked" ] && [ "$backed_at" = "$checked" ] ||
+    die "check: refused: $backed_at is neither the recorded phase.check (${checked:-none}) nor HEAD $(head_commit)"
+  echo "$backed_at"
+}
+
 # True when WORD is one of the words of LIST.
 one_of() {
   case " $2 " in *" $1 "*) return 0 ;; esac
@@ -1070,8 +1100,9 @@ check_stages() {
     fi
     exit 1
   fi
-  # The workflow records phase.check from the checker's result, so a check
-  # run outside it backs nothing.
+  # The workflow records phase.check from the checker's result alone; a
+  # check another start ran, the contributor's own included, backs a later
+  # check only through these runner records at this very head.
   echo "check: every stage passed at $head; the workflow records the check"
 }
 
@@ -4095,7 +4126,7 @@ case "$command" in
   check)
     [ $# -le 1 ] || usage
     backed=""
-    [ $# -eq 0 ] || backed=$(commit_at "$1") || exit 1
+    [ $# -eq 0 ] || backed=$(backed_commit "$1") || exit 1
     check_wait "$backed" ;;
   check-run)
     [ $# -le 1 ] || usage
