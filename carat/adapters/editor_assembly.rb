@@ -79,6 +79,7 @@ require_relative "../use_cases/visual/delete_selection"
 require_relative "../use_cases/visual/yank_selection"
 require_relative "../use_cases/visual/change_selection"
 require_relative "../use_cases/visual/shift_selection"
+require_relative "../use_cases/visual/comment_selection"
 require_relative "../use_cases/visual/join_selection"
 require_relative "../use_cases/visual/recase_selection"
 require_relative "../use_cases/visual/insert_at_selection"
@@ -520,9 +521,10 @@ module Carat
         extend_visual = UseCases::ExtendVisual.new
         swap_visual_ends = UseCases::SwapVisualEnds.new
         shift_selection = UseCases::ShiftSelection.new
+        comment_selection = UseCases::CommentSelection.new
         UseCases::MotionHandler.register(@actions, move: @move)
         UseCases::SearchHandler.register(@actions, jump_to_match: @jump_to_match)
-        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection, recase_selection: @recase_selection)
+        UseCases::OperatorHandler.register(@actions, operate: @operate, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, shift_selection: shift_selection, recase_selection: @recase_selection, comment_selection: comment_selection)
         UseCases::EditHandler.register(@actions, operate: @operate, replace_chars: UseCases::ReplaceChars.new, toggle_case: UseCases::ToggleCase.new, put_register: @put_register, join_lines: UseCases::JoinLines.new)
         UseCases::TextObjectHandler.register(@actions, extend_visual: extend_visual)
         UseCases::InsertModeHandler.register(@actions)

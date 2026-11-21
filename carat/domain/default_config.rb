@@ -131,6 +131,7 @@ module Carat
       keymap.normal g~ operator.swap_case
       keymap.normal gu operator.lowercase
       keymap.normal gU operator.uppercase
+      keymap.normal gc operator.comment
       keymap.normal x operator.delete_char
       keymap.normal s operator.substitute_char
       keymap.normal S operator.substitute_line
@@ -358,6 +359,7 @@ module Carat
       keymap.visual g~ operator.swap_case
       keymap.visual gu operator.lowercase
       keymap.visual gU operator.uppercase
+      keymap.visual gc operator.comment
       keymap.visual J visual.join
       keymap.visual gJ visual.join_raw
       keymap.visual p visual.put
@@ -493,6 +495,7 @@ module Carat
       keymap.visual_line g~ operator.swap_case
       keymap.visual_line gu operator.lowercase
       keymap.visual_line gU operator.uppercase
+      keymap.visual_line gc operator.comment
       keymap.visual_line J visual.join
       keymap.visual_line gJ visual.join_raw
       keymap.visual_line p visual.put
@@ -628,6 +631,7 @@ module Carat
       keymap.visual_block g~ operator.swap_case
       keymap.visual_block gu operator.lowercase
       keymap.visual_block gU operator.uppercase
+      keymap.visual_block gc operator.comment
       keymap.visual_block J visual.join
       keymap.visual_block gJ visual.join_raw
       keymap.visual_block p visual.put
@@ -755,6 +759,7 @@ module Carat
       keymap.operator_pending g~ operator.swap_case
       keymap.operator_pending gu operator.lowercase
       keymap.operator_pending gU operator.uppercase
+      keymap.operator_pending gc textobject.comment
       keymap.operator_pending ~ operator.swap_case
       keymap.operator_pending u operator.lowercase
       keymap.operator_pending U operator.uppercase

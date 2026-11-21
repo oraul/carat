@@ -92,6 +92,7 @@ The operand is a motion from the table above, a text object from the table below
 | `g~{motion}`, `[count]g~~`, `g~g~` | `operator.swap_case` | Switch the case of every character of the range, writing no register; charwise leaves the cursor at the start, linewise where it was on the first line; a letter with no single-letter form stays | `editor_case_operators` |
 | `gu{motion}`, `[count]guu`, `gugu` | `operator.lowercase` | Lower the case of every character of the range, the cursor as for `g~` | `editor_case_operators` |
 | `gU{motion}`, `[count]gUU`, `gUgU` | `operator.uppercase` | Upper the case of every character of the range, the cursor as for `g~`; `ß` becomes `SS` as in Neovim | `editor_case_operators` |
+| `gc{motion}`, `[count]gcc` | `operator.comment` | Toggle the comment of every line the operand touches: when every non-blank line is commented each is uncommented (the marker and one space after it removed, a line left blank becomes empty), otherwise each non-blank line gets the marker and one space at the smallest indent; blank lines are untouched; the marker is the filetype's (`#` for ruby, `#` for an unknown filetype); one undo step, repeated by `.`; the cursor goes to the first non-blank of the first line | `editor_comments` |
 | `[count]x` | `operator.delete_char` | Delete count characters under and after the cursor, within the line | `editor_operators` |
 | `[count]s` | `operator.substitute_char` | Delete count characters and enter insert mode | `editor_operators` |
 | `[count]S` | `operator.substitute_line` | As `cc` | `editor_operators` |
@@ -106,7 +107,7 @@ The operand is a motion from the table above, a text object from the table below
 
 Exclusive motions follow Vim's two adjustments: an operator range ending in column 0 of a later line ends at the end of the previous line inclusively, and becomes linewise when it started at or before the first non-blank; `w` under an operator stops at the end of the line when the last word moved over ends there (`editor_operators`).
 
-Differences from Neovim: the `=` and `gq` operators and `X` are not implemented in normal mode (visual mode has `u U X`); a letter changes by itself as Neovim's simple case mapping has it, with `ß` becoming `SS` under `gU` and `U` and `İ` becoming `i` when lowered, and a letter whose case form is several characters (a ligature) stays; `r<CR>` does not split the line and `r` with fewer characters left than its count does nothing silently where Neovim beeps; `tildeop` does not exist; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
+Differences from Neovim: `gc` has no `commentstring` option yet, its markers are a fixed table by filetype with `#` for every other, and markers with a right part (`/* %s */`) are not supported; Differences from Neovim: the `=` and `gq` operators and `X` are not implemented in normal mode (visual mode has `u U X`); a letter changes by itself as Neovim's simple case mapping has it, with `ß` becoming `SS` under `gU` and `U` and `İ` becoming `i` when lowered, and a letter whose case form is several characters (a ligature) stays; `r<CR>` does not split the line and `r` with fewer characters left than its count does nothing silently where Neovim beeps; `tildeop` does not exist; `joinspaces` is off; `p` of an empty register shows `E353` as Vim does.
 
 ## Text objects
 
@@ -123,6 +124,7 @@ Usable after an operator, in operator-pending mode, and in the visual modes (see
 | `[count]i{ a{ i} a} iB aB` | `textobject.inner_brace`, `textobject.a_brace` | Inside or including the count-th enclosing `{}`; the inner form is linewise when the braces end their lines | `editor_text_objects` |
 | `[count]i< a< i> a>` | `textobject.inner_angle`, `textobject.a_angle` | Inside or including the count-th enclosing `<>` | `editor_text_objects` |
 | `i" a"`, `i' a'`, `` i` a` `` | `textobject.inner_double_quote`, `textobject.a_double_quote`, `textobject.inner_single_quote`, `textobject.a_single_quote`, `textobject.inner_backtick`, `textobject.a_backtick` | Inside or including the quoted string on the line, skipping backslash-escaped quotes | `editor_text_objects` |
+| `gc` | `textobject.comment` | The adjacent commented lines around the cursor, linewise, a blank line ending the block; nothing when the cursor line is not commented; operator-pending mode only, as in Neovim | `editor_comments` |
 
 Differences from Neovim: `is` and `as` take no count; quote objects pair quotes from the start of the line and `2i"` has no special meaning; tag objects `it at` wait for a tokenizer.
 
@@ -205,6 +207,7 @@ The selection runs from the anchor, where visual mode started, to the cursor, bo
 | `r{char}` | `visual.replace` | Replace every selected character, not the line breaks | `editor_visual` |
 | `~`, `u`, `U` | `visual.toggle_case`, `visual.lowercase`, `visual.uppercase` | Toggle, lower, or upper the case of the selection | `editor_visual`, `editor_case_operators` |
 | `g~`, `gu`, `gU` | `operator.swap_case`, `operator.lowercase`, `operator.uppercase` | As `~`, `u`, and `U`, on the selection at once; the dot command repeats them on as many characters or lines | `editor_case_operators` |
+| `gc` | `operator.comment` | Toggle the comment of every line the selection touches, in every visual mode, a block included, by the rule of normal `gc`; the cursor goes to the first non-blank of the first line | `editor_comments` |
 | `["x]X`, `["x]D` | `visual.delete_lines`, `visual.delete_to_end` | Delete the selected lines; in a block `X` deletes the block and `D` to the end of every row | `editor_visual` |
 | `["x]Y` | `visual.yank_lines` | Yank the selected lines; in a block, the block | `editor_visual` |
 | `["x]C`, `["x]S`, `["x]R` | `visual.change_to_end`, `visual.change_lines` | Change the selected lines; in a block `C` changes to the end of every row | `editor_visual` |

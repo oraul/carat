@@ -153,7 +153,7 @@ Files:
 - `carat/domain/keymap_node.rb`: `KeymapNode` trie node; `child?`, `child_for`, `child_named`, `leaf?`, `child_keys`, `binding_count`.
 - `carat/domain/keymap_match.rb`: `KeymapMatch` value (`kind`, `value`), a lookup result.
 - `carat/domain/command.rb`: `Command` value (`register`, `count`, `operator`, `action`, `char`, `linewise`, `keys`); `plain`, `count_or`, `operator?`.
-- `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `pending?`, `display`.
+- `carat/domain/command_grammar.rb`: `CommandGrammar` state machine; `accept`, `accept_visual`, `take`, `reset`, `wants_char?`, `pending?`, `display`; `LAST_KEY_DOUBLED`, the operators doubled by their last key (`gcc`).
 - `carat/domain/input_state.rb`: `InputState`, the pending keys and the grammar, owned by `HandleKey`; `pending?`, `take_keys`.
 - `carat/use_cases/handle_key.rb`: `HandleKey#call`; ends in `FollowHover` only while a documentation float is recorded and in `FollowSignature` only while a call is followed; a typed `(` or `,` in insert mode calls `RequestSignature`; `HideKeyHints` first while the hints show, `FollowPalette` last while the palette follows, then the action its Enter chose; a plugin's live prompt keymap answers first on the command line and `PluginHost#follow_prompt` ends the key while one is open.
 - `carat/use_cases/dispatcher.rb`: `Dispatcher#call`; an arrow key in insert mode closes the session's undo state and opens the next; under `:normal` an open transaction is joined, not closed.
@@ -193,7 +193,7 @@ Files:
 - `carat/domain/sentence_starts.rb`: `SentenceStarts`; `add`, `index_at`, `after?`, `before?`.
 - `carat/domain/find.rb`: `Find` value (`char`, `forward`, `till`) of `f F t T`; `reversed`.
 - `carat/domain/last_find.rb`: `LastFind`, the `;` and `,` repeat; `remember`.
-- `carat/domain/text_objects.rb`: `TextObjects`; `call`, `object?`, `NAMES`, `word`, `sentence`, `paragraph`, `pair`, `quote`.
+- `carat/domain/text_objects.rb`: `TextObjects`; `call`, `object?`, `NAMES`, `word`, `sentence`, `paragraph`, `pair`, `quote`; `textobject.comment` from `Comments.block`.
 - `carat/domain/runs.rb`: `Runs`, the character class runs of a line; `add`, `class_at`, `index_of`.
 - `carat/use_cases/move.rb`: `Move#call`.
 - `carat/use_cases/actions/motion_handler.rb`: `MotionHandler.register`, registers `Motions::NAMES` and `FIND_NAMES`.
@@ -225,12 +225,13 @@ Bench: `lh`, `j`, `w`, `lh-utf8`, `j-utf8`, `long-ascii`, `long-utf8`, `n`.
 
 What: the operators over motions, text objects, and doubled forms, the standalone edits, and the registers they write and read.
 
-Flow: `OperatorHandler` (kind `:operator`, the eight pending operators `d c y > < g~ gu gU`) and `EditHandler` (`x s S C D Y J p P r ~`) run `Operate#call` or a standalone use case; `Operate` resolves the range from `Motions.call` or `TextObjects.call`, runs `Operators.extract`, `delete`, `shift`, `recase_range`, or `join`, and writes `Registers#yank` or `Registers#delete` by Vim's rules; `PutRegister` reads `Registers#read` and calls `Operators.put` or `put_block`.
+Flow: `OperatorHandler` (kind `:operator`, the nine pending operators `d c y > < g~ gu gU gc`) and `EditHandler` (`x s S C D Y J p P r ~`) run `Operate#call` or a standalone use case; `Operate` resolves the range from `Motions.call` or `TextObjects.call`, runs `Operators.extract`, `delete`, `shift`, `recase_range`, or `join`, and writes `Registers#yank` or `Registers#delete` by Vim's rules; `PutRegister` reads `Registers#read` and calls `Operators.put` or `put_block`.
 
 Files:
 
 - `carat/domain/operators.rb`: `Operators`; `extract`, `delete`, `put`, `join`, `extract_block`, `delete_block`, `put_block`, `shift_block`, `shift`, `unindent`, `recase`, `recase_letter`, `recase_row`, `recase_rows`, `recase_range`, `make_indent`.
-- `carat/domain/operator_kind.rb`: `OperatorKind`, the eight operator action names.
+- `carat/domain/operator_kind.rb`: `OperatorKind`, the nine operator action names (`COMMENT` for `gc`) and `zf`.
+- `carat/domain/comments.rb`: `Comments`; the marker table `MARKERS` by filetype (`#` by default), `marker_for`, `blank?`, `commented?`, `toggle`, `uncommented`, `block`: the `gc` toggle and its text object.
 - `carat/domain/register_entry.rb`: `RegisterEntry` (charwise, linewise, or blockwise); `charwise`, `lines`, `block`, `linewise?`, `blockwise?`, `joined`.
 - `carat/domain/registers.rb`: `Registers` (unnamed, named, numbered, small delete, black hole, read-only `. : % /`); `yank`, `delete`, `read`, `read_with_file`, `numbered_at`, `valid_name?`, `read_only?`, `unnamed?` (a name standing for no register in particular).
 - `carat/use_cases/operate.rb`: `Operate#call`; refuses a read-only register with `E354`; `g~ gu gU` change the case of the range and write no register; `zf` makes a fold of the range, and a linewise range reaches over the closed folds at its ends.
@@ -241,8 +242,9 @@ Files:
 - `carat/use_cases/actions/operator_handler.rb`: `OperatorHandler.register`.
 - `carat/use_cases/actions/edit_handler.rb`: `EditHandler.register`, the standalone edits over a fixed operand.
 - `carat/use_cases/ex/register_command_handler.rb`: `RegisterCommandHandler` (`:registers`, `:display`); `line`.
+- `carat/use_cases/visual/comment_selection.rb`: `CommentSelection#call`, visual `gc` toggling the comment of the selected lines in every visual mode.
 
-Tests: `test/domain_registers.rb`, `test/editor_operators.rb`, `test/editor_registers.rb`, `test/editor_case_operators.rb`.
+Tests: `test/domain_registers.rb`, `test/editor_operators.rb`, `test/editor_registers.rb`, `test/editor_case_operators.rb`, `test/editor_comments.rb`.
 
 Designs: `command-grammar` (Operators are functions over ranges), `undo-and-registers` (Registers), `visual-modes` (Registers get a kind), `use-case-boundaries` (The splits; Shared logic).
 
@@ -329,7 +331,7 @@ Bench: `undo`, `undo-line`, `dot-r`, `dot-dd`, `dot-ciw`.
 
 What: charwise, linewise, and blockwise selection, with every motion and text object and the operators on the selection.
 
-Flow: `VisualModeHandler` runs `StartVisual` (enter, switch, leave), `ReselectVisual` (`gv`), `SwapVisualEnds` (`o`, `O`), and `ExtendVisual` (text objects); the anchor and the last selection live on the `Window`, and `EditorState#selection` resolves them to a `Selection`. In a visual mode the eight operators complete at once; `SelectionHandler` runs one use case per operator, which use `SelectionCut.call`, the `Operators` block functions, and `BlockInsert` (repeated by `LeaveInsert`).
+Flow: `VisualModeHandler` runs `StartVisual` (enter, switch, leave), `ReselectVisual` (`gv`), `SwapVisualEnds` (`o`, `O`), and `ExtendVisual` (text objects); the anchor and the last selection live on the `Window`, and `EditorState#selection` resolves them to a `Selection`. In a visual mode the nine operators complete at once; `SelectionHandler` runs one use case per operator, which use `SelectionCut.call`, the `Operators` block functions, and `BlockInsert` (repeated by `LeaveInsert`).
 
 Files:
 
