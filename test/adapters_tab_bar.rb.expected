@@ -13,13 +13,14 @@ ok   a wider row starts its run as early as the current tab allows
 ok   a row narrower than the counts still shows the current tab, cut
 ok   unlisted buffers are neither shown nor counted
 ok   a leading unlisted buffer is neither shown nor counted
-ok   selected tab with its gem and icon, its separator and the plain tab and its icon in TabLine, fill, and the tab-page numbers
+ok   selected tab with its leading space and icon, its separator and the plain tab and its icon in TabLine, fill, and the tab-page numbers
 ok   nerd
 ok   unicode
 ok   ascii
 ok   the counts are plain
-ok   gem and separator, unicode
-ok   gem and separator, nerd
-ok   gem and separator, ascii
-ok   the gem is in the selected group, the separators in TabLine
-adapters_tab_bar: 24 passed, 0 failed
+ok   no gem, separator, unicode
+ok   no gem, separator, nerd
+ok   no gem, separator, ascii
+ok   the selected tab's leading space is in the selected group, the other tab and the separators in TabLine
+ok   under ascii the only * in a row is the modified mark
+adapters_tab_bar: 25 passed, 0 failed
