@@ -523,6 +523,11 @@ module EditorFloatsTest
     h.plugins.window_requests.set_float_border("test", id, "double")
     h.redraw
     t.assert_equal(["╔═══ doc ════╗", "║ one        ║", "╚════════════╝"], [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 5, 4, 14)], "A float opened without a border gets one: double")
+    h = editor
+    open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, true), ["one", "two"])
+    current = h.plugins.window_requests.set_float_border("test", 0, "single")
+    h.redraw
+    t.assert_equal([true, "┌"], [current.ok, cells(h, 2, 4, 1)], "window 0 is the plugin's current float")
     # Scenario: The empty style follows winborder.
     h = configured("option.winborder single\n", 12, 40)
     id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])

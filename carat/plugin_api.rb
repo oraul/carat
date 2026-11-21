@@ -193,7 +193,8 @@ module Carat
     # "cursor" from the cursor cell; height and width are its text rows
     # and columns, at least 1; the host pads the text with one column on
     # each side, inside the box; border draws a one-cell border around
-    # it (in the style of option.winborder, none drawing none) with the
+    # it (in the style of option.winborder, none drawing none, or the
+    # float's own style from set_float_border, 2.13) with the
     # title centered on its top edge, so a bordered box is width + 4
     # columns wide under a drawn border and width + 2 under none, as
     # Host#float_frame answers; z from 0 to 1000 stacks it, higher on

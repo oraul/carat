@@ -108,8 +108,9 @@ ok   and single under NO_COLOR +--- doc ----+ / | one        | / +------------+
 ok   A float border style of none: no edge and no title, the padding kept
 ok   the float without its edge equals a full repaint
 ok   A float opened without a border gets one: double
+ok   window 0 is the plugin's current float
 ok   The empty style follows winborder: double, then single again, the other float single throughout
 ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
 ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
 ok   a refill keeps the border style
-editor_floats: 114 passed, 0 failed
+editor_floats: 115 passed, 0 failed
