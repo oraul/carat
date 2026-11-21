@@ -42,6 +42,26 @@ module Carat
         Dir.children(dir).sort
       end
 
+      # Returns the sorted names of at most limit entries, read one at a
+      # time through Dir#read, which stops at the limit, "." and ".."
+      # left out.
+      # @rbs dir: String
+      # @rbs limit: Integer
+      def list_first(dir, limit)
+        names = []
+        handle = Dir.open(dir)
+        begin
+          while names.length < limit
+            name = handle.read
+            break if name.nil?
+            names << name unless name == "." || name == ".."
+          end
+        ensure
+          handle.close
+        end
+        names.sort
+      end
+
       # Returns the PathInfo of the path: a link whose target is missing
       # reads as an empty link, and a missing path as PathInfo.missing.
       # The pinned Spinel answers File.file? true for a FIFO and a device,
