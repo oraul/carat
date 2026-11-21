@@ -17,7 +17,7 @@
 
 ## 4. Documents
 
-- [ ] 4.1 `docs/goals.md` escalation paragraph, `docs/codebase-map.md` area 1, and CLAUDE.md Commands.
+- [x] 4.1 `docs/goals.md` escalation paragraph, `docs/codebase-map.md` area 1, and CLAUDE.md Commands.
 
 ## 5. Checks
 

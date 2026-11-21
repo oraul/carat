@@ -67,7 +67,7 @@ Rules:
 - Never include a session id, a username, an email, a model name, or a URL in a branch name.
 - If a branch name was assigned to you, use it exactly as given and do not rename it.
 
-Examples: `feature/user-login`, `feature/42-order-export`, `bugfix/null-price-crash`, `chore/bump-dependencies`.
+Examples: `feature/user-login`, `bugfix/null-price-crash`, `chore/bump-dependencies`.
 
 ## Commit messages
 
@@ -231,13 +231,13 @@ Every command is a Makefile target and this list names them all; `make help` pri
 - Performance: `make bench` (`SCENARIOS`, named per area in the map), `bench-budget`, `profile`, `metrics`, `metrics-compare` (fails on more allocations or rounds).
 - Configuration: `make gen-config`, `config-current`. Authoring: `make new-use-case`, `new-action`, `new-ex-command`, `new-test`, `new-plugin` (kinds in `docs/examples.md`).
 - Checks: `make check` runs `CHECK_STAGES` in order, `make stages` prints `FAST_STAGES`, which the checker runs before every push while CI runs the rest, and `make check-stage S=NAME` runs one; the Makefile records why CI leaves out two. `make docs-lint`, `tools-test`, `gates` (`tools/gates.sh static`).
-- `sh tools/run_state.sh COMMAND`: a change's run state, every command in the script's header: `check CHANGE` runs the stages detached, `push CHANGE` pushes after the pre-push gates, and `status` is `/status`.
+- `sh tools/run_state.sh COMMAND`: a change's run state, every command in the script's header: `check CHANGE` runs the stages detached, `push CHANGE` pushes after the pre-push gates, and `status` is `/status`; `sh tools/lane_facts.sh CHANGE` prints a lane's facts from git.
 - `sh tools/open_pr.sh write CHANGE TITLE` writes the title and gated body as the archived `pr.md`, `wait CHANGE` records the pull request open-pr opens or updates on the push, and `message CHANGE SHA` prints the merger's squash message; the workflow's are `read`, `gate`, `rule`, `open`.
 - OpenSpec: `make spec-list`, `spec-validate` (also each active change as its archive would leave the specs, in a copy), `spec-update`.
 
 ## Layout
 
-Defined in `docs/architecture.md` section 11, in the shape `spin` expects; `docs/codebase-map.md` places every file. `carat.rb` is the production require graph, innermost layer first, ending with the plugin registry, with no test double. `carat/` holds `plugin_api.rb` (the only file a plugin may require), the layers, the doubles `doubles/` (required only by `carat/test_support.rb`), and `plugins/`. `bin/carat.rb` is the composition root, the only place drivers are constructed; `config/default.caratrc` holds every default, mirrored by the generated `carat/domain/default_config.rb`. `build/`, `dist/`, and `tmp/` are ignored, the toolchain in the hidden `tmp/.spinel` and `tmp/.toolchain`, since `spin` reads every visible directory as source.
+Defined in `docs/architecture.md` section 11, in the shape `spin` expects. `carat.rb` is the production require graph, innermost layer first, ending with the plugin registry, with no test double. `carat/` holds `plugin_api.rb` (the only file a plugin may require), the layers, the doubles `doubles/` (required only by `carat/test_support.rb`), and `plugins/`. `bin/carat.rb` is the composition root, the only place drivers are constructed; `config/default.caratrc` holds every default, mirrored by the generated `carat/domain/default_config.rb`. `build/`, `dist/`, and `tmp/` are ignored, the toolchain in the hidden `tmp/.spinel` and `tmp/.toolchain`, since `spin` reads every visible directory as source.
 
 ## Coding conventions
 
