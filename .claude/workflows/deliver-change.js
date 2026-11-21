@@ -63,8 +63,8 @@ const ROUNDS = 3
 const MAX_AREAS = 3
 const WAITS = 4
 // Checker starts in a row that may end without a verdict at the head (a
-// killed, superseded, or unfinished check) before the run stops; such a
-// start is rerun with no fix round.
+// killed, superseded, escaped, or unfinished check) before the run stops;
+// such a start is rerun with no fix round.
 const RERUNS = 2
 const notes = []
 let head = ''
@@ -1000,14 +1000,17 @@ async function verify(fixes = true) {
 // The verdict line of tools/run_state.sh check, which the checker returns
 // verbatim: passed or failed (a refusal is a failure the contributor fixes)
 // at a commit; killed, superseded, and running mean the check did not
-// finish, and any other line is none. The words are the script's verdicts,
-// which tools/tools_test.sh compares with RERUN_WORDS.
-const RERUN_WORDS = /^(killed|superseded|running|none)$/
+// finish, escaped that every stage exited 0 but files outside its clone
+// changed, another lane's writes among them, so no pass counted and the
+// stages run again (lane-isolation), and any other line is none. The words
+// are the script's verdicts, which tools/tools_test.sh compares with
+// RERUN_WORDS.
+const RERUN_WORDS = /^(killed|superseded|escaped|running|none)$/
 function checkVerdict(line) {
   const text = String(line || '').trim().replace(/^run_state: /, '')
   let m = /^check: every stage passed at ([0-9a-f]{7,40})(;|$)/.exec(text)
   if (m) return { kind: 'passed', at: m[1], stage: '', log: '' }
-  m = /^check: stage ([a-z0-9-]+) (failed|killed|superseded) at ([0-9a-f]{7,40}); read ([A-Za-z0-9_./-]+)$/.exec(text)
+  m = /^check: stage ([a-z0-9-]+) (failed|killed|superseded|escaped) at ([0-9a-f]{7,40}); read ([A-Za-z0-9_./-]+)$/.exec(text)
   if (m) return { kind: m[2], at: m[3], stage: m[1], log: m[4] }
   m = /^check: refused: (.+)$/.exec(text)
   if (m) return { kind: 'failed', at: head, stage: 'refused', log: m[1] }

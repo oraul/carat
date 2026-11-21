@@ -10,7 +10,8 @@
 #                    commit it started on, with "carried-from-COMMIT" when
 #                    check carried it (below); EXIT is "running" while it
 #                    runs, "killed" when a signal ended it, "superseded"
-#                    when HEAD moved while it ran
+#                    when HEAD moved while it ran, "escaped" when it passed
+#                    in a check that files outside its clone voided
 #   review.KIND      "RESULT COMMIT SUMMARY" (security, quality, bench, and
 #                    periodic-security and periodic-quality after a merge)
 #   at.review.periodic-security
@@ -147,7 +148,11 @@
 #                               runs; the last line is the verdict: "check:
 #                               every stage passed at C", "check: stage S
 #                               failed|killed|superseded at C; read LOG" (S
-#                               none before a stage), or "check: still running"
+#                               none before a stage), "check: stage none
+#                               escaped at C; read LOG" when every stage
+#                               exited 0 but files outside the clone changed
+#                               (its records rewritten escaped, rerun with no
+#                               fix round), or "check: still running"
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -777,6 +782,22 @@ stage_record() {
 "
 }
 
+# The stage records this runner wrote as passing (runner_records), each
+# rewritten as escaped and its compile record cleared, so no later check
+# reuses a pass that files changed outside the clone voided (compiled_same
+# would skip a compile stage on it); the workflow reruns such a check with
+# no fix round (lane-isolation). Records of an earlier check stand.
+escaped_records() {
+  for key in $(printf '%s' "$runner_records" | awk '$2 == "0" { print $1 }' | sort -u); do
+    s=${key#stage.}
+    record=$(read_key "$key")
+    case "$record" in
+      "0 "*) stage_record "$key" "escaped $(echo "$record" | cut -d' ' -f2-4)"
+        ! one_of "$s" "$COMPILE_STAGES" || compiled_set "$s" "" ;;
+    esac
+  done
+}
+
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
 # record reading running, its log NAME.log, and "PID SECONDS COMMIT" in
 # job_dir/NAME.start; the job writes CMD's exit status to
@@ -987,9 +1008,10 @@ check_stages() {
   done
   escaped=$(escaped_paths)
   if [ -n "$escaped" ]; then
-    echo "check: a stage wrote outside its clone, so no pass counts (make toolchain reinstalls a changed toolchain):"
+    echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
     printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
-    echo "check: stage none failed at $head; read $(check_log)"
+    escaped_records
+    echo "check: stage none escaped at $head; read $(check_log)"
     exit 1
   fi
   # The workflow records phase.check from the checker's result, so a check
@@ -1642,6 +1664,8 @@ push_branch() {
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
+  over=$(queue_over)
+  [ -z "$over" ] || die "push: refused: $over"
   if ! CHANGE=$change sh "$here/gates.sh" pre-push; then
     write_key gates_failed $(($(count gates_failed) + 1))
     die "push: refused: the pre-push gates failed"
@@ -1824,7 +1848,7 @@ bench_compare() {
     return 0
   fi
   echo "bench: comparing with $source"
-  "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last"
+  "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last" "METRICS_OUT=$metrics_out"
   differ=$(awk -F'\t' '
     NR == FNR { if ($1 ~ /^(allocs|rounds)[.]/) base[$1] = $2; next }
     $1 ~ /^(allocs|rounds)[.]/ {
@@ -1964,7 +1988,9 @@ records_change() {
 
 # Applies the delivery planner's directory, PLAN_DIR/CHANGE, for the
 # change's lane (lane_of) only: its queue over that lane's docs/ queue,
-# the other lane's queue file left and named, goals.md over docs/goals.md,
+# fitted within the lane's budget (queue_fit) or refused with the bytes
+# over, the queue then left as it was; the other lane's queue file left
+# and named, goals.md over docs/goals.md,
 # and backlog.md appended to the change's findings file. Two lanes' package
 # steps so write no common record.
 plan_apply() {
@@ -1972,8 +1998,16 @@ plan_apply() {
   lane=$(lane_of)
   if [ ! -d "$dir" ]; then echo "plan-apply: no plan in $dir/; nothing applied"; return 0; fi
   if [ -f "$dir/queue-$lane.md" ]; then
-    cp "$dir/queue-$lane.md" "docs/queue-$lane.md" || die "plan-apply: docs/queue-$lane.md not written"
+    fit="docs/queue-$lane.md.fit"
+    cp "$dir/queue-$lane.md" "$fit" || die "plan-apply: $fit not written"
+    if ! queue_fit "$lane" "$fit"; then
+      rm -f "$fit"
+      die "plan-apply: refused: $dir/queue-$lane.md is $fit_bytes bytes with every Decisions line dropped, $((fit_bytes - fit_budget)) over the $lane lane's budget of $fit_budget (tools/docs_lint.sh); docs/queue-$lane.md left as it was"
+    fi
+    mv "$fit" "docs/queue-$lane.md" || die "plan-apply: docs/queue-$lane.md not written"
     echo "plan-apply: copied $dir/queue-$lane.md over docs/queue-$lane.md"
+    [ "$fit_dropped" -eq 0 ] ||
+      echo "plan-apply: dropped the last $fit_dropped Decisions line(s) of docs/queue-$lane.md to fit the $lane lane's budget of $fit_budget bytes"
   fi
   for l in feature backlog; do
     [ "$l" = "$lane" ] || [ ! -f "$dir/queue-$l.md" ] || echo "plan-apply: left $dir/queue-$l.md, of the $l lane, which $change's package step never applies"
@@ -1986,6 +2020,46 @@ plan_apply() {
     mkdir -p "$findings_dir" && cat "$dir/backlog.md" >> "$findings_dir/$change.md" || die "plan-apply: $findings_dir/$change.md not appended"
     echo "plan-apply: appended $dir/backlog.md to $findings_dir/$change.md"
   fi
+}
+
+# queue_budget LANE: the lane queue's byte budget, QUEUE_BUDGET_FEATURE or
+# QUEUE_BUDGET_BACKLOG of tools/docs_lint.sh, its one source.
+queue_budget() {
+  case "$1" in
+    feature) sed -n 's/^QUEUE_BUDGET_FEATURE=\([0-9][0-9]*\)$/\1/p' "$here/docs_lint.sh" ;;
+    backlog) sed -n 's/^QUEUE_BUDGET_BACKLOG=\([0-9][0-9]*\)$/\1/p' "$here/docs_lint.sh" ;;
+  esac
+}
+
+# queue_fit LANE FILE: fits the lane queue FILE within its lane's budget
+# before the push (lane-isolation), as the planner's trims do: drops the
+# "- " bullets of its "## Decisions" section, each with its indented
+# continuation lines, from the last up, never an item. Sets fit_budget,
+# fit_bytes, and fit_dropped; false when dropping every one is not enough.
+queue_fit() {
+  fit_budget=$(queue_budget "$1")
+  fit_dropped=0
+  [ -n "$fit_budget" ] || die "queue: no budget for the $1 lane in $here/docs_lint.sh"
+  fit_bytes=$(wc -c < "$2")
+  while [ "$fit_bytes" -gt "$fit_budget" ]; do
+    last=$(awk '/^## / { on = ($0 == "## Decisions"); next } on && /^- / { n = NR } END { print n + 0 }' "$2")
+    [ "$last" -gt 0 ] || return 1
+    awk -v n="$last" 'NR == n { drop = 1; next } drop && /^[ \t]+[^ \t]/ { next } { drop = 0; print }' "$2" > "$2.tmp" &&
+      mv "$2.tmp" "$2" || die "queue: $2 not written"
+    fit_dropped=$((fit_dropped + 1))
+    fit_bytes=$(wc -c < "$2")
+  done
+}
+
+# queue_over: why the lane queue committed at HEAD is over its budget,
+# nothing when it fits, so a push never takes CI a queue its check did
+# not see (an edit after plan-apply).
+queue_over() {
+  lane=$(lane_of)
+  budget=$(queue_budget "$lane")
+  bytes=$(git show "HEAD:docs/queue-$lane.md" 2> /dev/null | wc -c)
+  [ -z "$budget" ] || [ "$bytes" -le "$budget" ] ||
+    echo "docs/queue-$lane.md is $bytes bytes at HEAD, $((bytes - budget)) over the $lane lane's budget of $budget; shorten its Decisions"
 }
 
 # The queue at COMMIT: both lane queues, else, at a commit before the
@@ -3862,6 +3936,12 @@ shift
 case "$change" in
   ""|*/*|.*|*[[:cntrl:]]*) die "not a change name: $change" ;;
 esac
+# A check's and bench's metrics stay in the change's lane (lane-isolation):
+# run from the main checkout while tmp/.lane-CHANGE exists, under the
+# lane's build/, never the main checkout's shared build/, which another
+# lane's check scans for writes (main_scan). Inside the lane the relative
+# default already is the lane's own.
+[ -n "${METRICS_OUT:-}" ] || [ ! -d "tmp/.lane-$change" ] || metrics_out=tmp/.lane-$change/build/metrics/current.tsv
 
 case "$command" in
   init)
