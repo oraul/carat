@@ -2848,11 +2848,9 @@ backlog_move() {
   dates=$(mktemp) && before=$(mktemp) && after=$(mktemp) || die "backlog-move: no temporary file"
   git blame --date=short -- "$src" 2>/dev/null |
     awk 'match($0, /[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9] +[0-9]+\)/) { s = substr($0, RSTART, RLENGTH - 1); split(s, p, / +/); print p[2], p[1] }' > "$dates"
-  # shellcheck disable=SC2046
-  { entry_lines "$src"; entry_lines $(backlog_files); } | LC_ALL=C sort > "$before"
+  { entry_lines "$src"; backlog_files | while IFS= read -r f; do entry_lines "$f"; done; } | LC_ALL=C sort > "$before"
   file_entries "$dates" < "$src" > /dev/null || { rm -f "$dates" "$before" "$after"; die "backlog-move: $src not filed"; }
-  # shellcheck disable=SC2046
-  entry_lines $(backlog_files) | LC_ALL=C sort > "$after"
+  backlog_files | while IFS= read -r f; do entry_lines "$f"; done | LC_ALL=C sort > "$after"
   headings=$(entry_lines "$src" | grep -c "^##")
   lines=$(entry_lines "$src" | grep -c .)
   if ! cmp -s "$before" "$after"; then

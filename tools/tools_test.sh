@@ -2355,7 +2355,7 @@ echo b1 >> README.md
 commit "fix: b1"
 b1c=$(git rev-parse --short=12 HEAD)
 mkdir -p docs/backlog/tools
-printf '# Backlog: tools/b.sh\n\n## j near-same at tools/b.sh:10\n\n- Location: tools/b.sh:10\n- Why: j reason.\n' > docs/backlog/tools/b.sh.md
+printf '# Backlog: tools/b.sh\n\n## j near-same at tools/b.sh:10\n\n- Location: tools/b.sh:10\n- Why: j reason.\n- Category: pipeline\n- Added: 2026-01-01\n' > docs/backlog/tools/b.sh.md
 cat > docs/backlog/_general.md <<'EOB'
 # Backlog
 
@@ -2645,7 +2645,7 @@ expect "run_state: groom removes a security entry with its fixing commit" 1 "" g
 expect "run_state: groom removes a group of findings with a commit touching a file it names" 1 "" grep -q 'Findings of z' backlog.all
 expect "run_state: groom removes an entry fixed at its ./ path ending a sentence" 1 "" grep -q 'u quoting' backlog.all
 expect "run_state: groom removes a gone entry whose heading holds ' -- ', its line split at the last ' -- '" 1 "" grep -q 'i dashed' backlog.all
-expect "run_state: groom merges a near-same entry keeping both reasons and locations" 0 "^### Kept entry at tools/b[.]sh:9[|][|]- Why: kept[.][|]- Merged: ## j near-same at tools/b[.]sh:10[|]- Location: tools/b[.]sh:10[|]- Why: j reason[.][|][|]## w quality" \
+expect "run_state: groom merges a near-same entry keeping both reasons and locations, its own Category and Added lines dropped" 0 "^### Kept entry at tools/b[.]sh:9[|][|]- Why: kept[.][|]- Merged: ## j near-same at tools/b[.]sh:10[|]- Location: tools/b[.]sh:10[|]- Why: j reason[.][|][|]## w quality" \
   sh -c "grep -A7 -x -F '### Kept entry at tools/b.sh:9' backlog.all | tr '\n' '|'"
 expect "run_state: groom merges a security entry into another security entry" 0 "^## r skeptic entry at tools/k[.]sh:1[|][|]- Why: security disputed: no caller reaches it; tools/k[.]sh:1 a thing[.][|]- Merged: ## q periodic note at tools/m[.]sh:2[|]- Why: High [(]8[)] tools/m[.]sh:2 a thing[.][|]" \
   sh -c "grep -A4 -x -F '## r skeptic entry at tools/k.sh:1' backlog.all | tr '\n' '|'"
