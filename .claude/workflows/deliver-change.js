@@ -1001,8 +1001,8 @@ async function verify(fixes = true) {
 // verbatim: passed or failed (a refusal is a failure the contributor fixes)
 // at a commit; killed, superseded, and running mean the check did not
 // finish, escaped that every stage exited 0 but files changed outside its
-// clone, all under the main checkout's build/, which another lane writes,
-// so no pass counted and the stages run again (lane-isolation; any other
+// clone, all under the paths of the main checkout's build/ another lane
+// writes (LANE_WRITTEN, none by default), so no pass counted and the stages run again (lane-isolation; any other
 // escaped path reads failed), and any other line is none. The words
 // are the script's verdicts, which tools/tools_test.sh compares with
 // RERUN_WORDS.

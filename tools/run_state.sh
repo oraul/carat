@@ -60,8 +60,9 @@
 # holds its own copy of the toolchain; files changed outside the clone
 # while every stage exited 0 (escaped_paths) void the check: its passes
 # are rewritten as not passing, the paths kept as a security-escape note,
-# and its verdict reads escaped when every path lies under the main
-# checkout's build/, which another lane writes (lane_written), else failed.
+# and its verdict reads escaped when every path lies under a path of the
+# main checkout's build/ another lane writes (LANE_WRITTEN, none by
+# default; lane_written), else failed.
 #
 # History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
 # per merged change in its lane's file (lane), appended by history
@@ -154,8 +155,9 @@
 #                               none before a stage), "check: stage none
 #                               escaped at C; read LOG" when every stage
 #                               exited 0 but files changed outside the clone,
-#                               each under the main checkout's build/ seen
-#                               from a lane (rerun with no fix round; any
+#                               each under a LANE_WRITTEN path of the main
+#                               checkout's build/ seen from a lane, none by
+#                               default (rerun with no fix round; any
 #                               other path reads "stage none failed"; both
 #                               rewrite its records escaped and note the
 #                               paths), or "check: still running"
@@ -435,7 +437,8 @@
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
 # (build/metrics/current.tsv, under tmp/.lane-CHANGE/ when run from the
 # main checkout while that lane exists), CHECK_WAIT (540, seconds check
-# waits),
+# waits), LANE_WRITTEN (none, the paths under the main checkout's build/
+# another lane writes, whose writes alone make a check read escaped),
 # BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
 # date groom files a findings entry with, else the UTC day),
 # SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR (build/plan).
@@ -446,6 +449,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
+lane_written_paths=${LANE_WRITTEN:-}
 metrics_prefix=${METRICS_PREFIX:-docs/metrics}
 metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_dir=${BACKLOG_DIR:-docs/backlog}
@@ -816,16 +820,33 @@ escaped_note() {
     LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
 }
 
-# lane_written PATHS: true when every escaped path, one per line, lies
-# under the main checkout's build/ seen from a lane, which another lane's
-# tools write, so the workflow reruns the check with no fix round; a write
-# anywhere else (the shared toolchain or Spinel's checkout, the user's git
-# configuration, the git directory, the main checkout's other files, the
-# delivery clone, or its run state) fails the check, its fix round as
-# before (lane-isolation).
+# lane_written PATHS: true when every escaped path, one per line, is a
+# path of LANE_WRITTEN under the main checkout seen from a lane, or lies
+# under one, which another lane's tools are known to write, so the
+# workflow reruns the check with no fix round. LANE_WRITTEN names none by
+# default: tree_scan leaves out every build/ directory a lane links in
+# (LANE_LINKS), and a lane keeps its metrics and bench logs under itself.
+# A write anywhere else, the rest of the main checkout's build/ included
+# (its release binary build/bin/carat, build/dev, build/test,
+# build/spinel, build/bench, build/metrics), the shared toolchain or
+# Spinel's checkout, the user's git configuration, the git directory, the
+# main checkout's other files, the delivery clone, or its run state, fails
+# the check, its fix round as before (lane-isolation). An entry outside
+# build/ or naming a . or .. segment is ignored.
 lane_written() {
-  [ -n "$main_tree" ] || return 1
-  printf '%s\n' "$1" | BUILD="$main_tree/build/" awk 'index($0, ENVIRON["BUILD"]) != 1 { other = 1 } END { exit other }'
+  [ -n "$main_tree" ] && [ -n "$lane_written_paths" ] || return 1
+  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk '
+    BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
+    { ok = 0
+      for (i = 1; i <= n; i++) {
+        p = owned[i]
+        if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
+        sub(/\/+$/, "", p)
+        full = ENVIRON["MAIN"] p
+        if ($0 == full || index($0, full "/") == 1) ok = 1
+      }
+      if (!ok) other = 1 }
+    END { exit other }'
 }
 
 # stage_launch NAME CMD...: starts CMD as a job in the background, its

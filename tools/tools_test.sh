@@ -543,6 +543,7 @@ case "$REACH" in
   gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-untracked) : > "$MAIN/forged" ;;
   main-build) mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" ;;
+  main-bin) mkdir -p "$MAIN/build/bin" && echo forged > "$MAIN/build/bin/carat" ;;
   main-build-gitconfig)
     mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" &&
       git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
@@ -672,7 +673,7 @@ expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE line
 # leave it passing.
 lane_reach() {
   env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
-    HOME="${REACH_HOME:-$HOME}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+    HOME="${REACH_HOME:-$HOME}" LANE_WRITTEN="${REACH_OWNED:-}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 }
 main_head=$(git -C "$iso_top" rev-parse HEAD)
 expect "run_state: a stage that writes a tracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main
@@ -706,15 +707,32 @@ REACH_HOME="$work/home"
 expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
 expect "run_state: a write to HOME's git configuration from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
 rm "$work/home/.gitconfig"
-# lane-isolation: from a lane, files changed only under the main
-# checkout's build/, which another lane's tools write, end in an escaped
-# verdict, which the workflow reruns with no fix round; one more path
-# elsewhere fails the check.
-expect "run_state: a write only under the main checkout's build/ from a lane voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
-expect "run_state: a write only under the main checkout's build/ from a lane ends in an escaped verdict line" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+# lane-isolation: from a lane, files changed only under a path of the main
+# checkout's build/ that LANE_WRITTEN names as another lane's end in an
+# escaped verdict, which the workflow reruns with no fix round; with none
+# named (the default), a path outside the named ones, such as the release
+# binary build/bin/carat, or one more path elsewhere fails the check.
+expect "run_state: a write to the main checkout's build/metrics from a lane, LANE_WRITTEN unset, voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write to the main checkout's build/metrics from a lane, LANE_WRITTEN unset, ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write to the main checkout's build/bin/carat from a lane voids the check" 1 "^[|] $iso_top/build/bin/carat$" lane_reach main-bin
+expect "run_state: a write to the main checkout's build/bin/carat from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write to the main checkout's build/bin/carat from a lane records its path in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/build/bin/carat" cat build/pipeline/isolated.json
+REACH_OWNED=build/metrics
+expect "run_state: a write only under a LANE_WRITTEN path of the main checkout's build/ from a lane voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write only under a LANE_WRITTEN path of the main checkout's build/ from a lane ends in an escaped verdict line" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
 expect "run_state: an escaped check from a lane records its paths in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/build/metrics/current[.]tsv" cat build/pipeline/isolated.json
-expect "run_state: a write under the main checkout's build/ and to HOME's git configuration from a lane fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach main-build-gitconfig
-expect "run_state: a write under the main checkout's build/ beside one elsewhere ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write to the main checkout's build/bin/carat beside a LANE_WRITTEN path voids the check" 1 "^[|] $iso_top/build/bin/carat$" lane_reach main-bin
+expect "run_state: a write to the main checkout's build/bin/carat beside a LANE_WRITTEN path ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write under a LANE_WRITTEN path and to HOME's git configuration from a lane fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach main-build-gitconfig
+expect "run_state: a write under a LANE_WRITTEN path beside one elsewhere ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=build/met
+expect "run_state: a LANE_WRITTEN path covers whole path segments, so build/met leaves build/metrics voiding the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write beside a LANE_WRITTEN path's prefix ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=build/../build/metrics
+expect "run_state: a LANE_WRITTEN entry naming a .. segment is ignored, the write voiding the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write under an ignored LANE_WRITTEN entry ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=
+rm -r "$iso_top/build/bin"
 rm -r "$iso_top/build/metrics"
 REACH_HOME=
 rm -r "$work/home"
