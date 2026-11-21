@@ -10,7 +10,7 @@ Options can be changed only by editing a `.caratrc` file and restarting: `:set` 
 - Every value is checked by the configuration line's own rule, through one `Options#problem` that both `Options#apply` and `:set` call, so `:set` never stores a value an `option.*` line would refuse: a value that is not a number is `E521: Number required after =: ts=x`, any other refused value `E474: Invalid argument: ts=0`, and the option keeps its value.
 - `name&` resets an option `:set` handles to its shipped default (the value `config/default.caratrc` gives it).
 - A bare `:set` lists, under `--- Options ---`, the options that differ from their shipped defaults and the current buffer's `filetype` and `syntax` when set; `:set all` lists every option `:set` handles.
-- A change shows at once: the next frame reads the option, `undolevels` reaches the buffer feed every buffer records its undo states through, and the frame's layout key gains the number column so a window draws its new gutter. `startscreen`, read only when the editor starts, answers `Not implemented: :set startscreen live` to every form that would change it; `:set startscreen?` shows it.
+- A change shows at once: the next frame and the next arrange read the option, so the number column, the tab stops, and the winbars follow, and `undolevels` reaches the buffer feed every buffer records its undo states through. `startscreen`, read only when the editor starts, answers `Not implemented: :set startscreen live` to every form that would change it; `:set startscreen?` shows it.
 - `theme` and `background` keep `Not implemented: :set name`; any other name is `E518`; a `no` or `inv` prefix, a value, or `!` on an option that is not a flag is `E474`; `+=`, `-=`, `^=` on a word option and `&` on `filetype` or `syntax` answer `Not implemented: :set word`.
 - Docs: `docs/compatibility.md` (the `:set` rows per kind and the Differences and Options sentences that said `:set` does not handle an option), the README options section, `docs/architecture.md` (the item 9 line), `docs/codebase-map.md`, and the comments of `config/default.caratrc` with its generated mirror.
 
@@ -39,6 +39,6 @@ Options can be changed only by editing a `.caratrc` file and restarting: `:set` 
 
 - README.md: the options section says every option above is set by `:set` too, with its forms.
 - docs/architecture.md: the item 9 line of the roadmap says which part of `:set` arrived.
-- docs/codebase-map.md: the `set_command_handler.rb`, `options.rb`, and `frame_presenter.rb` lines.
+- docs/codebase-map.md: the `set_command_handler.rb` and `options.rb` lines and the new `test/editor_set_options.rb`.
 - CLAUDE.md: unchanged, no process change.
-- Performance: one more integer in the frame's layout key; `lh`, `j`, and `insert` run no `:set`.
+- Performance: `lh`, `j`, and `insert` run no `:set`; the configuration read at startup takes the same checks in a different order of calls.

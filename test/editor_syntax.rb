@@ -133,34 +133,31 @@ module EditorSyntaxTest
     t.assert_equal("Not implemented: :syntax list", h.message, ":syntax alone would list the items")
 
     # :set filetype and syntax.
+    # Scenario "Asking for the filetype" (syntax-highlighting).
     h.type(":set ft?<CR>")
     t.assert_equal("  filetype=ruby", h.message, ":set ft? shows the filetype")
     h.type(":set filetype<CR>")
     t.assert_equal("  filetype=ruby", h.message, "so does the bare name")
+    # Scenario "Turning one buffer's syntax off" (syntax-highlighting).
     h.type(":set syntax=OFF<CR>")
     t.assert_equal("", spans(h, 0), ":set syntax=OFF turns this buffer plain")
     h.type(":set syntax?<CR>")
     t.assert_equal("  syntax=", h.message, "and its syntax is empty")
     h.type(":set syn=ON<CR>")
     t.assert_equal(["Define:def Function:go String:\"hi\" Comment:# note", "ruby"], [spans(h, 0), h.buffer.syntax], ":set syn=ON goes back to the filetype")
-    h.type(":set number<CR>")
-    t.assert_equal("Not implemented: :set number", h.message, "an option :set does not handle yet")
-    h.type(":set winborder=single<CR>")
-    t.assert_equal("Not implemented: :set winborder=single", h.message, "winborder is an option Carat has, read from configuration lines")
-    h.type(":set list<CR>")
-    t.assert_equal("Not implemented: :set list", h.message, "list is an option Carat has, read from configuration lines")
-    h.type(":set lcs=trail:-<CR>")
-    t.assert_equal("Not implemented: :set lcs=trail:-", h.message, "and listchars, by its short name too")
-    # Scenario ":set answers not implemented" (config-files).
-    h.type(":set showtabline=2<CR>")
-    t.assert_equal("Not implemented: :set showtabline=2", h.message, "showtabline is an option Carat has, read from configuration lines")
-    h.type(":set stal=0<CR>")
-    t.assert_equal("Not implemented: :set stal=0", h.message, "and by its short name too")
+    # Scenario "An option set does not handle yet" (syntax-highlighting):
+    # theme and background wait for :colorscheme.
+    h.type(":set theme=carat-light<CR>")
+    t.assert_equal("Not implemented: :set theme=carat-light", h.message, "theme is an option :set does not handle yet")
+    h.type(":set bg=terminal<CR>")
+    t.assert_equal("Not implemented: :set bg=terminal", h.message, "and background, by its short name too")
+    # Scenario "An unknown option" (syntax-highlighting).
     h.type(":set bogus<CR>")
     t.assert_equal("E518: Unknown option: bogus", h.message, "an unknown option")
     h.type(":e notes.txt<CR>")
     # With a second file listed the buffer tabs take row 0.
     t.assert_equal(["", ""], [spans(h, 1), h.buffer.filetype], "a text file is plain")
+    # Scenario "Setting the filetype" (syntax-highlighting).
     h.type(":se ft=ruby<CR>")
     t.assert_equal(["Define:def Function:go", "ruby", "ruby"], [spans(h, 1), h.buffer.filetype, h.buffer.syntax], ":se ft=ruby highlights it and sets the syntax")
     h.type(":set ft= syn?<CR>")

@@ -82,8 +82,8 @@ An option changed by `:set` SHALL take effect from the next key: the frame is dr
 - **THEN** the first row starts with the text after the first command and with the line number after the second
 
 #### Scenario: A tab is drawn at the new tabstop
-- **WHEN** `:set ts=4` is run in a buffer whose first line is a tab and `x`
-- **THEN** `x` is drawn four columns after the start of the text
+- **WHEN** `:set ts=4` is run in a buffer whose first line is `a`, a tab, and `x`
+- **THEN** `x` is drawn in the fifth column of the text, at the tab stop of 4
 
 #### Scenario: Fewer undo levels
 - **WHEN** `:set ul=1` is run and three changes are made

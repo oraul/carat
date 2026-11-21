@@ -18,7 +18,7 @@ Non-goals: local options; `theme` and `background` (colorscheme-command); the op
 - An argument is split at unescaped blanks, `\ ` and `\\` kept as a blank and a backslash, as Vim reads `:set`. The operator is found from the first `=` (with a `+`, `-`, or `^` before it) or a trailing `?`, `&`, or `!`; a `no` or `inv` prefix is read only when the rest names an option, so `number` is never read as `no` + `mber`.
 - Refusals are Neovim's codes: `E521` for a number that does not parse (one to nine digits, an optional minus), `E474` for every other refused value or form, `E518` for an unknown name; Not implemented answers (`theme`, `background`, `startscreen live`, a word's `+=`) are messages, not errors, as the handler's are today.
 - After a store the handler runs the side effects the old switches ran (the case options compile the last pattern again, `hlsearch` on shows the matches again) and copies `undolevels` into the feed. `startscreen` answers `Not implemented: :set startscreen live` before any store.
-- The frame presenter's layout key gains `number`, beside `relativenumber`, so a changed gutter invalidates the cached rows.
+- The frame presenter and `ArrangeView` read every option at each frame and arrange (the gutter width from `Window#gutter_width`, the tab width, the winbars), so no cache needs telling; the editor test of each live scenario proves it through the harness's real frame.
 
 ## Risks / Trade-offs
 

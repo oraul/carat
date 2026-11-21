@@ -203,8 +203,8 @@ module EditorBreadcrumbsTest
     r.type("<C-w>l")
     t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [r.frame.hl_at(0, 1), r.frame.hl_at(0, 22)], "the selected winbar follows the current window")
     r = rig("", {})
-    r.type(":set breadcrumbs=never<CR>")
-    t.assert_equal("Not implemented: :set breadcrumbs=never", r.assembly.state.message, "the mode is read from configuration lines, not :set")
+    r.type("<C-w>v:set breadcrumbs=never<CR>")
+    t.assert_equal(["", true, 0], [r.assembly.state.message, r.row(0).start_with?("class Foo"), r.assembly.state.window.row], ":set breadcrumbs=never hides the winbars at once, the text taking their row")
     r = rig("", {})
     r.type("5<C-w>s")
     window = r.assembly.state.window

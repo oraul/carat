@@ -11,7 +11,7 @@
 - [ ] 2.3 The word options, the backslash escapes, E474, and Not implemented for `+=` on a word (proved by `test/editor_set_options.rb`, "Word options are set with set" scenarios)
 - [ ] 2.4 `name&` from the shipped options (proved by "Resetting an option")
 - [ ] 2.5 Bare `:set` and `:set all` (proved by "A bare set lists the changed options" and "Set all lists every option")
-- [ ] 2.6 Live effect: `undolevels` reaches the feed, the frame key reads `number`, `startscreen` answers Not implemented live (proved by "The number column follows set number", "A tab is drawn at the new tabstop", "Fewer undo levels", "startscreen is read only at startup")
+- [ ] 2.6 Live effect: `undolevels` reaches the feed, `startscreen` answers Not implemented live (proved by "The number column follows set number", "A tab is drawn at the new tabstop", "Fewer undo levels", "startscreen is read only at startup")
 - [ ] 2.7 `EditorAssembly` passes the shipped options and the feed; `theme` and `background` keep Not implemented (proved by `test/editor_syntax.rb`, "An option set does not handle yet")
 
 ## 3. Docs

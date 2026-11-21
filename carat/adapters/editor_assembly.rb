@@ -505,7 +505,7 @@ module Carat
         UseCases::HistoryCommandHandler.register(@commands, undo_step: @undo_step, redo_step: @redo_step, undo_to_state: @undo_to_state, travel_history: @travel_history, list_undo: @list_undo)
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::SyntaxCommandHandler.register(@commands)
-        UseCases::SetCommandHandler.register(@commands, last_search: @last_search, last_substitute: @last_substitute)
+        UseCases::SetCommandHandler.register(@commands, last_search: @last_search, last_substitute: @last_substitute, shipped: Domain::Options.shipped, feed: @buffers.feed)
         UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
