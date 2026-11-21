@@ -19,3 +19,7 @@
 - [x] 4.1 `backlog_move` split the folder's file list on spaces (`$(backlog_files)`): read it line by line (`tools/run_state.sh`); proven by the `run_state: backlog-move` cases
 - [x] 4.2 A merged entry's own `- Category:` and `- Added:` lines were dropped without a test: the near-same fixture entry carries both, and `run_state: groom merges a near-same entry keeping both reasons and locations, its own Category and Added lines dropped` proves them gone
 - [x] 4.3 The mismatch branch of `backlog-move` (the folder differing from before plus FILE) has no test: filing cannot lose a line by construction, so no fixture reaches it; recorded in `docs/findings/backlog-per-file.md`
+
+## 5. Fix round
+
+- [x] 5.1 The lane queues were 18,295 bytes against their shared budget of 17,969 after #277 grew the feature queue: drop `docs/queue-backlog.md`'s lines of the merged `backlog-records-rule` (its exception paragraph and its Size, No split, and Critical decisions) and write this change's exception as the brief's line; proven by `make docs-lint` (`ok   queue`)

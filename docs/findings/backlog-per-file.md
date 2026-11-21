@@ -33,3 +33,8 @@
 - Location: `tools/run_state.sh`, `backlog_move`, the `cmp -s "$before" "$after"` branch that keeps FILE and dies.
 - Why: `file_entries` appends every entry line unchanged, so no fixture makes the folder differ from before plus FILE; the branch guards a future change to the filing, and a regression there would go unseen.
 - Fix: let a test inject a filing that drops a line (for example an environment hook naming the filing command), then expect the refusal and FILE kept.
+
+### The lane queues exceeded their shared budget on main after #277
+- Location: `docs/queue-feature.md`, `docs/queue-backlog.md`, budget `tools/docs_lint.sh:62` (QUEUE_BUDGET 17969)
+- Why: at 7f96588 the two queues were 18,297 bytes together, so docs-lint fails on main and on every lane branch until one lane trims its queue; backlog-per-file trimmed only backlog-lane text (the merged backlog-records-rule's exception and three of its decisions), leaving the feature queue untouched as its brief requires.
+- Fix: have plan-apply or the merger's gate refuse a queue rewrite that leaves both lane queues over the shared budget, so a lane's merge cannot push the other lane over it.
