@@ -76,7 +76,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.12
+ok   the plugin API is 2.13
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
@@ -98,4 +98,18 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 100 passed, 0 failed
+ok   Each float border style: single ┌─── doc ────┐ / │ one        │ / │ two        │ / └────────────┘
+ok   Each float border style: double ╔═══ doc ════╗ / ║ one        ║ / ║ two        ║ / ╚════════════╝
+ok   Each float border style: solid      doc       /   one          /   two          /               
+ok   Each float border style: rounded ╭─── doc ────╮ / │ one        │ / │ two        │ / ╰────────────╯
+ok   a float's own border is in FloatBorder and its title in FloatTitle
+ok   A float border style in ASCII: double under option.icons ascii +--- doc ----+ / | one        | / +------------+
+ok   and single under NO_COLOR +--- doc ----+ / | one        | / +------------+
+ok   A float border style of none: no edge and no title, the padding kept
+ok   the float without its edge equals a full repaint
+ok   A float opened without a border gets one: double
+ok   The empty style follows winborder: double, then single again, the other float single throughout
+ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
+ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
+ok   a refill keeps the border style
+editor_floats: 114 passed, 0 failed

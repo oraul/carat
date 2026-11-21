@@ -408,7 +408,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.12", API::VERSION, "the plugin API is 2.12")
+    t.assert_equal("2.13", API::VERSION, "the plugin API is 2.13")
 
     # Scenario: An offset out of range is refused.
     h = editor
@@ -472,6 +472,89 @@ module EditorFloatsTest
     # Scenario: A notification title is centered like a float title.
     t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::DIAGNOSTIC_WARN, D::Highlight::FLOAT_BORDER], [h.frame.hl_at(0, 43), h.frame.hl_at(0, 44), h.frame.hl_at(0, 48), h.frame.hl_at(0, 52), h.frame.hl_at(0, 53)], "A notification title is centered like a float title: the severity and its blanks in its group")
 
+
+    # A float's own border style (set_float_border, API 2.13). Scenario:
+    # Each float border style, under the shipped rounded border.
+    own_frames = [
+      ["single", ["┌", "┐", "└", "┘", "─", "│"]],
+      ["double", ["╔", "╗", "╚", "╝", "═", "║"]],
+      ["solid", [" ", " ", " ", " ", " ", " "]],
+      ["rounded", ["╭", "╮", "╰", "╯", "─", "│"]]
+    ]
+    own_frames.each do |row|
+      name = Carat::Json.element(row, 0).to_s
+      g = strings(Carat::Json.element(row, 1))
+      h = editor
+      id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+      set = h.plugins.window_requests.set_float_border("test", id, name)
+      h.redraw
+      expected = [g[0] + g[4] * 3 + " doc " + g[4] * 4 + g[1], g[5] + " one        " + g[5], g[5] + " two        " + g[5], g[2] + g[4] * 12 + g[3]]
+      got = [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 4, 4, 14), cells(h, 5, 4, 14)]
+      t.assert_equal([true, expected], [set.ok, got], "Each float border style: #{name} #{got.join(" / ")}")
+    end
+    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::FLOAT_TITLE], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 8)], "a float's own border is in FloatBorder and its title in FloatTitle")
+    # Scenario: A float border style in ASCII.
+    h = configured("option.icons ascii\n", 12, 40)
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    h.plugins.window_requests.set_float_border("test", id, "double")
+    h.redraw
+    got = [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 5, 4, 14)]
+    t.assert_equal(["+--- doc ----+", "| one        |", "+------------+"], got, "A float border style in ASCII: double under option.icons ascii #{got.join(" / ")}")
+    h = configured("", 12, 40)
+    h.terminal.no_color = true
+    h.open("a.txt")
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    h.plugins.window_requests.set_float_border("test", id, "single")
+    h.redraw
+    got = [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 5, 4, 14)]
+    t.assert_equal(["+--- doc ----+", "| one        |", "+------------+"], got, "and single under NO_COLOR #{got.join(" / ")}")
+    # Scenario: A float border style of none.
+    h = editor
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    h.plugins.window_requests.set_float_border("test", id, "none")
+    h.redraw
+    shown = h.screen
+    t.assert_equal(["  2 line 2", "  3  one        ", "  4  two        ", "  5 line 5"], [h.row(1).rstrip, cells(h, 2, 0, 16), cells(h, 3, 0, 16), h.row(4).rstrip], "A float border style of none: no edge and no title, the padding kept")
+    h.resize(12, 40)
+    t.assert_equal(shown, h.screen, "the float without its edge equals a full repaint")
+    # Scenario: A float opened without a border gets one.
+    h = editor
+    id = open(h, options("editor", 2, 4, 2, 10, false, "doc", 50, false), ["one", "two"])
+    h.plugins.window_requests.set_float_border("test", id, "double")
+    h.redraw
+    t.assert_equal(["╔═══ doc ════╗", "║ one        ║", "╚════════════╝"], [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 5, 4, 14)], "A float opened without a border gets one: double")
+    # Scenario: The empty style follows winborder.
+    h = configured("option.winborder single\n", 12, 40)
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    open(h, options("editor", 7, 24, 1, 4, true, "", 50, false), ["x"])
+    h.plugins.window_requests.set_float_border("test", id, "double")
+    h.redraw
+    corners = [cells(h, 2, 4, 1), cells(h, 7, 24, 1)]
+    h.plugins.window_requests.set_float_border("test", id, "")
+    h.redraw
+    t.assert_equal([["╔", "┌"], ["┌", "┌"], ""], [corners, [cells(h, 2, 4, 1), cells(h, 7, 24, 1)], h.state.tab.floats.at(0).border_style], "The empty style follows winborder: double, then single again, the other float single throughout")
+    # Scenario: A restyled border repaints.
+    h = editor
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    count = h.state.tab.floats.at(0).style_count
+    h.plugins.window_requests.set_float_border("test", id, "double")
+    h.redraw
+    shown = h.screen
+    restyled = [cells(h, 2, 4, 1), cells(h, 3, 4, 1), count + 1 == h.state.tab.floats.at(0).style_count]
+    h.resize(12, 40)
+    t.assert_equal([["╔", "║", true], shown], [restyled, h.screen], "A restyled border repaints: the double corner with the box unchanged, equal to a full repaint")
+    # Scenario: Bad border requests are refused.
+    float = h.state.tab.floats.at(0)
+    count = float.style_count
+    bad = [
+      h.plugins.window_requests.set_float_border("test", id, "thick"),
+      h.plugins.window_requests.set_float_border("other", id, "single"),
+      h.plugins.window_requests.set_float_border("test", 999, "single")
+    ]
+    t.assert_equal([[false, "No border style thick: none, single, double, rounded, or solid"], [false, "No float #{id}"], [false, "No float 999"], "double", count], [[bad[0].ok, bad[0].message], [bad[1].ok, bad[1].message], [bad[2].ok, bad[2].message], float.border_style, float.style_count], "Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept")
+    h.plugins.window_requests.set_float_lines("test", id, ["new"], "doc")
+    h.redraw
+    t.assert_equal(["double", "╔"], [float.border_style, cells(h, 2, 4, 1)], "a refill keeps the border style")
     t.finish
   end
 end

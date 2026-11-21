@@ -123,10 +123,11 @@ module Carat
         dcol = @cache.fetch(window.buffer.line(cursor.row), tabstop).col(cursor.col)
         cursor_row = window.row + window.row_offset(cursor.row)
         cursor_col = window.col + window.gutter_width(options) + dcol - window.left
-        edged = Domain::BorderStyle.edged?(options.winborder)
+        winborder = options.winborder
         i = 0
         while i < floats.count
           float = floats.at(i)
+          edged = Domain::BorderStyle.edged?(float.style_under(winborder))
           if float.spec.cursor_anchored?
             float.place(cursor_row, cursor_col, rows, cols, edged)
           else

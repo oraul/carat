@@ -307,6 +307,15 @@ module Carat
         @windows.style_float(@name, window, selected, spans)
       end
 
+      # Returns a Response.
+      # @rbs window: Integer
+      # @rbs style: String
+      def set_float_border(window, style)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.set_float_border(@name, window, style)
+      end
+
       # Returns a FloatFrame.
       # @rbs border: bool
       def float_frame(border)

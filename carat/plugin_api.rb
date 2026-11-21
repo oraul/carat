@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 12
-    VERSION = "2.12"
+    MINOR = 13
+    VERSION = "2.13"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -785,6 +785,23 @@ module Carat
       # @rbs spans: Array[Integer]
       def style_float(window, selected, spans)
         raise NotImplementedError, "Host#style_float"
+      end
+
+      # Gives the plugin's float with the window id, 0 for the current
+      # window, a border style of its own and returns a Response (from
+      # 2.13): "none", "single", "double", "rounded", or "solid", drawn as
+      # option.winborder draws it, its ASCII form under option.icons ascii
+      # or NO_COLOR, or "" for option.winborder again. The float is then
+      # bordered whatever its FloatOptions said, "none" drawing no edge and
+      # no title, and its edge is one cell for every other style;
+      # set_float_lines keeps the style. Fails with "No float N" for
+      # another plugin's float or an unknown id, and "No border style X:
+      # none, single, double, rounded, or solid" for any other name; a
+      # failed request changes nothing.
+      # @rbs window: Integer
+      # @rbs style: String
+      def set_float_border(window, style)
+        raise NotImplementedError, "Host#set_float_border"
       end
 
       # Returns a FloatFrame (from 2.6): the frame a float the plugin opens

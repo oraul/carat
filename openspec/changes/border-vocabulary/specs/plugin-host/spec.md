@@ -85,11 +85,11 @@ The request `set_float_border(window, style)` (API 2.13) SHALL give one of the p
 
 #### Scenario: A plugin requests a border style
 - **WHEN** a test plugin opens a float through its host and sets its border to `double`
-- **THEN** the request succeeds and the float draws the double corners, while a disabled plugin's request is refused with "Plugin NAME is disabled"
+- **THEN** the request succeeds and the float takes the double style with a border, while a disabled plugin's request is refused with "Plugin NAME is disabled" and the float keeps its border
 
 #### Scenario: A plugin written against 2.12 still loads
 - **WHEN** a plugin's manifest names API version "2.12" and the host has 2.13
-- **THEN** the plugin is accepted and its bordered float is drawn in `option.winborder`, its unbordered float with no edge
+- **THEN** the plugin is accepted, its bordered float takes `option.winborder` with an edge, and its unbordered float has no edge
 
 ### Requirement: A bad border style request is refused
 `set_float_border` SHALL fail with "No float N" for another plugin's float or an id no float has, and with "No border style X: none, single, double, rounded, or solid" for any other name. A refused request SHALL leave the float's border unchanged.

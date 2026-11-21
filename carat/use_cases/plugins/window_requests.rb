@@ -315,6 +315,23 @@ module Carat
         PluginApi::Response.success("", 0)
       end
 
+      # Gives the plugin's float a border style of its own, a copy of one
+      # of BorderStyle::STYLES, or "" for option.winborder, and a border
+      # whatever it opened with; the float is any of the plugin's, as
+      # move_float's, since the border belongs to the window. Raising the
+      # style count repaints a restyle that keeps the box.
+      #: (String, Integer, String) -> PluginApi::Response
+      def set_float_border(name, id, style)
+        index = own_float_tab(name, id)
+        return PluginApi::Response.failure("No float #{id}") if index < 0
+        return PluginApi::Response.failure("No border style #{style}: none, single, double, rounded, or solid") unless style.empty? || Domain::BorderStyle.style?(style)
+        float = float_in(index, id)
+        float.border_style = String.new(style)
+        float.spec = float.spec.bordered
+        float.style_count += 1
+        PluginApi::Response.success("", 0)
+      end
+
       # The frame a float of the plugin would have, bordered or not, under
       # the current border style: its edge, padding, and margin cells.
       #: (String, bool) -> PluginApi::FloatFrame
