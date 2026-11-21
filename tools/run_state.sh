@@ -29,7 +29,9 @@
 #   merged           the squash commit on main
 #   metric.NAME      one measurement or figure of the run: tools/metrics.sh
 #                    names, rework, ci_min, estimate (the plan's size), critical (rule letter),
-#                    escalated (1), quality_blocked (blocking quality rounds), phase.KEY
+#                    escalated (1), quality_review (the contributor's quality
+#                    review, ADDED/FIXED/RECORDED; quality_blocked, the
+#                    blocking quality rounds, in older runs), phase.KEY
 #                    ("TOKENS/CALLS" of a phase so far), first.GATE (0 or 1,
 #                    its first verdict), extra (fix rounds granted beyond
 #                    three), stop (rounds when a start stopped at the

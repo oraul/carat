@@ -812,7 +812,6 @@ function mergeTarget() {
   return pr && repo && branch ? ` Pull request ${pr} of ${repo}, branch ${branch}.` : ' Read the pull request, the repository, and the branch with the show command.'
 }
 
-const at = (key) => (state[key] || '').split(' ')
 const doneAtHead = (name) => passedAt(ran, 'phase.' + name, head) || (name === 'check' && settledAtHead())
 const reviewedAtHead = (kind) => passedAt(ran, 'review.' + kind, head) || (SETTLES.includes(kind) && settledAtHead())
 const note = (line) => { notes.push(line); log(line) }

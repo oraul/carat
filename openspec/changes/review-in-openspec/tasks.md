@@ -1,15 +1,23 @@
 ## 1. Contributor quality step
 
-- [ ] 1.1 Add `operations.apply.guidance` and `operations.archive.guidance` for the quality step to `openspec/config.yaml`; checked by `openspec validate` and `make spec-validate`
-- [ ] 1.2 Make card rule 10 and the implement steps of `.claude/agents/contributor.md` the quality step, with `CONTRIBUTOR_CARD` in `.claude/workflows/deliver-change.js` word for word; proven by the tools-test card comparison
-- [ ] 1.3 Add the `quality_review` result field, its refusal in `contributor()`, `metric.quality_review`, and `qualityStep()` before the archive and package step (`.claude/workflows/deliver-change.js`); proven by tools-test cases for a refused result, a restart, a stop, and the step before package
+- [x] 1.1 Add `operations.apply.guidance` and `operations.archive.guidance` for the quality step to `openspec/config.yaml`; checked by `openspec validate` and `make spec-validate`
+- [x] 1.2 Make card rule 10 and the implement steps of `.claude/agents/contributor.md` the quality step, with `CONTRIBUTOR_CARD` in `.claude/workflows/deliver-change.js` word for word; proven by the tools-test card comparison
+- [x] 1.3 Add the `quality_review` result field, its refusal in `contributor()`, `metric.quality_review`, and `qualityStep()` before the archive and package step (`.claude/workflows/deliver-change.js`); proven by tools-test cases for a refused result, a restart, a stop, and the step before package
 
 ## 2. Quality phase removed
 
-- [ ] 2.1 Remove the quality reviewer start, its scope, split, advisories, rounds, carry, and records from `.claude/workflows/deliver-change.js`, the reviews being the security review alone; proven by tools-test cases that a delivery starts no quality-reviewer but the text check and that the security reviewer still runs and blocks
-- [ ] 2.2 Require check, security, and bench in the `passed` gate of `tools/gates.sh`; proven by the tools-test gate case
-- [ ] 2.3 Update the tools-test cases of the removed helpers and caps (`tools/tools_test.sh`), and prove sprint-planning still starts its quality review
+- [x] 2.1 Remove the quality reviewer start, its scope, split, advisories, rounds, carry, and records from `.claude/workflows/deliver-change.js`, the reviews being the security review alone; proven by tools-test cases that a delivery starts no quality-reviewer but the text check and that the security reviewer still runs and blocks
+- [x] 2.2 Require check, security, and bench in the `passed` gate of `tools/gates.sh`; proven by the tools-test gate case
+- [x] 2.3 Update the tools-test cases of the removed helpers and caps (`tools/tools_test.sh`), and prove sprint-planning still starts its quality review
 
 ## 3. Docs
 
-- [ ] 3.1 Update CLAUDE.md's Agents phases line, README.md's pipeline steps, `docs/goals.md`, `docs/contributor-notes.md`, and the quality reviewer's use line; checked by `make docs-lint` and `make gates`
+- [x] 3.1 Update CLAUDE.md's Agents phases line, README.md's pipeline steps, `docs/goals.md`, `docs/contributor-notes.md`, and the quality reviewer's use line; checked by `make docs-lint` and `make gates`
+
+## 4. Quality review
+
+- [x] 4.1 Remove the `at` reader of `.claude/workflows/deliver-change.js` that only the removed quality seed called, and the tools-test stubs of it and of `addAdvisories`; proven by the closing loop's restart cases, which run `seed` without them
+- [x] 4.2 Name `metric.quality_review` in the run state header of `tools/run_state.sh`, `quality_blocked` kept for older runs; documentation only
+- [x] 4.3 Recorded in `docs/findings/review-in-openspec.md`: the steps 5 to 7 of `.claude/agents/quality-reviewer.md` still describe a delivery review no workflow starts; rewording them needs a decision on the pull request text check's recording, beyond this change
+- [x] 4.4 Recorded in `docs/findings/review-in-openspec.md`: the advisory-only round that settles on records-only fixes can no longer arise, since only security findings are offered and a security offer never settles; removing it is new code beyond this change
+- [x] 4.5 Recorded in `docs/findings/review-in-openspec.md`: a run resumed across this change no longer hands its earlier `quality-advisory` notes to the package step
