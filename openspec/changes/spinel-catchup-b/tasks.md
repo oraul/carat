@@ -20,3 +20,7 @@
 
 - [x] 3.1 Recheck the open notes of `docs/spinel-notes.md` (Known miscompilations and the other `Open:` notes) with reduced probes at the new pin and record each result there; each workaround the pin makes unnecessary whose removal is not trivial and tested goes to `docs/findings/spinel-catchup-b.md`; verify with `make docs-lint`, `make gates`, and `make spec-validate`.
   - Result: `private_constant` is enforced since Spinel ae6a3602 (the probe read `Owner::NAME` from another class at 0d1a7ca3 and raised `NameError` at 2f6c2486): its note is no longer open, `docs/architecture.md` section 5 and the `test/lint.rb` comment no longer say Spinel does not enforce it, the `lint` rule stays as carat's own layering rule, and the backlog entry goes to the planner as a finding. The `when CONST` folding still reproduces; the one-character slice is still quadratic (28 ms over 10,000 `é`, 359 ms over 40,000); the destructuring probe, now the size of the f34005bf one, the string-return, empty-array, and versioned-entry probes answer correctly, so only reverting carat's rewrites decides them; the slab release is unchanged in `lib/sp_slab.c`.
+
+## Quality review
+
+- [x] 4.1 Move the `private_constant` note of `docs/spinel-notes.md` from Known miscompilations to Language and library, since the pin no longer miscompiles it (quality advisory on the note's section).
