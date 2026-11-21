@@ -2,7 +2,7 @@
 
 ## 1. The check, the guard, and the lane facts
 
-- [ ] 1.1 `tools/agent_guard.sh`: the contributor runs `run_state.sh check CHANGE`, never with a COMMIT; tools-test cases `guard: contributor runs the check of its change` and `guard: contributor refuses a check that backs a commit`.
+- [x] 1.1 `tools/agent_guard.sh`: the contributor runs `run_state.sh check CHANGE`, never with a COMMIT; tools-test cases `guard: contributor runs the check of its change` and `guard: contributor refuses a check that backs a commit`.
 - [ ] 1.2 `tools/run_state.sh` check: a COMMIT other than `phase.check` or HEAD is refused; header and comments document the trust; tools-test `run_state: check refuses a backed commit other than phase.check or the head`, the carry cases recording `phase.check`.
 - [ ] 1.3 `tools/lane_facts.sh`: the `machinery` line; tools-test cases for no, yes after a tools/ commit, and the existing lines.
 

@@ -3463,6 +3463,15 @@ for c in 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-
   expect "guard: contributor refuses $c" 2 "git push is not a command of this profile" guard contributor "$c"
 done
 expect "guard: contributor pushes through tools/run_state.sh" 0 "^$" guard contributor 'sh tools/run_state.sh push c'
+# contributor-self-check: the contributor runs the check of its own head,
+# never one backing a commit, and no other verb of the checker.
+expect "guard: contributor runs the check of its change" 0 "^$" guard contributor 'sh tools/run_state.sh check c'
+expect "guard: contributor runs the check of its change in its worktree" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh check c'
+expect "guard: contributor refuses a check that backs a commit" 2 "tools/run_state.sh check other than CHANGE, with no commit" guard contributor 'sh tools/run_state.sh check c abc1234'
+expect "guard: contributor refuses a check of no change" 2 "tools/run_state.sh check other than CHANGE, with no commit" guard contributor 'sh tools/run_state.sh check'
+for v in metric settled moved; do
+  expect "guard: contributor refuses the checker's $v" 2 "tools/run_state.sh $v" guard contributor "sh tools/run_state.sh $v c abc1234"
+done
 expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: contributor refuses a reset" 2 "git reset is not" guard contributor 'git reset --hard HEAD~1'
 expect "guard: contributor refuses another git configuration" 2 "a git configuration override: -c core.hooksPath=tmp" guard contributor 'git -c core.hooksPath=tmp commit -m x'
