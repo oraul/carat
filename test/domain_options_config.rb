@@ -213,6 +213,27 @@ module DomainOptionsConfigTest
     end
     t.assert_equal("auto", options.breadcrumbs, "the shipped configuration shows breadcrumbs with two or more file windows")
 
+    # option.showtabline: when the tab row shows (config-files scenarios):
+    # "A value from a line"
+    # "A value out of range"
+    # Rows are [label, project lines, [value, problems]]; Options.new keeps
+    # 1, the shipped file says 2.
+    t.table([
+      ["1 by default for an Options built in code", "", [1, []]],
+      ["0 is stored", "option.showtabline 0\n", [0, []]],
+      ["2 is stored", "option.showtabline 2\n", [2, []]],
+      ["a later line wins", "option.showtabline 0\noption.showtabline 1\n", [1, []]],
+      ["3 is refused and keeps the value before it", "option.showtabline 0\noption.showtabline 3\n", [0, [".caratrc:2: option.showtabline takes a number from 0 to 2"]]],
+      ["a negative number is refused", "option.showtabline -1\n", [1, [".caratrc:1: option.showtabline takes a number"]]],
+      ["a word is refused", "option.showtabline always\n", [1, [".caratrc:1: option.showtabline takes a number"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      read = D::Options.from_config(config)
+      [read.showtabline, config.report]
+    end
+    t.assert_equal(2, options.showtabline, "The shipped default is 2: the shipped configuration always shows the tab row")
+
     # option.winborder: the float border. Rows are [label, project lines,
     # [style, problems]]. Scenarios: The shipped border is rounded (the
     # assertion after the table), An unknown border style.

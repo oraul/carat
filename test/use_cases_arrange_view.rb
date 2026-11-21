@@ -31,6 +31,18 @@ module UseCasesArrangeViewTest
     [window.row, window.col, window.height, window.width]
   end
 
+  # Whether the row shows under showtabline with tab pages and files listed.
+  #: (Integer, Integer, Integer) -> bool
+  def self.tab_row_case(showtabline, tab_pages, files)
+    list = D::BufferList.new(tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: [""], path: nil, line_ending: "\n"))))
+    n = 0
+    while n < files
+      list.add(D::Buffer.new(lines: [""], path: "f#{n}.txt", line_ending: "\n"))
+      n += 1
+    end
+    list.tab_row?(tab_pages, showtabline)
+  end
+
   def self.main
     t = Carat::Testing.new("use_cases_arrange_view")
 
@@ -50,17 +62,40 @@ module UseCasesArrangeViewTest
 
     # Two listed file buffers, or two tab pages, give the top row to the
     # buffer tabs; a scratch buffer does not count.
-    t.assert_equal([false, false, true], [listed.tab_row?(1), listed.tab_row?(0), listed.tab_row?(2)], "one tab page and no files has no tabs row, two tab pages have one")
+    t.assert_equal([false, false, true], [listed.tab_row?(1, 1), listed.tab_row?(0, 1), listed.tab_row?(2, 1)], "one tab page and no files has no tabs row, two tab pages have one")
     listed.add(D::Buffer.new(lines: [""], path: "a.txt", line_ending: "\n"))
     scratch = D::Buffer.new(lines: [""], path: nil, line_ending: "\n")
     scratch.owner = "tree"
     scratch.title = "tree"
     listed.add(scratch)
-    t.assert_equal(false, listed.tab_row?(1), "one file and a scratch buffer have no tabs row")
+    t.assert_equal(false, listed.tab_row?(1, 1), "one file and a scratch buffer have no tabs row")
     listed.add(D::Buffer.new(lines: [""], path: "b.txt", line_ending: "\n"))
     arrange.call(s)
     t.assert_equal([1, 0, 7, 40], rect(s.window), "with two files listed the window starts under the tabs row")
     listed.remove(listed.buffer_at(2))
+    arrange.call(s)
+
+    # showtabline (buffer-tabs): 0 never shows the row, 1 only from two
+    # tab pages or files, 2 always. Rows are [label, [showtabline, tab
+    # pages, files], row shown].
+    t.cases([
+      ["0 hides the row with two files and two tab pages", [0, 2, 2], false],
+      ["1 hides the row with one tab page and one file", [1, 1, 1], false],
+      ["1 shows the row with two tab pages", [1, 2, 1], true],
+      ["1 shows the row with two files", [1, 1, 2], true],
+      ["2 shows the row with one tab page and no file", [2, 1, 0], true],
+      ["2 shows the row with one tab page and one file", [2, 1, 1], true]
+    ]) { |input| tab_row_case(input[0].to_i, input[1].to_i, input[2].to_i) }
+    t.assert_equal(false, listed.tab_row?(1, 1), "one file is listed before the option is set")
+    s.options.showtabline = 2
+    arrange.call(s)
+    t.assert_equal([1, 0, 7, 40], rect(s.window), "with showtabline 2 one file has the row and the window starts under it")
+    listed.add(D::Buffer.new(lines: [""], path: "b.txt", line_ending: "\n"))
+    s.options.showtabline = 0
+    arrange.call(s)
+    t.assert_equal([0, 0, 8, 40], rect(s.window), "with showtabline 0 two files leave the window at row 0")
+    listed.remove(listed.buffer_at(listed.count - 1))
+    s.options.showtabline = 1
     arrange.call(s)
 
     # Vertical scrolling to the cursor, both ways, with scrolloff.

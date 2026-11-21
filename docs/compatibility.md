@@ -494,7 +494,7 @@ Differences from Neovim: the top row lists buffers rather than tab pages, as buf
 
 ## Status bar and buffer tabs
 
-One status bar on the row above the message row serves every window, as `laststatus=3`, and the top row lists the buffers, as the bufferline plugins do; neither is an option yet.
+One status bar on the row above the message row serves every window, as `laststatus=3`, and the top row lists the buffers, as the bufferline plugins do; the bar is not an option yet, the top row's showing is `option.showtabline`.
 
 | Part | Behavior | Test |
 | --- | --- | --- |
@@ -508,9 +508,10 @@ One status bar on the row above the message row serves every window, as `laststa
 | File type, encoding | The filetype when there is one (30) and `utf-8` (20) | `adapters_status_bar` |
 | Position, percent | `row:col` (80) and `All`, `Top`, `Bot`, or `N%` (50) | `adapters_status_bar`, `editor_screen` |
 | Narrow bar | Whole segments dropped, lowest priority first and the later of equals first, until the rest fit | `adapters_status_bar` |
-| Buffer tabs | From two listed file buffers or two tab pages: a tab per file buffer with its icon, name, and modified icon and a thin `│` (`|` under ascii) after it, the current window's in `TabLineSel` (accent background and bold, no gem); the tabs that do not fit counted as ` <N ` and ` N> `; the tab-page numbers at the right end | `adapters_tab_bar`, `editor_tabs` |
+| Buffer tabs | Under `option.showtabline` 2 (shipped) always, under 1 from two listed file buffers or two tab pages, under 0 never: a tab per file buffer with its icon, name, and modified icon and a thin `│` (`|` under ascii) after it, the current window's in `TabLineSel` (accent background and bold, no gem); the tabs that do not fit counted as ` <N ` and ` N> `; the tab-page numbers at the right end | `adapters_tab_bar`, `editor_tabs`, `adapters_frame_presenter`, `use_cases_arrange_view` |
+| `option.showtabline` | 0, 1, or 2: the row never shows, shows only from two files or two tab pages, or always (default 2, as Neovim's `showtabline=2` that tabline plugins expect); a value out of range or a word is `file:line: option.showtabline takes a number from 0 to 2` and keeps the one before it; `:set showtabline=N` and `:set stal=N` answer `Not implemented: :set showtabline=N`, `:set` coming with set-options | `domain_options_config`, `editor_syntax`, `adapters_frame_presenter` |
 
-Differences from Neovim: there is no `laststatus`, `showtabline`, `statusline`, or `tabline` option, no winbar, and no per-window status line; tabs are not clickable and equal file names are not told apart; the encoding is always `utf-8`.
+Differences from Neovim: there is no `laststatus`, `statusline`, or `tabline` option, `showtabline` is read from `option.*` lines only (`:set` answers Not implemented) and shows or hides the buffer tabs row, not a tab pages row, no winbar, and no per-window status line; tabs are not clickable and equal file names are not told apart; the encoding is always `utf-8`.
 
 ## File explorer
 
@@ -679,4 +680,4 @@ Differences from Neovim: Neovim's `winborder` is empty by default, drawing no bo
 
 ## Options read so far
 
-`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `startscreen` and `reducedmotion` (Start screen), `indentguides` and `indentguides.char` (Indent guides), `list` and `listchars` (Whitespace marks), `winborder` (Float borders), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.
+`number`, `relativenumber`, `tabstop`, `shiftwidth`, `expandtab`, `autoindent`, `scroll`, `scrolloff`, `timeoutlen`, `keyhints.delay` (Key hints), `layout.left_width`, `layout.right_width`, and `layout.panel_height` (Layout slots), `breadcrumbs` (Breadcrumbs), `undolevels`, `icons`, `theme`, and `background` (Themes), `showtabline` (Status bar and buffer tabs), `startscreen` and `reducedmotion` (Start screen), `indentguides` and `indentguides.char` (Indent guides), `list` and `listchars` (Whitespace marks), `winborder` (Float borders), from the `option.*` lines of the configuration files; `ignorecase`, `smartcase`, `hlsearch`, `incsearch`, and `cursorline` from those lines and `:set` (Neovim's defaults: off, off, on, on, off; the shipped configuration turns `smartcase` and `cursorline` on); `filetype` and `syntax` per buffer, set by `:set`. `scrolloff` is capped at half the window height as in Neovim. `scroll` of 0 scrolls half the window, as in Neovim, but the option is global. `shiftwidth` of 0 uses `tabstop`, as in Neovim.

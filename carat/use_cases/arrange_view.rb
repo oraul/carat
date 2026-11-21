@@ -48,7 +48,7 @@ module Carat
         return if rows <= 0 || cols <= 0
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        tabline = @buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
+        tabline = @buffers.tab_row?(state.tabs.tab_count, options.showtabline) ? 1 : 0
         area = rows - 1 - tabline
         area = 1 if area < 1
         layout = state.tab.layout

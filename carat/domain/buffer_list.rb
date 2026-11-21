@@ -1,6 +1,7 @@
 require_relative "position"
 require_relative "buffer"
 require_relative "buffer_feed"
+require_relative "options"
 require_relative "tab_list"
 
 module Carat
@@ -217,10 +218,13 @@ module Carat
         total
       end
 
-      # Whether the top row of buffer tabs shows: from two tabbed file
-      # buffers or two tab pages.
-      #: (Integer) -> bool
-      def tab_row?(tab_count)
+      # Whether the top row of buffer tabs shows under showtabline: never
+      # at 0, from two tabbed file buffers or two tab pages at 1, always
+      # at 2.
+      #: (Integer, Integer) -> bool
+      def tab_row?(tab_count, showtabline)
+        return false if showtabline == Options::SHOWTABLINE_NEVER
+        return true if showtabline == Options::SHOWTABLINE_ALWAYS
         tab_count > 1 || file_count > 1
       end
 

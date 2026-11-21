@@ -127,6 +127,14 @@ ok   the second tab page's window is drawn
 ok   with one tab page and no files listed there is no tabs row
 ok   two listed files show their tabs, the current one selected
 ok   the selected tab's icon is in the selected group, TabLineSel
+ok   0 shows no row with one file
+ok   0 shows no row with two files
+ok   1 shows no row with one file
+ok   1 shows the row with two files, the current tab first
+ok   2 shows the row with one file
+ok   2 shows the row with two files
+ok   2 shows the modified mark after the name of the one file
+ok   2 shows the row with no file listed
 ok   No signs: no sign column
 ok   One sign: the sign sits in its one cell and the numbers move right by one
 ok   the sign column is one cell in SignColumn, the next cell is the number column's
@@ -226,4 +234,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 228 passed, 0 failed
+adapters_frame_presenter: 236 passed, 0 failed
