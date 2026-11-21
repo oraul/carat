@@ -13,4 +13,4 @@
 
 ## 3. Docs
 
-- [ ] 3.1 README, `docs/compatibility.md`, `docs/actions.md`, `docs/codebase-map.md`
+- [ ] 3.1 README, `docs/compatibility.md`, `docs/actions.md`, `docs/codebase-map.md`, the `FilePort` row of `docs/architecture.md` section 6

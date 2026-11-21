@@ -34,7 +34,7 @@ None.
 ## Impact
 
 - README.md: changed, the command-line paragraph.
-- docs/architecture.md: unchanged, no layer, port contract, or Spinel rule moves: `list_first` is one more request of the existing file port, which section 6 does not enumerate.
+- docs/architecture.md: changed, the `FilePort` row of section 6 names `list_first`.
 - docs/codebase-map.md: area 12 (the use cases, the handler, the record, the test) and area 17 (the port request).
 - docs/compatibility.md and docs/actions.md: the command-line rows and `<S-Tab>`.
 - Performance: one comparison per key in `HandleKey#follow` while no menu shows; the popup is built only on `<Tab>`.
