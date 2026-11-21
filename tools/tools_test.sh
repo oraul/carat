@@ -542,6 +542,11 @@ case "$REACH" in
   ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
   gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-untracked) : > "$MAIN/forged" ;;
+  main-build) mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" ;;
+  main-bin) mkdir -p "$MAIN/build/bin" && echo forged > "$MAIN/build/bin/carat" ;;
+  main-build-gitconfig)
+    mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" &&
+      git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-reset) git -C "$MAIN" reset -q --hard "$(git -C "$TOP" rev-parse HEAD)" ;;
   concurrent)
     touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
@@ -562,8 +567,18 @@ expect "run_state: a stage writing its clone's toolchain leaves the shared one" 
   sh -c 'cat tmp/.toolchain/lib/spin tmp/.toolchain/bin/spinel | tr "\n" " "'
 expect "run_state: check leaves Spinel's checkout out of its clone" 0 "every stage passed" reach no-spinel
 expect "run_state: a stage that changes the shared toolchain by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]toolchain/lib/spin$" reach toolchain
-expect "run_state: a check failed by a write outside its clone ends in a verdict line" 0 "^check: stage none failed at " tail -1 build/stages/isolated/check.log
+# lane-isolation: a write outside the clone while every stage exited 0
+# that no other lane makes (the shared toolchain here) still fails the
+# check, its fix round as before; the passes it wrote read as not passing,
+# so no later check reuses them, and its paths stay in a security-escape
+# note, which a rerun's log does not rewrite.
+expect "run_state: a check voided by a write to the shared toolchain ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a voided check's stage records read as not passing" 0 "^escaped [0-9]+s [0-9a-f]{12} " state get isolated stage.reach
+expect "run_state: a voided check records its escaped paths in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/tmp/[.]toolchain/lib/spin" cat build/pipeline/isolated.json
 echo spin > tmp/.toolchain/lib/spin
+expect "run_state: a later check backed at the head reuses no stage record of an escaped check" 0 "^stage reach: exit 0" \
+  env STAGES=reach MAKE="$work/bin/reach-make" TOP="$iso_top" REACH=inside REACH_OUT="$work/reach.out" \
+    TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated "$(git rev-parse --short=12 HEAD)"
 expect "run_state: a stage that writes Spinel's checkout by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]spinel/planted$" reach spinel
 rm tmp/.spinel/planted
 expect "run_state: a stage that writes a tracked file of the delivery clone by an absolute path fails the check" 1 "^[|] $iso_top/README[.]md$" reach tracked
@@ -658,7 +673,7 @@ expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE line
 # leave it passing.
 lane_reach() {
   env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
-    HOME="${REACH_HOME:-$HOME}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+    HOME="${REACH_HOME:-$HOME}" LANE_WRITTEN="${REACH_OWNED:-}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 }
 main_head=$(git -C "$iso_top" rev-parse HEAD)
 expect "run_state: a stage that writes a tracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main
@@ -690,6 +705,35 @@ git_q update-ref -d refs/heads/forged
 mkdir -p "$work/home"
 REACH_HOME="$work/home"
 expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
+expect "run_state: a write to HOME's git configuration from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+rm "$work/home/.gitconfig"
+# lane-isolation: from a lane, files changed only under a path of the main
+# checkout's build/ that LANE_WRITTEN names as another lane's end in an
+# escaped verdict, which the workflow reruns with no fix round; with none
+# named (the default), a path outside the named ones, such as the release
+# binary build/bin/carat, or one more path elsewhere fails the check.
+expect "run_state: a write to the main checkout's build/metrics from a lane, LANE_WRITTEN unset, voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write to the main checkout's build/metrics from a lane, LANE_WRITTEN unset, ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write to the main checkout's build/bin/carat from a lane voids the check" 1 "^[|] $iso_top/build/bin/carat$" lane_reach main-bin
+expect "run_state: a write to the main checkout's build/bin/carat from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write to the main checkout's build/bin/carat from a lane records its path in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/build/bin/carat" cat build/pipeline/isolated.json
+REACH_OWNED=build/metrics
+expect "run_state: a write only under a LANE_WRITTEN path of the main checkout's build/ from a lane voids the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write only under a LANE_WRITTEN path of the main checkout's build/ from a lane ends in an escaped verdict line" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: an escaped check from a lane records its paths in a security-escape note" 0 "security-escape escaped check at [0-9a-f]{12}: $iso_top/build/metrics/current[.]tsv" cat build/pipeline/isolated.json
+expect "run_state: a write to the main checkout's build/bin/carat beside a LANE_WRITTEN path voids the check" 1 "^[|] $iso_top/build/bin/carat$" lane_reach main-bin
+expect "run_state: a write to the main checkout's build/bin/carat beside a LANE_WRITTEN path ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+expect "run_state: a write under a LANE_WRITTEN path and to HOME's git configuration from a lane fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach main-build-gitconfig
+expect "run_state: a write under a LANE_WRITTEN path beside one elsewhere ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=build/met
+expect "run_state: a LANE_WRITTEN path covers whole path segments, so build/met leaves build/metrics voiding the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write beside a LANE_WRITTEN path's prefix ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=build/../build/metrics
+expect "run_state: a LANE_WRITTEN entry naming a .. segment is ignored, the write voiding the check" 1 "^[|] $iso_top/build/metrics/current[.]tsv$" lane_reach main-build
+expect "run_state: a write under an ignored LANE_WRITTEN entry ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=
+rm -r "$iso_top/build/bin"
+rm -r "$iso_top/build/metrics"
 REACH_HOME=
 rm -r "$work/home"
 # The lane's commit the main checkout fast-forwards to adds a tracked file
@@ -856,7 +900,7 @@ expect "run_state: the check after a finishing runner leaves no runner behind" 1
 # The workflow reruns a check whose verdict says it did not finish, and
 # sends only a failure to a fix round: its RERUN_WORDS are this script's.
 rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")
-for word in killed superseded running none; do
+for word in killed superseded escaped running none; do
   expect "run_state: the workflow reruns a $word check with no fix round" 0 "[(|]$word[|)]" echo "$rerun"
 done
 expect "run_state: the workflow sends only a failed check to a fix round" 1 "^0$" sh -c 'printf "%s\n" "$1" | grep -c -E "failed|passed"' _ "$rerun"
@@ -1058,6 +1102,14 @@ chmod +x "$work/bin/metrics-make"
 env STAGES="metrics" MAKE="$work/bin/metrics-make" METRICS_OUT="$work/metrics/out.tsv" sh "$here/run_state.sh" check compiled > "$work/compiled.out" 2>&1
 expect "run_state: check runs the metrics stage in its clone without METRICS_OUT" 0 "^stage metrics: exit 0" cat "$work/compiled.out"
 expect "run_state: check copies the clone's metrics to METRICS_OUT" 0 "^rounds	7$" cat "$work/metrics/out.tsv"
+# lane-isolation: without METRICS_OUT, a check run from the main checkout
+# while the change's lane exists copies them under the lane.
+mkdir -p tmp/.lane-compiled
+rm -rf build/metrics
+env STAGES="metrics" MAKE="$work/bin/metrics-make" METRICS_OUT= sh "$here/run_state.sh" check compiled > "$work/compiled.out" 2>&1
+expect "run_state: a check's metrics land under the change's lane" 0 "^rounds	7 none$" \
+  sh -c 'echo "$(cat tmp/.lane-compiled/build/metrics/current.tsv) $([ -e build/metrics ] && echo main || echo none)"'
+rm -rf tmp/.lane-compiled
 rm -rf "$work/compiled.out" "$work/metrics"
 
 fresh pushing
@@ -1071,6 +1123,13 @@ commit "chore: more"
 # pushed before the branch.
 expect "run_state: backup is no longer a command" 2 "" state backup pushing
 expect "run_state: restore is no longer a command" 2 "" state restore pushing
+# lane-isolation: a lane queue over its budget at HEAD never reaches CI.
+awk 'BEGIN { for (i = 0; i < 140; i++) printf "%079d\n", 0 }' > docs/queue-backlog.md
+commit "docs: an over-budget backlog queue"
+expect "run_state: push refuses a lane queue over its budget at HEAD" 1 "push: refused: docs/queue-backlog[.]md is 11200 bytes at HEAD, 207 over the backlog lane's budget of 10993" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+rm docs/queue-backlog.md
+commit "docs: no backlog queue"
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -2066,7 +2125,7 @@ mkdir -p build/metrics
 printf 'rounds.carat\t2\nallocs.lh\t27.0\nus.lh\t60.0\n' > build/metrics/current.tsv
 { printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
 expect "run_state: bench passes the same figures" 0 "same allocations and rounds" bench
-expect "run_state: bench compares through make metrics-compare" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv$" bench
+expect "run_state: bench compares through make metrics-compare" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv METRICS_OUT=build/metrics/current[.]tsv$" bench
 expect "run_state: bench writes the last row as a base" 0 "^allocs[.]lh[[:space:]]27$" cat build/metrics/last.tsv
 expect "run_state: bench records the measurement" 0 "^60[.]0$" state get bench metric.us.lh
 printf 'rounds.carat\t2\nallocs.lh\t28.0\n' > build/metrics/current.tsv
@@ -2080,6 +2139,16 @@ expect "run_state: bench writes the pending change's figures as a base" 0 "^allo
 printf 'rounds.carat\t2\nallocs.lh\t27.0\n' > build/metrics/current.tsv
 expect "run_state: bench names a figure that differs from the pending change's" 1 "^allocs[.]lh 28[.]0 -> 27[.]0$" bench
 rm build/pipeline/merged-first.json
+# lane-isolation: run from the main checkout while the change's lane
+# exists, bench reads and writes the lane's metrics, none in the main
+# checkout's shared build/.
+mkdir -p tmp/.lane-bench/build/metrics
+cp build/metrics/current.tsv tmp/.lane-bench/build/metrics/current.tsv
+rm -f build/metrics/last.tsv
+expect "run_state: bench from the main checkout compares the lane's metrics" 0 "^make --no-print-directory metrics-compare BASE_METRICS=tmp/[.]lane-bench/build/metrics/last[.]tsv METRICS_OUT=tmp/[.]lane-bench/build/metrics/current[.]tsv$" bench
+expect "run_state: bench's files land under the lane, none in the main checkout's build/" 0 "^lane none$" \
+  sh -c 'echo $([ -f tmp/.lane-bench/build/metrics/last.tsv ] && echo lane) $([ -f build/metrics/last.tsv ] && echo main || echo none)'
+rm -rf tmp/.lane-bench
 state init merged-bare chore/merged-bare > /dev/null
 state set merged-bare merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: bench does not compare with a pending change without figures" 1 "has no recorded allocations or rounds" \
@@ -2761,6 +2830,27 @@ expect "run_state: a feature package step leaves the backlog lane's queue and hi
 commit "docs: the f2 records"
 expect "run_state: two lanes' records share no file" 0 "^none$" sh -c "git diff --name-only $lanes_base chore/b2 | sort > '$work/b2.files'; git diff --name-only $lanes_base feature/f2 | sort > '$work/f2.files'; echo \$(comm -12 '$work/b2.files' '$work/f2.files' | grep -c . | sed 's/^0$/none/')"
 expect "run_state: two lanes' records merge cleanly" 0 "" git_q merge -q --no-edit chore/b2
+# lane-isolation: plan-apply fits the lane's queue within its budget
+# before the push, dropping Decisions bullets from the last up, or
+# refuses with the bytes over, the queue left as it was.
+fit_plan() {
+  mkdir -p build/plan/b3
+  printf '# Queue\n\n1. `b3` (T4, estimated small): the fit.\n\n## Pool\n\n' > build/plan/b3/queue-backlog.md
+  awk -v n="$(($1 - $(wc -c < build/plan/b3/queue-backlog.md)))" \
+    'BEGIN { while (n > 0) { k = n > 80 ? 80 : n; s = sprintf("%*s", k - 1, ""); gsub(/ /, "x", s); print s; n -= k } }' >> build/plan/b3/queue-backlog.md
+  printf '## Decisions\n\n- Keep (T1): first.\n- Drop (T2): second,\n  wrapped.\n- Drop (T3): third.\n' >> build/plan/b3/queue-backlog.md
+}
+fit_plan 10937
+expect "run_state: plan-apply trims an over-budget lane queue's last Decisions lines" 0 "dropped the last 2 Decisions line[(]s[)] of docs/queue-backlog[.]md to fit the backlog lane's budget of 10993 bytes" state plan-apply b3
+expect "run_state: the trimmed queue fits and keeps its items and first Decisions line" 0 "^10971 1 1 0$" \
+  sh -c 'echo $(wc -c < docs/queue-backlog.md) $(grep -c "^1[.] .b3." docs/queue-backlog.md) $(grep -c "Keep (T1)" docs/queue-backlog.md) $(grep -c "wrapped" docs/queue-backlog.md)'
+fit_before=$(cksum < docs/queue-backlog.md)
+fit_plan 11100
+expect "run_state: plan-apply refuses a lane queue that dropping every Decisions line cannot fit" 1 "plan-apply: refused: build/plan/b3/queue-backlog[.]md is 11114 bytes with every Decisions line dropped, 121 over the backlog lane's budget of 10993" state plan-apply b3
+expect "run_state: a refused plan-apply leaves the lane queue as it was" 0 "^same none$" \
+  sh -c '[ "$(cksum < docs/queue-backlog.md)" = "$1" ] && echo same $(ls docs/*.fit 2> /dev/null || echo none)' _ "$fit_before"
+git_q checkout -q docs/queue-backlog.md
+rm -rf build/plan/b3
 
 # Each delivery's own worktree (parallel-lanes-b): lane-open makes it under
 # the hidden tmp/ from origin/main, linking the main checkout's toolchain,
@@ -3804,12 +3894,33 @@ docs queuesize
 printf '# Queue\n\n1. `a` (T2, estimated small): one.\n' > docs/queue-backlog.md
 printf '# Queue\n\n1. `b` (T2, estimated small): two.\n' > docs/queue-feature.md
 # The padding, in lines of at most 80 bytes: a single line that long
-# takes the gates of docs_lint.sh seconds to scan.
-awk -v n="$((17969 - $(wc -c < docs/queue-backlog.md) - $(wc -c < docs/queue-feature.md)))" \
-  'BEGIN { while (n > 0) { k = n > 80 ? 80 : n; s = sprintf("%*s", k - 1, ""); gsub(/ /, "x", s); print s; n -= k } }' >> docs/queue-backlog.md
-expect "docs_lint: passes the lane queues at their shared budget" 0 "ok   queue: 2 item" doclint
+# takes the gates of docs_lint.sh seconds to scan. pad FILE BYTES brings
+# FILE to BYTES.
+pad() {
+  awk -v n="$(($2 - $(wc -c < "$1")))" \
+    'BEGIN { while (n > 0) { k = n > 80 ? 80 : n; s = sprintf("%*s", k - 1, ""); gsub(/ /, "x", s); print s; n -= k } }' >> "$1"
+}
+pad docs/queue-backlog.md 10993
+pad docs/queue-feature.md 6976
+expect "docs_lint: passes each lane queue at its own budget" 0 "ok   queue: 2 item" doclint
+# lane-isolation: one lane's queue over its own budget fails only that
+# lane's docs-lint; a full run, on main or in CI, names the file.
+echo x >> docs/queue-backlog.md
+expect "docs_lint: refuses a lane queue over its own budget" 1 "FAIL queue: docs/queue-backlog[.]md is 10995 bytes, over the backlog lane's budget of 10993" doclint
+expect "docs_lint: the backlog lane's queue over its budget fails the backlog lane's check" 1 "FAIL queue: docs/queue-backlog[.]md is 10995 bytes" env DOCS_LINT_LANE=backlog sh "$here/docs_lint.sh" .
+expect "docs_lint: the backlog lane's queue over its budget leaves the feature lane's check passing" 0 "ok   queue: 1 item[(]s[)] with a tier and a size, the feature lane" env DOCS_LINT_LANE=feature sh "$here/docs_lint.sh" .
+git_q init -q .
+git_q checkout -q -b feature/f
+expect "docs_lint: a feature branch checks only the feature lane's queue" 0 "ok   queue: 1 item[(]s[)] with a tier and a size, the feature lane" doclint
+git_q checkout -q -b chore/c
+expect "docs_lint: another branch type checks the backlog lane's queue" 1 "FAIL queue: docs/queue-backlog[.]md is 10995 bytes" doclint
+expect "docs_lint: the queue naming the checked change names its lane, over the branch type" 0 "the feature lane" env DOCS_LINT_CHANGE=b sh "$here/docs_lint.sh" .
+expect "docs_lint: a sprint's records change checks both lanes" 1 "FAIL queue: docs/queue-backlog[.]md is 10995 bytes" env DOCS_LINT_CHANGE=sprint-9-records DOCS_LINT_LANE= sh "$here/docs_lint.sh" .
+rm -rf .git
+sed -i '$d' docs/queue-backlog.md
 echo x >> docs/queue-feature.md
-expect "docs_lint: refuses the lane queues over their shared budget" 1 "FAIL queue: the lane queues are 17971 bytes together, over their budget of 17969" doclint
+expect "docs_lint: the feature lane's queue over its budget fails a full run" 1 "FAIL queue: docs/queue-feature[.]md is 6978 bytes, over the feature lane's budget of 6976" doclint
+expect "docs_lint: the feature lane's queue over its budget leaves the backlog lane's check passing" 0 "the backlog lane" env DOCS_LINT_LANE=backlog sh "$here/docs_lint.sh" .
 docs sprint
 printf '# Queue\n\n## Sprint 2\n\n1. `b` (T1 pipeline defect, estimated small): two.\n2. `c` (T0 pipeline, estimated small): three.\n\n## Pool\n\n3. `d` (T1 pipeline, estimated small): four.\n' > docs/queue-backlog.md
 expect "docs_lint: a T0 pipeline item does not count" 0 "ok   queue: 3 item" doclint
@@ -4957,6 +5068,10 @@ expect "workflow: a passing check starts no checker relay" 0 '^\[false,false,fal
   check_js "['check: every stage passed at abc1234', 'run_state: check: refused: the tracked tree is dirty', 'check: stage test-run killed at abc1234; read build/stages/c/test-run.log'].map((l) => checkerNeeded(checkVerdict(l)))"
 expect "workflow: a failed stage starts the checker to read its log" 0 '^true$' \
   check_js "checkerNeeded(checkVerdict('check: stage lint failed at abc1234; read build/stages/c/lint.log'))"
+# lane-isolation: an escaped check, every stage at exit 0 and files
+# outside its clone changed, starts no checker, no fix round, and reruns.
+expect "workflow: an escaped check starts no checker relay and reruns with no fix round" 0 '^\[false,"escaped","none","rerun"\]$' \
+  js "$wf" "COMMIT sameCommit settled SETTLED checkVerdict checkerNeeded RERUN_WORDS checkOutcome" "(() => { globalThis.head = 'abc1234'; const l = 'check: stage none escaped at abc1234; read build/stages/c/check.log'; const v = checkVerdict(l); return [checkerNeeded(v), v.kind, v.stage, checkOutcome(l, 'abc1234', '')] })()"
 expect "workflow: the check lines run spent and bench only after the check" 0 '^\["sh tools/run_state[.]sh metric c rework=0; sh tools/run_state[.]sh check c abc1234","sh tools/run_state[.]sh spent c; sh tools/run_state[.]sh bench c","",true,true\]$' \
   check_js "(l => [l.check, l.passed, l.moved, checkRunTask(l).indexOf(l.check) < checkRunTask(l).indexOf('Only when that line begins'), checkRunTask(l).includes('read nothing else')])(checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=0'))"
 expect "guard: the checker's run start may run the check lines" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=0; sh tools/run_state.sh check c abc1234; sh tools/run_state.sh spent c; sh tools/run_state.sh bench c; sh tools/run_state.sh moved c abc1234'

@@ -23,8 +23,11 @@
 #             heading, are 0 to 3 in the feature lane and 0 to 2 in the
 #             backlog lane, at most one of them saying "pipeline" in its
 #             parenthesis without T0, and that one a defect, unless a line
-#             of that section begins "The user-approved exception"; both
-#             files together within QUEUE_BUDGET
+#             of that section begins "The user-approved exception"; each
+#             file within its lane's budget, QUEUE_BUDGET_FEATURE or
+#             QUEUE_BUDGET_BACKLOG; only the lane being checked
+#             (own_lane, DOCS_LINT_LANE feature, backlog, or all), both on
+#             main, a detached head, or a sprint's records change
 #   required  each file of REQUIRED exists (docs/design.md, the binding look)
 #   histories every non-blank row of each lane history, docs/metrics-*.tsv,
 #             has as many tab-separated fields as its line 1, the header
@@ -56,10 +59,14 @@ BUDGETS="CLAUDE.md 30720
 .claude/agents/*.md 8192
 .claude/agents/contributor.md 6999
 docs/architecture.md 88064"
-# The two lane queues share one budget, what the planner rewrites and every
-# agent may read at a start: the one queue's 17,369 bytes before the lanes
-# and 600 for the second file's title and opening line.
-QUEUE_BUDGET=17969
+# Each lane queue's own budget, what the planner rewrites and every agent
+# may read at a start, so one lane's growth never fails the other lane's
+# check (lane-isolation): together the one queue's 17,369 bytes before the
+# lanes and 600 for the second file's title and opening line, split by the
+# queues' sizes at fa889a3 (feature 6,884, backlog 10,901) with 92 bytes of
+# headroom each. tools/run_state.sh reads them (queue_budget).
+QUEUE_BUDGET_FEATURE=6976
+QUEUE_BUDGET_BACKLOG=10993
 
 # The paths a change retired that the backlog files, the documents keeping
 # older entries as they were written, may still name: the one queue and
@@ -179,40 +186,72 @@ $dead"
   [ $failed -ne $start ] || ok "$(printf '%s\n' "$spans" | grep -c .) path(s) exist"
 }
 
-# The items of each lane queue, lines that start with a number and a
-# period: each names its tier and its size, as the rubric of docs/goals.md
-# asks. A lane's sprint holds at most its share of the sprint of 6 (3 + 3,
-# the user's decision of 2026-11-17), the feature lane 3 and the backlog
-# lane 3; the sprint, both lanes' sprint
-# sections together, holds a pipeline item only for a defect, at most one
-# (T0 exempt), unless a line beginning "The user-approved exception" in
-# either lifts it; both files within QUEUE_BUDGET.
+# The lane being checked: DOCS_LINT_LANE (feature, backlog, or all), else
+# the lane whose queue holds the checked change's item (own_change), else
+# the branch's type, as tools/run_state.sh lane_of falls back: feature/
+# the feature lane, another type the backlog lane. A sprint's records
+# change, which rewrites both queues, main, and a detached head (CI) check
+# all lanes.
+own_lane() {
+  case "${DOCS_LINT_LANE:-}" in
+    feature|backlog|all) echo "$DOCS_LINT_LANE"; return 0 ;;
+  esac
+  if name=$(own_change); then
+    case "$name" in sprint-[0-9]*-records) echo all; return 0 ;; esac
+    for l in feature backlog; do
+      [ -f "docs/queue-$l.md" ] && grep -q -E "^[0-9]+[.] \`$name\` [(]" "docs/queue-$l.md" && { echo "$l"; return 0; }
+    done
+  fi
+  case "$(git symbolic-ref -q --short HEAD 2>/dev/null)" in
+    feature/*) echo feature ;;
+    */*) echo backlog ;;
+    *) echo all ;;
+  esac
+}
+
+# The items of each lane queue checked, lines that start with a number and
+# a period: each names its tier and its size, as the rubric of
+# docs/goals.md asks. A lane's sprint holds at most its share of the
+# sprint of 6 (3 + 3, the user's decision of 2026-11-17), the feature lane
+# 3 and the backlog lane 3; the sprint, the sprint sections checked
+# together, holds a pipeline item only for a defect, at most one (T0
+# exempt), unless a line beginning "The user-approved exception" in one of
+# them lifts it; each file within its lane's budget. A lane's check reads
+# only its own queue (own_lane), so the other lane's file never fails it;
+# the full runs on main and in CI keep the limit across both.
 check_queue() {
   gate=queue
   start=$failed
   total=0
-  bytes=0
   sprints=""
   marked=""
-  for lane in feature:3 backlog:3; do
-    file=docs/queue-${lane%%:*}.md
-    [ -f "$file" ] && check_lane "$file" "${lane#*:}"
+  lane=$(own_lane)
+  for l in feature backlog; do
+    [ "$lane" = all ] || [ "$lane" = "$l" ] || continue
+    file=docs/queue-$l.md
+    [ -f "$file" ] && check_lane "$file" 3 "$l"
   done
+  where="across both lanes"
+  [ "$lane" = all ] || where="in the $lane lane"
   pipeline=$(printf '%s\n' "$sprints" | sed -n 's/^[^(]*(\([^)]*\)).*/\1/p' | grep -w pipeline | grep -v -w T0)
   others=$(printf '%s\n' "$pipeline" | grep . | grep -c -v -w defect)
   pipeline=$(printf '%s\n' "$pipeline" | grep -c .)
   # A line beginning "The user-approved exception" lifts the pipeline
   # limits for its sprint; an item line begins with its number instead.
   [ -n "$marked" ] || { [ "$pipeline" -le 1 ] && [ "$others" -eq 0 ]; } ||
-    bad "the sprint holds $pipeline pipeline items across both lanes, $others of them no defect; at most 1, a defect (T0 exempt), without a line beginning \"The user-approved exception\""
-  [ "$bytes" -le "$QUEUE_BUDGET" ] || bad "the lane queues are $bytes bytes together, over their budget of $QUEUE_BUDGET"
-  [ $failed -ne $start ] || ok "$total item(s) with a tier and a size"
+    bad "the sprint holds $pipeline pipeline items $where, $others of them no defect; at most 1, a defect (T0 exempt), without a line beginning \"The user-approved exception\""
+  if [ $failed -eq $start ]; then
+    if [ "$lane" = all ]; then ok "$total item(s) with a tier and a size"; else ok "$total item(s) with a tier and a size, the $lane lane"; fi
+  fi
 }
 
-# One lane file: its tiers, sizes, and sprint share; its sprint items and
-# exception lines are added to the sprint's for check_queue.
+# One lane file: its bytes against its lane's budget, its tiers, sizes,
+# and sprint share; its sprint items and exception lines are added to the
+# sprint's for check_queue. check_lane FILE SHARE LANE
 check_lane() {
-  bytes=$((bytes + $(wc -c < "$1")))
+  bytes=$(wc -c < "$1")
+  case "$3" in feature) budget=$QUEUE_BUDGET_FEATURE ;; *) budget=$QUEUE_BUDGET_BACKLOG ;; esac
+  [ "$bytes" -le "$budget" ] || bad "$1 is $bytes bytes, over the $3 lane's budget of $budget"
   items=$(grep -n -E '^[0-9]+[.] ' "$1")
   untiered=$(printf '%s\n' "$items" | grep . | grep -v -E '(^|[^A-Za-z0-9])T[0-6]([^0-9]|$)' | cut -c1-80)
   unsized=$(printf '%s\n' "$items" | grep . | grep -v -E 'estimated (small|medium|large)' | cut -c1-80)

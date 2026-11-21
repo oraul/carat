@@ -10,7 +10,8 @@
 #                    commit it started on, with "carried-from-COMMIT" when
 #                    check carried it (below); EXIT is "running" while it
 #                    runs, "killed" when a signal ended it, "superseded"
-#                    when HEAD moved while it ran
+#                    when HEAD moved while it ran, "escaped" when it passed
+#                    in a check that files outside its clone voided
 #   review.KIND      "RESULT COMMIT SUMMARY" (security, quality, bench, and
 #                    periodic-security and periodic-quality after a merge)
 #   at.review.periodic-security
@@ -56,8 +57,12 @@
 # clone for each check (TMPDIR) and removes on exit; every stage runs in
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
 # pipeline, stages, and plan) and METRICS_OUT gets its metrics. The clone
-# holds its own copy of the toolchain; a stage that wrote outside the clone
-# (escaped_paths) fails the check.
+# holds its own copy of the toolchain; files changed outside the clone
+# while every stage exited 0 (escaped_paths) void the check: its passes
+# are rewritten as not passing, the paths kept as a security-escape note,
+# and its verdict reads escaped when every path lies under a path of the
+# main checkout's build/ another lane writes (LANE_WRITTEN, none by
+# default; lane_written), else failed.
 #
 # History: docs/metrics-feature.tsv and docs/metrics-backlog.tsv, one row
 # per merged change in its lane's file (lane), appended by history
@@ -147,7 +152,15 @@
 #                               runs; the last line is the verdict: "check:
 #                               every stage passed at C", "check: stage S
 #                               failed|killed|superseded at C; read LOG" (S
-#                               none before a stage), or "check: still running"
+#                               none before a stage), "check: stage none
+#                               escaped at C; read LOG" when every stage
+#                               exited 0 but files changed outside the clone,
+#                               each under a LANE_WRITTEN path of the main
+#                               checkout's build/ seen from a lane, none by
+#                               default (rerun with no fix round; any
+#                               other path reads "stage none failed"; both
+#                               rewrite its records escaped and note the
+#                               paths), or "check: still running"
 #   scope CHANGE COMMIT [FILE...]
 #                               print "fix: ..." and exit 0 when every path
 #                               changed from COMMIT to HEAD is a FILE or
@@ -422,7 +435,10 @@
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
 # unset), MAKE (make), METRICS_PREFIX (docs/metrics, the lane files
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
-# (build/metrics/current.tsv), CHECK_WAIT (540, seconds check waits),
+# (build/metrics/current.tsv, under tmp/.lane-CHANGE/ when run from the
+# main checkout while that lane exists), CHECK_WAIT (540, seconds check
+# waits), LANE_WRITTEN (none, the paths under the main checkout's build/
+# another lane writes, whose writes alone make a check read escaped),
 # BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
 # date groom files a findings entry with, else the UTC day),
 # SPRINTS_FILE (docs/sprints.tsv), PLAN_DIR (build/plan).
@@ -433,6 +449,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 state_dir=${RUN_STATE_DIR:-build/pipeline}
 stage_dir=${STAGE_DIR:-build/stages}
 make_cmd=${MAKE:-make}
+lane_written_paths=${LANE_WRITTEN:-}
 metrics_prefix=${METRICS_PREFIX:-docs/metrics}
 metrics_files="$metrics_prefix-feature.tsv $metrics_prefix-backlog.tsv"
 backlog_dir=${BACKLOG_DIR:-docs/backlog}
@@ -777,6 +794,61 @@ stage_record() {
 "
 }
 
+# The stage records this runner wrote as passing (runner_records), each
+# rewritten as escaped and its compile record cleared, so no later check
+# reuses a pass that files changed outside the clone voided (compiled_same
+# would skip a compile stage on it), whether the check reads escaped or
+# failed (lane_written). Records of an earlier check stand.
+escaped_records() {
+  for key in $(printf '%s' "$runner_records" | awk '$2 == "0" { print $1 }' | sort -u); do
+    s=${key#stage.}
+    record=$(read_key "$key")
+    case "$record" in
+      "0 "*) stage_record "$key" "escaped $(echo "$record" | cut -d' ' -f2-4)"
+        ! one_of "$s" "$COMPILE_STAGES" || compiled_set "$s" "" ;;
+    esac
+  done
+}
+
+# escaped_note PATHS: records the escaped paths, one per line, as a
+# security-escape note of the run state, so they outlive the check log a
+# rerun rewrites; every byte but a printable one is written "?", so no
+# path a stage names can make write_key refuse the note and the check
+# end with no verdict.
+escaped_note() {
+  add_note security-escape "escaped check at $head: $(printf '%s\n' "$1" | head -n 20 |
+    LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
+}
+
+# lane_written PATHS: true when every escaped path, one per line, is a
+# path of LANE_WRITTEN under the main checkout seen from a lane, or lies
+# under one, which another lane's tools are known to write, so the
+# workflow reruns the check with no fix round. LANE_WRITTEN names none by
+# default: tree_scan leaves out every build/ directory a lane links in
+# (LANE_LINKS), and a lane keeps its metrics and bench logs under itself.
+# A write anywhere else, the rest of the main checkout's build/ included
+# (its release binary build/bin/carat, build/dev, build/test,
+# build/spinel, build/bench, build/metrics), the shared toolchain or
+# Spinel's checkout, the user's git configuration, the git directory, the
+# main checkout's other files, the delivery clone, or its run state, fails
+# the check, its fix round as before (lane-isolation). An entry outside
+# build/ or naming a . or .. segment is ignored.
+lane_written() {
+  [ -n "$main_tree" ] && [ -n "$lane_written_paths" ] || return 1
+  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk '
+    BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
+    { ok = 0
+      for (i = 1; i <= n; i++) {
+        p = owned[i]
+        if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
+        sub(/\/+$/, "", p)
+        full = ENVIRON["MAIN"] p
+        if ($0 == full || index($0, full "/") == 1) ok = 1
+      }
+      if (!ok) other = 1 }
+    END { exit other }'
+}
+
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
 # record reading running, its log NAME.log, and "PID SECONDS COMMIT" in
 # job_dir/NAME.start; the job writes CMD's exit status to
@@ -987,9 +1059,15 @@ check_stages() {
   done
   escaped=$(escaped_paths)
   if [ -n "$escaped" ]; then
-    echo "check: a stage wrote outside its clone, so no pass counts (make toolchain reinstalls a changed toolchain):"
+    echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
     printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
-    echo "check: stage none failed at $head; read $(check_log)"
+    escaped_note "$escaped"
+    escaped_records
+    if lane_written "$escaped"; then
+      echo "check: stage none escaped at $head; read $(check_log)"
+    else
+      echo "check: stage none failed at $head; read $(check_log)"
+    fi
     exit 1
   fi
   # The workflow records phase.check from the checker's result, so a check
@@ -1642,6 +1720,8 @@ push_branch() {
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
+  over=$(queue_over)
+  [ -z "$over" ] || die "push: refused: $over"
   if ! CHANGE=$change sh "$here/gates.sh" pre-push; then
     write_key gates_failed $(($(count gates_failed) + 1))
     die "push: refused: the pre-push gates failed"
@@ -1824,7 +1904,7 @@ bench_compare() {
     return 0
   fi
   echo "bench: comparing with $source"
-  "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last"
+  "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last" "METRICS_OUT=$metrics_out"
   differ=$(awk -F'\t' '
     NR == FNR { if ($1 ~ /^(allocs|rounds)[.]/) base[$1] = $2; next }
     $1 ~ /^(allocs|rounds)[.]/ {
@@ -1964,7 +2044,9 @@ records_change() {
 
 # Applies the delivery planner's directory, PLAN_DIR/CHANGE, for the
 # change's lane (lane_of) only: its queue over that lane's docs/ queue,
-# the other lane's queue file left and named, goals.md over docs/goals.md,
+# fitted within the lane's budget (queue_fit) or refused with the bytes
+# over, the queue then left as it was; the other lane's queue file left
+# and named, goals.md over docs/goals.md,
 # and backlog.md appended to the change's findings file. Two lanes' package
 # steps so write no common record.
 plan_apply() {
@@ -1972,8 +2054,16 @@ plan_apply() {
   lane=$(lane_of)
   if [ ! -d "$dir" ]; then echo "plan-apply: no plan in $dir/; nothing applied"; return 0; fi
   if [ -f "$dir/queue-$lane.md" ]; then
-    cp "$dir/queue-$lane.md" "docs/queue-$lane.md" || die "plan-apply: docs/queue-$lane.md not written"
+    fit="docs/queue-$lane.md.fit"
+    cp "$dir/queue-$lane.md" "$fit" || die "plan-apply: $fit not written"
+    if ! queue_fit "$lane" "$fit"; then
+      rm -f "$fit"
+      die "plan-apply: refused: $dir/queue-$lane.md is $fit_bytes bytes with every Decisions line dropped, $((fit_bytes - fit_budget)) over the $lane lane's budget of $fit_budget (tools/docs_lint.sh); docs/queue-$lane.md left as it was"
+    fi
+    mv "$fit" "docs/queue-$lane.md" || die "plan-apply: docs/queue-$lane.md not written"
     echo "plan-apply: copied $dir/queue-$lane.md over docs/queue-$lane.md"
+    [ "$fit_dropped" -eq 0 ] ||
+      echo "plan-apply: dropped the last $fit_dropped Decisions line(s) of docs/queue-$lane.md to fit the $lane lane's budget of $fit_budget bytes"
   fi
   for l in feature backlog; do
     [ "$l" = "$lane" ] || [ ! -f "$dir/queue-$l.md" ] || echo "plan-apply: left $dir/queue-$l.md, of the $l lane, which $change's package step never applies"
@@ -1986,6 +2076,46 @@ plan_apply() {
     mkdir -p "$findings_dir" && cat "$dir/backlog.md" >> "$findings_dir/$change.md" || die "plan-apply: $findings_dir/$change.md not appended"
     echo "plan-apply: appended $dir/backlog.md to $findings_dir/$change.md"
   fi
+}
+
+# queue_budget LANE: the lane queue's byte budget, QUEUE_BUDGET_FEATURE or
+# QUEUE_BUDGET_BACKLOG of tools/docs_lint.sh, its one source.
+queue_budget() {
+  case "$1" in
+    feature) sed -n 's/^QUEUE_BUDGET_FEATURE=\([0-9][0-9]*\)$/\1/p' "$here/docs_lint.sh" ;;
+    backlog) sed -n 's/^QUEUE_BUDGET_BACKLOG=\([0-9][0-9]*\)$/\1/p' "$here/docs_lint.sh" ;;
+  esac
+}
+
+# queue_fit LANE FILE: fits the lane queue FILE within its lane's budget
+# before the push (lane-isolation), as the planner's trims do: drops the
+# "- " bullets of its "## Decisions" section, each with its indented
+# continuation lines, from the last up, never an item. Sets fit_budget,
+# fit_bytes, and fit_dropped; false when dropping every one is not enough.
+queue_fit() {
+  fit_budget=$(queue_budget "$1")
+  fit_dropped=0
+  [ -n "$fit_budget" ] || die "queue: no budget for the $1 lane in $here/docs_lint.sh"
+  fit_bytes=$(wc -c < "$2")
+  while [ "$fit_bytes" -gt "$fit_budget" ]; do
+    last=$(awk '/^## / { on = ($0 == "## Decisions"); next } on && /^- / { n = NR } END { print n + 0 }' "$2")
+    [ "$last" -gt 0 ] || return 1
+    awk -v n="$last" 'NR == n { drop = 1; next } drop && /^[ \t]+[^ \t]/ { next } { drop = 0; print }' "$2" > "$2.tmp" &&
+      mv "$2.tmp" "$2" || die "queue: $2 not written"
+    fit_dropped=$((fit_dropped + 1))
+    fit_bytes=$(wc -c < "$2")
+  done
+}
+
+# queue_over: why the lane queue committed at HEAD is over its budget,
+# nothing when it fits, so a push never takes CI a queue its check did
+# not see (an edit after plan-apply).
+queue_over() {
+  lane=$(lane_of)
+  budget=$(queue_budget "$lane")
+  bytes=$(git show "HEAD:docs/queue-$lane.md" 2> /dev/null | wc -c)
+  [ -z "$budget" ] || [ "$bytes" -le "$budget" ] ||
+    echo "docs/queue-$lane.md is $bytes bytes at HEAD, $((bytes - budget)) over the $lane lane's budget of $budget; shorten its Decisions"
 }
 
 # The queue at COMMIT: both lane queues, else, at a commit before the
@@ -3862,6 +3992,12 @@ shift
 case "$change" in
   ""|*/*|.*|*[[:cntrl:]]*) die "not a change name: $change" ;;
 esac
+# A check's and bench's metrics stay in the change's lane (lane-isolation):
+# run from the main checkout while tmp/.lane-CHANGE exists, under the
+# lane's build/, never the main checkout's shared build/, which another
+# lane's check scans for writes (main_scan). Inside the lane the relative
+# default already is the lane's own.
+[ -n "${METRICS_OUT:-}" ] || [ ! -d "tmp/.lane-$change" ] || metrics_out=tmp/.lane-$change/build/metrics/current.tsv
 
 case "$command" in
   init)
