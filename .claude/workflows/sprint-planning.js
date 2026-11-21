@@ -156,7 +156,7 @@ function recordsRun(sprint) {
   const change = `${sprint.sprint}-records`
   return {
     change, branch: `chore/${change}`,
-    brief: `${change}: apply the plan of ${sprint.sprint} waiting in build/plan/, sprint-planning's records change (T0 records, estimated small). In your implement step run \`sh tools/run_state.sh history ${change}\`, which appends every lane's pending rows, then \`sh tools/run_state.sh groom ${change}\`, which folds the findings files into docs/backlog.md, copies the sprint's two lane queues, and appends the sprint's row to docs/sprints.tsv; commit them with this change's OpenSpec change (skip_specs: true), no code and no other file. When groom applies nothing (the plan waits or stands applied), stop and say so.`,
+    brief: `${change}: apply the plan of ${sprint.sprint} waiting in build/plan/, sprint-planning's records change (T0 records, estimated small). In your implement step run \`sh tools/run_state.sh history ${change}\`, which appends every lane's pending rows, then \`sh tools/run_state.sh groom ${change}\`, which files each findings entry into the backlog file of its first named path under docs/backlog/, copies the sprint's two lane queues, and appends the sprint's row to docs/sprints.tsv; commit them with this change's OpenSpec change (skip_specs: true), no code and no other file. When groom applies nothing (the plan waits or stands applied), stop and say so.`,
   }
 }
 
@@ -233,7 +233,7 @@ const reviewed = ran && !missed && noted && skeptical && swept
 
 phase('Plan')
 const plan = !reviewed ? null : await agent(
-  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog.md docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog.md docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
+  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 
 phase('Record')

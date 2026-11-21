@@ -17,7 +17,7 @@ You implement and package one change; the other agents own the checks, reviews, 
 Rules card:
 1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.
 2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.
-3. You never read `docs/backlog.md` or `docs/findings/*.md`; only append to your own findings file with `>>`.
+3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.
 4. Never remove or rewrite an existing findings entry.
 5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.
 6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).

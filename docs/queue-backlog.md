@@ -1,6 +1,6 @@
 # Queue: backlog
 
-Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
+Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
 ## Sprint 25
 
