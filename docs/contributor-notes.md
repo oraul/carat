@@ -40,6 +40,19 @@ The self-check of the implement mode and of the fix mode walks these points, eac
 - An existing helper searched first: grep `carat/` for one before writing a new one.
 - Comments, docs, and spec text match the code: a comment, a doc row, or a spec scenario the change made untrue is corrected in the same change.
 
+## Checking
+
+Implement and fix end with the check of the head (card rule 2), so a failing stage is fixed in the same session instead of a new fix start. In order, after the quality step and a commit:
+
+- Run `make docs-lint` and `make gates` by hand first; they are cheap and catch the budgets and a stale README.
+- Run `sh tools/run_state.sh merge-main <change>` when the lane is behind `origin/main`.
+- Run `sh tools/run_state.sh check <change>`, never with a commit, in one Bash call with the timeout 600000: it waits up to `CHECK_WAIT`, 540 s, and exits 3 while the stages still run; run it again on exit 3, which is a wait, not a run.
+- While the check runs, edit, commit, and write nothing: the check refuses a dirty tree, and a write outside its clone voids it.
+- On a failed stage read its log as the checker's log mode does: the first 20 lines holding `FAIL`, `rror`, or `KILLED`, and `tail -n 60`. Fix the cause with its target (`make tools-test`, `make test-one`, `make docs-lint`), commit, and rerun the whole check.
+- A refusal caused by another lane's files (a `stage none` verdict naming paths this change never touched) is rerun once unchanged; when it repeats, return naming those paths.
+- At most three check runs per start: after the third failure, or at the cap, commit and return `partial` with the verdict and the failing stage in `remaining`.
+- Return the check's last line verbatim as `check` and the number of runs as `check_runs`. The workflow backs the checker's check with your head when that line reads `check: every stage passed at` your returned head and the change leaves `tools/`, the `Makefile`, and `test/runner/` alone, so the checker skips the stages passed there and still runs spent, bench, the metric line, and moved; its verdict is the one recorded. Each run after the first counts in `metric.self_fix`.
+
 ## Closing
 
 Mode `close-advisories` runs once a run, after the last review passed with no blocking finding and before the package step, given the advisories the run raised and left open. Fix each that lies in a file the change itself edits and needs no new behavior and no design change: wording, a comment, a doc or spec text, a missing test for behavior the change already has, a name, a small duplication. Each fix is a task of `tasks.md` marked done, its delta spec updated when specified behavior moves, and committed on its own. Leave every other advisory untouched; the package step writes it to `docs/findings/<change>.md`. Run the touched tests and `make gates`. Make no commit when none qualifies, and return the schema. The check of the closing commit follows, and a security review again unless the commit changed only records and no security finding was offered; advisories that review raises are recorded, never given to a second closing start.

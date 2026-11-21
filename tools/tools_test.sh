@@ -415,6 +415,9 @@ expect "run_state: check refuses a backed commit that is not one" 1 "not a commi
 # every stage.
 env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 before_tests=$(git rev-parse --short=12 HEAD)
+# The workflow records the check it passed: only that commit or the head
+# backs a check (contributor-self-check).
+state phase state check "$before_tests" > /dev/null
 echo "check" > test/t.rb
 commit "test: t"
 env STAGES="a b test-run diagnose metrics docs-lint" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests" > carry.out 2>&1
@@ -429,6 +432,22 @@ echo "check again" > test/t.rb
 commit "test: t again"
 expect "run_state: check carries a stage carried from the backed commit" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
+# contributor-self-check: a commit that is neither the recorded phase.check
+# nor the head backs nothing, so it carries no record a check never passed,
+# and the check still runs: the workflow writes phase.check only after its
+# rounds, so a fix round's check may name a pass the run state does not
+# hold yet, which costs stage runs, never a refused check and a fix round.
+# Here phase.check names another commit, so $before_tests, which carries
+# stage b when backed, backs nothing.
+state phase state check "$(git rev-parse --short=12 HEAD~1)" > /dev/null
+env STAGES="b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests" > unbacked.out 2>&1
+echo "exit $?" >> unbacked.out
+state phase state check "$before_tests" > /dev/null
+expect "run_state: check names a backed commit other than phase.check or the head as backing nothing" 0 "check: $before_tests is neither the recorded phase.check \([0-9a-f]{12}\) nor HEAD [0-9a-f]{12}: it backs nothing, every stage runs" cat unbacked.out
+expect "run_state: check carries no stage from an unbacked commit" 1 "^$" grep -E "carried to|passed at .*, skipped" unbacked.out
+expect "run_state: check runs every stage after an unbacked commit and passes" 0 "^stage b: exit 0" grep -E "^stage b: exit 0" unbacked.out
+expect "run_state: check after an unbacked commit exits 0, refusing nothing" 0 "^exit 0$" cat unbacked.out
+rm unbacked.out
 # TEST_ONLY reads the Markdown files of the backlog folder as records
 # (backlog-records-rule), never another file under it.
 mkdir -p docs/backlog/carat/adapters
@@ -453,6 +472,18 @@ git_q mv tools/t.sh test/moved.sh
 commit "chore: move t"
 expect "run_state: check reruns every stage after a file moves under test/" 0 "^stage a: exit 0" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+# contributor-self-check: the checker backs the head a contributor's check
+# claimed passed. A claim no runner record holds costs only the stages; the
+# contributor's own check (no commit) then lets the checker skip them.
+echo "claim" > test/claim.rb
+commit "test: claim"
+expect "run_state: check runs the stages a claimed pass at the head never recorded" 0 "^stage a: exit 0" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+echo "claim again" > test/claim.rb
+commit "test: claim again"
+env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+expect "run_state: check skips the stages the contributor's own check passed at the backed head" 0 "^stage b: passed at $(git rev-parse --short=12 HEAD), skipped" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 # The checks judge the commit: a modified tracked file or an untracked
 # source spin would compile is refused before any stage runs.
 echo dirty >> README.md
@@ -3147,9 +3178,9 @@ facts_base=$(git rev-parse --short=12 HEAD)
 git_q worktree add -q -b chore/lf tmp/.lane-lf
 (cd tmp/.lane-lf && echo one > one.txt && commit "chore: one")
 facts_head=$(git -C tmp/.lane-lf rev-parse --short=12 HEAD)
-expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
   facts lf
-expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
   sh -c "cd tmp/.lane-lf && sh '$here/lane_facts.sh' lf | tr '\n' ' '"
 git -C tmp/.lane-lf push -q origin chore/lf 2>/dev/null
 expect "lane_facts: a lane whose origin branch is its head reads pushed yes" 0 " pushed yes " facts lf
@@ -3160,18 +3191,30 @@ expect "lane_facts: dirty counts the uncommitted paths, untracked ones included"
 expect "lane_facts: a commit past origin's branch reads pushed no and a new head" 0 "^head $(git -C tmp/.lane-lf rev-parse --short=12 HEAD) .* pushed no dirty 0 " facts lf
 mkdir -p build/stages/lf
 printf 'stage a: passed\ncheck: stage test-run failed at abc1234def56; read build/stages/lf/test-run.log\n' > build/stages/lf/check.log
-expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 $" facts lf
+expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 machinery no $" facts lf
 echo "check: every stage passed at 0123456789ab; the workflow records the check" >> build/stages/lf/check.log
-expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab $" facts lf
+expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab machinery no $" facts lf
 echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
-expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none $" facts lf
+expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none machinery no $" facts lf
 echo "stage a: running" >> build/stages/lf/check.log
-expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none $" facts lf
+expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none machinery no $" facts lf
 idx=$(git -C tmp/.lane-lf rev-parse --path-format=absolute --git-path index)
 cp "$idx" "$work/facts.index"
 echo broken > "$idx"
 expect "lane_facts: a lane git status cannot read reads dirty unknown, never 0" 0 " dirty unknown " facts lf
 cp "$work/facts.index" "$idx"
+# contributor-self-check: a change to the check's own machinery, tools/, the
+# Makefile, or test/runner/, reads machinery yes; no base reads unknown.
+for p in tools/x.sh Makefile test/runner/x.rb; do
+  (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
+  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes $" facts lf
+  (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
+done
+expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no $" facts lf
+facts_main=$(git rev-parse refs/remotes/origin/main)
+git_q update-ref -d refs/remotes/origin/main
+expect "lane_facts: a lane with no base reads machinery unknown" 0 " base none .* machinery unknown $" facts lf
+git_q update-ref refs/remotes/origin/main "$facts_main"
 expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
 expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
 expect "lane_facts: no argument is refused with the usage" 2 "usage: sh tools/lane_facts.sh CHANGE" sh "$here/lane_facts.sh"
@@ -3463,6 +3506,15 @@ for c in 'git push -q --atomic origin HEAD:refs/backup/chore/x main:refs/backup-
   expect "guard: contributor refuses $c" 2 "git push is not a command of this profile" guard contributor "$c"
 done
 expect "guard: contributor pushes through tools/run_state.sh" 0 "^$" guard contributor 'sh tools/run_state.sh push c'
+# contributor-self-check: the contributor runs the check of its own head,
+# never one backing a commit, and no other verb of the checker.
+expect "guard: contributor runs the check of its change" 0 "^$" guard contributor 'sh tools/run_state.sh check c'
+expect "guard: contributor runs the check of its change in its worktree" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh check c'
+expect "guard: contributor refuses a check that backs a commit" 2 "tools/run_state.sh check other than CHANGE, with no commit" guard contributor 'sh tools/run_state.sh check c abc1234'
+expect "guard: contributor refuses a check of no change" 2 "tools/run_state.sh check other than CHANGE, with no commit" guard contributor 'sh tools/run_state.sh check'
+for v in metric settled moved; do
+  expect "guard: contributor refuses the checker's $v" 2 "tools/run_state.sh $v" guard contributor "sh tools/run_state.sh $v c abc1234"
+done
 expect "guard: contributor refuses a CI record" 2 "tools/run_state.sh set of ci" guard contributor 'sh tools/run_state.sh set c ci \"green abc1234\"'
 expect "guard: contributor refuses a reset" 2 "git reset is not" guard contributor 'git reset --hard HEAD~1'
 expect "guard: contributor refuses another git configuration" 2 "a git configuration override: -c core.hooksPath=tmp" guard contributor 'git -c core.hooksPath=tmp commit -m x'
@@ -5073,7 +5125,7 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', $1)"
+  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', globalThis.selfFix = 0, $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
@@ -5310,7 +5362,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.qualityReview = ''; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.selfFix = 0; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.qualityReview = ''; return $1 })()"
 }
 close_back=$PWD
 fresh closes
@@ -5334,7 +5386,8 @@ expect "workflow: a close record line with one refused phase reports its refusal
 expect "workflow: a close record line with one refused phase reports only that line" 0 "^1\$" sh -c 'printf "%s\n" "$1" | grep -c "^refused: "' _ "$close_out"
 expect "workflow: a close record line with one refused phase still records the rest and every metric field" 0 "^$close_head  ok\$" \
   sh -c 'pairs=$(printf "%s" "$2" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//"); bad=""; for p in $pairs; do [ "$(sh "$1" get closes "metric.${p%%=*}")" = "${p#*=}" ] || bad="$bad $p"; done; echo "$(sh "$1" get closes phase.package) $(sh "$1" get closes phase.ci)$bad ok"' _ "$here/run_state.sh" "$close_line"
-expect "workflow: the close's metric line carries every figure" 0 "^8\$" sh -c 'printf "%s" "$1" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//" | tr " " "\n" | grep -c "="' _ "$close_line"
+# Nine figures since contributor-self-check added self_fix.
+expect "workflow: the close's metric line carries every figure, self_fix among them" 0 "^9\$" sh -c 'printf "%s" "$1" | sed "s/.*run_state.sh metric closes //; s/ || echo refused: [0-9]*\$//" | tr " " "\n" | grep -c "="' _ "$close_line"
 expect "workflow: the refused close lines are noted by their text" 0 '^"refused at the close, the other lines recorded: b; output: x"$' \
   close_js "refusedNote(['a', 'b', 'c'], { refused: [2, 9], record_output: 'x' })"
 expect "workflow: a close with no refused line writes no refused note" 0 '^""$' close_js "refusedNote(['a'], { refused: [] })"
@@ -5417,13 +5470,13 @@ expect "closing loop: a records-only closing commit stands on the earlier check 
 # tools/lane_facts.sh with the lane value and the dirty count, its
 # prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem parseLaneFacts headForm qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead contributor" "(async () => {
-    globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem parseLaneFacts headForm qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead COMMIT sameCommit checkVerdict claimFrom backedCommit extraRuns contributor" "(async () => {
+    globalThis.rework = 0; globalThis.selfFix = 0; globalThis.claimedPass = null; globalThis.machinery = 'no'; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
     globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'; globalThis.dirty = 0
     globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1; globalThis.qualityReview = ''
     globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
     globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
-    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: 'head ' + lane + '\\nbranch chore/c\\ndirty ' + dirty + '\\ncheck none\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
+    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: 'head ' + lane + '\\nbranch chore/c\\ndirty ' + dirty + '\\ncheck none\\nmachinery ' + machinery + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
     globalThis.continuation = (r) => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.pushedHint = () => ''
     globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
     $1
@@ -5450,8 +5503,24 @@ expect "head form: a placeholder head over a committed lane is taken from git, n
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, kept: r.head, starts: prompts.length, queued, escalated, closable: queued.every((l) => CLOSABLE.test(l)) }"
 expect "head form: a short, full, upper-case, empty, or placeholder head of a committed lane is a form; another commit, a six-character prefix, the head itself, or a dirty or unread lane is not" 0 '^\[\[true,true,true,true,true,true\],\[false,false,false,false\],\[false,false,false\]\]$' \
   contributor_js "const clean = { head: 'bbbbbbbbbbbb', dirty: 0 }; return [['bbbbbbb', 'b'.repeat(40), 'BBBBBBBBBBBB', '', 'HEAD', '<head>'].map((h) => headForm(h, clean)), ['cccccccccccc', 'bbbbbb', 'bbbbbbbbbbbb', 'bbbbbbbc'].map((h) => headForm(h, clean)), [headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: 1 }), headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: -1 }), headForm('placeholder', { head: '', dirty: 0 })]]"
-expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1" 0 '^\[\{"head":"0123456789ab","dirty":3\},\{"head":"","dirty":-1\},\{"head":"","dirty":-1\}\]$' \
-  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\n'), parseLaneFacts('head HEAD\ndirty many'), parseLaneFacts('')]"
+expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1, and machinery yes or no, else unknown" 0 '^\[\{"head":"0123456789ab","dirty":3,"machinery":"no"\},\{"head":"","dirty":-1,"machinery":"unknown"\},\{"head":"","dirty":-1,"machinery":"unknown"\}\]$' \
+  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\nmachinery no\n'), parseLaneFacts('head HEAD\ndirty many\nmachinery maybe'), parseLaneFacts('')]"
+# contributor-self-check: the contributor's own passing check at its
+# returned head, over a lane that leaves the check's machinery alone, is the
+# commit the checker's check backs, so the stages passed there are skipped;
+# any other claim backs phase.check as before, and none refuses or restarts.
+expect "self-check: a passing check at the returned head is the checker's backed commit, its later runs counted in self_fix" 0 '^\[\{"at":"bbbbbbbbbbbb"\},"bbbbbbbbbbbb","sh tools/run_state[.]sh check c bbbbbbbbbbbb",2,1,0\]$' \
+  contributor_js "globalThis.checkLines = (c, b) => ({ check: 'sh tools/run_state.sh check ' + c + (b ? ' ' + b : '') }); results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 }, check: 'check: every stage passed at bbbbbbbbbbbb; the workflow records the check', check_runs: 3 }]; await contributor('implement', 'd'); const b = backedCommit(claimedPass, head, 'abc1234'); return [claimedPass, b, checkLines('c', b).check, selfFix, prompts.length, notes.filter((n) => n.includes('refused')).length]"
+expect "self-check: a change of tools/, the Makefile, or test/runner/ backs phase.check, so every stage reruns" 0 '^\[null,"abc1234"\]$' \
+  contributor_js "machinery = 'yes'; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb' }]; await contributor('fix', 'd'); return [claimedPass, backedCommit(claimedPass, head, 'abc1234')]"
+expect "self-check: an unknown machinery line claims nothing" 0 '^null$' \
+  contributor_js "machinery = 'maybe'; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb' }]; await contributor('fix', 'd'); return claimedPass"
+expect "self-check: a pass at another commit, a failed stage, or no line claims nothing, with no refusal and no restart" 0 '^\[\[null,null,null\],"abc1234",3,0,0\]$' \
+  contributor_js "const lines = ['check: every stage passed at cccccccccccc', 'check: stage lint failed at bbbbbbbbbbbb; read build/stages/c/lint.log', undefined]; const claims = []; for (const l of lines) { results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: l }]; await contributor('fix', 'd'); claims.push(claimedPass) } return [claims, backedCommit(null, head, 'abc1234'), prompts.length, notes.filter((n) => n.includes('refused')).length, selfFix]"
+expect "self-check: a claim at a head that moved since backs phase.check, or nothing without one" 0 '^\["abc1234","",""\]$' \
+  contributor_js "return [backedCommit({ at: 'bbbbbbbbbbbb' }, 'dddddddddddd', 'abc1234'), backedCommit({ at: 'bbbbbbbbbbbb' }, 'dddddddddddd', ''), backedCommit(null, 'dddddddddddd', 'not a commit')]"
+expect "self-check: a later contributor start of another mode clears the claim, and self_fix adds only implement and fix runs" 0 '^\[\{"at":"bbbbbbbbbbbb"\},null,1\]$' \
+  contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb', check_runs: 2 }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check_runs: 5 }]; await contributor('fix', 'd'); const a = claimedPass; await contributor('package', 'd'); return [a, claimedPass, selfFix]"
 expect "head form: a continued start keeps the lane's head read from git, the reported one only when the lane is unread" 0 '^\[\["bbbbbbbbbbbb","eeeeeee"\],4\]$' \
   contributor_js "let n = 0; continuation = () => (n++ % 2 ? { next: 'done' } : { next: 'continue', left: ['x'] }); const kept = []; queue = (l, c) => { if (l.includes(' overrun ')) kept.push(c) }; results = [{ status: 'partial', head: 'placeholder', summary: 's' }]; await contributor('fix', 'd'); lane = null; results = [{ status: 'partial', head: 'eeeeeee', summary: 's' }, { status: 'done', head: 'dddddddddddd', summary: 's' }]; await contributor('fix', 'd'); return [kept, headPrompts.length]"
 expect "head form: a hostile head over a committed lane reaches the head-form note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true,false\]$' \
@@ -5506,6 +5575,17 @@ expect "self-check: a settled round clears the last self-check" 0 '^null$' \
   settle_js "(() => { globalThis.selfCheck = { mode: 'fix', said: 'match' }; settleRound('abc1234'); return selfCheck })()"
 expect "self-check: rounds hands a check that finished at the head to finishCheck after reading its outcome" 0 '^true$' \
   js "$wf" "rounds" "(() => { const r = rounds.toString(); return r.indexOf('checkOutcome(c.verdict') > -1 && r.indexOf('finishCheck(v)') > r.indexOf('checkOutcome(c.verdict') })()"
+# contributor-self-check: the checker's check backs what backedCommit gives
+# over the contributor's claim, the head, and phase.check.
+expect "self-check: rounds builds the check line on backedCommit over the claim, the head, and phase.check" 0 '^true$' \
+  js "$wf" "rounds" "(() => { const r = rounds.toString(); const b = r.indexOf(\"const backed = backedCommit(claimedPass, head, state['phase.check'])\"); return b > -1 && r.indexOf('checkLines(state.change, backed,') > b })()"
+# contributor-self-check: the workflow queues phase.check until its rounds
+# end, and the run state backs a commit only from the record it holds, so a
+# fix round's check backing this run's last pass flushes that record first.
+expect "self-check: backedUnwritten holds only for a queued phase.check of a commit other than the head" 0 '^\[true,false,false,false,false\]$' \
+  js "$wf" "COMMIT sameCommit phaseLine backedUnwritten" "(() => { globalThis.state = { change: 'c' }; const q = ['sh tools/run_state.sh phase c check aaaaaaaaaaaa']; return [backedUnwritten('aaaaaaaaaaaa', 'bbbbbbbbbbbb', q), backedUnwritten('aaaaaaaaaaaa', 'aaaaaaaaaaaa', q), backedUnwritten('cccccccccccc', 'bbbbbbbbbbbb', q), backedUnwritten('', 'bbbbbbbbbbbb', q), backedUnwritten('aaaaaaaaaaaa', 'bbbbbbbbbbbb', [])] })()"
+expect "self-check: rounds flushes a queued phase.check it backs before the checker's start" 0 '^true$' \
+  js "$wf" "rounds" "(() => { const r = rounds.toString(); const f = r.indexOf('if (backedUnwritten(backed, head, pending) && !(await flush())) return false'); return f > r.indexOf('const backed = backedCommit(') && f < r.indexOf('checkLines(state.change, backed,') })()"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
 expect "quality step: the archive and package step runs the quality step first when none is recorded, refused without one, and not again once recorded" 0 '^\[\["implement quality"\],false,\["verify","close"\]\]$' \
@@ -5536,7 +5616,7 @@ expect "workflow: only this start's verdicts enter its records" 0 '^only verdict
   sh -c '[ "$(grep -c -E "ran\[" "$1")" = "$(grep -c -E "^  ran\[.(phase|review)[.]. [+] (name|kind)\] = |String[(]ran\[" "$1")" ] && ! grep -q -E "Object[.]assign[(]ran|settledRecords|gates[.]sh passed" "$1" && echo only verdicts' _ "$wf"
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
-expect "workflow: no record start runs at the close, only verify's and the closing loop's two (before and after its re-review)" 0 '^3$' grep -c 'await flush(' "$wf"
+expect "workflow: no record start runs at the close, only verify's, the closing loop's two (before and after its re-review), and a fix round's check backing a queued phase.check (contributor-self-check)" 0 '^4$' grep -c 'await flush(' "$wf"
 expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
   sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
