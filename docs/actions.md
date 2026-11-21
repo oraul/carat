@@ -134,9 +134,18 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `completion.keyword_next` | completion | Complete the word before the cursor from the words of the listed buffers, scanning forward, and open the popup on the nearest match |
 | `completion.keyword_previous` | completion | Complete the word before the cursor from the words of the listed buffers, scanning backward, and open the popup on the nearest match |
 | `cmdline.execute` | cmdline | Run the command line |
-| `cmdline.backspace` | cmdline | Remove the last character, or leave when empty |
+| `cmdline.backspace` | cmdline | Remove the character before the cursor, nothing at the start of a line with text, or leave when empty |
 | `cmdline.history_older` | cmdline | Recall the next older entry of the prompt's history that starts with the typed text |
 | `cmdline.history_newer` | cmdline | Recall the next newer entry, or the typed text after the newest |
+| `cmdline.left` | cmdline | Move the command line's cursor one character left, stopping at the start |
+| `cmdline.right` | cmdline | Move the cursor one character right, stopping at the end |
+| `cmdline.home` | cmdline | Move the cursor to the start of the command line |
+| `cmdline.end` | cmdline | Move the cursor to the end of the command line |
+| `cmdline.word_left` | cmdline | Move the cursor to the start of the blank-separated word before it |
+| `cmdline.word_right` | cmdline | Move the cursor to the start of the next blank-separated word, or the end |
+| `cmdline.delete` | cmdline | Remove the character under the cursor; at the end of the line act as `cmdline.backspace` |
+| `cmdline.delete_word` | cmdline | Remove the word before the cursor; nothing on an empty line |
+| `cmdline.delete_line` | cmdline | Remove everything before the cursor; nothing on an empty line |
 | `message.quit_hint` | normal | Show the quit hint |
 | `history.undo` | normal | Undo count states along the current branch of the undo tree |
 | `history.redo` | normal | Redo count states along the current branch |

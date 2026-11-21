@@ -64,7 +64,7 @@ module Carat
         @plugin_ui.close_prompt
         @search_prompt.close
         state.mode = Domain::Mode::CMDLINE
-        state.cmdline = ""
+        state.replace_cmdline("")
         Outcome.none
       end
 

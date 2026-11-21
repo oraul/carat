@@ -52,7 +52,7 @@ module Carat
       #: (Domain::EditorState) -> Outcome
       def call(state)
         text = state.cmdline
-        state.cmdline = ""
+        state.replace_cmdline("")
         state.mode = Domain::Mode::NORMAL
         return pick(state) if @palette.active
         prompt = @search_prompt

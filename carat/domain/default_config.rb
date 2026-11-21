@@ -805,6 +805,19 @@ module Carat
       keymap.cmdline <Esc> mode.normal
       keymap.cmdline <CR> cmdline.execute
       keymap.cmdline <BS> cmdline.backspace
+      keymap.cmdline <Del> cmdline.delete
+      keymap.cmdline <C-w> cmdline.delete_word
+      keymap.cmdline <C-u> cmdline.delete_line
+      keymap.cmdline <Left> cmdline.left
+      keymap.cmdline <Right> cmdline.right
+      keymap.cmdline <Home> cmdline.home
+      keymap.cmdline <C-b> cmdline.home
+      keymap.cmdline <End> cmdline.end
+      keymap.cmdline <C-e> cmdline.end
+      keymap.cmdline <S-Left> cmdline.word_left
+      keymap.cmdline <C-Left> cmdline.word_left
+      keymap.cmdline <S-Right> cmdline.word_right
+      keymap.cmdline <C-Right> cmdline.word_right
       keymap.cmdline <Up> cmdline.history_older
       keymap.cmdline <Down> cmdline.history_newer
       keymap.cmdline <C-n> palette.next

@@ -10,7 +10,7 @@ module Carat
     # The current view the use cases and the presenter share: the tab
     # list, through which the current tab page, window, buffer, cursor, and
     # visual selection are reached, the mode, the options, the command
-    # line, the message and the history of those shown, the quit flag, and the repetition a blockwise
+    # line with its cursor (cmdline_after, read as cmdline_position), the message and the history of those shown, the quit flag, and the repetition a blockwise
     # insert owes when insert mode is left, and the size of the screen
     # in rows and columns, 0 before the first render, and how many :normal
     # commands are running keys (normal_depth), 0 outside them. The rest of the editor's state
@@ -18,11 +18,12 @@ module Carat
     # that need them: the buffer list, the input state, the registers, the
     # last find, and the plugins' segments and prompt. A Struct record:
     # mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, :normal_depth, keyword_init: true)
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :cmdline_after, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, :normal_depth, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
       # @rbs @cmdline: String
+      # @rbs @cmdline_after: Integer
       # @rbs @message: String
       # @rbs @message_error: bool
       # @rbs @history: MessageHistory
@@ -39,6 +40,7 @@ module Carat
         self.mode = Mode::NORMAL
         self.options = options
         self.cmdline = ""
+        self.cmdline_after = 0
         self.message = ""
         self.message_error = false
         self.history = MessageHistory.new
@@ -47,6 +49,32 @@ module Carat
         self.screen_rows = 0
         self.screen_cols = 0
         self.normal_depth = 0
+      end
+
+      # Puts a new text in the command line, every prompt's, with the
+      # cursor after its last character.
+      #: (String) -> void
+      def replace_cmdline(text)
+        self.cmdline = text
+        self.cmdline_after = 0
+      end
+
+      # The cursor of the command line as a character index into cmdline,
+      # 0 to its length. It is kept as the characters after it
+      # (cmdline_after), so a text set without replace_cmdline has the
+      # cursor at its end.
+      #: () -> Integer
+      def cmdline_position
+        after = cmdline_after
+        n = cmdline.length
+        after > n ? 0 : n - after
+      end
+
+      # Moves the cursor of the command line to a character index of the
+      # text it holds now, which the caller has just set.
+      #: (Integer) -> void
+      def cmdline_position=(position)
+        self.cmdline_after = cmdline.length - position
       end
 
       # Records the size of the screen.

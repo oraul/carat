@@ -12,7 +12,13 @@ ok   page up
 ok   ss3 home
 ok   ss3 f1
 ok   csi f5
-ok   modified arrow
+ok   modified arrow: Alt is ignored
+ok   Ctrl and Shift arrows decode to their own keys: ctrl left
+ok   Ctrl and Shift arrows decode to their own keys: ctrl right
+ok   Ctrl and Shift arrows decode to their own keys: shift left
+ok   Ctrl and Shift arrows decode to their own keys: shift right
+ok   ctrl shift left is ctrl left
+ok   shift alt right is shift right
 ok   ctrl page down
 ok   ctrl page up
 ok   ctrl shift page down is ctrl page down
@@ -42,7 +48,9 @@ ok   delete
 ok   f1
 ok   f12
 ok   ctrl page down
+ok   ctrl left
+ok   shift right
 ok   alt x
 ok   unicode
 ok   every key round-trips through encode and feed
-adapters_key_decoder: 47 passed, 0 failed
+adapters_key_decoder: 55 passed, 0 failed

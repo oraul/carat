@@ -68,7 +68,7 @@ module Carat
         state = @state
         return PluginApi::Response.failure("A prompt is already open") if @plugin_ui.prompting?
         @plugin_ui.open_prompt(name, id.dup, text.dup)
-        state.cmdline = initial.dup
+        state.replace_cmdline(initial.dup)
         @input.pending_keys = []
         state.mode = Domain::Mode::CMDLINE
         PluginApi::Response.success("", 0)
@@ -97,7 +97,7 @@ module Carat
         ui = @plugin_ui
         return PluginApi::Response.failure("No prompt is open") unless ui.prompting? && ui.prompt_owner == name
         ui.close_prompt
-        @state.cmdline = ""
+        @state.replace_cmdline("")
         @state.mode = Domain::Mode::NORMAL
         PluginApi::Response.success("", 0)
       end

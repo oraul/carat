@@ -38,6 +38,10 @@ module Carat
       F12 = SPECIAL + 22
       CTRL_PAGE_UP = SPECIAL + 23
       CTRL_PAGE_DOWN = SPECIAL + 24
+      SHIFT_LEFT = SPECIAL + 25
+      SHIFT_RIGHT = SPECIAL + 26
+      CTRL_LEFT = SPECIAL + 27
+      CTRL_RIGHT = SPECIAL + 28
       UNKNOWN = SPECIAL + 99
       # Not a key the terminal sends: the wait for more keys of a binding
       # ran out. The input controller hands it to HandleKey, which resolves
@@ -61,6 +65,15 @@ module Carat
       #: (Integer) -> Integer
       def self.base(code)
         code & ~ALT
+      end
+
+      # The plain arrow a Shift or Ctrl arrow stands for, any other code
+      # as it is.
+      #: (Integer) -> Integer
+      def self.unmodified(code)
+        return LEFT if code == SHIFT_LEFT || code == CTRL_LEFT
+        return RIGHT if code == SHIFT_RIGHT || code == CTRL_RIGHT
+        code
       end
 
       # The character a printable code stands for.

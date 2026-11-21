@@ -208,7 +208,9 @@ module Carat
 
       # A live prompt's keymap answers first on the command line, then the
       # scratch buffer's own keymap; a key neither binds nor starts a
-      # binding with falls through to the mode's keymap.
+      # binding with falls through to the mode's keymap, where a lone
+      # Shift or Ctrl arrow the mode does not bind is looked up as the
+      # plain arrow.
       #: (Domain::EditorState, Array[Integer]) -> Domain::KeymapMatch
       def lookup(state, keys)
         prompt_keys = @plugin_ui.prompt_keymap
@@ -221,7 +223,10 @@ module Carat
           match = local.lookup(state.mode, keys)
           return match unless match.kind == :none
         end
-        @keymap.lookup(state.mode, keys)
+        found = @keymap.lookup(state.mode, keys)
+        return found unless found.kind == :none && keys.length == 1
+        plain = Domain::Key.unmodified(keys[0])
+        plain == keys[0] ? found : @keymap.lookup(state.mode, [plain])
       end
 
       # Whether the grammar reads keys in the current mode.

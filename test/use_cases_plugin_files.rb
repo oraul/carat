@@ -282,14 +282,19 @@ module UseCasesPluginFilesTest
     fs.host.prompt("ask", "Name: ", "")
     h.type("<Esc>")
     t.assert_equal(["ask \"\" true", :normal], [fs.inputs[1], h.mode], "Escape delivers a cancel")
+    # Scenario: The command line has a cursor (a plugin's prompt opens with it at the end of the initial text).
+    fs.host.prompt("ask", "Name: ", "ab")
+    h.type("<Left>X<C-e>Y")
+    t.assert_equal(["Name: aXbY", 10], [h.message_row.rstrip, h.frame.cursor_col], "a plugin's prompt has the cursor: edited mid-line and at the end")
+    h.type("<Esc>")
     fs.host.prompt("ask", "Name: ", "z")
     h.type("<BS><BS>")
-    t.assert_equal(["ask \"\" true", :normal], [fs.inputs[2], h.mode], "a backspace on an empty line cancels")
+    t.assert_equal(["ask \"\" true", :normal], [fs.inputs[3], h.mode], "a backspace on an empty line cancels")
     fs.host.prompt("ask", "Name: ", "")
     h.type("q<CR>")
-    t.assert_equal([false, "ask \"q\" false"], [h.quit?, fs.inputs[3]], "the text is not run as an ex command")
+    t.assert_equal([false, "ask \"q\" false"], [h.quit?, fs.inputs[4]], "the text is not run as an ex command")
     h.type(":q<CR>")
-    t.assert_equal([true, 4], [h.quit?, fs.inputs.length], "the next command line is an ex command again")
+    t.assert_equal([true, 5], [h.quit?, fs.inputs.length], "the next command line is an ex command again")
 
     # list_files and read_file (API 2.5).
     session = editor
