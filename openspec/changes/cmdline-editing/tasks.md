@@ -16,3 +16,9 @@
 
 - [x] 3.1 `test/editor_cmdline_edit.rb` names every ADDED scenario
 - [x] 3.2 README, `docs/compatibility.md`, `docs/actions.md`, `docs/codebase-map.md`
+
+## Quality review
+
+- [x] Q.1 The `EditorState` comment names the command line's cursor (fixed in `carat/domain/editor_state.rb`)
+- [x] Q.2 A plugin prompt's cursor was proved only at the end of its text (fixed: `test/use_cases_plugin_files.rb` edits it mid-line)
+- [x] Q.3 A text written straight to `cmdline` after a cursor move keeps the old count of characters after the cursor (recorded in `docs/findings/cmdline-editing.md`: every shipped writer uses `replace_cmdline`, and a lint refusing a direct write needs new code)

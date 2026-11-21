@@ -10,7 +10,7 @@ module Carat
     # The current view the use cases and the presenter share: the tab
     # list, through which the current tab page, window, buffer, cursor, and
     # visual selection are reached, the mode, the options, the command
-    # line, the message and the history of those shown, the quit flag, and the repetition a blockwise
+    # line with its cursor (cmdline_after, read as cmdline_position), the message and the history of those shown, the quit flag, and the repetition a blockwise
     # insert owes when insert mode is left, and the size of the screen
     # in rows and columns, 0 before the first render, and how many :normal
     # commands are running keys (normal_depth), 0 outside them. The rest of the editor's state
