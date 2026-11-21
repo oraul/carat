@@ -122,7 +122,7 @@ module AdaptersTabBarTest
     f = paint(setup(ten, 5, 1), 40)
     t.assert_equal([H::TAB_LINE, H::TAB_LINE], [f.cell(0, 1).hl, f.cell(0, 33).hl], "the counts are plain")
 
-    # Scenario "The ascii icons give the ascii separator and no gem" (the gem is gone): no set draws a gem, so the ascii
+    # Scenario "The ascii icons give the ascii gem and separator" (the gem is gone): no set draws a gem, so the ascii
     # `*` stays the modified mark's alone, and the separator ends every tab in TabLine, ascii's |.
     t.table([
       ["no gem, separator, unicode", "unicode", "  • a.txt   │  • b.txt   │"],

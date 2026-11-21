@@ -22,3 +22,8 @@
 - Location: the backlog entries "The ascii gem and the ascii modified mark are both `*`" and "tab_boundary? takes a digit after a gem as a tab boundary"
 - Why: this change removes ASCII_GEM and tab_boundary?, so both entries are fixed
 - Fix: groom removes both as fixed by tabs-only-dot
+
+### The scenario "The ascii icons give the ascii gem and separator" keeps a name that no longer fits
+- Location: openspec/specs/buffer-tabs/spec.md, the scenario of that name
+- Why: a MODIFIED block must keep the current scenario's title, so this change could not rename it though it now asserts no gem
+- Fix: a later change renames the scenario in the spec, its test comment in test/adapters_tab_bar.rb, and its task text together
