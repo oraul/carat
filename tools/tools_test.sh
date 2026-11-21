@@ -3184,7 +3184,7 @@ cp "$work/facts.index" "$idx"
 for p in tools/x.sh Makefile test/runner/x.rb; do
   (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
   expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes $" facts lf
-  (cd tmp/.lane-lf && git_q revert -q --no-edit HEAD > /dev/null)
+  (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
 done
 expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no $" facts lf
 facts_main=$(git rev-parse refs/remotes/origin/main)
