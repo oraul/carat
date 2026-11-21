@@ -103,7 +103,8 @@ ok   Each float border style: single ┌─── doc ────┐ / │ one 
 ok   Each float border style: double ╔═══ doc ════╗ / ║ one        ║ / ║ two        ║ / ╚════════════╝
 ok   Each float border style: solid      doc       /   one          /   two          /               
 ok   Each float border style: rounded ╭─── doc ────╮ / │ one        │ / │ two        │ / ╰────────────╯
-ok   a float's own border is in FloatBorder and its title in FloatTitle
+ok   the highlighted float draws its own double border
+ok   a float's own double border is in FloatBorder and its title in FloatTitle: ╔═══ doc ════╗
 ok   A float border style in ASCII: double under option.icons ascii +--- doc ----+ / | one        | / +------------+
 ok   and single under NO_COLOR +--- doc ----+ / | one        | / +------------+
 ok   A float border style of none: no edge and no title, the padding kept
@@ -114,4 +115,4 @@ ok   The empty style follows winborder: double, then single again, the other flo
 ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
 ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
 ok   a refill keeps the border style
-editor_floats: 116 passed, 0 failed
+editor_floats: 117 passed, 0 failed

@@ -13,3 +13,7 @@
 ## 3. Docs
 
 - [x] 3.1 `docs/plugins.md` (request row, version history, `api_version`) and `docs/codebase-map.md` (area 15, `FloatWindow`, `FloatSpec`, `FramePresenter`) (proved by `make docs-lint` and `make lint`)
+
+## 4. Review fixes
+
+- [x] 4.1 `test/editor_floats.rb`: the FloatBorder and FloatTitle check after the "Each float border style" loop opens its own float set to double instead of reading the loop's last (rounded) editor (proved by "the highlighted float draws its own double border" and "a float's own double border is in FloatBorder and its title in FloatTitle" in `test/editor_floats.rb`)

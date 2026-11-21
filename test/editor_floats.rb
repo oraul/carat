@@ -494,7 +494,12 @@ module EditorFloatsTest
       got = [cells(h, 2, 4, 14), cells(h, 3, 4, 14), cells(h, 4, 4, 14), cells(h, 5, 4, 14)]
       t.assert_equal([true, expected], [set.ok, got], "Each float border style: #{name} #{got.join(" / ")}")
     end
-    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::FLOAT_TITLE], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 8)], "a float's own border is in FloatBorder and its title in FloatTitle")
+    h = editor
+    id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
+    h.plugins.window_requests.set_float_border("test", id, "double")
+    h.redraw
+    t.assert_equal("╔═══ doc ════╗", cells(h, 2, 4, 14), "the highlighted float draws its own double border")
+    t.assert_equal([D::Highlight::FLOAT_BORDER, D::Highlight::FLOAT_TITLE, D::Highlight::FLOAT_BORDER, D::Highlight::FLOAT_BORDER], [h.frame.hl_at(2, 4), h.frame.hl_at(2, 8), h.frame.hl_at(3, 4), h.frame.hl_at(5, 17)], "a float's own double border is in FloatBorder and its title in FloatTitle: #{cells(h, 2, 4, 14)}")
     # Scenario: A float border style in ASCII.
     h = configured("option.icons ascii\n", 12, 40)
     id = open(h, options("editor", 2, 4, 2, 10, true, "doc", 50, false), ["one", "two"])
