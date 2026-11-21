@@ -28,3 +28,7 @@
 - [x] 6.1 `tools/lane_facts.sh`: `dirty` read 0 when `git status` failed, so an unreadable lane passed as committed; it now reads `unknown`, which `parseLaneFacts` keeps as -1, proved by the `lane_facts: a lane git status cannot read reads dirty unknown, never 0` case in `tools/tools_test.sh` (fixed).
 - [x] 6.2 `.claude/workflows/deliver-change.js` `headForm`: the empty and non-hex tests were two branches of one rule; folded into one (fixed, the head-form cases unchanged).
 - [x] 6.3 `.claude/agents/merger.md` and `.claude/agents/quality-reviewer.md` still copy main's short sha by hand; outside a lane, so recorded in `docs/findings/contributor-harness.md` (recorded).
+
+## Fix round
+
+- [x] 7.1 `tools/agent_guard.sh`: the merger profile refuses `sh tools/lane_facts.sh` after a cd into a worktree, whose copy is the branch's, as it refuses `open_pr.sh message` there (security Low); proved by `guard: merger refuses tools/lane_facts.sh after a cd into a worktree, the branch's copy` in `tools/tools_test.sh`, the read and contributor profiles still allowed there and the merger from the project (fixed). The wider refusal of every merger `tools/*.sh` form after such a cd, `run_state.sh` included, alters behavior outside this change and stays with the finding for `docs/findings/contributor-harness.md`.

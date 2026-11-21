@@ -3198,7 +3198,7 @@ guard_edit() {
 # not list, however they are written.
 for p in read merger contributor; do
   expect "guard: $p allows a git read" 0 "^$" guard $p 'git --no-pager log --oneline -5 && git diff origin/main...HEAD | head -40'
-  expect "guard: $p reads a lane's facts with tools/lane_facts.sh" 0 "^$" guard $p 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+  expect "guard: $p reads a lane's facts with tools/lane_facts.sh" 0 "^$" guard $p 'sh tools/lane_facts.sh c'
   expect "guard: $p refuses tools/lane_facts.sh other than one change name" 2 "tools/lane_facts.sh other than CHANGE" guard $p 'sh tools/lane_facts.sh c extra'
   expect "guard: $p refuses git push" 2 "refused for the $p profile: git push" guard $p 'git push origin chore/x'
   expect "guard: $p refuses a quoted verb" 2 "git push" guard $p "git 'push' origin x"
@@ -3352,6 +3352,10 @@ expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_w
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
 expect "guard: merger prints the squash message at the pushed head" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger refuses open_pr message at a short sha" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message c 0123456789ab'
+expect "guard: read reads a lane's facts after a cd into its worktree" 0 "^$" guard read 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: contributor reads a lane's facts after a cd into its worktree" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: merger refuses tools/lane_facts.sh after a cd into a worktree, the branch's copy" 2 "tools/lane_facts.sh after cd tmp/.lane-c for the merger" guard merger 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: merger reads a lane's facts after a cd back to the project" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/lane_facts.sh c'
 expect "guard: merger refuses open_pr message after a cd into a worktree, the branch's copy" 2 "tools/open_pr.sh message after cd tmp/.lane-c" guard merger 'cd tmp/.lane-c && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger prints the squash message before a cd into a worktree" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567 && cd tmp/.lane-c'
 expect "guard: merger prints the squash message after a cd back to the project from a worktree" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
