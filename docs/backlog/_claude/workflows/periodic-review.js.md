@@ -1,0 +1,57 @@
+# Backlog: .claude/workflows/periodic-review.js
+
+## The periodic quality slices count a repeated finding twice
+
+- Where: the slice results in `.claude/workflows/periodic-review.js` (lines 94, 115, and 116 at 594dd35) merge blocking and advisory findings with `flatMap`. Quality advisory in `partial-results`.
+- Why it matters: a continued start that repeats a finding of its first start counts it twice in the recorded results the planner reads.
+- Fix outline: drop duplicates as `combineReviews` in `.claude/workflows/deliver-change.js` does.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-07
+
+## Periodic review slices cut the map areas by count
+
+- Where: `areaSlices` in `.claude/workflows/periodic-review.js:67`. Periodic quality at 9a92265.
+- Why it matters: slice 1 puts area 1 (about 8,850 lines and a 425 KB backlog) with five more areas under one 53-call cap, so the guard, the tools test, and most of the gates go unread.
+- Fix outline: weight slices by size or give area 1 its own. Queue item `review-scope`.
+- Category: pipeline
+- Added: 2026-11-10
+
+## The periodic slices put area 1 under one cap
+
+- Where: `.claude/workflows/periodic-review.js:67` (`areaSlices` splits by area count; area 1 holds about 6,700 lines). Periodic quality at bd86828.
+- Why it matters: the slice holding area 1 caps and the review ends partial by design.
+- Fix outline: none prescribed; superseded if the council reviews diffs. Queue item `periodic-council`.
+- Category: pipeline
+- Added: 2026-11-11
+
+### Stale review-due comment in the periodic review (`sprint-planning` quality advisory)
+
+- Location: `.claude/workflows/periodic-review.js:122`.
+- Why it matters: the comment says a partial review keeps the next one due, but `review-due` now counts sprints only, so a reader is misled about when the review runs again.
+- Fix outline: drop the review-due clause or state the new rule.
+- Category: pipeline
+- Added: 2026-11-11
+
+### Periodic quality slices split areas by count
+
+- Location: .claude/workflows/periodic-review.js:65 (sprint-4 sweep, quality).
+- Why: slice 1 holds area 1, about 10,000 lines, which one start cannot read; the sweep left areas 1, 13, 14, 15 unreviewed (covered 14/18).
+- Fix: weight slices by line count, or split area 1 in the map.
+- Category: pipeline
+- Added: 2026-11-14
+
+### Periodic sweep tokens still count in the records budget
+- Location: .claude/workflows/periodic-review.js:142
+- Why: the sweep runs inside sprint-planning but its record start is labelled record, which add_tokens keys record, not sprint, so its tokens still count in the records change's budget; raised twice by the quality review, merged here.
+- Fix: label it periodic: record or match the sweep's record in add_tokens.
+- Category: pipeline
+- Added: 2026-11-18
+
+### Every sweep leaves area 1 partial (sprint-24 sweep quality)
+
+- Location: `.claude/workflows/periodic-review.js:65`
+- Why: QUALITY_SLICES splits 18 areas by count, but area 1 (about 14,000 lines of shell) exceeds one 53-call start, so both starts cap (`review.periodic-quality` partial 17/18).
+- Fix: split area 1 in the map or slice by size.
+- Category: pipeline
+- Added: 2026-11-21

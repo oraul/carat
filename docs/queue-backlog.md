@@ -1,14 +1,12 @@
 # Queue: backlog
 
-Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
+Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every fix is accepted with `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
 ## Sprint 25
 
 The user-approved exception (2026-11-21, the user's tier decision): `contributor-harness` runs in the backlog lane, outside the 3.
 
-The user-approved exception (2026-11-21, the user's backlog layout): `backlog-records-rule` runs in the backlog lane, outside the 3.
-
-The user-approved exception (2026-11-21, the user's backlog layout): after `backlog-records-rule`, `backlog-per-file` runs in the backlog lane, outside the 3.
+The user-approved exception (2026-11-21, the user's backlog layout): `backlog-per-file` runs in the backlog lane, outside the 3.
 
 The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside the 3, after groom-evidence-only, `metrics-row-format` (T2 user request, pipeline defect, estimated medium, critical b tools/run_state.sh): 9 rows hold 12-character merged commits, authoring-kit's has no date; accepted when the rows are fixed and history and docs-lint refuse a malformed date, merged, or pr, a tools-test case each.
 
@@ -43,7 +41,4 @@ The user-approved exception (2026-11-21, listchars-folds notes 16, 17): outside 
 - Order (T2 user request of 2026-11-21): `backlog-records-rule` first, alone, outside Sprint 25's 3; `backlog-per-file` (stopped at 3102188) next by its line; `review-in-openspec` merged at 3102188 (#274).
 - Rules first (T2): `tools/rules.sh:69` RECORDS_RE matched only `docs/backlog.md`, so the merge gate holds docs/backlog/ before the move; `rules-instruction-records` (Pool 13) stays apart.
 - Names backticked (T1): queue_class (`tools/run_state.sh:2597`) counts an exception only for a backticked name (contributor-tier-high 1).
-- Size (T1): medium; base small (1 pattern, 1 comment, 5 tools-test cases), one up: last two over (1,372,173 against 1.2M; 653,549 output against 416,666).
-- No split (T1): 1 pattern, its 5 tools-test cases, and its comment are one testable part.
-- Critical (T1): b tools/rules.sh.
 - Retro (T1): border-vocabulary 2, 3, 4 and review-in-openspec 9, 10, 11 in Pool 10, 12; overruns (review-in-openspec 8, contributor-tier-high 12) in Pool 9 `budget-recalibrate`; tabs-only-dot's (border-vocabulary 5) the feature lane's.

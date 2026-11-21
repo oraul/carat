@@ -61,10 +61,15 @@ docs/architecture.md 88064"
 # and 600 for the second file's title and opening line.
 QUEUE_BUDGET=17969
 
-# The paths a change retired that the backlog, the one document keeping
+# The paths a change retired that the backlog files, the documents keeping
 # older entries as they were written, may still name: the one queue and
-# history the lanes replaced. Every other document names the lane files.
-RETIRED='docs/queue\.md|docs/metrics\.tsv'
+# history the lanes replaced and the one backlog file docs/backlog/ replaced
+# (backlog-per-file). Every other document names the lane files.
+RETIRED='docs/queue\.md|docs/metrics\.tsv|docs/backlog\.md'
+# The retired path a lane queue may still name until the planner rewrites
+# it: the one backlog file, which docs/queue-feature.md names while a
+# backlog-lane change may not edit the feature lane's files.
+RETIRED_QUEUE='docs/backlog\.md'
 
 # The documents every checkout must hold: docs/design.md is the one binding
 # description of the look, which CLAUDE.md and docs/architecture.md name.
@@ -76,6 +81,7 @@ documents() {
     .github/pull_request_template.md; do
     [ -f "$f" ] && echo "$f"
   done
+  [ ! -d docs/backlog ] || find docs/backlog -type f -name '*.md' | LC_ALL=C sort
 }
 
 check_budgets() {
@@ -158,7 +164,8 @@ check_paths() {
   # shellcheck disable=SC2046
   spans=$(grep -n -o '`[^` ]*`' $(documents) | tr -d '`' |
     grep -E ':(carat|bin|test|bench|tools|docs|config|openspec|\.claude|\.github)/' |
-    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E "^docs/backlog\.md:[0-9]+:($RETIRED)(:[0-9][0-9,-]*)?\$")
+    grep -v -E ':.*([<>*${}]|NAME|CHANGE|KIND|\.\.\.)' | grep -v -E "^docs/backlog/[^:]*\.md:[0-9]+:($RETIRED)(:[0-9][0-9,-]*)?\$" |
+    grep -v -E "^docs/queue-(feature|backlog)\.md:[0-9]+:($RETIRED_QUEUE)\$")
   own=$(own_items)
   dead=$(printf '%s\n' "$spans" | while IFS= read -r line; do
     [ -n "$line" ] || continue

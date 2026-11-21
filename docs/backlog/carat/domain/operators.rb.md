@@ -1,0 +1,44 @@
+# Backlog: carat/domain/operators.rb
+
+## Visual r over an illegal byte has no test row
+
+- Where: the `:replace` branch of `ascii_recase` in `carat/domain/operators.rb` (line 243, `char * text.length` over text that is not UTF-8), while `~`, `U`, and `u` have rows in `test/editor_registers.rb` (lines 49 to 51). Advisory of the periodic quality review at 6ea61b1.
+- Why it matters: an untested branch on hostile text is where the next crash on an illegal byte would hide.
+- Fix outline: add a `v$r` row over a line with an illegal byte.
+- Also: test/editor_registers.rb
+- Category: editor
+- Added: 2026-11-03
+
+## Seven more methods are public with no outside caller
+
+- Where: `Operators.ascii_recase` and `indent_width` (`carat/domain/operators.rb` lines 239 and 271), `Registers#unnamed?` (`carat/domain/registers.rb` line 65), `Buffer#layer_at` (`carat/domain/buffer.rb` line 232), `UndoTree#transaction_at`, `parent_of`, `head_of` (`carat/domain/undo_tree.rb` lines 99, 105, 111), at 31919d9. Periodic quality. Queue item: backlog items, needless public methods. Raised again at ce6abdb (periodic quality): `UndoTree#parent_of` and `transaction_at` have no production caller, queue item `editing-counts`.
+- Why it matters: needless public surface, called only by tests.
+- Fix outline: make them private and test them through their public callers.
+- Also: carat/domain/registers.rb, carat/domain/buffer.rb, carat/domain/undo_tree.rb
+- Category: editor
+- Added: 2026-11-09
+
+## Requires out of step with the constants a file names
+
+- Where: `carat/domain/operators.rb` line 6 (requires `selection`, unused; `registers` where it uses `RegisterEntry`); `last_change.rb`, `reselect_visual.rb`, `toggle_slot.rb`, `completion_handler.rb`, `show_completion.rb` (unused requires); `carat/domain/layout.rb`, `window.rb`, `slot.rb`, `tab_page.rb`, `layout_node.rb` (build constants they never require). Periodic quality at e49f63d.
+- Why it matters: they compile only by the load order of `carat.rb`.
+- Fix outline: require what each file names and drop the rest, `make diagnose` confirming. Queue item: Backlog batches.
+- Also: carat/domain/layout.rb, carat.rb
+- Category: editor
+- Added: 2026-11-10
+
+### The tabstop fallback is re-spelled beside Options#tab_width
+
+- Location: dispatcher.rb:112, leave_insert.rb:69, repeat_last.rb:104, visual/extend_visual.rb:54, arrange_view.rb:43, insert_tab.rb:22 under carat/use_cases/, and carat/domain/operators.rb:172, 251, 272 (sprint-4 sweep, quality advisory).
+- Why: `tabstop > 0 ? tabstop : 8` repeats Options#tab_width (options.rb:130), and Options already refuses a tabstop below 1, so the fallback is dead.
+- Fix: call options.tab_width, and one shift width helper for the operators.
+- Category: editor
+- Added: 2026-11-14
+
+### Operators repeats the indent step fallback
+
+- Location: carat/domain/operators.rb:172, :251, :272 (sweep, quality).
+- Why: shift_block and shift repeat the shiftwidth-else-tabstop-else-8 step and indent_width the tab fallback.
+- Fix outline: one private step_width(shiftwidth, tabstop), or an Options reader passed in.
+- Category: editor
+- Added: 2026-11-17

@@ -1,0 +1,101 @@
+# Backlog: .claude/agents/quality-reviewer.md
+
+### Quality advisories the package step drops as style (same proposal as review-demotion)
+- Location: `.claude/agents/quality-reviewer.md` (check-parallel note 10).
+- Why: check-parallel dropped 4 of 7 advisories as style-only, 1 fixed, 2 appended; sprint-security dropped 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
+- Fix: the reviewer does not report a class the contributor then drops unchanged; accepted when over the next 5 runs the package step drops none of the advisories reported.
+- Category: pipeline
+- Added: 2026-11-17
+
+### The quality reviewer reports advisory classes the package step drops
+- Location: `.claude/agents/quality-reviewer.md` (advisory classes)
+- Why: of sprint-security's 6 advisories, 3 naming or duplication ones (RAN, the repeated prompts, the findingLine format) were dropped, changing no decision; the reviews phase took 15,732 output and 28 of 126 calls (22.2%) (sprint-security note 9).
+- Fix: stop reporting the classes the package step drops by rule; accepted when over the next five runs the package step drops no advisory class the reviewer reported, with blocking findings unchanged. Queued in `review-demotion`.
+- Category: pipeline
+- Added: 2026-11-17
+
+### The quality reviewer reports advisory classes the package step always drops (sprint-security retro note 9)
+- Location: `.claude/agents/quality-reviewer.md` advisory rules, the package step's advisory triage
+- Why: 3 of sprint-security's 6 advisories (naming, repeated prompts, a duplicated format) were dropped as changing no decision; reviews 15,732 output and 28 of 126 calls (22.2%).
+- Fix: accepted when over the next five runs the package step drops no advisory class the reviewer reported, the reviewer no longer reporting that class, with first-pass blocking findings unchanged.
+- Category: pipeline
+- Added: 2026-11-17
+
+### The skeptic's disputed-note command double-quotes the finding text (`sprint-security` security Low (4))
+- Location: .claude/agents/quality-reviewer.md:41
+- Why: the skeptic is told to record a disputed security finding as a double-quoted shell argument, so `$(...)` or backticks in the finding text, which can echo attacker-controlled diff content, would be expanded when the skeptic runs the note command; the shape existed before, and sprint-security narrows it to disputed findings only.
+- Fix: have the skeptic single-quote the note text (escape ' as '\'' and turn control characters into spaces), as the workflow's shellWord does, or have the workflow build the disputed-note commands itself from a structured disputed list in the skeptic's result.
+- Category: security
+- Added: 2026-11-17
+
+### A security finding both reviewers missed may go unrecorded (`sprint-security` quality advisory)
+- Location: .claude/agents/quality-reviewer.md:41
+- Why: "Record what both missed the same way" now follows the disputed-only form, so a security finding both missed may be noted with a disputed: prefix or not at all.
+- Fix: say a missed finding is noted as note CHANGE security "FINDING" (quality as in Periodic mode step 4).
+- Category: security
+- Added: 2026-11-17
+
+### Quality advisories the package step drops as style (check-parallel retro note 10)
+- Location: .claude/agents/quality-reviewer.md, the advisory classes; queued in `review-demotion`
+- Why: check-parallel's package dropped 4 of 7 advisories as style, sprint-security 3 of 6; reviews 26,694 output (11.1%) and 26 of 133 calls; quality first pass 67/131.
+- Fix: the reviewer stops reporting the classes the contributor drops unchanged; accepted when over the next five runs the package step drops none of the advisories reported.
+- Category: pipeline
+- Added: 2026-11-17
+
+### The skeptic records a disputed security finding as a double-quoted shell argument (sprint-13 security Low (4))
+- Location: .claude/agents/quality-reviewer.md:41 (sprint-security).
+- Why: $(...) or backticks in the finding text, which can echo diff content, expand when the skeptic runs the note command; the workflow's own Notes step single-quotes with shellWord, this path does not.
+- Fix: the skeptic returns a structured disputed list and the workflow builds the note commands with shellWord; accepted when a tools-test finding holding $(...) is recorded literally. Queue item `sprint-security-b`.
+- Category: security
+- Added: 2026-11-17
+
+### The quality reviewer investigates findings it hands to security (ci-trust-gaps retro)
+- Location: `.claude/agents/quality-reviewer.md`
+- Why: in ci-trust-gaps quality note 1 (a replace ref past fsck, marked security's to judge) was the Medium (8) security then blocked on, the run's 1 rework round; reviews 50,343 of 252,190 output tokens (20.0 percent) and 27.3 percent of calls; quality first pass 77/143, the lowest gate.
+- Fix: a finding the quality reviewer marks security's to judge is named, not investigated; accepted when reviews fall below 15 percent of output tokens on the next three pipeline rows with security never skipped.
+- Category: security
+- Added: 2026-11-17
+
+### The quality reviewer raises blocking parity bugs one round at a time (vim-folds-a retro 24)
+
+- Location: .claude/agents/quality-reviewer.md and the quality phase of .claude/workflows/deliver-change.js.
+- Why: vim-folds-a's later rounds raised blocking findings on behavior present at the first review (G or a mark leaving the cursor inside a closed fold; o on a closed fold): rework 3, implement 266,825 of 481,959 output tokens (55.4%) over 4 contributor starts; quality first pass 80/147 (54.4%), the lowest gate.
+- Fix outline: the first review reports every blocking finding in the touched behavior; accepted when over the next 5 runs with first.quality 0 no later round raises a blocking finding on code unchanged since the first review.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-17
+
+### A re-review re-raised an advisory declined for the brief's reason
+- Location: `.claude/agents/quality-reviewer.md`, `.claude/workflows/deliver-change.js` (notes handed to a later round); facet-palette note 6 repeating note 1
+- Why: the PANEL_DIM advisory, declined in round 1 because the brief pins #a4aabd / #5c6173, came back word for word; round 2 grew output from 332,067 to 573,120 (+241,053, 33 percent of 736,922); quality first pass 93/166 (facet-palette retro 11).
+- Fix: an advisory declined with a recorded reason goes to the findings file, not to a new round; accepted when no run has a later-round advisory repeating a declined note that drives a round of its own. Fold into `rework-review-repeat`.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-18
+
+### Marker refers to the wrong review commit
+- Location: .claude/agents/quality-reviewer.md:21
+- Why: that diff refers to the diff since the last passed review, while a blocked round's input names the last review's commit, blocked or passed.
+- Fix: tie the marker to the commit the input names, the last quality review, as priorQuality words it.
+- Category: pipeline
+- Added: 2026-11-19
+
+### The quality first pass misses stale wording of a replaced behavior
+- Location: .claude/agents/quality-reviewer.md (finder-match-strict retro note 13)
+- Why: finder-match-strict's quality first pass listed no docs-currency advisory, then 3 later passes found 5 (the old 'fuzzy' or 'unchanged' wording in docs/plugins.md, docs/compatibility.md, docs/actions.md, docs/codebase-map.md, plugin.rb, README.md); quality first pass 106 of 194 overall; reviews 45,892 output tokens and 55 of 221 calls (25%); rework 2 of 3, round 2 docs-only.
+- Fix: when a change replaces a behavior, the first pass searches the tree for the replaced behavior's old wording and reports every stale mention at once; accepted when such a change shows no docs-currency advisory after its first quality pass.
+- Also: docs/plugins.md, docs/compatibility.md, docs/actions.md, docs/codebase-map.md, README.md
+- Category: pipeline
+- Added: 2026-11-20
+
+### The quality first pass names one occurrence of a pattern it flags (pr-trust-lows retro 8)
+- Location: `.claude/agents/quality-reviewer.md`, the first-pass instructions.
+- Why: the advisory at d388c4a (pin copies the test does not read) missed the guard's refusal literal at `tools/agent_guard.sh:902`, present since d388c4a and found at ee4ce6c, causing rework round 2 of 3 with every first pass 1 and 0 blocking findings; reviews 63,219 output tokens (21.0 percent) over 56 calls; quality first pass 113/205 in history. Near the backlog queue's `stale-wording-first-pass` and `rework-review-repeat`.
+- Fix: the first pass searches the tree for every occurrence of a flagged pattern and names them all; accepted when over the next 5 runs no advisory names a line unchanged since an earlier quality review of the same run.
+- Merged: ### The first quality pass names one occurrence of a pattern it flags (pr-trust-lows retro 8)
+- Location: `.claude/agents/quality-reviewer.md`, the first-pass instruction.
+- Why: pr-trust-lows' advisory at d388c4a (pin copies the test does not read) missed the guard's refusal literal at `tools/agent_guard.sh:902`, present since d388c4a and found only at ee4ce6c, costing rework round 2; the run recorded rework 3 of 3 with every first pass 1 and 0 blocking findings, reviews 63,219 output tokens (21.0 percent) over 56 calls; quality first pass 113/205. Near the backlog queue's `stale-wording-first-pass` (Pool 22) and `rework-review-repeat` (Pool 20).
+- Fix: have the first pass search the branch for every occurrence of a pattern it flags; accepted when over the next 5 runs no advisory names a line unchanged since an earlier quality review of the same run.
+- Also: tools/agent_guard.sh
+- Category: pipeline
+- Added: 2026-11-20
