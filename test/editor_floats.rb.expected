@@ -68,6 +68,7 @@ ok   A refill drops the style: the rows are drawn in NormalFloat with no span
 ok   a span over a multi-byte line counts code points, and a span past the line's end is cut there
 ok   Another plugin's float is not styled, nor an unknown id or a layout window
 ok   the current float is styled with 0, and a float switched to a listed scratch buffer is not styled
+ok   but its border is: the border belongs to the window, as in Bad border requests are refused
 ok   a float reopened at the same box shows its own text and equals a full repaint
 ok   a float loads a file and goes to its last line
 ok   lines deleted in the layout window pull the float's cursor onto the last line
@@ -76,7 +77,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.12
+ok   the plugin API is 2.13
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
@@ -98,4 +99,20 @@ ok   the padding of a float without an edge is in NormalFloat
 ok   a long title is cut between the corners with a blank on each side
 ok   a notification box is drawn in the border style
 ok   A notification title is centered like a float title: the severity and its blanks in its group
-editor_floats: 100 passed, 0 failed
+ok   Each float border style: single ┌─── doc ────┐ / │ one        │ / │ two        │ / └────────────┘
+ok   Each float border style: double ╔═══ doc ════╗ / ║ one        ║ / ║ two        ║ / ╚════════════╝
+ok   Each float border style: solid      doc       /   one          /   two          /               
+ok   Each float border style: rounded ╭─── doc ────╮ / │ one        │ / │ two        │ / ╰────────────╯
+ok   the highlighted float draws its own double border
+ok   a float's own double border is in FloatBorder and its title in FloatTitle: ╔═══ doc ════╗
+ok   A float border style in ASCII: double under option.icons ascii +--- doc ----+ / | one        | / +------------+
+ok   and single under NO_COLOR +--- doc ----+ / | one        | / +------------+
+ok   A float border style of none: no edge and no title, the padding kept
+ok   the float without its edge equals a full repaint
+ok   A float opened without a border gets one: double
+ok   window 0 is the plugin's current float
+ok   The empty style follows winborder: double, then single again, the other float single throughout
+ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
+ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
+ok   a refill keeps the border style
+editor_floats: 117 passed, 0 failed

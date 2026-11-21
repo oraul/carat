@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 12
-    VERSION = "2.12"
+    MINOR = 13
+    VERSION = "2.13"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -193,7 +193,8 @@ module Carat
     # "cursor" from the cursor cell; height and width are its text rows
     # and columns, at least 1; the host pads the text with one column on
     # each side, inside the box; border draws a one-cell border around
-    # it (in the style of option.winborder, none drawing none) with the
+    # it (in the style of option.winborder, none drawing none, or the
+    # float's own style from set_float_border, 2.13) with the
     # title centered on its top edge, so a bordered box is width + 4
     # columns wide under a drawn border and width + 2 under none, as
     # Host#float_frame answers; z from 0 to 1000 stacks it, higher on
@@ -785,6 +786,23 @@ module Carat
       # @rbs spans: Array[Integer]
       def style_float(window, selected, spans)
         raise NotImplementedError, "Host#style_float"
+      end
+
+      # Gives the plugin's float with the window id, 0 for the current
+      # window, a border style of its own and returns a Response (from
+      # 2.13): "none", "single", "double", "rounded", or "solid", drawn as
+      # option.winborder draws it, its ASCII form under option.icons ascii
+      # or NO_COLOR, or "" for option.winborder again. The float is then
+      # bordered whatever its FloatOptions said, "none" drawing no edge and
+      # no title, and its edge is one cell for every other style;
+      # set_float_lines keeps the style. Fails with "No float N" for
+      # another plugin's float or an unknown id, and "No border style X:
+      # none, single, double, rounded, or solid" for any other name; a
+      # failed request changes nothing.
+      # @rbs window: Integer
+      # @rbs style: String
+      def set_float_border(window, style)
+        raise NotImplementedError, "Host#set_float_border"
       end
 
       # Returns a FloatFrame (from 2.6): the frame a float the plugin opens

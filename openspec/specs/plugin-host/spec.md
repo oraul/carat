@@ -800,11 +800,11 @@ The request `set_float_lines(window, lines, title)` (API 2.11) SHALL replace the
 - **THEN** the request fails with "No float N" and the scratch buffer keeps its lines and title
 
 #### Scenario: A plugin written against 2.10 still loads
-- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.12
-- **THEN** the plugin is accepted, while a manifest naming "2.13" is refused naming both versions
+- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.13
+- **THEN** the plugin is accepted, while a manifest naming "2.14" is refused naming both versions
 
 ### Requirement: A plugin styles its float
-The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the style of one of the plugin's floats, 0 for the current window: `selected` is the row drawn in `PmenuSel`, the others then in `Pmenu`, or -1; `spans` are flat quadruples of row, column, length, and group id, drawn as tokens, `PmenuMatch` on the selected row in `PmenuMatchSel`. A refill SHALL drop the style. The API SHALL be 2.12; an older 2.x manifest SHALL load.
+The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the style of one of the plugin's floats, 0 for the current window: `selected` is the row drawn in `PmenuSel`, the others then in `Pmenu`, or -1; `spans` are flat quadruples of row, column, length, and group id, drawn as tokens, `PmenuMatch` on the selected row in `PmenuMatchSel`. A refill SHALL drop the style.
 
 #### Scenario: A row and spans styled
 - **WHEN** a plugin opens a float showing three lines and styles it with its second row selected and a `PmenuMatch` span on its first and its second row
@@ -827,7 +827,7 @@ The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the 
 - **THEN** the float's rows are drawn in `NormalFloat` with no span
 
 #### Scenario: A plugin written against 2.11 still loads
-- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.12
+- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.13
 - **THEN** the plugin is accepted
 
 ### Requirement: A float span admits only the popup menu's two groups beside the token groups
@@ -851,3 +851,45 @@ A span's group SHALL be a syntax, file-icon, or markup group, `PmenuSel`, or `Pm
 #### Scenario: Another plugin's float is not styled
 - **WHEN** another plugin styles the float, or the plugin styles an id no float has or a float switched to a listed buffer
 - **THEN** the request fails with "No float N"
+
+### Requirement: A plugin chooses its float's border style
+The request `set_float_border(window, style)` (API 2.13) SHALL give one of the plugin's floats, 0 for the current window, the border style `none`, `single`, `double`, `rounded`, or `solid`, drawn as `option.winborder` draws it with its ASCII form, or `""` for `option.winborder`; the float SHALL then be bordered, `none` drawing no edge and no title. Other floats and a refill SHALL keep their border. An older 2.x manifest SHALL load.
+
+#### Scenario: Each float border style
+- **WHEN** a plugin opens a bordered float of 2 rows by 10 columns titled "doc" under the shipped `rounded` border and sets its border to `single`, `double`, `solid`, or `rounded`
+- **THEN** its corners and edges are drawn with that style's characters around the title and the text
+
+#### Scenario: A float border style in ASCII
+- **WHEN** `option.icons ascii` is set, or `NO_COLOR`, and the plugin sets its float's border to `double` or `single`
+- **THEN** its top edge reads `+--- doc ----+`, its sides `|`, and its bottom edge `+` and `-`
+
+#### Scenario: A float border style of none
+- **WHEN** the plugin sets its bordered float's border to `none`
+- **THEN** the float shows its padding and lines with no edge and no title, and the screen equals a full repaint
+
+#### Scenario: A float opened without a border gets one
+- **WHEN** the plugin opens a float without a border and sets its border to `double`
+- **THEN** the float is drawn with the double corners and edges
+
+#### Scenario: The empty style follows winborder
+- **WHEN** `option.winborder single` is set and the plugin sets its float's border to `double` and then to `""`
+- **THEN** the float is drawn with the single corners again, and another float of the plugin stays single throughout
+
+#### Scenario: A restyled border repaints
+- **WHEN** the plugin changes its float's border from `rounded` to `double`, its box unchanged
+- **THEN** the next frame shows the double corners and equals a full repaint
+
+#### Scenario: A plugin requests a border style
+- **WHEN** a test plugin opens a float through its host and sets its border to `double`
+- **THEN** the request succeeds and the float takes the double style with a border, while a disabled plugin's request is refused with "Plugin NAME is disabled" and the float keeps its border
+
+#### Scenario: A plugin written against 2.12 still loads
+- **WHEN** a plugin's manifest names API version "2.12" and the host has 2.13
+- **THEN** the plugin is accepted, its bordered float takes `option.winborder` with an edge, and its unbordered float has no edge
+
+### Requirement: A bad border style request is refused
+`set_float_border` SHALL fail with "No float N" for another plugin's float or an id no float has, and with "No border style X: none, single, double, rounded, or solid" for any other name. A refused request SHALL leave the float's border unchanged.
+
+#### Scenario: Bad border requests are refused
+- **WHEN** the plugin sets its float's border to `thick`, another plugin sets it to `double`, or the plugin sets the border of an id no float has
+- **THEN** each request fails with its message and the float keeps its border
