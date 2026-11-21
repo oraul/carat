@@ -11,7 +11,7 @@ Removes the gem from the selected buffer tab so tabs show only the modified mark
 - Remove the gem from `TabBar`: the leading cell of every tab is a space, so tab widths and the overflow arithmetic are unchanged, and `GEM` and `ASCII_GEM` are deleted.
 - Change the buffer-tabs spec requirement "A tab per listed file buffer" to say the selected tab carries no gem and is told apart by the selected-tab group.
 - Change the tab-flow test to compare row 0 as squeezed text, dropping `strip_tab_cells`, `counter_end`, and `tab_boundary?` and about 60 lines of heuristics.
-- Change the tab bar, frame presenter, definitions, and editor tab tests and their snapshots to assert frame rows without a gem.
+- Change the tab bar, frame presenter, definitions, and editor tab tests to assert frame rows without a gem, and the tab bar snapshot to match.
 - Document the change in the README, `docs/compatibility.md`, and the code map.
 - Record the remaining advisories in the findings file and apply the planned queue.
 
