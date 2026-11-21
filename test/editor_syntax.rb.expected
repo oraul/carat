@@ -17,12 +17,8 @@ ok   so does the bare name
 ok   :set syntax=OFF turns this buffer plain
 ok   and its syntax is empty
 ok   :set syn=ON goes back to the filetype
-ok   an option :set does not handle yet
-ok   winborder is an option Carat has, read from configuration lines
-ok   list is an option Carat has, read from configuration lines
-ok   and listchars, by its short name too
-ok   showtabline is an option Carat has, read from configuration lines
-ok   and by its short name too
+ok   theme is an option :set does not handle yet
+ok   and background, by its short name too
 ok   an unknown option
 ok   a text file is plain
 ok   :se ft=ruby highlights it and sets the syntax
@@ -40,4 +36,4 @@ ok   typing in a heredoc tokenizes one row
 ok   the row is String
 ok   typing in a multi-line string tokenizes one row
 ok   an unclosed def in a Ruby file shows no sign
-editor_syntax: 42 passed, 0 failed
+editor_syntax: 38 passed, 0 failed
