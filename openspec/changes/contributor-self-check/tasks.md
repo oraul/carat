@@ -3,7 +3,7 @@
 ## 1. The check, the guard, and the lane facts
 
 - [x] 1.1 `tools/agent_guard.sh`: the contributor runs `run_state.sh check CHANGE`, never with a COMMIT; tools-test cases `guard: contributor runs the check of its change` and `guard: contributor refuses a check that backs a commit`.
-- [x] 1.2 `tools/run_state.sh` check: a COMMIT other than `phase.check` or HEAD is refused; header and comments document the trust; tools-test `run_state: check refuses a backed commit other than phase.check or the head`, the carry cases recording `phase.check`.
+- [x] 1.2 `tools/run_state.sh` check: a COMMIT other than `phase.check` or HEAD backs nothing (6.2, once refused); header and comments document the trust; tools-test `run_state: check names a backed commit other than phase.check or the head as backing nothing`, the carry cases recording `phase.check`.
 - [x] 1.3 `tools/lane_facts.sh`: the `machinery` line; tools-test cases for no, yes after a tools/ commit, and the existing lines.
 
 ## 2. The workflow
@@ -33,3 +33,5 @@
 ## Fix round
 
 - [x] 6.1 Security review (Low) `.claude/workflows/deliver-change.js` claimFrom and `tools/run_state.sh` check: the comments said the stage records come only from a runner no agent writes, false for the contributor, whose working tree's runner writes them; the check entry, `backed_commit`, the claim comment, and the design's Context and Risks now say a backed head trusts the contributor's session and what CI and main's merge gates rerun (fixed, comments only). Signing the runner's records or always rerunning diagnose and gates adds behavior, so it stays recorded for `docs/findings/contributor-self-check.md`.
+- [x] 6.2 Check refused at `9aa3b824c35b` (`tools/run_state.sh` `backed_commit`): the workflow queues `phase.check` until its rounds end, so a fix round's check named a pass the run state did not hold and was refused, a fix round lost. Any other COMMIT now backs nothing, noted on stderr, and every stage runs; tools-test `run_state: check names a backed commit other than phase.check or the head as backing nothing`, `run_state: check carries no stage from an unbacked commit`, `run_state: check runs every stage after an unbacked commit and passes`, `run_state: check after an unbacked commit exits 0, refusing nothing` (fixed).
+- [x] 6.3 `.claude/workflows/deliver-change.js` rounds: a fix round's check backing this run's queued `phase.check` flushes it first (`backedUnwritten`), so its stages still carry; tools-test `self-check: backedUnwritten holds only for a queued phase.check of a commit other than the head`, `self-check: rounds flushes a queued phase.check it backs before the checker's start` (fixed).

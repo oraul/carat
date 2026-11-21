@@ -433,9 +433,21 @@ commit "test: t again"
 expect "run_state: check carries a stage carried from the backed commit" 0 "stage a: passed at $before_tests, carried to $(git rev-parse --short=12 HEAD)" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests"
 # contributor-self-check: a commit that is neither the recorded phase.check
-# nor the head backs nothing, so it carries no record a check never passed.
-expect "run_state: check refuses a backed commit other than phase.check or the head" 1 "check: refused: [0-9a-f]{12} is neither the recorded phase.check \($before_tests\) nor HEAD" \
-  env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD~1)"
+# nor the head backs nothing, so it carries no record a check never passed,
+# and the check still runs: the workflow writes phase.check only after its
+# rounds, so a fix round's check may name a pass the run state does not
+# hold yet, which costs stage runs, never a refused check and a fix round.
+# Here phase.check names another commit, so $before_tests, which carries
+# stage b when backed, backs nothing.
+state phase state check "$(git rev-parse --short=12 HEAD~1)" > /dev/null
+env STAGES="b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$before_tests" > unbacked.out 2>&1
+echo "exit $?" >> unbacked.out
+state phase state check "$before_tests" > /dev/null
+expect "run_state: check names a backed commit other than phase.check or the head as backing nothing" 0 "check: $before_tests is neither the recorded phase.check \([0-9a-f]{12}\) nor HEAD [0-9a-f]{12}: it backs nothing, every stage runs" cat unbacked.out
+expect "run_state: check carries no stage from an unbacked commit" 1 "^$" grep -E "carried to|passed at .*, skipped" unbacked.out
+expect "run_state: check runs every stage after an unbacked commit and passes" 0 "^stage b: exit 0" grep -E "^stage b: exit 0" unbacked.out
+expect "run_state: check after an unbacked commit exits 0, refusing nothing" 0 "^exit 0$" cat unbacked.out
+rm unbacked.out
 # TEST_ONLY reads the Markdown files of the backlog folder as records
 # (backlog-records-rule), never another file under it.
 mkdir -p docs/backlog/carat/adapters

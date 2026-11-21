@@ -7,7 +7,7 @@ A workflow start cannot continue a finished agent, so every failed check sent ba
 ## What Changes
 
 - `tools/agent_guard.sh` lets the contributor run `sh tools/run_state.sh check CHANGE`, with no commit argument; a COMMIT, `metric`, `settled`, and `moved` stay refused.
-- `tools/run_state.sh check CHANGE COMMIT` refuses a COMMIT that is neither the recorded `phase.check` nor HEAD, and its header and comments say the workflow accepts a pass whoever started the check, only from the runner's own stage records.
+- `tools/run_state.sh check CHANGE COMMIT` counts stage records only at a COMMIT that is the recorded `phase.check` or HEAD; any other COMMIT backs nothing, a note says so, and every stage runs, since the workflow writes `phase.check` only after its rounds, so a refusal would cost a fix round; and its header and comments say the workflow accepts a pass whoever started the check, only from the runner's own stage records.
 - `tools/lane_facts.sh` prints a `machinery` line: `yes` when the diff from the merge base with origin/main touches `tools/`, the `Makefile`, or `test/runner/`, `no` otherwise, `unknown` without a merge base.
 - `deliver-change.js`: the contributor's schema gains `check` (the verdict line of its last check, verbatim) and `check_runs`; an implement or fix result whose `check` says every stage passed at its returned head, over a lane whose `machinery` is `no`, makes the checker's check back that head, so the stages passed there are skipped and the checker still runs spent, bench, the metric line, and moved; any other claim leaves the backed commit at `phase.check`, and a false claim only costs the stage run. A `self_fix` metric sums each start's check runs after its first. `CALL_CAPS` implement 90 to 110 and fix 40 to 60; the self-check prompt and the card's rule 2 ask for the check.
 - `.claude/agents/contributor.md`: maxTurns 140 to 170 (the caps formula), line 15 and card rule 2 reworded, implement step 5 and fix pointing at a new Checking section of `docs/contributor-notes.md`, within the file's budget.
@@ -18,7 +18,7 @@ Out of scope: `tools/rules.sh` (untouched); the handling of security findings (s
 
 Assumptions:
 
-- The brief asks both that the checker back the contributor's passing head and that a COMMIT other than `phase.check` be refused; the head the checker backs is never `phase.check` yet, so `check` accepts a COMMIT equal to `phase.check` or to HEAD. At HEAD it skips only the stage records the runner wrote there; any other commit, which could carry records forward, is refused.
+- The brief asks both that the checker back the contributor's passing head and that a COMMIT other than `phase.check` be refused; the head the checker backs is never `phase.check` yet, so `check` accepts a COMMIT equal to `phase.check` or to HEAD. At HEAD it skips only the stage records the runner wrote there; any other commit, which could carry records forward, backs nothing: its records are refused and every stage runs, never the check refused, since the workflow queues `phase.check` until its rounds end and a fix round's check may name a pass the run state does not hold yet; the workflow flushes that queued record before such a check (`backedUnwritten`), so its carry still holds.
 - `self_fix` is the count of check runs after the first in each implement or fix start, as the contributor reports it in `check_runs`; a re-wait on exit 3 is no run.
 - The brief's council paths under the session scratchpad are paraphrased in `brief.md`, which keeps no session path.
 

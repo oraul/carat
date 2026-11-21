@@ -137,9 +137,11 @@
 #                               failure, its log's last lines printed and
 #                               the stages still running recorded killed (the
 #                               workflow records phase.check); a stage record
-#                               counts only at COMMIT, refused unless it is
-#                               the recorded phase.check, the last check the
-#                               workflow passed, or HEAD, or carried from it:
+#                               counts only at COMMIT when it is the
+#                               recorded phase.check, the last check the
+#                               workflow passed, or HEAD (any other COMMIT
+#                               backs nothing, noted on stderr, and every
+#                               stage runs), or carried from it:
 #                               skipped when COMMIT is HEAD, carried to HEAD
 #                               for a
 #                               stage outside TEST_STAGES when only tests
@@ -641,9 +643,12 @@ commit_at() {
 # the recorded phase.check, the last check the workflow passed, or HEAD,
 # where the stage records the check skips are the runner's at that very
 # commit (the working tree's runner, so at HEAD they are only as trusted
-# as the session that ran it: the header's check entry); dies on any
-# other commit, which would carry records no check the workflow recorded
-# passed.
+# as the session that ran it: the header's check entry). Any other commit
+# backs nothing: its records are refused, a note says so on stderr, and
+# the check runs every stage, since the workflow queues its phase.check
+# record and writes it only after its rounds, so a fix round's check may
+# name a pass the run state does not hold yet, which costs stage runs,
+# never a refused check and a fix round.
 backed_commit() {
   backed_at=$(commit_at "$1") || exit 1
   if [ "$backed_at" = "$(head_commit)" ]; then
@@ -652,9 +657,11 @@ backed_commit() {
   fi
   checked=$(read_key phase.check)
   [ -z "$checked" ] || checked=$(git rev-parse --verify -q --short=12 "$checked^{commit}" 2>/dev/null) || checked=""
-  [ -n "$checked" ] && [ "$backed_at" = "$checked" ] ||
-    die "check: refused: $backed_at is neither the recorded phase.check (${checked:-none}) nor HEAD $(head_commit)"
-  echo "$backed_at"
+  if [ -n "$checked" ] && [ "$backed_at" = "$checked" ]; then
+    echo "$backed_at"
+    return
+  fi
+  echo "check: $backed_at is neither the recorded phase.check (${checked:-none}) nor HEAD $(head_commit): it backs nothing, every stage runs" >&2
 }
 
 # True when WORD is one of the words of LIST.
