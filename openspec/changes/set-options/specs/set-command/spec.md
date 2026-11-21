@@ -1,3 +1,7 @@
+## Purpose
+
+`:set` of the global options the editor has: the number, flag, and word options by their full and short names, checked by the rule of their configuration lines, reset to their shipped defaults, listed, and shown at once.
+
 ## ADDED Requirements
 
 ### Requirement: Number options are set with set
