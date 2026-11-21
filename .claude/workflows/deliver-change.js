@@ -229,6 +229,7 @@ function restoreCalibration(saved, used) {
 const STATUS = { type: 'string', enum: ['done', 'stopped'] }
 const WORK_STATUS = { type: 'string', enum: ['done', 'partial', 'stopped'], description: 'partial: the cap stopped you with the work committed and backed up' }
 const HEAD = { type: 'string', description: 'git rev-parse --short=12 HEAD at the end' }
+const LANE_HEAD = { type: 'string', description: 'the head line of sh tools/lane_facts.sh CHANGE at the end' }
 const LINES = { type: 'array', items: { type: 'string' } }
 const RESUME = {
   type: 'object',
@@ -285,7 +286,7 @@ const PACK = { type: 'object', properties: { pack: { type: 'string' } }, require
 const WORK = {
   type: 'object',
   properties: {
-    status: WORK_STATUS, head: HEAD, summary: { type: 'string' }, self_check: { type: 'string', enum: ['match', 'mismatch'], description: 'mismatch when the self-check found a test, document, or brief item still missing' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
+    status: WORK_STATUS, head: LANE_HEAD, summary: { type: 'string' }, self_check: { type: 'string', enum: ['match', 'mismatch'], description: 'mismatch when the self-check found a test, document, or brief item still missing' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
     remaining: { ...LINES, description: 'with status partial: each task or step left, one line each' },
     pushed: { type: 'string', description: 'after a push: the full sha it recorded, sh tools/run_state.sh get <change> pushed' },
     quality_review: {
@@ -876,17 +877,20 @@ const SELF_CHECK = '\nBefore returning, check yourself: every behavior the chang
 // The rules card at the top of the contributor's agent file, word for word
 // (tools/tools_test.sh compares them): the mid tier forgets a rule of a long
 // file, and each start is fresh, so every start carries it.
-const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `git rev-parse --short=12 HEAD`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded, before packaging."
+const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `sh tools/lane_facts.sh <change>`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded, before packaging."
 
 // Card rule 1 made mechanical: a done contributor result's head is the
-// lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters,
-// so a placeholder, a typed short or full hash, or another commit is
-// refused. The workflow has no shell, so laneHead reads the lane's head in
-// a start of the record profile (recordStart) that runs that one command;
-// '' when it could not, and then a well-formed head is taken, noted
-// head-unread (the check compares its own commit with it). safeText is all
-// of a reported head that reaches a note or a queued record line: no quote
-// or shell character.
+// lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters.
+// The workflow has no shell, so laneHead reads the lane's facts in a start
+// of the record profile (recordStart) that runs `sh tools/lane_facts.sh`
+// (contributor-harness): { head, dirty }, head '' when it could not read it,
+// and then a well-formed head is taken, noted head-unread (the check
+// compares its own commit with it); dirty -1 when unknown. A head that
+// differs from a committed lane head only in form (headForm) is taken from
+// git, noted head-form, with no refusal, escalation, or restart; any other
+// placeholder, short hash, or commit is refused (headProblem). safeText is
+// all of a reported head that reaches a note or a queued record line: no
+// quote or shell character.
 const HEAD12 = /^[0-9a-f]{12}$/
 function safeText(text) {
   return String(text || '').replace(/[^A-Za-z0-9._-]/g, '').slice(0, 40) || 'empty'
@@ -895,6 +899,29 @@ function headProblem(reported, lane) {
   if (!HEAD12.test(reported || '')) return `head ${safeText(reported)} is not the 12-character form of git rev-parse --short=12 HEAD`
   if (lane && reported !== lane) return `head ${reported} is not the lane's HEAD ${lane}`
   return ''
+}
+// The lane's head and dirty count from the `key value` lines of
+// tools/lane_facts.sh: only a 12-character hex head and a whole count kept.
+function parseLaneFacts(text) {
+  const facts = {}
+  for (const line of String(text || '').split('\n')) {
+    const m = /^([a-z_]+) (\S+)$/.exec(line.trim())
+    if (m) facts[m[1]] = m[2]
+  }
+  return { head: HEAD12.test(facts.head || '') ? facts.head : '', dirty: /^[0-9]+$/.test(facts.dirty || '') ? Number(facts.dirty) : -1 }
+}
+// True when a reported head differs from the lane's committed head only in
+// form: the lane read with no uncommitted path, and the head, lower-cased,
+// empty or holding a character that is not a hex digit (a placeholder), or
+// a hex prefix of seven or more characters of the lane head or one the lane
+// head prefixes (a short or full hash), upper case included. Another hex
+// value names another commit and is left to headProblem, as is any head
+// over a dirty or unknown lane.
+function headForm(reported, lane) {
+  if (!lane.head || lane.dirty !== 0 || reported === lane.head) return false
+  const r = String(reported || '').trim().toLowerCase()
+  if (!/^[0-9a-f]+$/.test(r)) return true
+  return r.length >= 7 && (lane.head.startsWith(r) || r.startsWith(lane.head))
 }
 // Card rule 10 made mechanical (review-in-openspec): an implement start's
 // done result, the one that finished the tasks, reports quality_review,
@@ -918,10 +945,8 @@ function resultProblems(mode, r, lane) {
   return found.filter((p) => p.text)
 }
 async function laneHead() {
-  const command = `git -C ${laneDir(state.change)} rev-parse --short=12 HEAD`
-  const r = await recordStart(command, 'record: lane head')
-  const out = r && r.ok ? String(r.output || '').trim() : ''
-  return HEAD12.test(out) ? out : ''
+  const r = await recordStart(`sh tools/lane_facts.sh ${state.change}`, 'record: lane head')
+  return parseLaneFacts(r && r.ok ? r.output : '')
 }
 
 async function contributor(mode, detail) {
@@ -943,11 +968,17 @@ async function contributor(mode, detail) {
     const step = continuation(result, result ? workLeft(result) : null, count)
     if (step.next === 'done') {
       const lane = await laneHead()
-      const problems = resultProblems(mode, result, lane)
+      if (headForm(result.head, lane)) {
+        const what = `contributor ${mode} start ${count + 1}: head ${safeText(result.head)} taken from git as ${lane.head}`
+        note(`${what}; not refused`)
+        queue(`sh tools/run_state.sh note ${state.change} head-form "${what}"`, head)
+        result = Object.assign({}, result, { head: lane.head })
+      }
+      const problems = resultProblems(mode, result, lane.head)
       if (!problems.length) {
         // An unread lane head is also a run-state note in fixed words, so a
         // reader that always fails, turning the wrong-head refusal off, shows.
-        if (!lane) {
+        if (!lane.head) {
           note(`contributor (${mode}): the lane's head could not be read; head ${result.head} taken as returned`)
           queue(`sh tools/run_state.sh note ${state.change} head-unread "contributor ${mode} start ${count + 1}: lane head not read"`, head)
         }
@@ -970,7 +1001,7 @@ async function contributor(mode, detail) {
       }
       for (const p of problems) refused.add(p.kind)
       more = problems.map((p) => p.kind === 'head'
-        ? `\nThis restarts a start whose result was refused: its ${p.text}. Return as head the output of \`git rev-parse --short=12 HEAD\` run in the worktree, copied, never typed or a placeholder; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
+        ? `\nThis restarts a start whose result was refused: its ${p.text}. Commit any uncommitted work, then return as head the \`head\` line of \`sh tools/lane_facts.sh ${state.change}\`, copied, never typed or a placeholder; redo nothing already committed or recorded.${pushedHint(mode, state.change)}`
         : `\nThis restarts a start whose result was refused: ${p.text}. ${QUALITY_STEP}`).join('')
       continue
     }
@@ -978,7 +1009,11 @@ async function contributor(mode, detail) {
       stopped = `contributor (${mode}) stopped${count ? ` after ${count + 1} starts` : ''}: ${result ? result.question || result.summary : 'no result'}`
       return false
     }
-    if (result && /^[0-9a-f]{7,40}$/.test(result.head || '')) head = result.head
+    // A continued start's head is read from the lane too, the reported
+    // well-formed one kept only when the lane's could not be read.
+    const read = result ? (await laneHead()).head : ''
+    if (read) head = read
+    else if (result && /^[0-9a-f]{7,40}$/.test(result.head || '')) head = result.head
     const why = result ? 'reached its cap' : 'returned no result'
     note(`contributor (${mode}) ${why}${result ? `, left: ${step.left.join('; ')}` : ''}; continued`)
     queue(`sh tools/run_state.sh note ${state.change} overrun "contributor ${mode} start ${count + 1} ${why} and was continued"`, head)

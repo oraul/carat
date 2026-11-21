@@ -3131,6 +3131,51 @@ expect "run_state: trusted leaves the file as it was" 0 '"phase.package"' cat bu
 expect "run_state: trusted without the base still trusts the ancestors of HEAD" 0 "\"untrusted\": \"merged phase.merge phase.package" \
   env BASE=nothing sh "$here/run_state.sh" trusted trust
 
+# ---------------------------------------------------------- lane_facts.sh
+# A lane's facts (contributor-harness), read from git and the check log,
+# never typed: each line on a test repository with a lane worktree, the
+# same from the main checkout and from the lane, and the refusals.
+facts() {
+  sh "$here/lane_facts.sh" "$@" | tr '\n' ' '
+}
+fresh facts
+git_q init -q --bare "$work/facts.git"
+git_q remote add origin "$work/facts.git"
+git_q push -q origin main 2>/dev/null
+git_q fetch -q origin
+facts_base=$(git rev-parse --short=12 HEAD)
+git_q worktree add -q -b chore/lf tmp/.lane-lf
+(cd tmp/.lane-lf && echo one > one.txt && commit "chore: one")
+facts_head=$(git -C tmp/.lane-lf rev-parse --short=12 HEAD)
+expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+  facts lf
+expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+  sh -c "cd tmp/.lane-lf && sh '$here/lane_facts.sh' lf | tr '\n' ' '"
+git -C tmp/.lane-lf push -q origin chore/lf 2>/dev/null
+expect "lane_facts: a lane whose origin branch is its head reads pushed yes" 0 " pushed yes " facts lf
+echo two >> tmp/.lane-lf/one.txt
+echo new > tmp/.lane-lf/new.txt
+expect "lane_facts: dirty counts the uncommitted paths, untracked ones included" 0 " pushed yes dirty 2 " facts lf
+(cd tmp/.lane-lf && commit "chore: two")
+expect "lane_facts: a commit past origin's branch reads pushed no and a new head" 0 "^head $(git -C tmp/.lane-lf rev-parse --short=12 HEAD) .* pushed no dirty 0 " facts lf
+mkdir -p build/stages/lf
+printf 'stage a: passed\ncheck: stage test-run failed at abc1234def56; read build/stages/lf/test-run.log\n' > build/stages/lf/check.log
+expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 $" facts lf
+echo "check: every stage passed at 0123456789ab; the workflow records the check" >> build/stages/lf/check.log
+expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab $" facts lf
+echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
+expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none $" facts lf
+echo "stage a: running" >> build/stages/lf/check.log
+expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none $" facts lf
+idx=$(git -C tmp/.lane-lf rev-parse --path-format=absolute --git-path index)
+cp "$idx" "$work/facts.index"
+echo broken > "$idx"
+expect "lane_facts: a lane git status cannot read reads dirty unknown, never 0" 0 " dirty unknown " facts lf
+cp "$work/facts.index" "$idx"
+expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
+expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
+expect "lane_facts: no argument is refused with the usage" 2 "usage: sh tools/lane_facts.sh CHANGE" sh "$here/lane_facts.sh"
+
 # --------------------------------------------------------- agent_guard.sh
 
 # guard PROFILE COMMAND [DIR]: the guard's answer to a Bash call of
@@ -3153,6 +3198,8 @@ guard_edit() {
 # not list, however they are written.
 for p in read merger contributor; do
   expect "guard: $p allows a git read" 0 "^$" guard $p 'git --no-pager log --oneline -5 && git diff origin/main...HEAD | head -40'
+  expect "guard: $p reads a lane's facts with tools/lane_facts.sh" 0 "^$" guard $p 'sh tools/lane_facts.sh c'
+  expect "guard: $p refuses tools/lane_facts.sh other than one change name" 2 "tools/lane_facts.sh other than CHANGE" guard $p 'sh tools/lane_facts.sh c extra'
   expect "guard: $p refuses git push" 2 "refused for the $p profile: git push" guard $p 'git push origin chore/x'
   expect "guard: $p refuses a quoted verb" 2 "git push" guard $p "git 'push' origin x"
   expect "guard: $p refuses a quoted name" 2 "git push" guard $p '\"git\" push origin x'
@@ -3305,6 +3352,10 @@ expect "guard: merger waits as its file says" 0 "^$" guard merger 'sh tools/ci_w
 expect "guard: merger verifies the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%H%n%B origin/main'
 expect "guard: merger prints the squash message at the pushed head" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger refuses open_pr message at a short sha" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message c 0123456789ab'
+expect "guard: read reads a lane's facts after a cd into its worktree" 0 "^$" guard read 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: contributor reads a lane's facts after a cd into its worktree" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: merger refuses tools/lane_facts.sh after a cd into a worktree, the branch's copy" 2 "tools/lane_facts.sh after cd tmp/.lane-c for the merger" guard merger 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+expect "guard: merger reads a lane's facts after a cd back to the project" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/lane_facts.sh c'
 expect "guard: merger refuses open_pr message after a cd into a worktree, the branch's copy" 2 "tools/open_pr.sh message after cd tmp/.lane-c" guard merger 'cd tmp/.lane-c && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger prints the squash message before a cd into a worktree" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567 && cd tmp/.lane-c'
 expect "guard: merger prints the squash message after a cd back to the project from a worktree" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
@@ -5362,16 +5413,17 @@ expect "closing loop: a records-only closing commit stands on the earlier check 
 # The real contributor function over a stubbed agent: the closing start's
 # prompt carries its numeric cap and it counts no rework round. The agent
 # returns the next of results (a done result at the lane's head when none is
-# left), and the lane-head start, labelled record, the lane value, its
+# left), and the lane-head start, labelled record, the lines of
+# tools/lane_facts.sh with the lane value and the dirty count, its
 # prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead contributor" "(async () => {
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem parseLaneFacts headForm qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead contributor" "(async () => {
     globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
-    globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'
+    globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'; globalThis.dirty = 0
     globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1; globalThis.qualityReview = ''
     globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
     globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
-    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: lane + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
+    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: 'head ' + lane + '\\nbranch chore/c\\ndirty ' + dirty + '\\ncheck none\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
     globalThis.continuation = (r) => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.pushedHint = () => ''
     globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
     $1
@@ -5382,15 +5434,28 @@ expect "closing loop: the closing start's prompt carries the numeric closing cap
 # Card rule 1 made mechanical (delivery-guards-b): a done result whose head
 # is a placeholder, a typed short hash, or not the lane's
 # git rev-parse --short=12 HEAD is refused, noted, escalated, and restarted
-# once; a second refusal stops the run.
+# once; a second refusal stops the run. Since contributor-harness the head
+# of a committed lane, read by tools/lane_facts.sh, replaces one that
+# differs from it only in form, noted head-form, with no refusal; a lane
+# with uncommitted work refuses it as before.
 expect "head guard: a head at the lane's HEAD is taken, with no note and no escalation" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":1,"queued":\[\],"escalated":false\}$' \
   contributor_js "const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated }"
-expect "head guard: the lane-head start runs git rev-parse --short=12 HEAD in the change's worktree, once per done result" 0 '^\[1,true\]$' \
-  contributor_js "await contributor('implement', 'd'); return [headPrompts.length, headPrompts[0].includes('\n\ngit -C tmp/.lane-c rev-parse --short=12 HEAD\n\n')]"
-expect "head guard: a placeholder head is refused, noted head-refused, escalated, and restarted once with the reason" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":2,"queued":\["sh tools/run_state.sh note c escalation \\"a refused head\\"","sh tools/run_state.sh note c head-refused \\"contributor implement start 1: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD\\""\],"escalated":true,"told":true,"closable":true\}$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
-expect "head guard: a well-formed head other than the lane's HEAD, or a typed short one, is refused" 0 '^\[\["head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb; restarted"\],"head bbbbbbb is not the 12-character form of git rev-parse --short=12 HEAD",""\]$' \
+expect "head guard: the lane-head start runs tools/lane_facts.sh for the change, once per done result" 0 '^\[1,true\]$' \
+  contributor_js "await contributor('implement', 'd'); return [headPrompts.length, headPrompts[0].includes('\n\nsh tools/lane_facts.sh c\n\n')]"
+expect "head guard: a placeholder head over a lane with uncommitted work is refused, noted head-refused, escalated, and restarted once with the reason" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","starts":2,"queued":\["sh tools/run_state.sh note c escalation \\"a refused head\\"","sh tools/run_state.sh note c head-refused \\"contributor implement start 1: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD\\""\],"escalated":true,"told":true,"closable":true\}$' \
+  contributor_js "dirty = 2; results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
+expect "head guard: a well-formed head other than the lane's HEAD is refused, and headProblem refuses a typed short one headForm left to it" 0 '^\[\["head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb; restarted"\],"head bbbbbbb is not the 12-character form of git rev-parse --short=12 HEAD",""\]$' \
   contributor_js "results = [{ status: 'done', head: 'cccccccccccc', summary: 's' }]; await contributor('fix', 'd'); return [notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .fix. result refused: /, '')), headProblem('bbbbbbb', 'bbbbbbbbbbbb'), headProblem('bbbbbbbbbbbb', 'bbbbbbbbbbbb')]"
+expect "head form: a placeholder head over a committed lane is taken from git, noted head-form, with no refusal, escalation, or restart" 0 '^\{"ok":true,"head":"bbbbbbbbbbbb","kept":"bbbbbbbbbbbb","starts":1,"queued":\["sh tools/run_state.sh note c head-form \\"contributor implement start 1: head placeholder taken from git as bbbbbbbbbbbb\\""\],"escalated":false,"closable":true\}$' \
+  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, kept: r.head, starts: prompts.length, queued, escalated, closable: queued.every((l) => CLOSABLE.test(l)) }"
+expect "head form: a short, full, upper-case, empty, or placeholder head of a committed lane is a form; another commit, a six-character prefix, the head itself, or a dirty or unread lane is not" 0 '^\[\[true,true,true,true,true,true\],\[false,false,false,false\],\[false,false,false\]\]$' \
+  contributor_js "const clean = { head: 'bbbbbbbbbbbb', dirty: 0 }; return [['bbbbbbb', 'b'.repeat(40), 'BBBBBBBBBBBB', '', 'HEAD', '<head>'].map((h) => headForm(h, clean)), ['cccccccccccc', 'bbbbbb', 'bbbbbbbbbbbb', 'bbbbbbbc'].map((h) => headForm(h, clean)), [headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: 1 }), headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: -1 }), headForm('placeholder', { head: '', dirty: 0 })]]"
+expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1" 0 '^\[\{"head":"0123456789ab","dirty":3\},\{"head":"","dirty":-1\},\{"head":"","dirty":-1\}\]$' \
+  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\n'), parseLaneFacts('head HEAD\ndirty many'), parseLaneFacts('')]"
+expect "head form: a continued start keeps the lane's head read from git, the reported one only when the lane is unread" 0 '^\[\["bbbbbbbbbbbb","eeeeeee"\],4\]$' \
+  contributor_js "let n = 0; continuation = () => (n++ % 2 ? { next: 'done' } : { next: 'continue', left: ['x'] }); const kept = []; queue = (l, c) => { if (l.includes(' overrun ')) kept.push(c) }; results = [{ status: 'partial', head: 'placeholder', summary: 's' }]; await contributor('fix', 'd'); lane = null; results = [{ status: 'partial', head: 'eeeeeee', summary: 's' }, { status: 'done', head: 'dddddddddddd', summary: 's' }]; await contributor('fix', 'd'); return [kept, headPrompts.length]"
+expect "head form: a hostile head over a committed lane reaches the head-form note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true,false\]$' \
+  contributor_js "results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-form')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid taken from git'), escalated]"
 # Card rule 10 made mechanical (review-in-openspec): the implement start
 # that finishes the tasks reports its quality review, or is refused and
 # restarted once with the step, a second refusal stopping the run before
@@ -5402,17 +5467,17 @@ expect "quality step: a second implement result without a quality review stops t
 expect "quality step: counts that add up pass, and a fix or package result needs no quality review" 0 '^\["",true,2,""\]$' \
   contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; await contributor('fix', 'd'); await contributor('package', 'd'); return [qualityReviewProblem({ quality_review: { status: 'done', added: 3, fixed: 2, recorded: 1 } }), qualityReviewProblem({ quality_review: { status: 'done', added: -1, fixed: 0, recorded: -1 } }).startsWith('quality review counts -1/0/-1'), prompts.length, qualityReview]"
 expect "quality step: a result refused for its head and its quality review together is noted twice and restarted once with both reasons and the step" 0 '^\{"ok":true,"starts":2,"kinds":\["head-refused","quality-refused"\],"head":true,"step":true\}$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, starts: prompts.length, kinds: queued.filter((l) => l.includes('-refused')).map((l) => / ([a-z]+-refused) /.exec(l)[1]), head: prompts[1].includes('refused: its head placeholder is not'), step: prompts[1].includes('refused: no quality review of status done') && prompts[1].includes('Run the quality step of card rule 10 now') }"
+  contributor_js "dirty = 1; results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, starts: prompts.length, kinds: queued.filter((l) => l.includes('-refused')).map((l) => / ([a-z]+-refused) /.exec(l)[1]), head: prompts[1].includes('refused: its head placeholder is not'), step: prompts[1].includes('refused: no quality review of status done') && prompts[1].includes('Run the quality step of card rule 10 now') }"
 expect "quality step: a quality review refused after a refused head is restarted once more, and a second refusal of a kind stops the run naming that kind" 0 '^\[true,3,"",false,"contributor \(implement\) returned a refused head and quality review twice: head placeholder is not the 12-character form of git rev-parse --short=12 HEAD; no quality review of status done: the quality step of card rule 10 did not run"\]$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, prompts.length, stopped]; results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }]; const second = await contributor('implement', 'd'); return a.concat([!!second, stopped])"
+  contributor_js "dirty = 1; results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, prompts.length, stopped]; results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }]; const second = await contributor('implement', 'd'); return a.concat([!!second, stopped])"
 expect "quality step: when a repeated head refusal stops the run beside a first quality refusal, only the head's note says refused twice" 0 '^\[false,2,\["head placeholder is not the 12-character form of git rev-parse --short=12 HEAD; restarted","head placeholder is not the 12-character form of git rev-parse --short=12 HEAD; refused twice, stopped","no quality review of status done: the quality step of card rule 10 did not run; stopped"\]\]$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return [!!r, prompts.length, notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .implement. result refused: /, ''))]"
+  contributor_js "dirty = 1; results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return [!!r, prompts.length, notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .implement. result refused: /, ''))]"
 expect "head guard: a second refused head in one call stops the run, unmerged" 0 '^\{"ok":false,"starts":2,"stopped":"contributor \(package\) returned a refused head twice: head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb","refusals":2\}$' \
-  contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'cccccccccccc', summary: 's' }]; const r = await contributor('package', 'd'); return { ok: !!r, starts: prompts.length, stopped, refusals: queued.filter((l) => l.includes('head-refused')).length }"
+  contributor_js "dirty = 1; results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'cccccccccccc', summary: 's' }]; const r = await contributor('package', 'd'); return { ok: !!r, starts: prompts.length, stopped, refusals: queued.filter((l) => l.includes('head-refused')).length }"
 expect "head guard: an unread lane head takes a well-formed head with a note and a closable head-unread note, never a placeholder" 0 '^\[true,"dddddddddddd",1,\["sh tools/run_state.sh note c head-unread \\"contributor implement start 1: lane head not read\\""\],true,false\]$' \
   contributor_js "lane = null; results = [{ status: 'done', head: 'dddddddddddd', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'x', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, head, notes.filter((n) => n.includes('could not be read')).length, queued.slice(), queued.every((l) => CLOSABLE.test(l))]; const second = await contributor('implement', 'd'); return a.concat([!!second])"
-expect "head guard: a hostile head reaches the queued note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true\]$' \
-  contributor_js "results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's' }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-refused')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid is not')]"
+expect "head guard: a hostile head over a dirty lane reaches the queued note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true\]$' \
+  contributor_js "dirty = 1; results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's' }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-refused')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid is not')]"
 # The self-check compared with the next check (delivery-guards-c): a match
 # from an implement or fix start that the next finished check contradicts by
 # failing a stage is noted self-check-mismatch and escalates the later
