@@ -36,6 +36,7 @@ module Carat
         "pageup" => Key::PAGE_UP,
         "pagedown" => Key::PAGE_DOWN,
         "s-left" => Key::SHIFT_LEFT,
+        "s-tab" => Key::SHIFT_TAB,
         "s-right" => Key::SHIFT_RIGHT,
         "c-left" => Key::CTRL_LEFT,
         "c-right" => Key::CTRL_RIGHT,
@@ -168,6 +169,7 @@ module Carat
         when Key::PAGE_UP then "<PageUp>"
         when Key::PAGE_DOWN then "<PageDown>"
         when Key::SHIFT_LEFT then "<S-Left>"
+        when Key::SHIFT_TAB then "<S-Tab>"
         when Key::SHIFT_RIGHT then "<S-Right>"
         when Key::CTRL_LEFT then "<C-Left>"
         when Key::CTRL_RIGHT then "<C-Right>"

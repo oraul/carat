@@ -62,6 +62,7 @@ module Carat
         when Domain::Key::PAGE_UP then "\e[5~"
         when Domain::Key::PAGE_DOWN then "\e[6~"
         when Domain::Key::SHIFT_LEFT then "\e[1;2D"
+        when Domain::Key::SHIFT_TAB then "\e[Z"
         when Domain::Key::SHIFT_RIGHT then "\e[1;2C"
         when Domain::Key::CTRL_LEFT then "\e[1;5D"
         when Domain::Key::CTRL_RIGHT then "\e[1;5C"
@@ -162,6 +163,7 @@ module Carat
         when 81 then Domain::Key::F2
         when 82 then Domain::Key::F3
         when 83 then Domain::Key::F4
+        when 90 then Domain::Key::SHIFT_TAB
         when 126 then tilde_key(number, modifier > 1 && ((modifier - 1) & 4) != 0)
         else Domain::Key::UNKNOWN
         end

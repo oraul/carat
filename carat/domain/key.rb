@@ -42,6 +42,7 @@ module Carat
       SHIFT_RIGHT = SPECIAL + 26
       CTRL_LEFT = SPECIAL + 27
       CTRL_RIGHT = SPECIAL + 28
+      SHIFT_TAB = SPECIAL + 29
       UNKNOWN = SPECIAL + 99
       # Not a key the terminal sends: the wait for more keys of a binding
       # ran out. The input controller hands it to HandleKey, which resolves
