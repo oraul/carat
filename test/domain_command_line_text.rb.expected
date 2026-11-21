@@ -1,0 +1,25 @@
+ok   back from the end of a path word
+ok   back from the start of a word
+ok   back skips blanks first
+ok   back over a path is one blank-separated word
+ok   back at the start stays
+ok   back over multi-byte text
+ok   back over a tab
+ok   back on an empty text
+ok   forward from the start of a word
+ok   forward skips the rest of the word and the blanks
+ok   forward on the last word goes to the end
+ok   forward at the end stays
+ok   forward over wide text
+ok   forward on an empty text
+ok   removal takes a run of word characters
+ok   removal takes a run of other characters
+ok   removal skips blanks first
+ok   removal stops at a blank
+ok   removal on the first word takes it whole
+ok   removal at the start takes nothing
+ok   removal over a word with an underscore and digits
+ok   removal over multi-byte letters
+ok   removal on blanks only reaches the start
+ok   removal on an empty text
+domain_command_line_text: 24 passed, 0 failed

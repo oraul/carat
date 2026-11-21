@@ -30,7 +30,13 @@ module AdaptersKeyDecoderTest
       ["ss3 home", "\eOH", [K::HOME]],
       ["ss3 f1", "\eOP", [K::F1]],
       ["csi f5", "\e[15~", [K::F5]],
-      ["modified arrow", "\e[1;5C", [K::RIGHT]],
+      ["modified arrow: Alt is ignored", "\e[1;3C", [K::RIGHT]],
+      ["Ctrl and Shift arrows decode to their own keys: ctrl left", "\e[1;5D", [K::CTRL_LEFT]],
+      ["Ctrl and Shift arrows decode to their own keys: ctrl right", "\e[1;5C", [K::CTRL_RIGHT]],
+      ["Ctrl and Shift arrows decode to their own keys: shift left", "\e[1;2D", [K::SHIFT_LEFT]],
+      ["Ctrl and Shift arrows decode to their own keys: shift right", "\e[1;2C", [K::SHIFT_RIGHT]],
+      ["ctrl shift left is ctrl left", "\e[1;6D", [K::CTRL_LEFT]],
+      ["shift alt right is shift right", "\e[1;4C", [K::SHIFT_RIGHT]],
       ["ctrl page down", "\e[6;5~", [K::CTRL_PAGE_DOWN]],
       ["ctrl page up", "\e[5;5~", [K::CTRL_PAGE_UP]],
       ["ctrl shift page down is ctrl page down", "\e[6;6~", [K::CTRL_PAGE_DOWN]],
@@ -80,11 +86,13 @@ module AdaptersKeyDecoderTest
       ["f1", K::F1, "\eOP"],
       ["f12", K::F12, "\e[24~"],
       ["ctrl page down", K::CTRL_PAGE_DOWN, "\e[6;5~"],
+      ["ctrl left", K::CTRL_LEFT, "\e[1;5D"],
+      ["shift right", K::SHIFT_RIGHT, "\e[1;2C"],
       ["alt x", 120 | K::ALT, "\ex"],
       ["unicode", 0x65E5, "日"]
     ]) { |code| Decoder.encode(code) }
 
-    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, K::CTRL_PAGE_UP, K::CTRL_PAGE_DOWN, 233, 120 | K::ALT]
+    round = [97, 13, 27, 3, K::UP, K::DOWN, K::LEFT, K::RIGHT, K::HOME, K::END_KEY, K::INSERT, K::DELETE, K::PAGE_UP, K::PAGE_DOWN, K::F1, K::F4, K::F5, K::F11, K::F12, K::CTRL_PAGE_UP, K::CTRL_PAGE_DOWN, K::SHIFT_LEFT, K::SHIFT_RIGHT, K::CTRL_LEFT, K::CTRL_RIGHT, 233, 120 | K::ALT]
     decoded = []
     round.each do |code|
       d = Decoder.new

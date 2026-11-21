@@ -35,6 +35,10 @@ module Carat
         "insert" => Key::INSERT,
         "pageup" => Key::PAGE_UP,
         "pagedown" => Key::PAGE_DOWN,
+        "s-left" => Key::SHIFT_LEFT,
+        "s-right" => Key::SHIFT_RIGHT,
+        "c-left" => Key::CTRL_LEFT,
+        "c-right" => Key::CTRL_RIGHT,
         "c-pageup" => Key::CTRL_PAGE_UP,
         "c-pagedown" => Key::CTRL_PAGE_DOWN,
         "f1" => Key::F1,
@@ -163,6 +167,10 @@ module Carat
         when Key::INSERT then "<Insert>"
         when Key::PAGE_UP then "<PageUp>"
         when Key::PAGE_DOWN then "<PageDown>"
+        when Key::SHIFT_LEFT then "<S-Left>"
+        when Key::SHIFT_RIGHT then "<S-Right>"
+        when Key::CTRL_LEFT then "<C-Left>"
+        when Key::CTRL_RIGHT then "<C-Right>"
         when Key::CTRL_PAGE_UP then "<C-PageUp>"
         when Key::CTRL_PAGE_DOWN then "<C-PageDown>"
         when Key::F1 then "<F1>"

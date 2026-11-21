@@ -17,6 +17,7 @@ module DomainKeysTest
       ["sequence with named keys", ":w<CR>", [58, 119, 13]],
       ["escape", "<Esc>", [27]],
       ["case-insensitive name", "<esc>", [27]],
+      # Scenario: Control and Alt keys (the control and alt rows)
       ["control key", "<C-r>", [18]],
       ["control uppercase letter", "<C-R>", [18]],
       ["control bracket", "<C-[>", [27]],
@@ -31,12 +32,14 @@ module DomainKeysTest
       ["home end del", "<Home><End><Del>", [K::HOME, K::END_KEY, K::DELETE]],
       ["page keys and insert", "<PageUp><PageDown><Insert>", [K::PAGE_UP, K::PAGE_DOWN, K::INSERT]],
       ["control page keys", "<C-PageDown><c-pageup>", [K::CTRL_PAGE_DOWN, K::CTRL_PAGE_UP]],
+      ["Ctrl and Shift arrows decode to their own keys: notation", "<S-Left><s-right><C-Left><c-RIGHT>", [K::SHIFT_LEFT, K::SHIFT_RIGHT, K::CTRL_LEFT, K::CTRL_RIGHT]],
       ["function keys", "<F1><F12>", [K::F1, K::F12]],
       ["lt and bar", "<lt><Bar>", [60, 124]],
       ["unicode character", "é", [233]],
       ["empty", "", []]
     ]) { |text| N.parse(text, " ").codes }
 
+    # Scenario: Malformed notation is an error
     bad = N.parse("<Nope>", " ")
     t.assert_equal(false, bad.ok?, "malformed notation is not ok")
     t.assert_equal("unknown key <Nope>", bad.error, "malformed notation names the key")
@@ -53,6 +56,8 @@ module DomainKeysTest
       ["up", K::UP, "<Up>"],
       ["control page down", K::CTRL_PAGE_DOWN, "<C-PageDown>"],
       ["control page up", K::CTRL_PAGE_UP, "<C-PageUp>"],
+      ["shift left", K::SHIFT_LEFT, "<S-Left>"],
+      ["ctrl right", K::CTRL_RIGHT, "<C-Right>"],
       ["enter", 13, "<CR>"],
       ["escape", 27, "<Esc>"],
       ["control c", 3, "<C-c>"],
@@ -80,6 +85,7 @@ module DomainKeysTest
     t.assert_equal(120, K.base(120 | K::ALT), "base strips the alt flag")
     t.assert_equal(true, K.alt?(120 | K::ALT), "alt? sees the flag")
     t.assert_equal("日", K.char(0x65E5), "char encodes a code point")
+    t.assert_equal([K::LEFT, K::LEFT, K::RIGHT, K::RIGHT, K::UP, 97], [K.unmodified(K::SHIFT_LEFT), K.unmodified(K::CTRL_LEFT), K.unmodified(K::SHIFT_RIGHT), K.unmodified(K::CTRL_RIGHT), K.unmodified(K::UP), K.unmodified(97)], "unmodified maps the four modified arrows and leaves the rest")
 
     # KeyNotation.caret, the palette's keys: a control character as "^"
     # and its letter, every other code as format spells it.

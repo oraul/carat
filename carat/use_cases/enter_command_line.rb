@@ -28,7 +28,7 @@ module Carat
         visual = Domain::Mode.visual?(state.mode)
         state.end_visual if visual
         state.mode = Domain::Mode::CMDLINE
-        state.cmdline = visual ? "'<,'>" : ""
+        state.replace_cmdline(visual ? "'<,'>" : "")
         @plugin_ui.close_prompt
         @search_prompt.close
         @command_history.restart

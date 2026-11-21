@@ -28,7 +28,7 @@ A control byte SHALL decode to a key whose code is the byte value, so Enter is 1
 - **THEN** the keys 13 and 3 are produced, in that order
 
 ### Requirement: Escape sequences decode to special keys
-The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page Up, Page Down, and F1 to F12, in both the CSI form and the SS3 form, SHALL decode to one key each with a code above the Unicode range. A modifier parameter in a CSI sequence SHALL be accepted and ignored, except that Page Up and Page Down with a modifier that holds Ctrl SHALL decode to the keys Ctrl-PageUp and Ctrl-PageDown, which key notation names `<C-PageUp>` and `<C-PageDown>`.
+The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page Up, Page Down, and F1 to F12, in both the CSI form and the SS3 form, SHALL decode to one key each with a code above the Unicode range. A modifier parameter in a CSI sequence SHALL be accepted and ignored, except for Ctrl on Page Up and Page Down, which decode to the keys Ctrl-PageUp and Ctrl-PageDown (`<C-PageUp>` and `<C-PageDown>`), and for Ctrl or Shift on Left and Right.
 
 #### Scenario: Arrow keys
 - **WHEN** the bytes of ESC [ A, ESC [ B, ESC [ C, and ESC [ D arrive
@@ -43,7 +43,7 @@ The sequences terminals send for the arrow keys, Home, End, Insert, Delete, Page
 - **THEN** the key Home is produced
 
 #### Scenario: Modified arrow
-- **WHEN** the bytes of ESC [ 1 ; 5 C arrive
+- **WHEN** the bytes of ESC [ 1 ; 3 C arrive
 - **THEN** the key Right is produced
 
 #### Scenario: Ctrl-PageDown and Ctrl-PageUp decode to their own keys
@@ -69,7 +69,7 @@ An Escape byte immediately followed by a printable character in the same read SH
 - **THEN** one key is produced whose code is 120 with the Alt flag set
 
 ### Requirement: Vim key notation names every key
-The editor SHALL parse key notation into key codes and format key codes back into notation. Plain characters stand for themselves; the named keys are <CR>, <Esc>, <Tab>, <BS>, <Space>, <Del>, <Up>, <Down>, <Left>, <Right>, <Home>, <End>, <PageUp>, <PageDown>, <Insert>, <F1> to <F12>, <lt>, and <Bar>; <C-x> is Ctrl plus a key, <A-x> and <M-x> are Alt plus a key, and <leader> expands to the configured leader. Names are case-insensitive.
+The editor SHALL parse key notation into key codes and format key codes back into notation. Plain characters stand for themselves; the named keys are <CR>, <Esc>, <Tab>, <BS>, <Space>, <Del>, <Up>, <Down>, <Left>, <Right>, <S-Left>, <S-Right>, <C-Left>, <C-Right>, <Home>, <End>, <PageUp>, <PageDown>, <Insert>, <F1> to <F12>, <lt>, and <Bar>; <C-x> is Ctrl plus a key, <A-x> and <M-x> are Alt plus a key, and <leader> expands to the configured leader. Names are case-insensitive.
 
 #### Scenario: Sequence with named keys
 - **WHEN** the notation ":w<CR>" is parsed
@@ -90,3 +90,14 @@ The editor SHALL parse key notation into key codes and format key codes back int
 #### Scenario: Malformed notation is an error
 - **WHEN** the notation "<Nope>" is parsed
 - **THEN** parsing reports an error naming the unknown key instead of producing codes
+
+### Requirement: Ctrl and Shift arrows are their own keys
+Left and Right with a modifier that holds Ctrl, or Shift without Ctrl, SHALL decode to the keys Ctrl-Left, Ctrl-Right, Shift-Left, and Shift-Right. A key of these four that a mode does not bind SHALL act as the plain Left or Right the mode binds.
+
+#### Scenario: Ctrl and Shift arrows decode to their own keys
+- **WHEN** the bytes of ESC [ 1 ; 5 D, ESC [ 1 ; 5 C, ESC [ 1 ; 2 D, and ESC [ 1 ; 2 C arrive
+- **THEN** the keys Ctrl-Left, Ctrl-Right, Shift-Left, and Shift-Right are produced, and their notation gives the same codes and formats back to the same names
+
+#### Scenario: An unbound Ctrl or Shift arrow acts as the plain arrow
+- **WHEN** Ctrl-Right is typed in normal mode
+- **THEN** the cursor moves one character right, as Right does

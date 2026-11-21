@@ -75,6 +75,7 @@ ok   the cursor is after the value
 ok   a second prompt is refused while one is open
 ok   Enter delivers the text
 ok   Escape delivers a cancel
+ok   a plugin's prompt has the cursor: edited mid-line and at the end
 ok   a backspace on an empty line cancels
 ok   the text is not run as an ex command
 ok   the next command line is an ex command again
@@ -99,4 +100,4 @@ ok   the next command line is an ex command again
 ok   its bindings went with it
 ok   close_prompt closes the plugin's prompt
 ok   close_prompt without a prompt fails
-use_cases_plugin_files: 101 passed, 0 failed
+use_cases_plugin_files: 102 passed, 0 failed

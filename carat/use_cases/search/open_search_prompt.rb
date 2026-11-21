@@ -31,7 +31,7 @@ module Carat
         @search_prompt.open(action != "search.backward", back, cursor.row, cursor.col, window.top, window.left)
         @search_history.restart
         state.mode = Domain::Mode::CMDLINE
-        state.cmdline = ""
+        state.replace_cmdline("")
         Outcome.none
       end
     end

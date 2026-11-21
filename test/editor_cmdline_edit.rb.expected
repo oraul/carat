@@ -1,0 +1,53 @@
+ok   Insert in the middle of the line
+ok   Left and Right move the cursor
+ok   Left and Right move the cursor: Right then Y
+ok   The cursor stays inside the line
+ok   The cursor stays inside the line: Right at the end
+ok   Home and End
+ok   Control-b and Control-e
+ok   Words move by blank-separated word
+ok   Words move by blank-separated word: forward
+ok   Words move by blank-separated word: past the last word
+ok   Words move by blank-separated word: back past the first
+ok   Movement over multi-byte and wide text
+ok   Movement over multi-byte and wide text: one Left
+ok   Movement over multi-byte and wide text: Home and End
+ok   Movement over multi-byte and wide text: words
+ok   The bar is at the cursor cell
+ok   Recall puts the cursor at the end
+ok   Recall then edit
+ok   Recall then edit: a word
+ok   Backspace removes before the cursor
+ok   Backspace at the start does nothing
+ok   Backspace at the start does nothing: then Backspace after a Right
+ok   Delete removes the character under the cursor
+ok   Delete removes the character under the cursor: in the middle
+ok   Delete at the end acts as Backspace
+ok   Control-w removes the word before the cursor
+ok   Control-w removes the word before the cursor: second
+ok   Control-w removes the word before the cursor: third
+ok   Control-w removes the word before the cursor: fourth
+ok   Control-w works at the cursor in the middle
+ok   Control-w works at the cursor in the middle: typing goes before the rest
+ok   Control-u removes everything before the cursor
+ok   Control-u removes everything before the cursor: at the end
+ok   Control-w and Control-u on an empty line do nothing
+ok   Control-w over wide text
+ok   Backspace on empty leaves
+ok   Delete at the end acts as Backspace: on an empty line it leaves
+ok   A visual range opens with the cursor at its end
+ok   The command line keeps the cursor after an Esc and a new colon
+ok   A visual range after an Esc has the cursor at its end
+ok   The palette's prompt has the cursor
+ok   The search prompt has the cursor
+ok   The search prompt: Control-u
+ok   An unbound Ctrl or Shift arrow acts as the plain arrow: Ctrl-Right moves right
+ok   An unbound Ctrl or Shift arrow acts as the plain arrow: Shift and Ctrl back
+ok   An unbound Ctrl or Shift arrow acts as the plain arrow: in insert mode
+ok   The search prompt has the cursor: the preview matches abc
+ok   The search prompt has the cursor: a deletion at the cursor
+ok   The search prompt previews after a deletion: the match of bc
+ok   The search prompt previews after a deletion: the match of b
+ok   The search prompt previews after a deletion: Enter searches the edited text
+ok   An edited command line runs as edited
+editor_cmdline_edit: 52 passed, 0 failed
