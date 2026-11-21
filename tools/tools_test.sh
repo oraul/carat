@@ -3193,6 +3193,8 @@ guard_edit() {
 # not list, however they are written.
 for p in read merger contributor; do
   expect "guard: $p allows a git read" 0 "^$" guard $p 'git --no-pager log --oneline -5 && git diff origin/main...HEAD | head -40'
+  expect "guard: $p reads a lane's facts with tools/lane_facts.sh" 0 "^$" guard $p 'cd tmp/.lane-c && sh tools/lane_facts.sh c'
+  expect "guard: $p refuses tools/lane_facts.sh other than one change name" 2 "tools/lane_facts.sh other than CHANGE" guard $p 'sh tools/lane_facts.sh c extra'
   expect "guard: $p refuses git push" 2 "refused for the $p profile: git push" guard $p 'git push origin chore/x'
   expect "guard: $p refuses a quoted verb" 2 "git push" guard $p "git 'push' origin x"
   expect "guard: $p refuses a quoted name" 2 "git push" guard $p '\"git\" push origin x'

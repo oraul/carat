@@ -53,7 +53,8 @@
 # repository, local_origin),
 # ls-remote origin with listing options and branch names, worktree add,
 # remove, list, and prune of a worktree tmp/.NAME, and checkout -q
-# --detach origin/main inside one (-C). A tmp/.NAME that exists is a
+# --detach origin/main inside one (-C); sh tools/lane_facts.sh CHANGE,
+# which writes nothing. A tmp/.NAME that exists is a
 # worktree only when it is a linked worktree of the project (worktree).
 #   read         adds mkdir and rm under DIR; make -s, -C tmp/.NAME, the
 #                targets dev-build test-build bench-budget metrics
@@ -755,6 +756,8 @@ script_form() {
             refuse "tools/open_pr.sh message other than CHANGE SHA (40 digits)" ;;
         *) refuse "tools/open_pr.sh other than write, wait, or message" ;;
       esac ;;
+    tools/lane_facts.sh)
+      [ $# -eq 1 ] && matches "$1" "$CHANGE_NAME" || refuse "tools/lane_facts.sh other than CHANGE" ;;
     tools/ci_wait.sh)
       only_profiles merger "tools/ci_wait.sh"
       [ $# -eq 1 ] && matches "$1" '^[0-9]+$' || refuse "tools/ci_wait.sh other than SECONDS" ;;

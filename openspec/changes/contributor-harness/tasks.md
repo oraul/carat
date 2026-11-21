@@ -13,7 +13,7 @@
 ## 3. Point agents at the script
 
 - [x] 3.1 The rules card in `.claude/agents/contributor.md` and `CONTRIBUTOR_CARD`, the head restart text, the resume prompt, and the contributor's schema name the `head` line of `tools/lane_facts.sh`.
-- [ ] 3.2 `tools/agent_guard.sh`: every profile may run `sh tools/lane_facts.sh CHANGE`; `tools/tools_test.sh` proves the form and its refusal.
+- [x] 3.2 `tools/agent_guard.sh`: every profile may run `sh tools/lane_facts.sh CHANGE`; `tools/tools_test.sh` proves the form and its refusal.
 
 ## 4. Documents
 
