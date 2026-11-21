@@ -35,6 +35,6 @@ None.
 
 - `tools/lane_facts.sh` (new), `.claude/workflows/deliver-change.js`, `tools/agent_guard.sh`, `tools/tools_test.sh`, `.claude/agents/contributor.md`, `docs/goals.md`.
 - CLAUDE.md: the Commands section names `tools/lane_facts.sh`, the bytes taken from duplicate text so it stays within its budget.
-- README.md: unchanged, it names neither the head check nor the scripts agents run for facts; its pipeline summary stays true.
+- README.md: the "Rules are checked, not remembered" paragraph names `tools/lane_facts.sh` and the head-form rule.
 - docs/codebase-map.md: area 1 lists `tools/lane_facts.sh`, and the entries of `deliver-change.js`, `agent_guard.sh`, and `tools_test.sh` follow.
 - docs/architecture.md: unchanged, section 10 names no head check; no layer, port, or roadmap item changes.
