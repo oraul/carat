@@ -79,6 +79,7 @@ operations:
       - 'Append each finding as a new task under a "## Quality review" heading of tasks.md, naming its file:line and the test that proves the fix, and fix those tasks in the same session'
       - 'Append a finding you will not fix to docs/findings/<change>.md with its reason, as a "### title" entry with Location, Why, and Fix lines, and mark its task done as recorded there, with that reason'
       - 'Report the quality_review result field: status done, and the counts of tasks added, fixed, and recorded (fixed plus recorded equals added)'
+      - 'The session runs in this order (contributor-self-check, the user''s decision of 2026-11-21): the tasks, the quality tasks and their fixes, a commit, make docs-lint and make gates, sh tools/run_state.sh merge-main <change> when the lane is behind origin/main, then sh tools/run_state.sh check <change> and its fixes as docs/contributor-notes.md, Checking, says, then return; the archive stays the package step''s first'
   archive:
     guidance:
       - 'Archive only after the quality review of the apply step: a "## Quality review" heading in tasks.md, or none when it found nothing, and every task marked done, fixed or recorded in docs/findings/<change>.md'
