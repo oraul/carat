@@ -19,7 +19,7 @@
 
 ## 4. Checks
 
-- [ ] 4.1 `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`.
+- [x] 4.1 `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`.
 
 ## Quality review
 
