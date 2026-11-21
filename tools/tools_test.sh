@@ -3131,6 +3131,46 @@ expect "run_state: trusted leaves the file as it was" 0 '"phase.package"' cat bu
 expect "run_state: trusted without the base still trusts the ancestors of HEAD" 0 "\"untrusted\": \"merged phase.merge phase.package" \
   env BASE=nothing sh "$here/run_state.sh" trusted trust
 
+# ---------------------------------------------------------- lane_facts.sh
+# A lane's facts (contributor-harness), read from git and the check log,
+# never typed: each line on a test repository with a lane worktree, the
+# same from the main checkout and from the lane, and the refusals.
+facts() {
+  sh "$here/lane_facts.sh" "$@" | tr '\n' ' '
+}
+fresh facts
+git_q init -q --bare "$work/facts.git"
+git_q remote add origin "$work/facts.git"
+git_q push -q origin main 2>/dev/null
+git_q fetch -q origin
+facts_base=$(git rev-parse --short=12 HEAD)
+git_q worktree add -q -b chore/lf tmp/.lane-lf
+(cd tmp/.lane-lf && echo one > one.txt && commit "chore: one")
+facts_head=$(git -C tmp/.lane-lf rev-parse --short=12 HEAD)
+expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+  facts lf
+expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none $" \
+  sh -c "cd tmp/.lane-lf && sh '$here/lane_facts.sh' lf | tr '\n' ' '"
+git -C tmp/.lane-lf push -q origin chore/lf 2>/dev/null
+expect "lane_facts: a lane whose origin branch is its head reads pushed yes" 0 " pushed yes " facts lf
+echo two >> tmp/.lane-lf/one.txt
+echo new > tmp/.lane-lf/new.txt
+expect "lane_facts: dirty counts the uncommitted paths, untracked ones included" 0 " pushed yes dirty 2 " facts lf
+(cd tmp/.lane-lf && commit "chore: two")
+expect "lane_facts: a commit past origin's branch reads pushed no and a new head" 0 "^head $(git -C tmp/.lane-lf rev-parse --short=12 HEAD) .* pushed no dirty 0 " facts lf
+mkdir -p build/stages/lf
+printf 'stage a: passed\ncheck: stage test-run failed at abc1234def56; read build/stages/lf/test-run.log\n' > build/stages/lf/check.log
+expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 $" facts lf
+echo "check: every stage passed at 0123456789ab; the workflow records the check" >> build/stages/lf/check.log
+expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab $" facts lf
+echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
+expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none $" facts lf
+echo "stage a: running" >> build/stages/lf/check.log
+expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none $" facts lf
+expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
+expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
+expect "lane_facts: no argument is refused with the usage" 2 "usage: sh tools/lane_facts.sh CHANGE" sh "$here/lane_facts.sh"
+
 # --------------------------------------------------------- agent_guard.sh
 
 # guard PROFILE COMMAND [DIR]: the guard's answer to a Bash call of

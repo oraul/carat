@@ -2,8 +2,8 @@
 
 ## 1. The lane facts script
 
-- [ ] 1.1 `tools/lane_facts.sh`: print head, branch, base, pushed, dirty, check, and check_at from git and the check log; refuse a bad name and a missing lane with exit 2.
-- [ ] 1.2 `tools/tools_test.sh`: the script's lines on a test repository with a lane worktree (clean, dirty, pushed, a check verdict, from the lane and the main checkout) and its refusals.
+- [x] 1.1 `tools/lane_facts.sh`: print head, branch, base, pushed, dirty, check, and check_at from git and the check log; refuse a bad name and a missing lane with exit 2.
+- [x] 1.2 `tools/tools_test.sh`: the script's lines on a test repository with a lane worktree (clean, dirty, pushed, a check verdict, from the lane and the main checkout) and its refusals.
 
 ## 2. The workflow takes the head from git
 
