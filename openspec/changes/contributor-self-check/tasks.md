@@ -20,3 +20,12 @@
 ## 4. Checks
 
 - [ ] 4.1 `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`.
+
+## Quality review
+
+- [x] 5.1 `.claude/agents/contributor.md:51`: trimming step 5 for the budget dropped the checklist points the step must name; restored in shorter words, proved by the tools-test case `contributor: the self-check names each checklist point and the self-review` (fixed).
+- [x] 5.2 `.claude/workflows/deliver-change.js` CALL_CAPS comment did not say why implement and fix rose; it now names the self-check runs (fixed, the caps cases unchanged).
+- [x] 5.3 `tools/tools_test.sh` close harness: metricLine read an undefined selfFix and the figure count was stale; `workflow: the close's metric line carries every figure, self_fix among them` (fixed).
+- [x] 5.4 `.claude/workflows/deliver-change.js` rounds: the backed commit's wiring had no test; `self-check: rounds builds the check line on backedCommit over the claim, the head, and phase.check` (fixed).
+- [x] 5.5 `tools/run_state.sh` history: self_fix has no history column, since this change may not touch the feature lane's history file; recorded in `docs/findings/contributor-self-check.md` (recorded).
+- [x] 5.6 `.claude/workflows/deliver-change.js` extraRuns: check_runs is self-reported and not compared with the runner's verdicts; recorded in `docs/findings/contributor-self-check.md` (recorded).
