@@ -48,3 +48,12 @@
 - Location: tools/run_state.sh file_entries (the linked and mkdir refusals), backlog_move
 - Why: file_entries writes each entry as it reads it, so when it refuses a symbolic link or a directory midway, the entries before it are already appended; backlog-move then keeps FILE, and running it again after removing the link files those entries twice (groom likewise keeps the findings files).
 - Fix: check every target file (linked, mkdir) in a first pass over the buffered entries and write only when all pass, or write into a copy of the folder and move it in place once the filing succeeded.
+### The feature queue still points at docs/backlog.md after the per-file move
+- Location: `docs/queue-feature.md:3` ("folded findings are in `docs/backlog.md`").
+- Why: `backlog-per-file` removes `docs/backlog.md` for `docs/backlog/<path>.md` files, and the feature lane's file is outside the backlog lane, so its pointer names a path that no longer exists.
+- Fix: the next feature-lane plan or the sprint records change rewrites the line to name `docs/backlog/`.
+
+### plan-apply overwrote the lane queue with a plan older than the branch's queue
+- Location: `tools/run_state.sh` plan-apply; `build/plan/backlog-per-file/queue-backlog.md` (written 12:45 UTC, before #276 merged and before the branch's queue commits ec40276 and 9f981a9).
+- Why: in this change's package step it re-queued the merged `backlog-records-rule` as Pool 1, dropped the backticks `queue_class` needs around `backlog-per-file` in the Sprint 25 exception line, and dropped three Decisions lines; the contributor restored the branch's queue by hand. Same defect as the queued `plan-apply-stale` (#263 lost 5 items).
+- Fix: plan-apply refuses a plan whose files are older than the last commit touching the lane queue, or one naming a change already in the lane's metrics file, and says so; a tools-test case each.
