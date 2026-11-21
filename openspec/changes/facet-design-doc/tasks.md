@@ -25,3 +25,7 @@
 - [x] 5.3 State one count order per surface: the status bar's counts `✖ ▲ ◇`, the sign cell `✖ ▲ ◆ ◇`.
 - [x] 5.4 Name `one-accent` and `glyph-audit` as planned items in section 7, since the queue does not hold them yet.
 - [x] 5.5 Split the glyph-pair row of Known drift into one row per pair with its two `icons.rb` lines.
+- [x] 5.6 State one count order for the status bar and the sign cell, `✖ ▲ ◆ ◇`, since `status_bar.rb:243-246` paints the information count.
+- [x] 5.7 Drop the `▎` sign claim from the git signs' Known drift row and add the `┃` scrollbar thumb versus git added sign to the open clashes of section 4.
+- [x] 5.8 Add the deleted git sign's `icons.rb:95` row to Known drift (`glyph-audit`), the shipped `▁` against the decided `▁▔`.
+- [x] 5.9 Rename the Known drift column to Closing item, since two items are planned, not queued.

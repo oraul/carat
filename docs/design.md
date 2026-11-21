@@ -60,8 +60,8 @@ One meaning per glyph. The AI owns `✦` and `◈`; nothing else uses them.
 | --- | --- | --- |
 | `✦` | The AI: insights, the status bar while a request waits, the file segment while the panel has focus (`✦ AI`) | AI only; shape and place, not color |
 | `◈` | The AI | AI only; the ruby and class icons give it up (section 7) |
-| `◇` | Any suggestion, language-server hints included | The status bar's counts read `✖ ▲ ◇` (error, warning, hint) |
-| `✖` | Error | Shape first; the sign cell reads `✖ ▲ ◆ ◇` (error, warning, information, hint) |
+| `◇` | Any suggestion, language-server hints included | |
+| `✖` | Error | Shape first; the status bar's counts and the sign cell both read `✖ ▲ ◆ ◇` (error, warning, information, hint) |
 | `▲` | Warning | Not `⚠`, which can turn into an emoji on the Mac |
 | `◆` | Information | The constant icon gives it up |
 | `▎` sapphire | This row: the selected row of every list | Full-width selection fill, bold label; its clash with the git sign is open until the glyph audit (below) |
@@ -71,7 +71,7 @@ One meaning per glyph. The AI owns `✦` and `◈`; nothing else uses them.
 | `●` after a name | State: a tab's modified mark, the language server, the AI | After the label |
 | `●` before a name | Type: the explorer's file-type dot (Ruby red, Markdown sapphire, data cyan, shell green, others faint) | Before the label; a tab has no type dot |
 | `M A ? D` | Git state, right-aligned: M cyan, A green, ? dim, D red; a folder with changes shows a cyan dot | |
-| `▎` green or cyan, `▁▔` red | Git signs in the sign column: added, changed, deleted | A diagnostic glyph wins the cell; the `▎` is the open clash with the selected row, settled by the glyph audit (below) |
+| `▎` green or cyan, `▁▔` red | Git signs in the sign column: added, changed, deleted | A diagnostic glyph wins the cell; the `▎` is the open clash with the selected row, settled by the glyph audit (below); the deleted sign ships as `▁` alone, a Known drift row |
 | `▸` `▾` | A fold's closed gap; the chevrons of the tree | Faint |
 | `⋯` | A closed fold's count (`⋯ 12 lines`, dim) | |
 | `›` | A separator in the winbar (faint), the lead of a query, the user's words in the AI panel (sapphire) | Never a selection mark |
@@ -89,6 +89,7 @@ Completion kinds become letters, so the kind icons stop sharing the marks above.
 - `◇` a hint versus the keyword icon, and `▣` the JSON icon versus the module icon.
 - `+` in the ascii set: the closed folder, ahead, and added.
 - `▎` the selected row versus the git sign.
+- `┃` the scrollbar thumb versus the git added sign, which ships as `┃`.
 
 ## 5. One accent
 
@@ -111,7 +112,7 @@ An empty surface says one dim sentence and names one key (`Empty folder`, `no ma
 
 Where the shipped code differs from this file at `6bb8f2a`, and the item that closes it. `finder-rows`, `explorer-rows`, and `float-polish` are in `docs/queue-feature.md`; `one-accent` and `glyph-audit` are planned items, which reach the queue through the planner's plan and are named here until then. A row leaves this table in the change that closes it.
 
-| Gap | Where | Queued item |
+| Gap | Where | Closing item |
 | --- | --- | --- |
 | The active tab is a sapphire fill | `carat/adapters/tab_bar.rb:126`, the TabLineSel row `carat/domain/themes.rb:109` | `one-accent` |
 | The tab-page number is a sapphire fill | `carat/adapters/tab_bar.rb:115` | `one-accent` |
@@ -129,7 +130,8 @@ Where the shipped code differs from this file at `6bb8f2a`, and the item that cl
 | `▸` is folder and property | `carat/domain/icons.rb:58`, `:87` | `glyph-audit` |
 | `◇` is hint and keyword | `carat/domain/icons.rb:67`, `:88` | `glyph-audit` |
 | `▣` is JSON and module | `carat/domain/icons.rb:69`, `:86` | `glyph-audit` |
-| The git signs ship `┃` added and `┇` changed, while `┃` is the scrollbar thumb only and the signs are `▎` green or cyan | `carat/domain/icons.rb:93`, `:94` | `glyph-audit` |
+| The git signs ship `┃` added and `┇` changed, while `┃` is the scrollbar thumb only | `carat/domain/icons.rb:93`, `:94` | `glyph-audit` |
+| The deleted git sign ships `▁` alone, where the table decides `▁▔` | `carat/domain/icons.rb:95` | `glyph-audit` |
 | `+` is the closed folder, ahead, and added in ascii | `carat/domain/icons.rb:99`, `:132`, `:134` | `glyph-audit` |
 | TabLine and TabLineSel fall below the contrast target at 16 colors | `carat/domain/themes.rb:108`, `:109` | `one-accent` |
 
