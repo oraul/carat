@@ -69,3 +69,16 @@ rules:
 #     archive:
 #       guidance:
 #         - Summarize the archive outcome before finishing
+
+# The quality review is the contributor's own step (review-in-openspec, the
+# user's decision of 2026-11-21): no reviewer start of the delivery runs it.
+operations:
+  apply:
+    guidance:
+      - 'Once every task of tasks.md is done, review the whole committed diff (git diff origin/main...HEAD) with the instructions of .claude/agents/quality-reviewer.md: a bug or an untested behavior change, and its advisory points'
+      - 'Append each finding as a new task under a "## Quality review" heading of tasks.md, naming its file:line and the test that proves the fix, and fix those tasks in the same session'
+      - 'Append a finding you will not fix to docs/findings/<change>.md with its reason, as a "### title" entry with Location, Why, and Fix lines, and mark its task done as recorded there, with that reason'
+      - 'Report the quality_review result field: status done, and the counts of tasks added, fixed, and recorded (fixed plus recorded equals added)'
+  archive:
+    guidance:
+      - 'Archive only after the quality review of the apply step: a "## Quality review" heading in tasks.md, or none when it found nothing, and every task marked done, fixed or recorded in docs/findings/<change>.md'

@@ -24,7 +24,7 @@ Rules card:
 7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).
 8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.
 9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.
-10. Before returning, re-read your diff with the instructions of `.claude/agents/quality-reviewer.md`.
+10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded; then archive.
 
 ## Mandate
 
@@ -36,7 +36,7 @@ Never skip, weaken, or quarantine a test, record a phase or a review, or push bu
 
 ## Context
 
-Read the scout packs first, trusting their lines, then the touched map areas, files, tests, and designs, as `docs/contributor-notes.md`, Context, says. Re-verify a brief's findings on `main`, saying which no longer hold.
+Read the scout packs first, trusting their lines, then what `docs/contributor-notes.md`, Context, names. Re-verify a brief's findings on `main`, saying which no longer hold.
 
 ## Modes
 
@@ -48,7 +48,7 @@ The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <ch
 2. Write the brief verbatim under `# Brief` to `openspec/changes/<change>/brief.md`, then propose and validate as `docs/contributor-notes.md`, Propose, says.
 3. Apply with the `openspec-apply-change` skill task by task, marking `- [x]` only when the behavior and its tests are done. Start a file of a common kind with its generator (`make new-*`). Commit one logical step at a time with the trailer of `CLAUDE.md` (`git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit`).
 4. Iterate with targeted `make` checks only (`docs/contributor-notes.md`, Iterating).
-5. Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it (README.md, CLAUDE.md, and the architecture, codebase map, compatibility, and actions docs) is current, no budget raised; the diff matches the brief, anything extra named. Walk the checklist of `docs/contributor-notes.md` (empty range, CRLF, UTF-16 and multi-byte, trailing blanks, last line, empty buffer; a test per behavior change; a helper searched first; comments, docs, and spec text matching the code), then self-review the diff (rule 10). Run `make gates` and `spec-validate`; fix what fails.
+5. Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it (README.md, CLAUDE.md, and the architecture, codebase map, compatibility, and actions docs) is current, no budget raised; the diff matches the brief, anything extra named. Walk the checklist of `docs/contributor-notes.md` (empty range, CRLF, UTF-16 and multi-byte, trailing blanks, last line, empty buffer; a test per behavior change; a helper searched first; comments, docs, and spec text matching the code), then self-review (rule 10). Run `make gates` and `spec-validate`; fix what fails.
 
 ### fix
 
