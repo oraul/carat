@@ -5532,7 +5532,7 @@ review_js() {
     globalThis.head = 'abc1234'; globalThis.ran = {}; globalThis.stopped = ''; globalThis.settledRound = null; globalThis.reviewFixRounds = 0
     globalThis.starts = []; globalThis.records = []; globalThis.kept = []; globalThis.reviewFindings = []; globalThis.awaiting = { security: [] }; globalThis.fixedInPlace = new Set()
     globalThis.intro = () => ''; globalThis.capLine = () => ''; globalThis.withCalls = (x) => x; globalThis.calibrate = (k, o) => o; globalThis.phase = () => {}; globalThis.note = () => {}; globalThis.verdict = () => {}
-    globalThis.measured = async (k, fn) => fn(); globalThis.callCap = () => 9; globalThis.addBacklog = (l) => kept.push(l)
+    globalThis.measured = async (k, fn) => fn(); globalThis.callCap = () => 9; globalThis.SECURITY = 1; globalThis.addBacklog = (l) => kept.push(l)
     globalThis.reviewed = (k, p, c) => { records.push(k + ' ' + (p ? 'pass' : 'blocked') + ' ' + c); ran['review.' + k] = (p ? 'pass ' : 'blocked ') + c }
     globalThis.agent = async (prompt, o) => { starts.push(o.agentType); return result }
     $1
