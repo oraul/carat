@@ -101,3 +101,10 @@ Left and Right with a modifier that holds Ctrl, or Shift without Ctrl, SHALL dec
 #### Scenario: An unbound Ctrl or Shift arrow acts as the plain arrow
 - **WHEN** Ctrl-Right is typed in normal mode
 - **THEN** the cursor moves one character right, as Right does
+
+### Requirement: Shift-Tab is its own key
+The decoder SHALL turn `ESC [ Z` into the `<S-Tab>` key, which key notation SHALL read and write as `<S-Tab>`, and encode SHALL turn back into `ESC [ Z`.
+
+#### Scenario: Shift-Tab decodes to its own key
+- **WHEN** the bytes `ESC [ Z` arrive
+- **THEN** the decoded key is `<S-Tab>`
