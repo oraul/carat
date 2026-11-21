@@ -9,4 +9,4 @@
 ## 2. Docs and checks
 
 - [x] 2.1 The `tools/run_state.sh` header and comments, `.claude/agents/planner.md` step 1 (its test in `tools/tools_test.sh`), CLAUDE.md's Backlog line, README.md pipeline step 11, and `docs/codebase-map.md`
-- [ ] 2.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
+- [x] 2.2 `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate` pass
