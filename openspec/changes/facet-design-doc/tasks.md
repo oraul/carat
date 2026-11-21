@@ -22,7 +22,7 @@
 
 - [x] 5.1 Add the git signs' `icons.rb:93`, `:94` row to Known drift (`glyph-audit`).
 - [x] 5.2 Mark the `▎` git sign row and the selection row as the open clash of section 4, so no glyph holds two decided meanings.
-- [x] 5.3 State one count order per surface: the status bar's counts `✖ ▲ ◇`, the sign cell `✖ ▲ ◆ ◇`.
+- [x] 5.3 State one count order per surface (superseded by 5.6, which sets `✖ ▲ ◆ ◇` for both the status bar and the sign cell).
 - [x] 5.4 Name `one-accent` and `glyph-audit` as planned items in section 7, since the queue does not hold them yet.
 - [x] 5.5 Split the glyph-pair row of Known drift into one row per pair with its two `icons.rb` lines.
 - [x] 5.6 State one count order for the status bar and the sign cell, `✖ ▲ ◆ ◇`, since `status_bar.rb:243-246` paints the information count.
