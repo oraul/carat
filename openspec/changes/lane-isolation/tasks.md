@@ -27,7 +27,7 @@
 
 ## 6. Checks
 
-- [ ] 6.1 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
+- [x] 6.1 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
 
 ## 7. Quality review
 
