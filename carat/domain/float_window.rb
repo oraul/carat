@@ -14,13 +14,15 @@ module Carat
     # float has -1 there. A float may mark the display columns mark_from
     # up to mark_to of its buffer's first row (the active parameter of a
     # signature), drawn in Visual; -1 for none. style_count counts the
-    # styles a plugin gave the float (style_float), so the presenter's
-    # float key moves when only the styles changed. A centered float (the
-    # palette) has its column computed by place from its box at every
-    # arrange, so it is centered at show and after a resize, the spec's
-    # column unused. A Struct record: mutable, with a reader and a writer
-    # per member.
-    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, :centered, :style_count, keyword_init: true)
+    # styles and border styles a plugin gave the float (style_float and
+    # set_float_border), so the presenter's float key moves when only
+    # the styles changed. border_style is the border style a plugin gave
+    # the float, "" for option.winborder. A centered float (the palette)
+    # has its column computed by place from its box at every arrange, so
+    # it is centered at show and after a resize, the spec's column
+    # unused. A Struct record: mutable, with a reader and a writer per
+    # member.
+    class FloatWindow < Struct.new(:window, :spec, :selected, :mark_from, :mark_to, :edge, :centered, :style_count, :border_style, keyword_init: true)
       # The columns of padding on each side of the text area.
       PAD = 1
       # The cells an editor-anchored box keeps from each side of the area
@@ -36,10 +38,11 @@ module Carat
       # @rbs @edge: Integer
       # @rbs @centered: bool
       # @rbs @style_count: Integer
+      # @rbs @border_style: String
 
       #: (window: Window, spec: FloatSpec) -> void
       def initialize(window:, spec:)
-        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge, centered: false, style_count: 0)
+        super(window: window, spec: spec, selected: -1, mark_from: -1, mark_to: -1, edge: spec.edge, centered: false, style_count: 0, border_style: "")
       end
 
       # The columns a box's frame takes beside its text: the padding on
@@ -56,6 +59,13 @@ module Carat
       #: (Integer, String) -> Integer
       def self.text_room(cols, style)
         cols - 2 * MARGIN - frame_width(BorderStyle.edged?(style) ? 1 : 0)
+      end
+
+      # The border style the float draws: its own, or winborder when it
+      # has none.
+      #: (String) -> String
+      def style_under(winborder)
+        border_style.empty? ? winborder : border_style
       end
 
       # Whether the float marks columns of its first row.

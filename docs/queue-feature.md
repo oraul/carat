@@ -4,15 +4,14 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 25
 
-1. `border-vocabulary` (T2 user request, Facet wave 3, estimated large, carried from Sprint 24, critical d carat/plugin_api.rb): a float's border is one bool (`FloatOptions`, `carat/plugin_api.rb:203`) drawn in the global `option.winborder rounded` (`config/default.caratrc:52`); split separators are fixed `│` and `─` (`frame_presenter.rb:107`, `:109`), every edge FloatBorder (`:537`, `:724`). Fix outline: the Facet border vocabulary as named styles a float may request at API 2.13, a 2.12 plugin's bool still honored. Accepted when frame rows draw each style and its ascii fallback, a plugin test requests a style, a 2.12 plugin loads, and `lh-float` is held. Backlog: none.
-2. `showtabline` (T2 user request, Facet wave 2, split from status-winbar-tabs-b at 7208588, estimated large): the tab row shows only from two tabs or two files (`carat/domain/buffer_list.rb:223`, read at `carat/use_cases/arrange_view.rb:51`, `frame_presenter.rb:238`); `docs/compatibility.md:510` lists `showtabline` missing. Fix outline: `option.showtabline` 0, 1, 2, default 2. Accepted when a table-driven test and frame rows show each value with one and two files (the one-file row at the default fails at 7208588), a `.caratrc` row with `make gen-config` current, its compatibility row, and `lh` held. Backlog: none.
+1. `showtabline` (T2 user request, Facet wave 2, split from status-winbar-tabs-b at 7208588, estimated large): the tab row shows only from two tabs or two files (`carat/domain/buffer_list.rb:223`, read at `carat/use_cases/arrange_view.rb:51`, `frame_presenter.rb:238`); `docs/compatibility.md:510` lists `showtabline` missing. Fix outline: `option.showtabline` 0, 1, 2, default 2. Accepted when a table-driven test and frame rows show each value with one and two files (the one-file row at the default fails at 7208588), a `.caratrc` row with `make gen-config` current, its compatibility row, and `lh` held. Backlog: none.
 
 ## Pool
 
 1. `folded-row` (T2 user request, Facet wave 2, estimated medium): a closed fold is one Normal row (`frame_presenter.rb:799`); accepted when shown in Folded, one cell of padding, both themes, ascii, 16 colors, NO_COLOR.
 2. `finder-switch` (T2 user request, estimated medium, pushed back 1, reason: the waves): `<C-g>` switches files and grep keeping the query, `<leader>fw` greps the word.
 3. `finder-rows` (T2 user request, estimated large, pushed back 2, same reason, critical e carat/plugins/finder/plugin.rb): PmenuSel band, PmenuMatch, paths cut left, grep rows; 1 entry (the NormalFloat hole).
-4. Facet wave 3 rest (T2 user request, estimated medium each): `window-surfaces`, `prompt-in-float`, `dim-backdrop`, `float-polish`.
+4. Facet wave 3 rest (T2 user request, estimated medium each): `window-surfaces`, `prompt-in-float`, `dim-backdrop`, `float-polish`; `separator-styles` (T2 user request, estimated small, split from border-vocabulary at f95b02a): split separators fixed `│` and `─` (`frame_presenter.rb:107`, `:109`), accepted when frame rows draw them in the Facet look and ascii.
 5. Facet wave 4 (T2 user request, estimated medium each): `plugin-ui-tokens` ("### style_float checks a span's start column only from below (sprint-23 review security Low (3), disputed)", 3 more: token length, PmenuExtra, float resolved three times), `finder-refined`, `key-hints-dock`, `explorer-rows`.
 6. Facet wave 5 (T2 user request, estimated medium each): `start-gem`, `diagnostic-text`, `explorer-git`.
 7. `finder-resume`, `finder-preview-gutter` (T2 user request, estimated small each, pushed back 1, reason: the waves); `grep-finish`, `explorer-filter` (T2 user request, estimated medium each, pushed back 1, same reason).
@@ -32,10 +31,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first (T0): none; sprint-24 review and sweep High 0, Medium 0, no periodic finding in the sprint-24-records run state.
-- Delivered (T2 user request): `tabs-only-dot`, Sprint 25 item 1 at 24df30e (listchars-folds note 13); Sprint 25 stays 3 features, 3 backlog, `border-vocabulary` and `showtabline` next.
-- Size (T2): `tabs-only-dot` medium; tab and bar rows tab-close-c 830,180, bar-colors 879,991, palette-narrow 736,843 under 1.2M; the one-up for status-winbar-tabs-b 2,192,549 and listchars-folds 1,499,684 is already in the Sprint 25 estimate.
-- No split (T2): one map area (the tab bar and its tests); its 3 backlog headings follow from the one gem removal, not independently testable.
-- Not critical (T2): `carat/adapters/tab_bar.rb` and `test/editor_tab_flows.rb` match no rule a to d, no security heading, medium.
-- Retro (T1): sprint-24-records note 10 is `records-bench-skip` (17.0 percent within its up to 21.4); notes 11, 12, 13 go to the findings file, the backlog queue being outside this lane.
-- Fold (T1): pool entry lists shortened to counts, security headings kept, to fit 17,969 bytes (review-trust-lows note 14).
+- Security first (T0): none; sprint-24 review and sweep High 0, Medium 0; no periodic finding in the pending runs groom-evidence-only and tabs-only-dot.
+- Delivered (T2 user request): `border-vocabulary`, Sprint 25 item 1 at f95b02a; Sprint 25 stays 3 features, 3 backlog, `showtabline` next.
+- Size (T2): large; base medium, `BorderStyle` (`carat/domain/border_style.rb:12`) already holds the 5 styles and ASCII, like picker-styles 1,428,108 (a host request at 2.12); one up, the last two over medium 1.2M (listchars-folds 1,499,684, tabs-only-dot 1,736,609).
+- Split (T2): the 2.13 request and its drawing are one testable part; the separators (`frame_presenter.rb:107`, `:109`) are in no acceptance check, queued as `separator-styles` in Pool 4.
+- Critical (T2): d carat/plugin_api.rb (a new host request, API 2.13), also e large.
+- Retro (T1): tabs-only-dot notes 14, 15 to the findings file, the backlog queue being outside this lane; both near its `closing-loop-fold`.

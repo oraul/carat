@@ -87,8 +87,8 @@ module Carat
     # the windows, the status bar, and the start screen: their text in
     # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel) with
     # a column of padding in the same colors on each side, the border of
-    # option.winborder in FloatBorder (none under none, ASCII when plain
-    # or under option.icons ascii), and the title centered on the top
+    # option.winborder or the float's own style in FloatBorder (none
+    # under none, ASCII when plain or under option.icons ascii), and the title centered on the top
     # edge with a blank on each side in FloatTitle. The notifications follow at the top right in the same
     # border, their severity centered as a title is. A frame keeps the
     # boxes it was painted with; when they
@@ -172,6 +172,7 @@ module Carat
       # @rbs @marks: WhitespaceMarks
       # @rbs @mark_here: bool
       # @rbs @border: Array[Integer]
+      # @rbs @ascii: bool
 
       #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
       def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
@@ -180,6 +181,7 @@ module Carat
         @plain = false
         @notice_from = 0
         @border = Domain::BorderStyle::ROUNDED
+        @ascii = false
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -239,7 +241,8 @@ module Carat
         back.base_serial = based ? base.serial : -1
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        @border = Domain::BorderStyle.glyphs(options.winborder, @plain || options.icons == "ascii")
+        @ascii = @plain || options.icons == "ascii"
+        @border = Domain::BorderStyle.glyphs(options.winborder, @ascii)
         tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count) ? 1 : 0
         tab = state.tab
         layout = tab.layout
@@ -541,7 +544,7 @@ module Carat
         last = right - 1
         bottom = top + NOTICE_HEIGHT - 1
         border = plain ? Domain::Highlight::NORMAL : Domain::Highlight::FLOAT_BORDER
-        paint_edge(frame, r, left, last, top, bottom, border)
+        paint_edge(frame, r, left, last, top, bottom, border, @border)
         if r == top
           level = @notices.level_at(n)
           paint_title(frame, r, left, last, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level))
@@ -554,11 +557,10 @@ module Carat
       end
 
       # One row of a box's border from left to last in hl, in the border
-      # glyphs of this frame: on its top or bottom row the corners and the
-      # edge between them, on any other row its two sides.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer) -> void
-      def paint_edge(frame, r, left, last, top, bottom, hl)
-        glyphs = @border
+      # glyphs given: on its top or bottom row the corners and the edge
+      # between them, on any other row its two sides.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer, Array[Integer]) -> void
+      def paint_edge(frame, r, left, last, top, bottom, hl, glyphs)
         if r == top || r == bottom
           frame.put_code(r, left, glyphs[r == top ? Domain::BorderStyle::TOP_LEFT : Domain::BorderStyle::BOTTOM_LEFT], 1, hl)
           frame.put_code(r, last, glyphs[r == top ? Domain::BorderStyle::TOP_RIGHT : Domain::BorderStyle::BOTTOM_RIGHT], 1, hl)
@@ -720,14 +722,17 @@ module Carat
         frame.blank(row, right, right + 1) if right < cols && frame.width_at(row, right) == 0
       end
 
-      # The border cells of one row of a float's box in FloatBorder and,
-      # on its top edge, its title centered between the corners.
+      # The border cells of one row of a float's box in FloatBorder, in
+      # the float's own border style or the frame's, and, on its top
+      # edge, its title centered between the corners.
       #: (Domain::Frame, Domain::FloatWindow, Integer) -> void
       def paint_border_row(frame, float, r)
         left = float.box_left
         last = float.box_right - 1
         top = float.box_top
-        paint_edge(frame, r, left, last, top, float.box_bottom - 1, Domain::Highlight::FLOAT_BORDER)
+        style = float.border_style
+        glyphs = style.empty? ? @border : Domain::BorderStyle.glyphs(style, @ascii)
+        paint_edge(frame, r, left, last, top, float.box_bottom - 1, Domain::Highlight::FLOAT_BORDER, glyphs)
         title = float.spec.title
         paint_title(frame, r, left, last, title, Domain::Highlight::FLOAT_TITLE) if r == top && !title.empty?
       end

@@ -8,8 +8,10 @@ ok   a refused plugin is not activated
 ok   a newer minor version is refused, as in A plugin written against 2.10 still loads
 ok   an older major version is refused
 ok   the host's own version is accepted
-ok   A plugin written against 2.10 still loads on the 2.12 host
-ok   A plugin written against 2.11 still loads on the 2.12 host
+ok   A plugin written against 2.10 still loads on the 2.13 host
+ok   A plugin written against 2.11 still loads on the 2.13 host
+ok   A plugin written against 2.12 still loads on the 2.13 host: its bordered float in option.winborder, its unbordered one with no edge
+ok   A plugin requests a border style: a 2.13 plugin's float takes double and a border
 ok   a broken manifest rule disables the plugin
 ok   a disabled entry registers without activating
 ok   an action of a disabled plugin says so
@@ -115,4 +117,5 @@ ok   the plugin has a float in each tab page, beside another plugin's
 ok   a disabled plugin's segment is dropped when it is disabled
 ok   a disabled plugin's floats are closed in every tab page and another plugin's float stays
 ok   a disabled plugin's style_float is refused by its link, the float's style unchanged
-use_cases_plugins: 117 passed, 0 failed
+ok   and its set_float_border too, as in A plugin requests a border style, the float's border unchanged
+use_cases_plugins: 120 passed, 0 failed

@@ -46,6 +46,12 @@ module Carat
         FloatSpec.new(anchor: anchor, row: row, col: col, height: height, width: width, border: border, title: to_title, z: z)
       end
 
+      # The same spec with a border.
+      #: () -> FloatSpec
+      def bordered
+        FloatSpec.new(anchor: anchor, row: row, col: col, height: height, width: width, border: true, title: title, z: z)
+      end
+
       # Why the values cannot make a float, "" when they can.
       #: (String, Integer, Integer, Integer, Integer, Integer) -> String
       def self.refusal(anchor, row, col, height, width, z)
