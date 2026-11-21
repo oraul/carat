@@ -15,9 +15,9 @@ module Carat
 
       # Options, by their Vim names. :set changes each of them while the editor
       # runs, with the same checks (:set ts=4, :set nonu, :set ts& for the value
-      # here), but theme, background, keyhints.delay, the layout sizes, and the
-      # indent guides, read from these lines only, and startscreen, read only
-      # at startup.
+      # here), but theme, background, jumptab, gt, keyhints.delay, the layout
+      # sizes, and the indent guides, read from these lines only, and
+      # startscreen, read only at startup.
       option.number true
       option.relativenumber false
       option.tabstop 2

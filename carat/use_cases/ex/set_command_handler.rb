@@ -139,7 +139,7 @@ module Carat
         value = value_part(word, op)
         options = state.options
         kind = Domain::Options::KINDS[option].to_s
-        return set_flag(options, option, prefix, op, word, shown) if kind == "bool" && option != "filetype" && option != "syntax"
+        return set_flag(options, option, prefix, op, word, shown) if kind == "bool"
         return "E474: Invalid argument: #{word}" unless prefix.empty? && op != "!"
         return set_buffer_option(state.buffer, option, op, value, word, shown) if option == "filetype" || option == "syntax"
         if op.empty? || op == "?"

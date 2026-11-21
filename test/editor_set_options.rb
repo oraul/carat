@@ -152,6 +152,7 @@ module EditorSetOptionsTest
       ["Not implemented: resetting every option", ":set all&<CR>", "Not implemented: :set all&"],
       ["an option outside :set's is unknown", ":set jumptab=keep<CR>", "E518: Unknown option: jumptab"],
       ["& on filetype is not implemented", ":set ft&<CR>", "Not implemented: :set ft&"],
+      ["a flag prefix on filetype is E474", ":set noft<CR>", "E474: Invalid argument: noft"],
       # Scenario "startscreen is read only at startup" (set-command).
       ["startscreen is read only at startup", ":set nostartscreen<CR>", "Not implemented: :set startscreen live"],
       ["startscreen is read only at startup: the value kept", ":set nostartscreen<CR>:set startscreen?<CR>", "  startscreen"],
