@@ -677,7 +677,7 @@ module AdaptersFramePresenterTest
 
     # Scenarios of buffer-tabs, each name on its own comment line:
     # "A second file shows the row"
-    # "One file has no row under 1"
+    # "One file has no row" (under 1)
     # "One file has the row under 2"
     # "The open file's modified mark follows its name under 2"
     # "Never hides the row"

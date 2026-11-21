@@ -7,7 +7,7 @@ Under `option.showtabline` 2, row 0 SHALL always be the buffer tabs row; under 1
 - **WHEN** "a.txt" is shown under `option.showtabline 1` and ":e b.txt" is run
 - **THEN** row 0 is the buffer tabs row and the first text row of the window is row 1
 
-#### Scenario: One file has no row under 1
+#### Scenario: One file has no row
 - **WHEN** only "a.txt" is listed in one tab page under `option.showtabline 1`
 - **THEN** row 0 is the first text row
 

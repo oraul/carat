@@ -36,9 +36,9 @@ module Carat
     # "keep", Vim's behavior. gt is "buffers" when gt and gT move between
     # the buffer tabs, or "tabpages", Vim's behavior. showtabline is 0
     # when the tab row never shows, 1 when it shows with two or more tab
-    # pages or files, 2 when it always does, Neovim's option. list draws the marks
-    # of listchars over the tabs, trailing spaces, and no-break spaces of
-    # file windows, Neovim's options and default. All but syntax_on
+    # pages or files, 2 when it always does, Neovim's option. list draws
+    # the marks of listchars over the tabs, trailing spaces, and no-break
+    # spaces of file windows, Neovim's options and default. All but syntax_on
     # come from option lines of the configuration. A Struct record:
     # mutable, with a reader and a writer per member.
     class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :showtabline, :list, :listchars, keyword_init: true)

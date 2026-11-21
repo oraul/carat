@@ -4,13 +4,13 @@ require_relative "../domain/default_config"
 
 module Carat
   module Doubles
-    # A config port that returns a configuration given to it. defaults
-    # reads the shipped defaults as the editor does; with reads lines a
+    # A config port that returns a configuration given to it. shipped
+    # reads the shipped defaults as the editor does and defaults, the test
+    # configuration, adds option.showtabline 1 to them; with reads lines a
     # test gives after them, as the project file .caratrc, and with_user as
     # the user file, so a test sets options and bindings with the lines a
-    # user would write. The test configuration keeps option.showtabline 1,
-    # the tab row's rule before the option, so a test with one file in one
-    # tab page sees no tab row; shipped is the defaults alone.
+    # user would write. The 1 is the tab row's rule before the option, so a
+    # test with one file in one tab page sees no tab row.
     class FixedConfig < Ports::ConfigPort
       # @rbs @value: Domain::Config
 

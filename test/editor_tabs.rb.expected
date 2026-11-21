@@ -132,6 +132,9 @@ ok   the first file and tab page are now selected
 ok   an unnamed buffer shows as [No Name]
 ok   the listed empty buffer keeps the row, without tab-page numbers
 ok   one file in one tab page has no tabs row
+ok   showtabline 2 gives one file its tab row, the window under it and the cursor on its row
+ok   showtabline 0 shows no row with two files
+ok   the shipped configuration alone, with no line for it, shows one file's tab row
 ok   a tab shows the file name without its directory
 ok   the path is untouched
 ok   A file opened in a tab page retires the startup buffer
@@ -145,4 +148,4 @@ ok   :tabonly keeps the current tab page on its last line
 ok   :tabn back to a tab page keeps its cursor on the last line
 ok   :tabnew and :tabclose over an empty buffer leave its one empty line
 ok   :tabclose of the tab page over an empty buffer keeps the other
-editor_tabs: 147 passed, 0 failed
+editor_tabs: 150 passed, 0 failed
