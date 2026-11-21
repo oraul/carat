@@ -33,3 +33,7 @@
 
 - [x] 7.1 The script header of `tools/run_state.sh` still gave `build/metrics/current.tsv` as METRICS_OUT's only default and said an escape fails the check: name the lane default and the escaped verdict. Fixed.
 - [x] 7.2 An escaped check also rewrites the derived passes it wrote (carried, scoped, compiled), which the next check derives again or runs: safe, recorded as a design note in `design.md`, no code change. Fixed in the design text.
+
+## 8. Fix round: security review
+
+- [x] 8.1 Security Medium at `tools/run_state.sh` (the escaped verdict): an escape by branch code into the shared toolchain, Spinel's checkout, the user's git configuration, the git directory, or the main checkout's other files reran with no fix round, the rerun's baseline taking the write in, and the escaped paths were lost with the rewritten check log. Fixed: `lane_written` keeps the `escaped` verdict for paths only under the main checkout's `build/` seen from a lane, any other path reads `stage none failed` as before, and `escaped_note` records every escape's paths as a `security-escape` note; `tools/tools_test.sh` proves the toolchain and git-configuration writes fail, a write only under the main checkout's `build/` is escaped, a mixed one fails, and both note the paths.
