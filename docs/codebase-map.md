@@ -144,7 +144,7 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 
 Files:
 
-- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`; a CSI modifier is read only for Ctrl on the page keys.
+- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`; a CSI modifier is read only for Ctrl on the page keys; `ESC [ Z` is `<S-Tab>`.
 - `carat/adapters/input_controller.rb`: `InputController`; `pump` (the notifications expired at an idle read and the read's wait cut to the next one's deadline; the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick, `ShowHover` when a hover answer did, `ShowSignature` when a signature answer did; `ShowKeyHints` once `keyhints.delay` passed over a `:waiting` key), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `caret` (the palette's `^W`), `control_code`, `special_name`; Vim notation such as `<C-w>`.
@@ -448,6 +448,7 @@ Files:
 - `carat/use_cases/files/probe_path.rb`: `ProbePath#call`, the one call of `FilePort#stat`, shared by `OpenFile` and the plugin file operations.
 - `carat/use_cases/files/make_path.rb`, `carat/use_cases/files/rename_path.rb` (the listed buffers following), `carat/use_cases/files/delete_path.rb`: `call`; make, rename, and delete inside a root with every check, used by the plugin file requests, each refusing a parent (create) or an entry's directory (rename, delete) that `ResolveInside` places outside the root.
 - `carat/use_cases/files/resolve_inside.rb`: `ResolveInside#call(root, dir, path)`, the one comparison of real paths (`FilePort#real_path`): `Outside the tree root: path` unless the directory with its links resolved is the resolved root or inside it; built by `PluginHost` and shared by the three.
+- `carat/domain/cmdline_menu.rb`: `CmdlineMenu`, the `:` prompt's completion menu: the matches and their labels, the selection (-1 for the typed text), the completed word's start and text, the line and cursor the last insert left, and the popup; `showing?`, `current?`, `clear`.
 - `carat/domain/command_line_text.rb`: `CommandLineText.word_back`, `word_forward` (the blank-separated words of `<S-Left>` and `<S-Right>`), and `removal_start` (the run `<C-w>` removes).
 - `carat/use_cases/recall_history.rb`: `RecallHistory#call`, `<Up>` and `<Down>` through the prompt's `History` (`:` or search).
 - `carat/use_cases/ex/lsp_start_command_handler.rb`: `LspStartCommandHandler.register` (`:LspStart`): starts the current buffer's language server, trusted directory or not, through `LanguageServicePort#start`.
@@ -463,8 +464,11 @@ Files:
 - `carat/use_cases/move_command_line_cursor.rb`: `MoveCommandLineCursor#call(state, motion)`, the prompts' cursor keys (`:left`, `:right`, `:home`, `:end`, `:word_left`, `:word_right`) over `EditorState#cmdline_position`, never past the text.
 - `carat/use_cases/delete_command_line_text.rb`: `DeleteCommandLineText#call(state, unit)`, `<Del>` (`:under`, at the end `<BS>`), `<C-w>` (`:word`), and `<C-u>` (`:line`) at the cursor, a search prompt previewing what is left.
 - `carat/use_cases/actions/command_line_edit_handler.rb`: `CommandLineEditHandler.register` (`cmdline.left`, `right`, `home`, `end`, `word_left`, `word_right`, `delete`, `delete_word`, `delete_line`), through `MoveCommandLineCursor` and `DeleteCommandLineText`.
+- `carat/use_cases/complete_command_line.rb`: `CompleteCommandLine#call(state, step)`, `<Tab>` and `<S-Tab>` at the `:` prompt: a command name from `ExTable#full_names`, a path after `:e`, `:w`, `:sp`, `:vs`, `:tabe` from at most 1000 entries of its directory (`FilePort#list_first`), cycling back to the typed text, and the bordered popup above the command line.
+- `carat/use_cases/close_cmdline_menu.rb`: `CloseCmdlineMenu#call`, closes the completion popup and forgets the matches; `HandleKey` runs it when a key left the line, `NormalModeHandler` on `<Esc>` before the line is discarded.
+- `carat/use_cases/actions/command_line_complete_handler.rb`: `CommandLineCompleteHandler.register` (`cmdline.complete_next`, `cmdline.complete_previous`), the step 1 or -1 of `CompleteCommandLine`.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`.
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`, `test/editor_cmdline_complete.rb`.
 
 Designs: `ex-write-quit-all` (all Decisions), `dependency-injection` (Ex names; ExecuteEx moves to use_cases/ex), `editor-foundation` (Use cases), `plugin-explorer` (The file requests are validated in the host), `use-case-boundaries` (The splits), `buffer-substitute` (all Decisions), `buffer-global` (all Decisions).
 
@@ -618,12 +622,12 @@ Files:
 
 - `carat/ports/terminal_port.rb`: `TerminalPort`; `size`, `read_key`, `write`, `colors`, `no_color?`, `background`, `enter`, `leave`.
 - `carat/ports/clock_port.rb`: `ClockPort`; `now`, `sleep`.
-- `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `read_no_link` (the same, refusing a link at the open), `write`, `exist?`, `list`, `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
+- `carat/ports/file_port.rb`: `FilePort`; `read` (bounded, regular files only), `read_no_link` (the same, refusing a link at the open), `write`, `exist?`, `list`, `list_first` (at most a limit of entries), `stat` (a `Domain::PathInfo`), `real_path`, `mkdir`, `rename`, `delete`, `cwd`, `home`.
 - `carat/ports/config_port.rb`: `ConfigPort#load`, the `Domain::Config` of every configuration file.
 - `carat/ports/signal_port.rb`: `SignalPort`; `install`, `terminated?`, `resized?`, `acknowledge_resize`.
 - `carat/drivers/ansi_terminal.rb`: `AnsiTerminal`; reads `COLORTERM` and `TERM` once for `colors` and `NO_COLOR` for `no_color?`, the environment reads but the `HOME` of `DiskFiles#home`; the first `read_key` after `enter` writes the OSC 11 query, after the first frame and in raw mode, and the reads take the answer out of the key bytes until one came, holding a start of it across reads and dropping it on a timeout, for `background`.
 - `carat/domain/terminal_background.rb`: `TerminalBackground`, the OSC 11 `QUERY`, `reply_size` (where an answer ends in the key bytes, or 0 to hold it under `LIMIT`) and `parse` (`rgb:` or `rgba:` within `LIMIT` bytes, light over half the luma, else dark or `""`).
-- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file, `read_no_link` adds `O_NOFOLLOW`.
+- `carat/drivers/disk_files.rb`: `DiskFiles`, the `FilePort` driver; `read` opens with `O_NONBLOCK` and checks the opened file, `read_no_link` adds `O_NOFOLLOW`, `list_first` stops `Dir#read` at its limit.
 - `carat/drivers/monotonic_clock.rb`: `MonotonicClock`.
 - `carat/drivers/signals.rb`: `Signals`; INT and TERM terminate, WINCH resizes, flags only.
 - `carat/drivers/main_loop.rb`: `MainLoop#run`.

@@ -24,6 +24,8 @@ require_relative "docs/request_signature"
 require_relative "docs/follow_signature"
 require_relative "discovery/hide_key_hints"
 require_relative "discovery/follow_palette"
+require_relative "close_cmdline_menu"
+require_relative "../domain/cmdline_menu"
 require_relative "../domain/key_hints"
 require_relative "../domain/palette"
 require_relative "../domain/plugin_ui"
@@ -74,7 +76,10 @@ module Carat
     # with no keys, as if its key had been pressed. While a plugin's
     # live prompt is open its keymap answers first on the command line
     # and every key ends in PluginHost#follow_prompt, which reports a
-    # changed text; with none, one comparison.
+    # changed text; with none, one comparison. While the completion menu
+    # of the `:` prompt shows, a key that left the line other than <Tab>
+    # left it (CmdlineMenu#current?) closes it through CloseCmdlineMenu;
+    # with none, one comparison.
     class HandleKey
       include Reporting
 
@@ -103,17 +108,21 @@ module Carat
       attr_reader :hide_key_hints #: HideKeyHints
       attr_reader :palette #: Domain::Palette
       attr_reader :follow_palette #: FollowPalette
+      attr_reader :cmdline_menu #: Domain::CmdlineMenu
+      attr_reader :close_cmdline_menu #: CloseCmdlineMenu
 
       # @rbs @replays: Integer
       # @rbs @plugin_ui: Domain::PluginUi
       # @rbs @hover: Domain::HoverRequest
 
-      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, definition: Domain::DefinitionRequest, follow_definition: FollowDefinition, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette) -> void
-      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, definition:, follow_definition:, request_signature:, follow_signature:, signature:, key_hints:, hide_key_hints:, palette:, follow_palette:)
+      #: (keymap: Domain::Keymap, input: Domain::InputState, actions: ActionTable, dispatcher: Dispatcher, insert_text: InsertText, command_line: EditCommandLine, completion: Domain::CompletionMenu, show_completion: ShowCompletion, plugins: PluginHost, arrange_view: ArrangeView, search_prompt: Domain::SearchPrompt, open_search_prompt: OpenSearchPrompt, follow_hover: FollowHover, definition: Domain::DefinitionRequest, follow_definition: FollowDefinition, request_signature: RequestSignature, follow_signature: FollowSignature, signature: Domain::SignatureRequest, key_hints: Domain::KeyHints, hide_key_hints: HideKeyHints, palette: Domain::Palette, follow_palette: FollowPalette, cmdline_menu: Domain::CmdlineMenu, close_cmdline_menu: CloseCmdlineMenu) -> void
+      def initialize(keymap:, input:, actions:, dispatcher:, insert_text:, command_line:, completion:, show_completion:, plugins:, arrange_view:, search_prompt:, open_search_prompt:, follow_hover:, definition:, follow_definition:, request_signature:, follow_signature:, signature:, key_hints:, hide_key_hints:, palette:, follow_palette:, cmdline_menu:, close_cmdline_menu:)
         @key_hints = key_hints
         @hide_key_hints = hide_key_hints
         @palette = palette
         @follow_palette = follow_palette
+        @cmdline_menu = cmdline_menu
+        @close_cmdline_menu = close_cmdline_menu
         @plugin_ui = plugins.plugin_ui
         @request_signature = request_signature
         @follow_signature = follow_signature
@@ -163,7 +172,8 @@ module Carat
 
       # After the keys of a typed key or a timeout ran: the completion menu,
       # the documentation and definition floats, the signature help, the
-      # palette, and a plugin prompt follow the result, each behind one
+      # palette, the command line's completion menu, and a plugin prompt
+      # follow the result, each behind one
       # comparison, then the plugins observe and the view is arranged.
       #: (Domain::EditorState) -> void
       def follow(state)
@@ -172,6 +182,7 @@ module Carat
         @follow_definition.call(state) if @definition.following?
         @follow_signature.call(state) if @signature.active?
         @follow_palette.call(state) if @palette.following?
+        @close_cmdline_menu.call(state) if @cmdline_menu.showing? && !@cmdline_menu.current?(state)
         @plugins.follow_prompt(state) if @plugin_ui.prompt_live
         @plugins.observe
         @arrange_view.call(state)

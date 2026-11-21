@@ -156,6 +156,7 @@ require_relative "../use_cases/actions/definition_handler"
 require_relative "../domain/signature_request"
 require_relative "../domain/key_hints"
 require_relative "../domain/palette"
+require_relative "../domain/cmdline_menu"
 require_relative "../use_cases/docs/request_signature"
 require_relative "../use_cases/docs/show_signature"
 require_relative "../use_cases/docs/follow_signature"
@@ -163,12 +164,15 @@ require_relative "../use_cases/discovery/show_key_hints"
 require_relative "../use_cases/discovery/hide_key_hints"
 require_relative "../use_cases/discovery/open_palette"
 require_relative "../use_cases/discovery/follow_palette"
+require_relative "../use_cases/complete_command_line"
+require_relative "../use_cases/close_cmdline_menu"
 require_relative "../use_cases/actions/docs_handler"
 require_relative "../use_cases/actions/palette_handler"
 require_relative "../use_cases/actions/layout_handler"
 require_relative "../use_cases/windows/change_folds"
 require_relative "../use_cases/actions/fold_handler"
 require_relative "../use_cases/actions/command_line_edit_handler"
+require_relative "../use_cases/actions/command_line_complete_handler"
 require_relative "../use_cases/actions/plugin_action_handler"
 require_relative "../use_cases/dispatcher"
 require_relative "../use_cases/handle_key"
@@ -325,6 +329,9 @@ module Carat
       attr_reader :show_key_hints #: UseCases::ShowKeyHints
       attr_reader :hide_key_hints #: UseCases::HideKeyHints
       attr_reader :palette #: Domain::Palette
+      attr_reader :cmdline_menu #: Domain::CmdlineMenu
+      attr_reader :close_cmdline_menu #: UseCases::CloseCmdlineMenu
+      attr_reader :complete_command_line #: UseCases::CompleteCommandLine
       attr_reader :open_palette #: UseCases::OpenPalette
       attr_reader :follow_palette #: UseCases::FollowPalette
       attr_reader :wiring #: WiringLedger
@@ -366,6 +373,7 @@ module Carat
         @signature = Domain::SignatureRequest.new
         @key_hints = Domain::KeyHints.new
         @palette = Domain::Palette.new
+        @cmdline_menu = Domain::CmdlineMenu.new
         @notices = Domain::Notices.new(history: @state.history)
         @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, definition: @definition, signature: @signature, symbols: @symbols, notices: @notices)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
@@ -486,8 +494,9 @@ module Carat
         @wiring.record("follow_palette", "palette", @palette)
         @wiring.record("follow_palette", "open_float", @open_float)
         @wiring.record("follow_palette", "close_float", @close_float)
+        @close_cmdline_menu = UseCases::CloseCmdlineMenu.new(menu: @cmdline_menu, close_float: @close_float)
         @dispatcher = UseCases::Dispatcher.new(actions: @actions, last_change: @last_change, clock: clock, feed: @buffers.feed)
-        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette)
+        @handle_key = UseCases::HandleKey.new(keymap: @keymap, input: @input, actions: @actions, dispatcher: @dispatcher, insert_text: @insert_text, command_line: @edit_command_line, completion: @completion_menu, show_completion: @show_completion, plugins: @plugins, arrange_view: @arrange_view, search_prompt: @search_prompt, open_search_prompt: @open_search_prompt, follow_hover: @follow_hover, definition: @definition, follow_definition: @follow_definition, request_signature: @request_signature, follow_signature: @follow_signature, signature: @signature, key_hints: @key_hints, hide_key_hints: @hide_key_hints, palette: @palette, follow_palette: @follow_palette, cmdline_menu: @cmdline_menu, close_cmdline_menu: @close_cmdline_menu)
 
         UseCases::FileCommandHandler.register(@commands, save_file: @save_file, save_all: @save_all, quit: @quit, quit_all: @quit_all, open_file: @open_file, buffers: @buffers)
         UseCases::WindowCommandHandler.register(@commands, split_window: @split_window, close_window: @close_window, close_other_windows: @close_other_windows)
@@ -529,7 +538,7 @@ module Carat
         UseCases::EditHandler.register(@actions, operate: @operate, replace_chars: UseCases::ReplaceChars.new, toggle_case: UseCases::ToggleCase.new, put_register: @put_register, join_lines: UseCases::JoinLines.new)
         UseCases::TextObjectHandler.register(@actions, extend_visual: extend_visual)
         UseCases::InsertModeHandler.register(@actions)
-        UseCases::NormalModeHandler.register(@actions, leave_insert: @leave_insert, cancel_command_line: @cancel_command_line)
+        UseCases::NormalModeHandler.register(@actions, leave_insert: @leave_insert, cancel_command_line: @cancel_command_line, cmdline_menu: @cmdline_menu, close_cmdline_menu: @close_cmdline_menu)
         UseCases::VisualModeHandler.register(@actions, start_visual: start_visual, reselect_visual: reselect_visual)
         UseCases::SelectionHandler.register(@actions, delete_selection: @delete_selection, yank_selection: @yank_selection, change_selection: @change_selection, join_selection: UseCases::JoinSelection.new, recase_selection: @recase_selection, insert_at_selection: UseCases::InsertAtSelection.new, put_over_selection: @put_over_selection, swap_visual_ends: swap_visual_ends)
         UseCases::CommandLineHandler.register(@actions, enter_command_line: @enter_command_line, execute_command_line: @execute_command_line, erase_command_line: erase_command_line, recall_history: @recall_history)
@@ -559,6 +568,8 @@ module Carat
         UseCases::FoldHandler.register(@actions, operate: @operate, change_folds: UseCases::ChangeFolds.new)
         delete_command_line_text = UseCases::DeleteCommandLineText.new(erase_command_line: erase_command_line, preview_search: @preview_search)
         UseCases::CommandLineEditHandler.register(@actions, move_command_line_cursor: UseCases::MoveCommandLineCursor.new, delete_command_line_text: delete_command_line_text)
+        @complete_command_line = UseCases::CompleteCommandLine.new(menu: @cmdline_menu, commands: @commands, files: files, palette: @palette, search_prompt: @search_prompt, plugin_ui: @plugin_ui, open_float: @open_float, close_float: @close_float)
+        UseCases::CommandLineCompleteHandler.register(@actions, complete_command_line: @complete_command_line)
         UseCases::PluginActionHandler.register(@actions, plugins: @plugins)
 
         @keymap.add_checked(value, known_actions)

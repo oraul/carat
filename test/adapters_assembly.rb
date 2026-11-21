@@ -180,6 +180,14 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.search_prompt, [["open_palette", w.held("open_palette", "search_prompt")]]), "the search prompt, in the palette")
     t.assert_equal([], strangers(a.open_float, [["show_key_hints", w.held("show_key_hints", "open_float")], ["follow_palette", w.held("follow_palette", "open_float")]]), "the open float use case, in the key hints and the palette")
     t.assert_equal([], strangers(a.close_float, [["hide_key_hints", w.held("hide_key_hints", "close_float")], ["follow_palette", w.held("follow_palette", "close_float")]]), "the close float use case, in the key hints and the palette")
+    t.assert_equal([], strangers(a.cmdline_menu, [["handle_key", a.handle_key.cmdline_menu], ["close_cmdline_menu", a.close_cmdline_menu.menu], ["complete_command_line", a.complete_command_line.menu]]), "the command line's completion menu")
+    t.assert_equal([], strangers(a.close_cmdline_menu, [["handle_key", a.handle_key.close_cmdline_menu]]), "the close command line menu use case, in the key handler")
+    t.assert_equal([], strangers(a.close_float, [["close_cmdline_menu", a.close_cmdline_menu.close_float], ["complete_command_line", a.complete_command_line.close_float]]), "the close float use case, in the command line's completion")
+    t.assert_equal([], strangers(a.open_float, [["complete_command_line", a.complete_command_line.open_float]]), "the open float use case, in the command line's completion")
+    t.assert_equal([], strangers(a.commands, [["complete_command_line", a.complete_command_line.commands]]), "the ex table, in the command line's completion")
+    t.assert_equal([], strangers(a.palette, [["complete_command_line", a.complete_command_line.palette]]), "the command palette, in the command line's completion")
+    t.assert_equal([], strangers(a.search_prompt, [["complete_command_line", a.complete_command_line.search_prompt]]), "the search prompt, in the command line's completion")
+    t.assert_equal([], strangers(a.plugin_ui, [["complete_command_line", a.complete_command_line.plugin_ui]]), "the plugin UI, in the command line's completion")
     t.assert_equal([], strangers(a.actions, [["show_key_hints", w.held("show_key_hints", "actions")], ["open_palette", w.held("open_palette", "actions")]]), "the action table, in the key hints and the palette")
     t.assert_equal([], strangers(a.actions, [["dispatcher", a.dispatcher.actions], ["handle_key", a.handle_key.actions], ["repeat_last", a.repeat_last.actions]]), "the action table")
     t.assert_equal([], strangers(a.dispatcher, [["handle_key", a.handle_key.dispatcher]]), "the dispatcher")
@@ -197,7 +205,7 @@ module AdaptersAssemblyTest
     # Each port is one instance too.
     t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
     t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock], ["services", a.services.clock]]), "the clock port")
-    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
+    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["complete_command_line", a.complete_command_line.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
       ["resolve_inside", host.make_path.resolve_inside.files], ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
       ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")
     t.assert_equal([], strangers(h.processes, [["assembly", a.processes], ["services", a.services.processes], ["plugin file requests", a.plugins.file_requests.processes]]), "the process port, in the services and the plugin file requests")
