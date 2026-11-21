@@ -43,3 +43,8 @@
 - Location: tools/gates.sh, tools/rules.sh (RECORDS_RE, docs/backlog/.+\.md$)
 - Why: file_entries now refuses to write through a symbolic link under docs/backlog/, but a commit adding such a link still lands as records-only after the security review was recorded; another writer of those paths (plan-apply, history) could follow it.
 - Fix: have the merge gates refuse a tracked symbolic link (git ls-files -s mode 120000) under the RECORDS_RE paths, in a rules change of its own since it edits tools/rules.sh or the gate reading it.
+
+### A refused filing leaves the entries filed before it in the folder
+- Location: tools/run_state.sh file_entries (the linked and mkdir refusals), backlog_move
+- Why: file_entries writes each entry as it reads it, so when it refuses a symbolic link or a directory midway, the entries before it are already appended; backlog-move then keeps FILE, and running it again after removing the link files those entries twice (groom likewise keeps the findings files).
+- Fix: check every target file (linked, mkdir) in a first pass over the buffered entries and write only when all pass, or write into a copy of the folder and move it in place once the filing succeeded.
