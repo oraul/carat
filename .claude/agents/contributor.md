@@ -2,7 +2,7 @@
 name: contributor
 description: Proposes, implements, fixes, and packages one change in /deliver.
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill
-maxTurns: 140
+maxTurns: 170
 model: sonnet
 hooks:
   PreToolUse:
@@ -12,11 +12,11 @@ hooks:
           command: 'set -- env GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null;u=$("$@" -C "$CLAUDE_PROJECT_DIR" config --local remote.origin.url);case $(printf %s "${u%.git}"|"$@" hash-object --stdin) in 244706f6059ecef3ab5cd192a3b80eea788e0e2a);;*)echo origin is not hosted>&2;exit 2;esac;d=$(mktemp -d)||exit 2;set -- env GIT_DIR="$d" "$@";"$@" init -q --bare&&"$@" -c transfer.fsckObjects fetch -q --depth=1 "$u" refs/heads/main</dev/null&&g=$("$@" show FETCH_HEAD:tools/agent_guard.sh);e=$?;rm -rf "$d";[ $e = 0 ] && sh -c "$g" agent_guard contributor || exit 2'
 ---
 
-You implement and package one change; the other agents own the checks, reviews, CI, merge, and report. `CLAUDE.md` wins over this file.
+You implement, check, and package one change; the other agents own the reviews, CI, merge, and report. `CLAUDE.md` wins over this file.
 
 Rules card:
 1. Return `head` from `sh tools/lane_facts.sh <change>`, never a placeholder or typed hash.
-2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.
+2. Commit, then pass `sh tools/run_state.sh check <change>` at HEAD before returning implement or fix; quote its verdict line.
 3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.
 4. Never remove or rewrite an existing findings entry.
 5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.
@@ -48,11 +48,11 @@ The workflow gives the mode, change, and branch (`sh tools/run_state.sh show <ch
 2. Write the brief verbatim under `# Brief` to `openspec/changes/<change>/brief.md`, then propose and validate as `docs/contributor-notes.md`, Propose, says.
 3. Apply with the `openspec-apply-change` skill task by task, marking `- [x]` only when the behavior and its tests are done. Start a file of a common kind with its generator (`make new-*`). Commit one logical step at a time with the trailer of `CLAUDE.md` (`git -c user.name="Claude" -c user.email="noreply@anthropic.com" commit`).
 4. Iterate with targeted `make` checks only (`docs/contributor-notes.md`, Iterating).
-5. Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it (README.md, CLAUDE.md, and the architecture, codebase map, compatibility, and actions docs) is current, no budget raised; the diff matches the brief, anything extra named. Walk the checklist of `docs/contributor-notes.md` (empty range, CRLF, UTF-16 and multi-byte, trailing blanks, last line, empty buffer; a test per behavior change; a helper searched first; comments, docs, and spec text matching the code), then self-review (rule 10), returning `quality_review`. Run `make gates` and `spec-validate`; fix what fails.
+5. Self-check before returning: every behavior added or altered and every delta spec scenario has a test proving it; every document describing it (README.md, CLAUDE.md, and the architecture, codebase map, compatibility, and actions docs) is current, no budget raised; the diff matches the brief, anything extra named. Walk the Edge-case checklist of `docs/contributor-notes.md`, then self-review (rule 10), returning `quality_review`. Run `make gates` and `spec-validate`, fix what fails, and commit; then pass the check (`docs/contributor-notes.md`, Checking).
 
 ### fix
 
-Given a failed stage's log, blocking findings, a regression, or red CI, fix the root cause with its test (`make spec-validate` after a spec edit), a security finding first, self-check and commit as in implement, recording nothing else.
+Given a failed stage's log, blocking findings, a regression, or red CI, fix the root cause with its test (`make spec-validate` after a spec edit), a security finding first, self-check and commit as in implement, then pass the check, recording nothing else.
 
 ### close-advisories
 

@@ -78,6 +78,10 @@ let stopped = ''
 const usage = {}
 const firstPass = {}
 let rework = 0
+// The check runs each implement or fix start made after its first, summed
+// across starts (contributor-self-check, metric.self_fix): the rework a
+// contributor fixed in its own session, which no fix round counts.
+let selfFix = 0
 // The closing loop's figures (closing-loop): the advisories it offered that
 // the reviews confirmed fixed, and those left, null until the loop ran or
 // was skipped; recorded as metric lines beside, not in, the rework rounds.
@@ -126,7 +130,7 @@ let qualityReview = ''
 // start
 // whose capped calls take one turn each can still commit, back up, and
 // return the schema; tools/tools_test.sh compares them with these lines.
-const CALL_CAPS = { planner: 20, scout: 30, implement: 90, fix: 40, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, scout: 30, implement: 110, fix: 60, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
 const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10, run: 8 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
@@ -289,6 +293,8 @@ const WORK = {
     status: WORK_STATUS, head: LANE_HEAD, summary: { type: 'string' }, self_check: { type: 'string', enum: ['match', 'mismatch'], description: 'mismatch when the self-check found a test, document, or brief item still missing' }, question: { type: 'string' }, assumptions: LINES, pr: { type: 'integer' },
     remaining: { ...LINES, description: 'with status partial: each task or step left, one line each' },
     pushed: { type: 'string', description: 'after a push: the full sha it recorded, sh tools/run_state.sh get <change> pushed' },
+    check: { type: 'string', description: 'implement and fix: the last line of your last sh tools/run_state.sh check <change>, verbatim' },
+    check_runs: { type: 'integer', minimum: 0, description: 'implement and fix: how many times that check ran in this start, a wait again on exit 3 not counted' },
     quality_review: {
       type: 'object',
       description: 'implement, in the start that finishes every task of tasks.md: the quality step of card rule 10, before the archive',
@@ -555,7 +561,7 @@ function verdict(gate, passed) {
 // shell and for tools/run_state.sh metric. Empty without a change name.
 function metricLine() {
   const pairs = Object.keys(usage).map((k) => `phase.${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`)
-    .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`, `extra=${extra}`, `stop=${stopKind}`])
+    .concat(Object.keys(firstPass).map((g) => `first.${g}=${firstPass[g]}`), [`rework=${rework}`, `self_fix=${selfFix}`, `extra=${extra}`, `stop=${stopKind}`])
   if (ciMinutes !== null) pairs.push(`ci_min=${Number(ciMinutes).toFixed(1)}`)
   if (Number.isInteger(ciWaitCalls)) pairs.push(`ci_wait_calls=${ciWaitCalls}`)
   if (closingFigures.closed !== null) pairs.push(`advisories_closed=${closingFigures.closed}`, `advisories_left=${closingFigures.left}`)
@@ -598,6 +604,7 @@ function seed() {
   restoreCalibration(state, calibrated)
   rework = Number(state['metric.rework']) || 0
   seededRework = rework
+  selfFix = Number(state['metric.self_fix']) || 0
   extra = Number(state['metric.extra']) || 0
   lastStop = /^[a-z]+$/.test(state['metric.stop'] || '') ? state['metric.stop'] : ''
   if (/^[01]$/.test(state['metric.planned'] || '')) planned = Number(state['metric.planned'])
@@ -624,7 +631,7 @@ function summary() {
   const keys = Object.keys(usage)
   const total = (field) => keys.reduce((n, k) => n + usage[k][field], 0)
   const first = Object.keys(firstPass).map((g) => `${g}:${firstPass[g]}`).join(',') || 'none'
-  return `output tokens ${Math.round(total('tokens'))}, tool calls ${total('calls')}; per phase ${keys.map((k) => `${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`).join(',') || 'none'}; first passes ${first}; rework ${rework} of ${ROUNDS + extra}${ciMinutes !== null ? `; CI ${ciMinutes} min` : ''}`
+  return `output tokens ${Math.round(total('tokens'))}, tool calls ${total('calls')}; per phase ${keys.map((k) => `${k}=${Math.round(usage[k].tokens)}/${usage[k].calls}`).join(',') || 'none'}; first passes ${first}; rework ${rework} of ${ROUNDS + extra}, self-fix ${selfFix}${ciMinutes !== null ? `; CI ${ciMinutes} min` : ''}`
 }
 
 // The records the script writes: a phase or a review at a commit, queued as
@@ -871,13 +878,14 @@ function contributorTask(mode, briefText, detail) {
 const MERGE_MAIN = 'First run `sh tools/run_state.sh merge-main <change>` in the worktree: it merges a moved origin/main into the branch, never a rebase, both sides of the appended records kept; on a conflict it names, follow your push mode\'s conflict rules.'
 // The contributor's self-check before an implement or fix start returns
 // (its agent file's implement step 5): the mechanical findings a review
-// would otherwise block on.
-const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary. Set self_check to mismatch when any of this is still not true as you return, else match.'
+// would otherwise block on, then its own check of the head
+// (contributor-self-check), which the checker's check backs (backedCommit).
+const SELF_CHECK = '\nBefore returning, check yourself: every behavior the change adds or alters has a test that proves it; every document describing that behavior (README.md, docs/architecture.md, CLAUDE.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md) is updated; and the diff is compared against the brief, anything extra named in your summary. Set self_check to mismatch when any of this is still not true as you return, else match. Then commit and run the check as docs/contributor-notes.md, Checking, says: `sh tools/run_state.sh check <change>` (Bash timeout 600000, again on exit 3), each failure fixed and committed in this start and the whole check rerun, at most three runs; return its last line verbatim as check and the runs as check_runs.'
 
 // The rules card at the top of the contributor's agent file, word for word
 // (tools/tools_test.sh compares them): the mid tier forgets a rule of a long
 // file, and each start is fresh, so every start carries it.
-const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `sh tools/lane_facts.sh <change>`, never a placeholder or typed hash.\n2. Claim no check you did not run: run `make gates` and your touched tests, quote each last output line.\n3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded, before packaging."
+const CONTRIBUTOR_CARD = "Rules card:\n1. Return `head` from `sh tools/lane_facts.sh <change>`, never a placeholder or typed hash.\n2. Commit, then pass `sh tools/run_state.sh check <change>` at HEAD before returning implement or fix; quote its verdict line.\n3. You never read `docs/backlog/` or `docs/findings/*.md`; only append to your own findings file with `>>`.\n4. Never remove or rewrite an existing findings entry.\n5. `pr.md` states only what the diff does; after a split, rewrite it for the delivered part.\n6. No model name or alias in a change name, branch, commit, `pr.md`, or doc (the `model:` line excepted).\n7. A fix's new test must fail with the fix reverted (mind caches keeping two frames).\n8. In a fix round fix what blocks; an advisory needing new code goes to the findings file, not a new change.\n9. A spec, compatibility, or architecture doc change also updates README.md and the code map, or the proposal says why not.\n10. Tasks done, review the diff by `.claude/agents/quality-reviewer.md`: a task per finding, fixed or recorded, before packaging."
 
 // Card rule 1 made mechanical: a done contributor result's head is the
 // lane's `git rev-parse --short=12 HEAD`, twelve lowercase hex characters.
@@ -901,14 +909,15 @@ function headProblem(reported, lane) {
   return ''
 }
 // The lane's head and dirty count from the `key value` lines of
-// tools/lane_facts.sh: only a 12-character hex head and a whole count kept.
+// tools/lane_facts.sh: only a 12-character hex head and a whole count kept, and
+// machinery yes or no, else unknown.
 function parseLaneFacts(text) {
   const facts = {}
   for (const line of String(text || '').split('\n')) {
     const m = /^([a-z_]+) (\S+)$/.exec(line.trim())
     if (m) facts[m[1]] = m[2]
   }
-  return { head: HEAD12.test(facts.head || '') ? facts.head : '', dirty: /^[0-9]+$/.test(facts.dirty || '') ? Number(facts.dirty) : -1 }
+  return { head: HEAD12.test(facts.head || '') ? facts.head : '', dirty: /^[0-9]+$/.test(facts.dirty || '') ? Number(facts.dirty) : -1, machinery: /^(yes|no)$/.test(facts.machinery || '') ? facts.machinery : 'unknown' }
 }
 // True when a reported head differs from the lane's committed head only in
 // form: the lane read with no uncommitted path, and the head, lower-cased,
@@ -949,8 +958,30 @@ async function laneHead() {
   return parseLaneFacts(r && r.ok ? r.output : '')
 }
 
+// The contributor's own check (contributor-self-check): a done implement or
+// fix result whose check line reads every stage passed at its returned
+// head, over a lane whose diff leaves the check's machinery alone
+// (tools/lane_facts.sh machinery no), is a claim the checker's check backs
+// (backedCommit); any other result claims nothing. A claim the run state
+// does not hold costs only the stages, which the runner then runs.
+let claimedPass = null
+function claimFrom(r, lane) {
+  const v = checkVerdict(r && r.check)
+  return v.kind === 'passed' && sameCommit(v.at, r.head) && lane && lane.machinery === 'no' ? { at: r.head } : null
+}
+// The commit the checker's check backs: the head the contributor's passing
+// check claimed, while it is still the head, else phase.check, the check
+// the workflow last recorded, as before.
+function backedCommit(claim, at, checked) {
+  if (claim && COMMIT.test(at || '') && sameCommit(claim.at, at)) return at
+  return COMMIT.test(checked || '') ? checked : ''
+}
+// The check runs a start made after its first, from its check_runs.
+const extraRuns = (r) => (r && Number.isInteger(r.check_runs) && r.check_runs > 1 ? r.check_runs - 1 : 0)
+
 async function contributor(mode, detail) {
   if (mode === 'fix') rework++
+  claimedPass = null
   // One kind names the start's phase figures, its cap line, and its cap.
   const capKind = mode === 'close-advisories' ? 'closing' : mode
   const key = mode === 'implement' || mode === 'fix' ? 'implement' : capKind === 'closing' ? 'closing' : 'package'
@@ -962,6 +993,7 @@ async function contributor(mode, detail) {
       `${intro()} ${contributorTask(mode, brief, detail)}${more}\nFollow your Modes section for \`${mode}\` and return the schema.${capLine(capKind)}`,
       calibrate('contributor', { agentType: 'contributor', schema: withCalls(WORK), label: `contributor: ${mode}${count ? ', continued' : ''}` })), callCap(capKind))
     state.pushed = keepPushed(mode, state.pushed, result)
+    if (mode === 'implement' || mode === 'fix') selfFix += extraRuns(result)
     if (!result) escalate('a start returned no result')
     else if (result.self_check === 'mismatch') escalate('a self-check mismatch')
     selfCheck = mode === 'implement' || mode === 'fix' ? { mode, said: (result && result.self_check) || '' } : null
@@ -983,6 +1015,7 @@ async function contributor(mode, detail) {
           queue(`sh tools/run_state.sh note ${state.change} head-unread "contributor ${mode} start ${count + 1}: lane head not read"`, head)
         }
         if (mode === 'implement') { const q = result.quality_review; qualityReview = `${q.added}/${q.fixed}/${q.recorded}` }
+        if (mode === 'implement' || mode === 'fix') claimedPass = claimFrom(result, lane)
         break
       }
       // Each refused kind, a head or a quality review, escalates, is noted,
@@ -1470,9 +1503,12 @@ async function rounds(fixes = true) {
     let by = 'check'
     if (!doneAtHead('check')) {
       phase('Check')
-      // The check the workflow last recorded: stage records count only at
-      // it, so a record at the head that no workflow record backs runs again.
-      const backed = COMMIT.test(state['phase.check'] || '') ? state['phase.check'] : ''
+      // The check the workflow last recorded, or the head the contributor's
+      // own passing check claimed (backedCommit): stage records count only
+      // at it, so a record at the head that neither backs runs again; the
+      // checker's verdict is the one recorded.
+      const backed = backedCommit(claimedPass, head, state['phase.check'])
+      if (claimedPass && backed === head) note(`check: backs the contributor's passing check at ${head}; the stages it passed there are skipped`)
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); a check still running at this commit is rejoined.` : ''
       const from = settleBase(movedFrom, settleAt)
       settleAt = ''

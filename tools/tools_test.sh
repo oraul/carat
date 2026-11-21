@@ -460,6 +460,18 @@ git_q mv tools/t.sh test/moved.sh
 commit "chore: move t"
 expect "run_state: check reruns every stage after a file moves under test/" 0 "^stage a: exit 0" \
   env STAGES="a b test-run" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state
+# contributor-self-check: the checker backs the head a contributor's check
+# claimed passed. A claim no runner record holds costs only the stages; the
+# contributor's own check (no commit) then lets the checker skip them.
+echo "claim" > test/claim.rb
+commit "test: claim"
+expect "run_state: check runs the stages a claimed pass at the head never recorded" 0 "^stage a: exit 0" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+echo "claim again" > test/claim.rb
+commit "test: claim again"
+env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+expect "run_state: check skips the stages the contributor's own check passed at the backed head" 0 "^stage b: passed at $(git rev-parse --short=12 HEAD), skipped" \
+  env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 # The checks judge the commit: a modified tracked file or an untracked
 # source spin would compile is refused before any stage runs.
 echo dirty >> README.md
@@ -5101,7 +5113,7 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', $1)"
+  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', globalThis.selfFix = 0, $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
@@ -5445,13 +5457,13 @@ expect "closing loop: a records-only closing commit stands on the earlier check 
 # tools/lane_facts.sh with the lane value and the dirty count, its
 # prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem parseLaneFacts headForm qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead contributor" "(async () => {
-    globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem parseLaneFacts headForm qualityReviewProblem REFUSED_WORDS resultProblems QUALITY_STEP recordStart laneHead COMMIT sameCommit checkVerdict claimFrom backedCommit extraRuns contributor" "(async () => {
+    globalThis.rework = 0; globalThis.selfFix = 0; globalThis.claimedPass = null; globalThis.machinery = 'no'; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
     globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'; globalThis.dirty = 0
     globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1; globalThis.qualityReview = ''
     globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
     globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
-    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: 'head ' + lane + '\\nbranch chore/c\\ndirty ' + dirty + '\\ncheck none\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
+    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: 'head ' + lane + '\\nbranch chore/c\\ndirty ' + dirty + '\\ncheck none\\nmachinery ' + machinery + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
     globalThis.continuation = (r) => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.pushedHint = () => ''
     globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
     $1
@@ -5478,8 +5490,24 @@ expect "head form: a placeholder head over a committed lane is taken from git, n
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, kept: r.head, starts: prompts.length, queued, escalated, closable: queued.every((l) => CLOSABLE.test(l)) }"
 expect "head form: a short, full, upper-case, empty, or placeholder head of a committed lane is a form; another commit, a six-character prefix, the head itself, or a dirty or unread lane is not" 0 '^\[\[true,true,true,true,true,true\],\[false,false,false,false\],\[false,false,false\]\]$' \
   contributor_js "const clean = { head: 'bbbbbbbbbbbb', dirty: 0 }; return [['bbbbbbb', 'b'.repeat(40), 'BBBBBBBBBBBB', '', 'HEAD', '<head>'].map((h) => headForm(h, clean)), ['cccccccccccc', 'bbbbbb', 'bbbbbbbbbbbb', 'bbbbbbbc'].map((h) => headForm(h, clean)), [headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: 1 }), headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: -1 }), headForm('placeholder', { head: '', dirty: 0 })]]"
-expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1" 0 '^\[\{"head":"0123456789ab","dirty":3\},\{"head":"","dirty":-1\},\{"head":"","dirty":-1\}\]$' \
-  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\n'), parseLaneFacts('head HEAD\ndirty many'), parseLaneFacts('')]"
+expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1, and machinery yes or no, else unknown" 0 '^\[\{"head":"0123456789ab","dirty":3,"machinery":"no"\},\{"head":"","dirty":-1,"machinery":"unknown"\},\{"head":"","dirty":-1,"machinery":"unknown"\}\]$' \
+  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\nmachinery no\n'), parseLaneFacts('head HEAD\ndirty many\nmachinery maybe'), parseLaneFacts('')]"
+# contributor-self-check: the contributor's own passing check at its
+# returned head, over a lane that leaves the check's machinery alone, is the
+# commit the checker's check backs, so the stages passed there are skipped;
+# any other claim backs phase.check as before, and none refuses or restarts.
+expect "self-check: a passing check at the returned head is the checker's backed commit, its later runs counted in self_fix" 0 '^\[\{"at":"bbbbbbbbbbbb"\},"bbbbbbbbbbbb","sh tools/run_state[.]sh check c bbbbbbbbbbbb",2,1,0\]$' \
+  contributor_js "globalThis.checkLines = (c, b) => ({ check: 'sh tools/run_state.sh check ' + c + (b ? ' ' + b : '') }); results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 }, check: 'check: every stage passed at bbbbbbbbbbbb; the workflow records the check', check_runs: 3 }]; await contributor('implement', 'd'); const b = backedCommit(claimedPass, head, 'abc1234'); return [claimedPass, b, checkLines('c', b).check, selfFix, prompts.length, notes.filter((n) => n.includes('refused')).length]"
+expect "self-check: a change of tools/, the Makefile, or test/runner/ backs phase.check, so every stage reruns" 0 '^\[null,"abc1234"\]$' \
+  contributor_js "machinery = 'yes'; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb' }]; await contributor('fix', 'd'); return [claimedPass, backedCommit(claimedPass, head, 'abc1234')]"
+expect "self-check: an unknown machinery line claims nothing" 0 '^null$' \
+  contributor_js "machinery = 'maybe'; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb' }]; await contributor('fix', 'd'); return claimedPass"
+expect "self-check: a pass at another commit, a failed stage, or no line claims nothing, with no refusal and no restart" 0 '^\[\[null,null,null\],"abc1234",3,0,0\]$' \
+  contributor_js "const lines = ['check: every stage passed at cccccccccccc', 'check: stage lint failed at bbbbbbbbbbbb; read build/stages/c/lint.log', undefined]; const claims = []; for (const l of lines) { results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: l }]; await contributor('fix', 'd'); claims.push(claimedPass) } return [claims, backedCommit(null, head, 'abc1234'), prompts.length, notes.filter((n) => n.includes('refused')).length, selfFix]"
+expect "self-check: a claim at a head that moved since backs phase.check, or nothing without one" 0 '^\["abc1234","",""\]$' \
+  contributor_js "return [backedCommit({ at: 'bbbbbbbbbbbb' }, 'dddddddddddd', 'abc1234'), backedCommit({ at: 'bbbbbbbbbbbb' }, 'dddddddddddd', ''), backedCommit(null, 'dddddddddddd', 'not a commit')]"
+expect "self-check: a later contributor start of another mode clears the claim, and self_fix adds only implement and fix runs" 0 '^\[\{"at":"bbbbbbbbbbbb"\},null,1\]$' \
+  contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check: 'check: every stage passed at bbbbbbbbbbbb', check_runs: 2 }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', check_runs: 5 }]; await contributor('fix', 'd'); const a = claimedPass; await contributor('package', 'd'); return [a, claimedPass, selfFix]"
 expect "head form: a continued start keeps the lane's head read from git, the reported one only when the lane is unread" 0 '^\[\["bbbbbbbbbbbb","eeeeeee"\],4\]$' \
   contributor_js "let n = 0; continuation = () => (n++ % 2 ? { next: 'done' } : { next: 'continue', left: ['x'] }); const kept = []; queue = (l, c) => { if (l.includes(' overrun ')) kept.push(c) }; results = [{ status: 'partial', head: 'placeholder', summary: 's' }]; await contributor('fix', 'd'); lane = null; results = [{ status: 'partial', head: 'eeeeeee', summary: 's' }, { status: 'done', head: 'dddddddddddd', summary: 's' }]; await contributor('fix', 'd'); return [kept, headPrompts.length]"
 expect "head form: a hostile head over a committed lane reaches the head-form note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true,false\]$' \
