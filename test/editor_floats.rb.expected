@@ -68,6 +68,7 @@ ok   A refill drops the style: the rows are drawn in NormalFloat with no span
 ok   a span over a multi-byte line counts code points, and a span past the line's end is cut there
 ok   Another plugin's float is not styled, nor an unknown id or a layout window
 ok   the current float is styled with 0, and a float switched to a listed scratch buffer is not styled
+ok   but its border is: the border belongs to the window, as in Bad border requests are refused
 ok   a float reopened at the same box shows its own text and equals a full repaint
 ok   a float loads a file and goes to its last line
 ok   lines deleted in the layout window pull the float's cursor onto the last line
@@ -113,4 +114,4 @@ ok   The empty style follows winborder: double, then single again, the other flo
 ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
 ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
 ok   a refill keeps the border style
-editor_floats: 115 passed, 0 failed
+editor_floats: 116 passed, 0 failed

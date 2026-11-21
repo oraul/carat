@@ -370,6 +370,8 @@ module EditorFloatsTest
     h.assembly.buffers.load(scratch)
     switched = h.plugins.window_requests.style_float("test", id, 0, ints([]))
     t.assert_equal([true, "No float #{id}", false], [current.ok, switched.message, scratch.styled?], "the current float is styled with 0, and a float switched to a listed scratch buffer is not styled")
+    bordered = h.plugins.window_requests.set_float_border("test", id, "double")
+    t.assert_equal([true, "double"], [bordered.ok, h.state.tab.floats.at(0).border_style], "but its border is: the border belongs to the window, as in Bad border requests are refused")
 
     # A float closed and replaced by another at the same box.
     h = editor
