@@ -4399,15 +4399,14 @@ echo code > tools/code.sh
 commit "feat: code"
 expect "gates: passed refuses a merge given no records" 1 "FAIL passed: check has no pass record" gates passed
 expect "gates: passed refuses a merge without a recorded push" 1 "FAIL passed: no push is recorded for passed" gates passed
-expect "gates: merge refuses a merge given no records" 1 "FAIL passed: quality has no pass record" gates merge body.md
+expect "gates: merge refuses a merge given no records" 1 "FAIL passed: security has no pass record" gates merge body.md
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 state phase passed check > /dev/null
-state review passed quality pass "blocking=0" > /dev/null
 state review passed security pass "high=0" > /dev/null
 state review passed bench blocked "blocking=1" > /dev/null
 expect "gates: passed refuses a blocked review" 1 "FAIL passed: bench has no pass record: blocked" gates passed
 state review passed bench pass "blocking=0" > /dev/null
-expect "gates: passed passes the four records at the pushed head" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
+expect "gates: passed passes the three records at the pushed head, no quality review among them" 0 "ok   passed: check, security, and bench passed at the pushed head" gates passed
 mkdir -p openspec/changes/archive/x
 echo archived > openspec/changes/archive/x/tasks.md
 echo "1. next" > docs/queue-backlog.md
@@ -4427,7 +4426,6 @@ commit "fix: more code"
 state set passed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: passed refuses a record before a code change" 1 "FAIL passed: check passed at [0-9a-f]+, but code changed since" gates passed
 state phase passed check > /dev/null
-state review passed quality pass "blocking=0" > /dev/null
 state review passed security pass "high=0" > /dev/null
 state review passed bench pass "blocking=0" > /dev/null
 echo dirty >> tools/code.sh
@@ -4455,7 +4453,7 @@ state sprint-row "$(git rev-parse --short=12 HEAD)" >> docs/sprints.tsv
 commit "docs: record the sprint row"
 state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: stages passes after groom's sprint row" 0 "ok   stages: every stage passed at the recorded check" gates stages
-expect "gates: passed passes after groom's sprint row" 0 "ok   passed: check, quality, security, and bench passed at the pushed head" gates passed
+expect "gates: passed passes after groom's sprint row" 0 "ok   passed: check, security, and bench passed at the pushed head" gates passed
 printf 'sprint-2\tb1\n' >> docs/sprints.tsv
 commit "docs: append a second sprint row"
 state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -4645,7 +4643,7 @@ cap_of() {
   printf '%s\n' "$caps" "$fixed" | sed -n "s/^$1://p"
 }
 missing=""
-for kind in planner scout implement fix closing package push checker quality security bench close resume areas record merger; do
+for kind in planner scout implement fix closing package push checker security bench close resume areas record merger; do
   cap_of "$kind" | grep -q -E '^[0-9]+$' || missing="$missing $kind"
 done
 for kind in $(grep -o -E "(capLine|callCap)\\('[a-z]+'\\)" "$wf" | sed "s/.*('\\(.*\\)')/\\1/" | sort -u); do
@@ -4661,7 +4659,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner quality-reviewer:quality,prtext retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner retrospective:close scout:scout security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -4750,7 +4748,7 @@ work_js() {
   js "$wf" "CONTINUES continuation workLeft reviewLeft combineReviews pushedHead PUSHING keepPushed pushedHint packagedPr packageStep" "$1"
 }
 calib_js() {
-  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.blockingQualityRounds = 0, $1)"
+  js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', $1)"
 }
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
@@ -4769,10 +4767,10 @@ expect "routing: a critical run records its rule and escalates nothing" 0 ' crit
   calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = 'small'; planned = null; state = { change: 'c' }; critical = 'b'; escalated = false; globalThis.notes = []; globalThis.queue = (l) => notes.push(l); escalate('x'); return metricLine() + ' ' + notes.length })()"
 expect "routing: criticalOf reads a plan value and a queue item's rule, and rejects the rest" 0 '^\[\{"rule":"b","path":"tools/rules.sh"\},\{"rule":"a","path":"carat/x.rb"\},null,null,null,null\]$' \
   calib_js "[criticalOf('b tools/rules.sh'), criticalOf('(T0 pipeline, estimated medium, critical a carat/x.rb), why'), criticalOf('b tools/a.sh tools/b.sh'), criticalOf('f tools/a.sh'), criticalOf('see the guards'), criticalOf('')]"
-expect "routing: restoreRouting restores the rule, the escalation, and the quality rounds, and drops bad values" 0 '^\["b",true,1,"",false,0\]$' \
-  calib_js "(() => { restoreRouting({ 'metric.critical': 'b', 'metric.escalated': '1', 'metric.quality_blocked': '1' }); const a = [critical, escalated, blockingQualityRounds]; restoreRouting({ 'metric.critical': 'x tools', 'metric.quality_blocked': 'many' }); return a.concat([critical, escalated, blockingQualityRounds]) })()"
-expect "routing: the metric line carries the quality rounds a restart restores" 0 ' quality_blocked=1"$' \
-  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; blockingQualityRounds = 1; return metricLine() })()"
+expect "routing: restoreRouting restores the rule and the escalation, and drops bad values" 0 '^\["b",true,"",false\]$' \
+  calib_js "(() => { restoreRouting({ 'metric.critical': 'b', 'metric.escalated': '1' }); const a = [critical, escalated]; restoreRouting({ 'metric.critical': 'x tools' }); return a.concat([critical, escalated]) })()"
+expect "quality step: the metric line keeps the contributor's quality review and no quality rounds" 0 ' quality_review=2/1/1"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; qualityReview = '2/1/1'; const l = metricLine(); return l.includes('quality_blocked') ? 'blocked rounds' : l })()"
 expect "routing: the planner and the goals name the critical rules" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "critical. (.LETTER PATH." "$1/planner.md") $(grep -c "^## Critical changes\$" "$2/docs/goals.md")"' _ "$agents" "$here/.."
 # A delivery's planner writes its own plan directory, and its package step
@@ -4800,10 +4798,10 @@ expect "workflow: the check lines run spent and bench only after the check" 0 '^
   check_js "(l => [l.check, l.passed, l.moved, checkRunTask(l).indexOf(l.check) < checkRunTask(l).indexOf('Only when that line begins'), checkRunTask(l).includes('read nothing else')])(checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=0'))"
 expect "guard: the checker's run start may run the check lines" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=0; sh tools/run_state.sh check c abc1234; sh tools/run_state.sh spent c; sh tools/run_state.sh bench c; sh tools/run_state.sh moved c abc1234'
 # An advisory-only round whose fix changed only records stands on the
-# check, security, and bench passes of the commit it started from; the
-# quality review alone runs, over the commits since (review-lite).
+# check, security, and bench passes of the commit it started from; no
+# review runs (review-lite).
 settle_js() {
-  js "$wf" "COMMIT CHANGE SQUASH CLOSABLE passedAt sameCommit settleFrom SETTLED settled settleBase checkVerdict RERUN_WORDS checkOutcome inPlaceRound settleAfter settleRound SETTLES settledAtHead doneAtHead reviewedAtHead queue settledTesting narrowedFrom priorQuality checkLines checkRunTask" "(() => { globalThis.head = 'def5678'; globalThis.state = { change: 'c' }; globalThis.pending = []; globalThis.notes = []; globalThis.log = () => {}; globalThis.note = (l) => notes.push(l); globalThis.settledRound = null; globalThis.qualityAt = ''; globalThis.qualityBlocking = []; globalThis.blockedAt = ''; globalThis.blockedFiles = []; globalThis.ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234', 'review.bench': 'pass abc1234', 'review.quality': 'pass abc1234' }; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH CLOSABLE passedAt sameCommit settleFrom SETTLED settled settleBase checkVerdict RERUN_WORDS checkOutcome inPlaceRound settleAfter settleRound SETTLES settledAtHead doneAtHead reviewedAtHead queue settledTesting narrowedFrom checkLines checkRunTask" "(() => { globalThis.head = 'def5678'; globalThis.state = { change: 'c' }; globalThis.pending = []; globalThis.notes = []; globalThis.log = () => {}; globalThis.note = (l) => notes.push(l); globalThis.settledRound = null; globalThis.ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234', 'review.bench': 'pass abc1234' }; return $1 })()"
 }
 expect "workflow: an advisory-only round settles from the commit of the check, security, and bench passes" 0 '^"abc1234"$' \
   settle_js "settleFrom(ran, ['quality advisory a.rb:1 a name; fix: rename'])"
@@ -4813,10 +4811,8 @@ expect "workflow: a settled line naming the head skips the check" 0 '^\[true,tru
   settle_js "[settled('settled: only records changed from abc1234 to def5678: openspec/changes/c/tasks.md', head, 'abc1234'), settled('run_state: settled: only records changed from abc1234def0 to def5678abc0: docs/findings/c.md', head, 'abc1234')]"
 expect "workflow: a line naming code changed runs the check" 0 '^\[false,false,false,false\]$' \
   settle_js "[settled('unsettled: tools/x.sh changed since abc1234 outside the records; run the full round', head, 'abc1234'), settled('check: every stage passed at def5678', head, 'abc1234'), settled('settled: only records changed from abc1234 to 0123456: a', head, 'abc1234'), settled('settled: only records changed from 0123456 to def5678: a', head, 'abc1234')]"
-expect "workflow: a settled round skips the check, security, and bench and records the skip" 0 '^\[false,false,true,true,true,false,"sh tools/run_state[.]sh note c settled-round \\"advisory-only round at def5678: only records changed since abc1234, where the check, the security review, and the benchmark passed; none of them rerun, the quality review scoped to the commits since\\"",true,false\]$' \
-  settle_js "(() => { const before = [doneAtHead('check'), reviewedAtHead('security')]; settleRound('abc1234'); const after = [doneAtHead('check'), reviewedAtHead('security'), reviewedAtHead('bench'), reviewedAtHead('quality'), pending[0], CLOSABLE.test(pending[0])]; head = '0123456'; return before.concat(after, [doneAtHead('check')]) })()"
-expect "workflow: a settled round's quality review reads only the commits since its pass" 0 'Review only `git diff abc1234 HEAD`, the commits since that pass' \
-  settle_js "(() => { settleRound('abc1234'); return priorQuality() })()"
+expect "workflow: a settled round skips the check, security, and bench, runs no review, and records the skip" 0 '^\[false,false,true,true,true,"sh tools/run_state[.]sh note c settled-round \\"advisory-only round at def5678: only records changed since abc1234, where the check, the security review, and the benchmark passed; none of them rerun\\"",true,false\]$' \
+  settle_js "(() => { const before = [doneAtHead('check'), reviewedAtHead('security')]; settleRound('abc1234'); const after = [doneAtHead('check'), reviewedAtHead('security'), reviewedAtHead('bench'), pending[0], CLOSABLE.test(pending[0])]; head = '0123456'; return before.concat(after, [doneAtHead('check')]) })()"
 expect "workflow: the check start runs settled first only in an advisory-only round" 0 '^\["sh tools/run_state[.]sh metric c rework=1; sh tools/run_state[.]sh settled c abc1234","sh tools/run_state[.]sh check c abc1234",true,true,"",false\]$' \
   settle_js "(() => { const l = checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=1', 'abc1234'); const t = checkRunTask(l); const plain = checkLines('c', 'abc1234', '', ''); return [l.settle, l.check, t.indexOf(l.settle) < t.indexOf(l.check), t.includes('when it exits 0, return its last line, verbatim, as verdict, and run nothing else'), plain.settle, checkRunTask(plain).includes('settled')] })()"
 expect "guard: the checker's run start may run the settle line with the run's figures" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=1; sh tools/run_state.sh settled c abc1234'
@@ -4830,10 +4826,6 @@ expect "workflow: the package step names the settled commit for Testing" 0 '^\["
   settle_js "(() => { const none = settledTesting(); settleRound('abc1234'); return [none, settledTesting().includes('in Testing name each at abc1234, never at the head')] })()"
 expect "workflow: a full round after a settled one names no settled commit for Testing" 0 '^""$' \
   settle_js "(() => { settleRound('abc1234'); head = '0123456'; return settledTesting() })()"
-# The quality first pass is asked for every blocking finding; a scoped or
-# continued review is not (pipeline-diet-b cut 4).
-expect "workflow: the quality first pass is asked for every blocking finding" 0 '^\[true,false,false\]$' \
-  js "$wf" "qualityTask" "[qualityTask('', ''), qualityTask('\nThe last quality review, at abc1234, was blocked. Review the whole branch diff.', ''), qualityTask('', '\nThe last start reached its cap')].map((t) => t.includes('every blocking finding'))"
 # The pull request text review (delivery-guards): a pr.md claiming work the
 # diff lacks, or the proposal's Out of scope moved out, blocks and goes back
 # to the body rewrite; a clean one, and a missing result, do not.
@@ -4844,17 +4836,17 @@ expect "workflow: a pull request text claiming out-of-scope work is blocked" 0 '
 # spare, are re-reviewed at the new head, and leave the hand-over only when
 # a reviewer confirms them fixed.
 place_js() {
-  js "$wf" "inPlaceRound inPlaceTask inPlaceCheck confirmInPlace offer findings handOver passedAt" "(() => { globalThis.state = { change: 'c' }; globalThis.offered = new Set(); globalThis.fixedInPlace = new Set(); globalThis.awaiting = { quality: [], security: [] }; globalThis.handed = new Set(); globalThis.backlog = ['security Low (6) a.sh:3 t; fix: f', 'security Low (5) b.sh:1 u; fix: g']; globalThis.qualityAdvisory = ['a.rb:2 name; fix: rename']; return $1 })()"
+  js "$wf" "inPlaceRound inPlaceTask inPlaceCheck confirmInPlace offer findings handOver passedAt" "(() => { globalThis.state = { change: 'c' }; globalThis.offered = new Set(); globalThis.fixedInPlace = new Set(); globalThis.awaiting = { security: [] }; globalThis.handed = new Set(); globalThis.backlog = ['security Low (6) a.sh:3 t; fix: f', 'security Low (5) b.sh:1 u; fix: g']; return $1 })()"
 }
 expect "workflow: findings in place ride with the blocking ones" 0 '^"with"$' place_js "inPlaceRound(true, 2, 2, 3)"
 expect "workflow: findings in place get a round of their own only with a round to spare" 0 '^\["alone","alone","record","none"\]$' \
   place_js "[inPlaceRound(false, 2, 0, 3), inPlaceRound(false, 2, 1, 3), inPlaceRound(false, 2, 2, 3), inPlaceRound(false, 0, 0, 3)]"
 expect "workflow: each finding fixed in place is a task of tasks.md" 0 '^\[true,true,true\]$' \
   place_js "(t => [t.includes(\"a task of the change's tasks.md\"), t.includes('adds no behavior'), t.endsWith('- security Low (6) a.sh:3 t; fix: f')])(inPlaceTask(['security Low (6) a.sh:3 t; fix: f']))"
-expect "workflow: a fix-in-place round runs check, security, and quality again at its head" 0 '^\[true,true,true,false,false,false,true,true\]$' \
-  place_js "(() => { const ran = { 'phase.check': 'abc1234', 'review.quality': 'pass abc1234', 'review.security': 'pass abc1234' }; offer(findings(), true); const keys = ['phase.check', 'review.quality', 'review.security']; return keys.map((k) => passedAt(ran, k, 'abc1234')).concat(keys.map((k) => passedAt(ran, k, 'def5678')), [inPlaceCheck('quality').includes('- quality advisory a.rb:2 name; fix: rename'), inPlaceCheck('security').includes('- security Low (5) b.sh:1 u; fix: g')]) })()"
-expect "workflow: a finding confirmed fixed in place leaves the hand-over" 0 '^\["security Low [(]5[)] b[.]sh:1 u; fix: g","quality advisory a[.]rb:2 name; fix: rename"\]$' \
-  place_js "(() => { offer(findings(), true); confirmInPlace('security', ['security Low (6) a.sh:3 t; fix: f', 'not offered']); confirmInPlace('quality', ['a.rb:2 name, reworded']); return handOver() })()"
+expect "workflow: a fix-in-place round runs the check and security again at its head" 0 '^\[true,true,false,false,true\]$' \
+  place_js "(() => { const ran = { 'phase.check': 'abc1234', 'review.security': 'pass abc1234' }; offer(findings(), true); const keys = ['phase.check', 'review.security']; return keys.map((k) => passedAt(ran, k, 'abc1234')).concat(keys.map((k) => passedAt(ran, k, 'def5678')), [inPlaceCheck('security').includes('- security Low (5) b.sh:1 u; fix: g')]) })()"
+expect "workflow: a finding confirmed fixed in place leaves the hand-over" 0 '^\["security Low [(]5[)] b[.]sh:1 u; fix: g"\]$' \
+  place_js "(() => { offer(findings(), true); confirmInPlace('security', ['security Low (6) a.sh:3 t; fix: f', 'not offered']); return handOver() })()"
 # Each delivery runs in its own worktree, its merge gates a worktree under
 # the lane's own tmp/, so two never share one (parallel-lanes-b).
 lane_js() {
@@ -4978,7 +4970,7 @@ expect "workflow: the planner is told the failing review run plan-needed names" 
   js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue-backlog.md (b)")]'
 expect "workflow: the planner prompt carries the failing review" 0 '^1$' grep -c -F '${planReview(planLine)}${capLine('"'"'planner'"'"')}' "$wf"
 speed_js() {
-  js "$wf" "COMMIT CLOSABLE noteText staleRed findingAt reRaised firstPassMiss qualitySplit qualityNotes securityBlocking narrowedFrom mergeRecords" "$1"
+  js "$wf" "COMMIT CLOSABLE noteText staleRed securityBlocking narrowedFrom mergeRecords" "$1"
 }
 expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b"$' \
   speed_js 'noteText("a $(x) \"q\" `y` b")'
@@ -4989,7 +4981,7 @@ expect "workflow: a late finding becomes a shell-safe note" 0 '^"a [(]x[)] q y b
 # the other phases and every metric field recorded and the refused line
 # reported by its position (record-squash-commit).
 close_js() {
-  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.blockingQualityRounds = 0; return $1 })()"
+  js "$wf" "COMMIT CHANGE SQUASH pending queue phaseLine phaseDone mergeDone CLOSABLE closeLines recordLine refusedNote SIZES usage firstPass PROFILE calibrated closingFigures criticalRule metricLine" "(() => { globalThis.notes = []; globalThis.note = (l) => notes.push(l); globalThis.ran = {}; globalThis.rework = 1; globalThis.extra = 0; globalThis.stopKind = 'none'; globalThis.ciMinutes = 4.2; globalThis.ciWaitCalls = 2; globalThis.estimate = 'small'; globalThis.planned = null; globalThis.critical = ''; globalThis.escalated = false; globalThis.qualityReview = ''; return $1 })()"
 }
 close_back=$PWD
 fresh closes
@@ -5026,14 +5018,14 @@ cd "$close_back" || exit 1
 # resume's seed hands to its package step, never held, so none is written
 # twice.
 late_js() {
-  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.qualityAdvisory = []; globalThis.handed = new Set(); globalThis.fixedInPlace = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
+  js "$wf" "noteText handOver recordLate findings heldFindings addBacklog" "(() => { const q = []; globalThis.queue = (l) => q.push(l); globalThis.backlog = ['security Low (3) tools/x.sh:4 a; fix: y']; globalThis.handed = new Set(); globalThis.fixedInPlace = new Set(); globalThis.held = []; globalThis.head = 'abc1234'; globalThis.state = { change: 'c' }; return $1 })()"
 }
 expect "workflow: an unmerged close holds its late findings, a merged one notes them late" 0 '^\[1,true,1,0,1,true\]$' \
-  late_js "(() => { state.pushed = 'abc1234'; recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
+  late_js "(() => { state.pushed = 'abc1234'; recordLate(); const before = [q.length, q[0] === 'sh tools/run_state.sh note c held-finding \"security Low (3) tools/x.sh:4 a; fix: y\"', handed.size]; recordLate(); before.push(q.length - 1); state.merged = 'def5678'; backlog.push('quality advisory tools/y.sh:2 b'); recordLate(); return [...before, q.length - 1, q[1] === 'sh tools/run_state.sh note c late-finding \"quality advisory tools/y.sh:2 b\"'] })()"
 expect "workflow: a merged resume after a stop notes the held findings late, once" 0 '^\[\["security Low a","quality advisory b"\],2,true,0\]$' \
   late_js "(() => { const noted = ['held-finding security Low a', 'quality-advisory abc1234 b', 'held-finding quality advisory b', 'held-finding security Low a']; held = heldFindings(noted); const seeded = held.slice(); backlog.length = 0; state.merged = 'def5678'; recordLate(); const first = [seeded, q.length, q[0] === 'sh tools/run_state.sh note c late-finding \"security Low a\"']; held = heldFindings(noted.concat(['late-finding def5678abcd security Low a', 'late-finding def5678abcd quality advisory b'])); return [...first, held.length] })()"
-expect "workflow: a stop before the push hands its findings at the resume's package step, never late" 0 '^\[2,true,2,1,2\]$' \
-  late_js "(() => { qualityAdvisory.push('tools/y.sh:2 b'); recordLate(); const first = [q.length, q[0] === 'sh tools/run_state.sh note c unpushed-finding \"security Low (3) tools/x.sh:4 a; fix: y\"']; const noted = ['unpushed-finding security Low (3) tools/x.sh:4 a; fix: y', 'quality-advisory abc1234 tools/y.sh:2 b', 'unpushed-finding quality advisory tools/y.sh:2 b']; backlog.length = 0; handed.clear(); held = heldFindings(noted); for (const t of heldFindings(noted, 'unpushed-finding')) addBacklog(t); addBacklog('security Low (3) tools/x.sh:4 a; fix: y'); const packaged = handOver(); state.pushed = 'abc1234'; state.merged = 'def5678'; recordLate(); return [...first, packaged.length, backlog.length, q.length] })()"
+expect "workflow: a stop before the push hands its findings at the resume's package step, never late" 0 '^\[2,true,2,2,2\]$' \
+  late_js "(() => { backlog.push('quality advisory tools/y.sh:2 b'); recordLate(); const first = [q.length, q[0] === 'sh tools/run_state.sh note c unpushed-finding \"security Low (3) tools/x.sh:4 a; fix: y\"']; const noted = ['unpushed-finding security Low (3) tools/x.sh:4 a; fix: y', 'quality-advisory abc1234 tools/y.sh:2 b', 'unpushed-finding quality advisory tools/y.sh:2 b']; backlog.length = 0; handed.clear(); held = heldFindings(noted); for (const t of heldFindings(noted, 'unpushed-finding')) addBacklog(t); addBacklog('security Low (3) tools/x.sh:4 a; fix: y'); const packaged = handOver(); state.pushed = 'abc1234'; state.merged = 'def5678'; recordLate(); return [...first, packaged.length, backlog.length, q.length] })()"
 expect "workflow: no push path records late findings before the merge" 0 '^1$' grep -c -x 'recordLate()' "$wf"
 expect "workflow: a red superseded by a green run of the same check is stale" 0 '^\[true,false,false\]$' \
   speed_js '[staleRed([".github/workflows/scan.yml, scan, completed, failure", ".github/workflows/ci.yml, spin, completed, success", ".github/workflows/scan.yml, scan, completed, success"]), staleRed([".github/workflows/scan.yml, scan, completed, success", ".github/workflows/scan.yml, scan, completed, failure"]), staleRed([])]'
@@ -5047,18 +5039,6 @@ expect "workflow: a check name with commas is read whole" 0 '^\[true,false,false
   speed_js '[staleRed([".github/workflows/ci.yml, spin (ubuntu, 4), completed, failure", ".github/workflows/ci.yml, spin (ubuntu, 4), completed, success"]), staleRed([".github/workflows/ci.yml, spin (ubuntu, 4), completed, failure", ".github/workflows/ci.yml, spin (ubuntu, 5), completed, success"]), staleRed(["-, spin, completed, success"])]'
 expect "workflow: the continued security prompt leaves the last file alone on its line" 0 '^\[true,true,true\]$' \
   js "$wf" "reviewMore continuedSecurity" '(l => [l.includes("- tools/x.sh"), l.includes("- .claude/workflows/y.js"), l.includes("Run it, every sub-task inline, and return the result.")])(continuedSecurity(reviewMore({ ran: true }, ["tools/x.sh", ".claude/workflows/y.js"])).split("\n"))'
-expect "workflow: a blocking finding at an earlier advisory's location is re-raised" 0 '^\[true,false,true\]$' \
-  speed_js '[reRaised(findingAt("abc1234 tools/x.sh:12 a thing"), ["tools/x.sh:12 earlier"]), reRaised(findingAt("abc1234 tools/x.sh:13 b"), ["tools/x.sh:12 earlier"]), reRaised("tools/x.sh:4", ["abc1234 tools/x.sh:4 an advisory"])]'
-expect "workflow: a first-pass miss is noted only for a new marked finding, re-raises removed first" 0 '^\[1,1,"b.sh:2"\]$' \
-  speed_js '(() => { const s = qualitySplit(["a1 a.sh:1 First-pass miss: x", "a1 b.sh:2 first-pass miss: y", "a1 c.sh:3 first-pass miss: plain", "a1 d.sh:4 not a first-pass miss"], ["a.sh:1 old"], ["a1 c.sh:3 first-pass miss: z"], true); return [s.raised.length, s.missed.length, findingAt(s.missed[0])] })()'
-expect "workflow: the marker counts only right after the location, in any case" 0 '^\[true,true,false,false\]$' \
-  speed_js '[firstPassMiss("a1 x.sh:1 First-pass miss: y"), firstPassMiss("a1 x.sh:1 first-pass miss"), firstPassMiss("a1 x.sh:1 unquoted; fix: quote"), firstPassMiss("a1 x.sh:1 not a first-pass miss")]'
-expect "workflow: the quality handler notes first-pass misses only when the prior list is the last review's" 0 '^\["quality first-pass misses: a1 x.sh:1 first-pass miss","quality re-raises kept as advisories: x.sh:2",0\]$' \
-  speed_js '(() => { const m = qualitySplit(["a1 x.sh:1 first-pass miss"], [], [], true); const n = qualitySplit(["a1 x.sh:1 first-pass miss"], [], [], false); return [qualityNotes(m)[0], qualityNotes({ raised: ["x.sh:2"], missed: [] })[0], qualityNotes(n).length] })()'
-expect "workflow: the marker may be wrapped in backticks, quotes, or parentheses, after a line range" 0 '^\[true,true,true,true,false\]$' \
-  speed_js '[firstPassMiss("a1 x.sh:1 `first-pass miss`"), firstPassMiss("a1 x.sh:1 (first-pass miss)"), firstPassMiss("a1 x.sh:12-14 first-pass miss"), firstPassMiss("a1 x.sh:1 \"first-pass miss\""), firstPassMiss("a1 x.sh:1 see the first-pass miss")]'
-expect "workflow: the whole-branch quality input lists the last review's blocking findings" 0 'Its blocking findings:.*x.sh:1 y.*Review the whole branch diff[.]' \
-  settle_js "(() => { ran['review.quality'] = 'blocked abc1234'; qualityAt = 'abc1234'; qualityBlocking = ['abc1234 x.sh:1 y']; blockedAt = ''; return priorQuality().replace(/\\n/g, ' ') })()"
 expect "workflow: a re-rated security Medium at confidence 8 still blocks" 0 '^\[2,0\]$' \
   speed_js '[securityBlocking([{ severity: "Medium", confidence: 8, in_change: true, file: "tools/x.sh", line: 4 }, { severity: "High", confidence: 9, in_change: true }, { severity: "Low", confidence: 9, in_change: true }, { severity: "Medium", confidence: 7, in_change: true }, { severity: "High", confidence: 9, in_change: false }]).length, securityBlocking([]).length]'
 expect "workflow: no security finding is kept non-blocking by its location" 0 '^none$' \
@@ -5076,12 +5056,12 @@ expect "workflow: the merger's waiting calls are recorded" 0 ' ci_wait_calls=4"$
 # its commit, and no second loop. closing_js stubs the starts and records
 # what the loop called.
 closing_js() {
-  js "$wf" "COMMIT closingFigures openAdvisories closingTask readyToPackage freshOffers closeAdvisories SIZES seed passedAt reviewedAtHead settledAtHead SETTLES settleFrom settleAfter sameCommit RERUN_WORDS SETTLED checkVerdict settled checkOutcome" "(async () => {
+  js "$wf" "COMMIT closingFigures openAdvisories closingTask readyToPackage QUALITY_STEP qualityStep freshOffers closeAdvisories SIZES seed passedAt reviewedAtHead settledAtHead SETTLES settleFrom settleAfter sameCommit RERUN_WORDS SETTLED checkVerdict settled checkOutcome" "(async () => {
     globalThis.calls = []; globalThis.verifies = 0; globalThis.settledRound = null; globalThis.settleAt = ''
     globalThis.state = { change: 'c' }; globalThis.head = 'aaaaaaa'; globalThis.fixedInPlace = new Set(); globalThis.closingLoop = false
-    globalThis.ran = { 'phase.check': 'aaaaaaa', 'review.security': 'pass aaaaaaa', 'review.bench': 'pass aaaaaaa', 'review.quality': 'pass aaaaaaa' }
+    globalThis.ran = { 'phase.check': 'aaaaaaa', 'review.security': 'pass aaaaaaa', 'review.bench': 'pass aaaaaaa' }; globalThis.qualityReview = '0/0/0'
     globalThis.note = () => {}; globalThis.phase = () => {}; globalThis.offer = () => {}; globalThis.flushes = []; globalThis.flush = async (force) => { flushes.push(JSON.stringify(closingFigures) + (force ? ' forced' : '')); return true }
-    globalThis.awaiting = { quality: ['quality advisory a.rb:1 wording'], security: [] }
+    globalThis.awaiting = { security: ['security Low (5) a.rb:1 t; fix: f'] }
     globalThis.contributor = async (mode, detail) => { calls.push(mode); globalThis.head = commits.shift() || head; return { head } }
     globalThis.verify = async () => { verifies++; fixedInPlace.add(open[0]); open.push('quality advisory raised by the closing review'); return true }
     $1
@@ -5107,13 +5087,13 @@ expect "closing loop: a records-only closing commit stands on the earlier check 
 # left), and the lane-head start, labelled record, the lane value, its
 # prompt kept in headPrompts.
 contributor_js() {
-  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem recordStart laneHead contributor" "(async () => {
+  js "$wf" "CALL_CAPS CALL_SCALE FIXED_CAPS SIZES sizeWord callCap capLine CLOSABLE criticalRule escalate laneDir HEAD12 safeText headProblem qualityReviewProblem QUALITY_STEP recordStart laneHead contributor" "(async () => {
     globalThis.rework = 0; globalThis.estimate = ''; globalThis.state = { change: 'c' }; globalThis.brief = 'b'; globalThis.stopped = ''; globalThis.head = 'aaaaaaaaaaaa'
     globalThis.critical = ''; globalThis.escalated = false; globalThis.queued = []; globalThis.notes = []; globalThis.results = []; globalThis.lane = 'bbbbbbbbbbbb'
-    globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1
+    globalThis.prompts = []; globalThis.headPrompts = []; globalThis.caps = []; globalThis.WORK = 1; globalThis.RECORDED = 1; globalThis.qualityReview = ''
     globalThis.intro = () => ''; globalThis.contributorTask = () => 'task'; globalThis.calibrate = (k, o) => o; globalThis.withCalls = (x) => x
     globalThis.measured = async (key, fn, cap) => { caps.push(key + ':' + cap); return fn() }
-    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: lane + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' } }
+    globalThis.agent = async (prompt, o) => { if (o.label === 'record: lane head') { headPrompts.push(prompt); return lane === null ? null : { ok: true, output: lane + '\\n' } }; prompts.push(prompt); return results.length ? results.shift() : { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } } }
     globalThis.continuation = (r) => ({ next: 'done' }); globalThis.workLeft = () => []; globalThis.keepPushed = (m, p) => p; globalThis.pushedHint = () => ''
     globalThis.note = (l) => notes.push(l); globalThis.queue = (l) => queued.push(l)
     $1
@@ -5133,10 +5113,20 @@ expect "head guard: a placeholder head is refused, noted head-refused, escalated
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, starts: prompts.length, queued, escalated, told: prompts[1].includes('This restarts a start whose result was refused: its head placeholder'), closable: queued.every((l) => CLOSABLE.test(l)) }"
 expect "head guard: a well-formed head other than the lane's HEAD, or a typed short one, is refused" 0 '^\[\["head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb; restarted"\],"head bbbbbbb is not the 12-character form of git rev-parse --short=12 HEAD",""\]$' \
   contributor_js "results = [{ status: 'done', head: 'cccccccccccc', summary: 's' }]; await contributor('fix', 'd'); return [notes.filter((n) => n.includes('result refused')).map((n) => n.replace(/^contributor .fix. result refused: /, '')), headProblem('bbbbbbb', 'bbbbbbbbbbbb'), headProblem('bbbbbbbbbbbb', 'bbbbbbbbbbbb')]"
+# Card rule 10 made mechanical (review-in-openspec): the implement start
+# that finishes the tasks reports its quality review, or is refused and
+# restarted once with the step, a second refusal stopping the run before
+# the archive; no other mode needs one.
+expect "quality step: an implement result without a quality review is refused before the archive, noted, escalated, and restarted with the step" 0 '^\{"ok":true,"starts":2,"refused":1,"escalated":true,"told":true,"kept":"0/0/0","closable":true\}$' \
+  contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; const r = await contributor('implement', 'd'); return { ok: !!r, starts: prompts.length, refused: queued.filter((l) => l.includes(' quality-refused \"contributor implement start 1: no quality review of status done')).length, escalated, told: prompts[1].includes('This restarts a start whose result was refused: no quality review of status done') && prompts[1].includes('Run the quality step of card rule 10 now'), kept: qualityReview, closable: queued.every((l) => CLOSABLE.test(l)) }"
+expect "quality step: a second implement result without a quality review stops the run, no quality review recorded" 0 '^\[false,2,true,""\]$' \
+  contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's', quality_review: { status: 'done', added: 2, fixed: 1, recorded: 0 } }]; const r = await contributor('implement', 'd'); return [!!r, prompts.length, stopped.startsWith('contributor (implement) returned a refused quality review twice: quality review counts 2/1/0 are not added, fixed, and recorded'), qualityReview]"
+expect "quality step: counts that add up pass, and a fix or package result needs no quality review" 0 '^\["",true,2,""\]$' \
+  contributor_js "results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }, { status: 'done', head: 'bbbbbbbbbbbb', summary: 's' }]; await contributor('fix', 'd'); await contributor('package', 'd'); return [qualityReviewProblem({ quality_review: { status: 'done', added: 3, fixed: 2, recorded: 1 } }), qualityReviewProblem({ quality_review: { status: 'done', added: -1, fixed: 0, recorded: -1 } }).startsWith('quality review counts -1/0/-1'), prompts.length, qualityReview]"
 expect "head guard: a second refused head in one call stops the run, unmerged" 0 '^\{"ok":false,"starts":2,"stopped":"contributor \(package\) returned a refused head twice: head cccccccccccc is not the lane.s HEAD bbbbbbbbbbbb","refusals":2\}$' \
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'cccccccccccc', summary: 's' }]; const r = await contributor('package', 'd'); return { ok: !!r, starts: prompts.length, stopped, refusals: queued.filter((l) => l.includes('head-refused')).length }"
 expect "head guard: an unread lane head takes a well-formed head with a note and a closable head-unread note, never a placeholder" 0 '^\[true,"dddddddddddd",1,\["sh tools/run_state.sh note c head-unread \\"contributor implement start 1: lane head not read\\""\],true,false\]$' \
-  contributor_js "lane = null; results = [{ status: 'done', head: 'dddddddddddd', summary: 's' }, { status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'x', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, head, notes.filter((n) => n.includes('could not be read')).length, queued.slice(), queued.every((l) => CLOSABLE.test(l))]; const second = await contributor('implement', 'd'); return a.concat([!!second])"
+  contributor_js "lane = null; results = [{ status: 'done', head: 'dddddddddddd', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }, { status: 'done', head: 'placeholder', summary: 's' }, { status: 'done', head: 'x', summary: 's' }]; const r = await contributor('implement', 'd'); const a = [!!r, head, notes.filter((n) => n.includes('could not be read')).length, queued.slice(), queued.every((l) => CLOSABLE.test(l))]; const second = await contributor('implement', 'd'); return a.concat([!!second])"
 expect "head guard: a hostile head reaches the queued note only as letters, digits, dot, underscore, and hyphen" 0 '^\[true,true\]$' \
   contributor_js "results = [{ status: 'done', head: 'x\\\"; touch /tmp/p; \\\$(id) \\\`id\\\`', summary: 's' }]; await contributor('implement', 'd'); const line = queued.find((l) => l.includes('head-refused')); return [CLOSABLE.test(line), line.includes('head xtouchtmppidid is not')]"
 # The self-check compared with the next check (delivery-guards-c): a match
@@ -5160,7 +5150,7 @@ expect "self-check: a refusal of the contributor's own tree counts as the stage 
 expect "self-check: each refusal CONTRIBUTOR_REFUSAL counts is one tools/run_state.sh check prints, and the CHECK_JOBS one is not among them" 0 '^\[true,true,false\]$' \
   js "$wf" "CONTRIBUTOR_REFUSAL" "(() => { const lines = require('fs').readFileSync('$here/run_state.sh', 'utf8').split('\\n').map((l) => (/check: refused: ([^\"]*)/.exec(l) || [])[1]).filter(Boolean); const counts = (start) => lines.some((l) => l.startsWith(start) && CONTRIBUTOR_REFUSAL.test(l)); return [counts('tracked files differ'), counts('untracked files'), counts('CHECK_JOBS')] })()"
 expect "self-check: contributor keeps an implement or fix start's self-check and clears it after another mode's start" 0 '^\[\{"mode":"implement","said":"match"\},\{"mode":"fix","said":""\},null\]$' \
-  contributor_js "const out = []; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', self_check: 'match' }]; await contributor('implement', 'd'); out.push(selfCheck); await contributor('fix', 'd'); out.push(selfCheck); await contributor('package', 'd'); out.push(selfCheck); return out"
+  contributor_js "const out = []; results = [{ status: 'done', head: 'bbbbbbbbbbbb', summary: 's', self_check: 'match', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; await contributor('implement', 'd'); out.push(selfCheck); await contributor('fix', 'd'); out.push(selfCheck); await contributor('package', 'd'); out.push(selfCheck); return out"
 expect "self-check: finishCheck records the verdict and the report note, compares the self-check, and returns whether the check passed" 0 '^\[false,0,"check at aaaaaaaaaaaa: failed at stage gates; l","contributor fix self-check said match, the check failed at stage gates",2,null,true\]$' \
   selfcheck_js "selfCheck = { mode: 'fix', said: 'match' }; const failed = finishCheck({ kind: 'failed', at: head, stage: 'gates', log: 'l' }); const a = [failed, firstPass.check, notes[0], notes[1], queued.length, selfCheck]; return a.concat([finishCheck({ kind: 'passed', at: head, stage: '', log: '' })])"
 expect "self-check: a settled round clears the last self-check" 0 '^null$' \
@@ -5169,7 +5159,11 @@ expect "self-check: rounds hands a check that finished at the head to finishChec
   js "$wf" "rounds" "(() => { const r = rounds.toString(); return r.indexOf('checkOutcome(c.verdict') > -1 && r.indexOf('finishCheck(v)') > r.indexOf('checkOutcome(c.verdict') })()"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
-expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"quality":\[\],"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
+expect "quality step: the archive and package step runs the quality step first when none is recorded, refused without one, and not again once recorded" 0 '^\[\["implement quality"\],false,\["verify","close"\]\]$' \
+  closing_js "const order = []; globalThis.qualityReview = ''; globalThis.contributor = async (mode, d) => { order.push(mode + (d.startsWith('Every task of tasks.md is done. Run the quality step of card rule 10 now') ? ' quality' : '')); return false }; globalThis.verify = async () => { order.push('verify'); return true }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; const ok = await readyToPackage(); const first = order.splice(0); qualityReview = '1/1/0'; await readyToPackage(); return [first, ok, order]"
+expect "quality step: a restart reads the recorded quality review back, a malformed one dropped" 0 '^\["3/2/1",""\]$' \
+  closing_js "globalThis.usage = {}; globalThis.firstPass = {}; globalThis.calibrated = {}; globalThis.restoreCalibration = () => {}; globalThis.restoreRouting = () => {}; globalThis.heldFindings = () => []; globalThis.addBacklog = () => {}; globalThis.handed = new Set(); globalThis.qualityReview = ''; globalThis.state = { change: 'c', 'metric.quality_review': '3/2/1' }; seed(); const a = qualityReview; qualityReview = ''; state = { change: 'c', 'metric.quality_review': '3/2' }; seed(); return [a, qualityReview]"
+expect "closing loop: a start that commits nothing resets the offered findings and records its figures at once" 0 '^\{"awaiting":\{"security":\[\]\},"flushes":\["\{\\"closed\\":0,\\"left\\":1\} forced"\]\}$' \
   closing_js "globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; await closeAdvisories(); return { awaiting, flushes }"
 expect "closing loop: a restart restores the recorded figures and closeAdvisories then starts nothing" 0 '^\{"calls":\[\],"figures":\{"closed":2,"left":3\}\}$' \
   closing_js "globalThis.usage = {}; globalThis.firstPass = {}; globalThis.calibrated = {}; globalThis.restoreCalibration = () => {}; globalThis.restoreRouting = () => {}; globalThis.heldFindings = () => []; globalThis.addBacklog = () => {}; globalThis.addAdvisories = () => {}; globalThis.handed = new Set(); globalThis.at = () => []; globalThis.commits = []; globalThis.open = ['quality advisory a.rb:1 wording']; globalThis.findings = () => open; globalThis.state = { change: 'c', 'metric.advisories_closed': '2', 'metric.advisories_left': '3' }; seed(); await closeAdvisories(); return { calls, figures: closingFigures }"
@@ -5186,7 +5180,7 @@ expect "workflow: the merger's lines leave the CI stages to the record and closi
 expect "workflow: CI is recorded at the pushed head, never the merger's reported head" 0 "^1 1 0$" \
   sh -c 'echo "$(grep -c "state.ci = \`green \${pushed}\`; phaseDone(.ci., pushed)" "$1") $(grep -c "ci \"\${result} \${pushed}\"" "$1") $(grep -c "phaseDone(.ci., m.head)" "$1")"' _ "$wf"
 expect "deliver: the command records the weighted tokens" 0 "sh tools/run_state.sh tokens <change> <dir>" cat "$here/../.claude/commands/deliver.md"
-expect "workflow: both reviews' scopes read this start's records" 0 '^2$' grep -c "narrowedFrom(ran, '" "$wf"
+expect "workflow: the security review's scope reads this start's records" 0 '^1$' grep -c "narrowedFrom(ran, '" "$wf"
 expect "workflow: a resume past the push builds no merge records from the run state" 0 '^\[\]$' \
   speed_js 'mergeRecords({})'
 expect "workflow: only this start's verdicts enter its records" 0 '^only verdicts$' \
@@ -5297,7 +5291,7 @@ expect "workflow: the merge gates' records come from this start's alone" 0 '^\[\
   js "$wf" "mergeRecords" "[mergeRecords({}), mergeRecords({ 'review.security': 'pass abc1234', 'phase.check': 'abc1234' })]"
 expect "workflow: the merge lines use this start's records" 0 "const records = mergeRecords[(]ran[)]" grep -F 'const records = mergeRecords(ran)' "$wf"
 expect "workflow: a resume past the push checks and reviews again unless this start ran them" 0 '^\[false,false,true\]$' \
-  js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.quality': 'pass a', 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.quality': 'pass a', 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
+  js "$wf" "ranAll" "[ranAll({}), ranAll({ 'review.security': 'pass a', 'phase.check': 'a' }), ranAll({ 'review.security': 'blocked b', 'review.bench': 'pass a', 'phase.check': 'a' })]"
 expect "workflow: the resume check reads this start's records" 0 "if [(]!ranAll[(]ran[)][)]" grep -F "if (!ranAll(ran))" "$wf"
 expect "workflow: the resume check runs verify without fixes" 0 "verify[(]false[)]" grep -F "verify(false)" "$wf"
 # A resume past the push gets one review fix round a run, pushed once more
@@ -5325,8 +5319,8 @@ expect "workflow: no main-moved path without a green refusal for a moved main" 0
 expect "workflow: the merge loop counts the run state's main-moved pushes and this start's" 0 "^1$" grep -c -F "const moved = mainMoved(m, Number(state.main_moved || 0) + mainMovedPushes)" "$wf"
 expect "workflow: the moved-main merge is pushed with --main-moved, then CI and the merge run again" 0 "^1$" \
   grep -c "await contributor('push', .Push the merge of the moved main with .*sh tools/run_state.sh push [\$]{state.change} --main-moved" "$wf"
-expect "workflow: the reviews carry over only at one commit both passed at" 0 '^\["abc1234","",""\]$' \
-  js "$wf" "COMMIT carryFrom" "[carryFrom({ 'review.quality': 'pass abc1234', 'review.security': 'pass abc1234' }), carryFrom({ 'review.quality': 'pass abc1234', 'review.security': 'pass bbc1234' }), carryFrom({ 'review.quality': 'blocked abc1234', 'review.security': 'pass abc1234' })]"
+expect "workflow: the security review carries over only from its pass, no quality review needed" 0 '^\["abc1234","",""\]$' \
+  js "$wf" "COMMIT carryFrom" "[carryFrom({ 'review.security': 'pass abc1234' }), carryFrom({ 'review.security': 'blocked abc1234' }), carryFrom({ 'review.quality': 'pass abc1234' })]"
 expect "workflow: the reviews stand only on a moved line naming the head and the reviewed commit" 0 '^\[true,false,false,false\]$' \
   js "$wf" "COMMIT sameCommit CARRIED carried" "[carried('moved: the change is the same at abcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('moved: the merge changed files of the change: a.rb; the reviews run again at abcdef012345', 'abcdef012345', '111111222222'), carried('moved: the change is the same at bbcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('', 'abcdef012345', '111111222222')]"
 expect "workflow: the check after a main-moved merge asks for the moved line and carries only on a pass" 0 "^2$" \
@@ -5525,6 +5519,33 @@ for pair in quality-reviewer:review security-reviewer:review quality-reviewer:sk
   expect "caps: the sprint ${pair#*:} cap leaves the margin under the $agent file's maxTurns" 0 "^within$" \
     sh -c '[ -n "$1" ] && [ $(($1 + $2)) -le "$(sed -n "s/^maxTurns: //p" "$3")" ] && echo within' _ "$cap" "$margin" "$agents/$agent.md"
 done
+expect "caps: the quality-reviewer file's maxTurns is the sprint review cap and the margin" 0 "^maxTurns: $(($(sed -n 's/^const CAPS = {.* review: \([0-9]*\).*/\1/p' "$swf") + margin))$" grep -E '^maxTurns: ' "$agents/quality-reviewer.md"
+expect "caps: the pull request text cap leaves the margin under the quality-reviewer file's maxTurns" 0 "^within$" \
+  sh -c '[ "$1" -le "$(sed -n "s/^maxTurns: //p" "$2")" ] && echo within' _ "$(turns quality-reviewer prtext)" "$agents/quality-reviewer.md"
+# review-in-openspec: a delivery starts no quality reviewer but the pull
+# request text check, the security reviewer still runs and blocks, and the
+# sprint's quality review and skeptic are the independent quality check.
+expect "delivery: no quality-reviewer start but the pull request text check, no Quality phase" 0 '^1 1 0 0$' \
+  sh -c 'echo "$(grep -c "agentType: .quality-reviewer." "$1") $(grep "agentType: .quality-reviewer." "$1" | grep -c "label: .quality-reviewer: pull request text.") $(grep -c -e "phase(.Quality.)" -e "title: .Quality." "$1") $(grep -c "CALL_CAPS = {.* quality: " "$1")"' _ "$wf"
+review_js() {
+  js "$wf" "COMMIT passedAt SETTLES settledAtHead reviewedAtHead securityBlocking reviewLeft combineReviews CONTINUES continuation continueReview reviewMore continuedSecurity priorSecurity narrowedFrom securityReview inPlaceCheck confirmInPlace reviews" "(async () => {
+    globalThis.head = 'abc1234'; globalThis.ran = {}; globalThis.stopped = ''; globalThis.settledRound = null; globalThis.reviewFixRounds = 0
+    globalThis.starts = []; globalThis.records = []; globalThis.kept = []; globalThis.reviewFindings = []; globalThis.awaiting = { security: [] }; globalThis.fixedInPlace = new Set()
+    globalThis.intro = () => ''; globalThis.capLine = () => ''; globalThis.withCalls = (x) => x; globalThis.calibrate = (k, o) => o; globalThis.phase = () => {}; globalThis.note = () => {}; globalThis.verdict = () => {}
+    globalThis.measured = async (k, fn) => fn(); globalThis.callCap = () => 9; globalThis.addBacklog = (l) => kept.push(l)
+    globalThis.reviewed = (k, p, c) => { records.push(k + ' ' + (p ? 'pass' : 'blocked') + ' ' + c); ran['review.' + k] = (p ? 'pass ' : 'blocked ') + c }
+    globalThis.agent = async (prompt, o) => { starts.push(o.agentType); return result }
+    $1
+  })()"
+}
+expect "delivery: the security reviewer still runs and a High at confidence 8 or above in the change blocks" 0 '^\{"starts":\["security-reviewer"\],"blocks":true,"records":\["security blocked abc1234"\]\}$' \
+  review_js "globalThis.result = { ran: true, head: 'abc1234', findings: [{ severity: 'High', confidence: 9, file: 'tools/x.sh', line: 3, in_change: true, title: 't', fix: 'f' }], not_reviewed: [] }; const m = await reviews(); return { starts, blocks: m.startsWith('Blocking security findings, to fix first:'), records }"
+expect "delivery: a Low passes and is kept for the findings file, and a pass at the head starts no review" 0 '^\["",1,\["security pass abc1234"\],1\]$' \
+  review_js "globalThis.result = { ran: true, head: 'abc1234', findings: [{ severity: 'Low', confidence: 9, file: 'tools/x.sh', line: 3, in_change: true, title: 't', fix: 'f' }], not_reviewed: [] }; const m = await reviews(); await reviews(); return [m, kept.length, records, starts.length]"
+expect "delivery: a security review that did not run stops the run, never skipped" 0 '^\[null,true\]$' \
+  review_js "globalThis.result = { ran: false, head: 'abc1234', findings: [] }; const m = await reviews(); return [m, stopped.includes('it cannot be skipped')]"
+expect "sprint: sprint-planning still starts its quality review of the combined diff and the skeptic" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c -F "agentType: '"'"'quality-reviewer'"'"', schema: QUALITY, label: '"'"'quality-reviewer: sprint'"'"'" "$1") $(grep -c -F "label: '"'"'quality-reviewer: skeptic'"'"'" "$1")"' _ "$swf"
 expect "workflow: the delivery never starts the periodic review" 1 "" grep -q -E "periodic-review[.]js|phase[(]'Review'[)]" "$wf"
 # No delivery reads or greps the backlog: the contributor only appends.
 backlog_reads() {

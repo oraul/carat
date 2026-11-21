@@ -46,8 +46,9 @@
 #              this script) passed at exactly that commit
 #   pushes     at most one push plus one per CI fix and one review fix
 #   passed     a clean tracked tree, phase.check and a pass of
-#              review.quality, review.security, and review.bench, each at a
-#              commit settled at the pushed head, HEAD
+#              review.security and review.bench, each at a commit settled
+#              at the pushed head, HEAD (no delivery reviews quality: the
+#              contributor's own step does)
 #   records    each review.KIND (and phase.check for check) of the run state
 #              has the result and commit the workflow received, given as
 #              RECORDS, which must hold security (refused when unset)
@@ -441,7 +442,7 @@ gate_pushes() {
 }
 
 # The pass records a merge needs, at the pushed head: phase.check and the
-# quality, security, and bench reviews, each at a commit settled at HEAD,
+# security and bench reviews, each at a commit settled at HEAD,
 # which must be the recorded push.
 gate_passed() {
   gate=passed
@@ -455,7 +456,7 @@ gate_passed() {
   elif [ "$(git rev-parse --verify -q --end-of-options "$pushed^{commit}")" != "$head" ]; then
     bad "HEAD $(git rev-parse --short=12 HEAD) is not the pushed head $pushed"
   fi
-  for kind in check quality security bench; do
+  for kind in check security bench; do
     if [ "$kind" = check ]; then
       at=$(state phase.check)
       record=${at:+pass $at}
@@ -469,7 +470,7 @@ gate_passed() {
       *) bad "$kind has no pass record: $record" ;;
     esac
   done
-  [ $failed -ne $start ] || ok "check, quality, security, and bench passed at the pushed head $pushed"
+  [ $failed -ne $start ] || ok "check, security, and bench passed at the pushed head $pushed"
 }
 
 # The run state's review records against the results the workflow received
