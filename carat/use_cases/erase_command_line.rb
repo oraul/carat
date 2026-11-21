@@ -25,8 +25,13 @@ module Carat
         return @cancel_command_line.call(state) if text.empty?
         cursor = state.cmdline_position
         return Outcome.none if cursor == 0
-        state.cmdline = text[0, cursor - 1].to_s + text[cursor, text.length - cursor].to_s
-        state.cmdline_position = cursor - 1
+        if cursor == text.length
+          state.cmdline = text[0, cursor - 1].to_s
+          state.cmdline_after = 0
+        else
+          state.cmdline = text[0, cursor - 1].to_s + text[cursor, text.length - cursor].to_s
+          state.cmdline_position = cursor - 1
+        end
         @preview_search.call(state)
       end
     end

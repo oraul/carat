@@ -22,8 +22,13 @@ module Carat
       def call(state, text)
         line = state.cmdline
         cursor = state.cmdline_position
-        state.cmdline = line[0, cursor].to_s + text + line[cursor, line.length - cursor].to_s
-        state.cmdline_position = cursor + text.length
+        if cursor >= line.length
+          state.cmdline = line + text
+          state.cmdline_after = 0
+        else
+          state.cmdline = line[0, cursor].to_s + text + line[cursor, line.length - cursor].to_s
+          state.cmdline_position = cursor + text.length
+        end
         @preview_search.call(state)
       end
     end
