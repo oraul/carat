@@ -920,8 +920,7 @@ function parseLaneFacts(text) {
 function headForm(reported, lane) {
   if (!lane.head || lane.dirty !== 0 || reported === lane.head) return false
   const r = String(reported || '').trim().toLowerCase()
-  if (!/^[0-9a-f]*$/.test(r)) return true
-  if (!r) return true
+  if (!/^[0-9a-f]+$/.test(r)) return true
   return r.length >= 7 && (lane.head.startsWith(r) || r.startsWith(lane.head))
 }
 // Card rule 10 made mechanical (review-in-openspec): an implement start's

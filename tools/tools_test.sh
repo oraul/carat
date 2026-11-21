@@ -3167,6 +3167,11 @@ echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
 expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none $" facts lf
 echo "stage a: running" >> build/stages/lf/check.log
 expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none $" facts lf
+idx=$(git -C tmp/.lane-lf rev-parse --path-format=absolute --git-path index)
+cp "$idx" "$work/facts.index"
+echo broken > "$idx"
+expect "lane_facts: a lane git status cannot read reads dirty unknown, never 0" 0 " dirty unknown " facts lf
+cp "$work/facts.index" "$idx"
 expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
 expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
 expect "lane_facts: no argument is refused with the usage" 2 "usage: sh tools/lane_facts.sh CHANGE" sh "$here/lane_facts.sh"

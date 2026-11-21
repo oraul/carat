@@ -8,7 +8,8 @@
 #   base      the merge base of HEAD and origin/main, 12 characters, or none
 #   pushed    yes when origin's branch (refs/remotes/origin/BRANCH, as the
 #             last fetch left it) is HEAD, else no
-#   dirty     the count of uncommitted paths, git status --porcelain
+#   dirty     the count of uncommitted paths, git status --porcelain, or
+#             unknown when that fails
 #   check     the verdict of the last check, the last line of
 #             build/stages/CHANGE/check.log: passed, failed, killed,
 #             superseded, or escaped, or none without one
@@ -51,7 +52,12 @@ if [ "$branch" != detached ] &&
   [ "$(lane_git rev-parse --verify -q "refs/remotes/origin/$branch" 2>/dev/null)" = "$full" ]; then
   pushed=yes
 fi
-dirty=$(lane_git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+# unknown when git status fails, never 0, so a reader cannot take an
+# unreadable tree for a committed one.
+dirty=unknown
+if porcelain=$(lane_git status --porcelain 2>/dev/null); then
+  dirty=$(printf '%s\n' "$porcelain" | grep -c .)
+fi
 
 # The verdict line: "check: every stage passed at C[; ...]" or
 # "check: stage S WORD at C[; read LOG]".

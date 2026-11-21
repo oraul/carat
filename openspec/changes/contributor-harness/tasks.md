@@ -22,3 +22,9 @@
 ## 5. Checks
 
 - [ ] 5.1 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`.
+
+## Quality review
+
+- [x] 6.1 `tools/lane_facts.sh`: `dirty` read 0 when `git status` failed, so an unreadable lane passed as committed; it now reads `unknown`, which `parseLaneFacts` keeps as -1, proved by the `lane_facts: a lane git status cannot read reads dirty unknown, never 0` case in `tools/tools_test.sh` (fixed).
+- [x] 6.2 `.claude/workflows/deliver-change.js` `headForm`: the empty and non-hex tests were two branches of one rule; folded into one (fixed, the head-form cases unchanged).
+- [x] 6.3 `.claude/agents/merger.md` and `.claude/agents/quality-reviewer.md` still copy main's short sha by hand; outside a lane, so recorded in `docs/findings/contributor-harness.md` (recorded).
