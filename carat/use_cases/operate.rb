@@ -4,6 +4,7 @@ require_relative "../domain/range"
 require_relative "../domain/motions"
 require_relative "../domain/text_objects"
 require_relative "../domain/operators"
+require_relative "../domain/comments"
 require_relative "../domain/registers"
 require_relative "../domain/last_find"
 require_relative "../domain/operator_kind"
@@ -31,7 +32,8 @@ module Carat
     # a fold of the lines its range covers. A linewise range reaches over
     # the closed folds at its two ends, and a doubled operator counts a
     # closed fold as one line, as Neovim's hasFolding adjustments do. g~,
-    # gu, and gU change the case of the range and write no register.
+    # gu, and gU change the case of the range and write no register; gc
+    # toggles the comment of the whole rows the range touches.
     class Operate
       attr_reader :registers #: Domain::Registers
       attr_reader :last_find #: Domain::LastFind
@@ -77,6 +79,7 @@ module Carat
         when Domain::OperatorKind::SWAP_CASE then recase(state, range, :toggle)
         when Domain::OperatorKind::LOWERCASE then recase(state, range, :lower)
         when Domain::OperatorKind::UPPERCASE then recase(state, range, :upper)
+        when Domain::OperatorKind::COMMENT then comment(state, range)
         end
         @notice
       end
@@ -241,6 +244,18 @@ module Carat
         Domain::Operators.recase_range(state.buffer, range, how)
         from = range.kind == :linewise ? range.from : range.normalized.from
         state.cursor.move_to(from.row, clamp(state, from.row, from.col))
+      end
+
+      # gc: toggles the comment of every row the range touches, by the
+      # marker of the buffer's filetype, the cursor on the first
+      # non-blank of the first row as after a shift.
+      #: (Domain::EditorState, Domain::Range) -> void
+      def comment(state, range)
+        span = range.normalized
+        buffer = state.buffer
+        row = span.from.row
+        Domain::Comments.toggle(buffer, row, span.to.row, Domain::Comments.marker_for(buffer.filetype))
+        state.cursor.move_to(row, buffer.first_nonblank(row))
       end
 
       #: (Domain::EditorState, Integer, Integer) -> Integer

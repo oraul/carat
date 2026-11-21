@@ -4,6 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Sprint 25
 
+The user-approved exception (2026-11-21, the design council): `comment-operator` runs first in the feature lane after `facet-design-doc`, outside the 3.
+
 1. `showtabline` (T2 user request, Facet wave 2, split from status-winbar-tabs-b at 7208588, estimated large): the tab row shows only from two tabs or two files (`carat/domain/buffer_list.rb:223`, read at `carat/use_cases/arrange_view.rb:51`, `frame_presenter.rb:238`); `docs/compatibility.md:510` lists `showtabline` missing. Fix outline: `option.showtabline` 0, 1, 2, default 2. Accepted when a table-driven test and frame rows show each value with one and two files (the one-file row at the default fails at 7208588), a `.caratrc` row with `make gen-config` current, its compatibility row, and `lh` held. Backlog: none.
 
 ## Pool
@@ -11,7 +13,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 1. `folded-row` (T2 user request, Facet wave 2, estimated medium): a closed fold is one Normal row (`frame_presenter.rb:799`); accepted when shown in Folded, one cell of padding, both themes, ascii, 16 colors, NO_COLOR.
 2. `finder-switch` (T2 user request, estimated medium, pushed back 1, reason: the waves): `<C-g>` switches files and grep keeping the query, `<leader>fw` greps the word.
 3. `finder-rows` (T2 user request, estimated large, pushed back 2, same reason, critical e carat/plugins/finder/plugin.rb): PmenuSel band, PmenuMatch, paths cut left, grep rows; 1 entry (the NormalFloat hole).
-4. Facet wave 3 rest (T2 user request, estimated medium each): `window-surfaces`, `prompt-in-float`, `dim-backdrop`, `float-polish`; `separator-styles` (T2 user request, estimated small, split from border-vocabulary at f95b02a): split separators fixed `│` and `─` (`frame_presenter.rb:107`, `:109`), accepted when frame rows draw them in the Facet look and ascii.
+4. Facet wave 3 rest (T2 user request, estimated medium each): `window-surfaces`, `prompt-in-float`, `dim-backdrop`, `float-polish`; `separator-styles` (T2 user request, estimated small, split from border-vocabulary at f95b02a): split separators fixed `│` and `─` (`frame_presenter.rb:107`, `:109`), accepted when frame rows draw them in the Facet look and ascii.; `one-accent` (T2 user request, estimated medium), `glyph-audit` (T2 user request, estimated small): the 8 and 8 rows of docs/design.md section 7 naming each (sapphire fills, tab icon, marks, TabLine at 16 colors; glyphs of two meanings, `icons.rb:58` to `:99`), accepted when frame rows or a test show each as section 7 says and its rows leave it.
 5. Facet wave 4 (T2 user request, estimated medium each): `plugin-ui-tokens` ("### style_float checks a span's start column only from below (sprint-23 review security Low (3), disputed)", 3 more: token length, PmenuExtra, float resolved three times), `finder-refined`, `key-hints-dock`, `explorer-rows`.
 6. Facet wave 5 (T2 user request, estimated medium each): `start-gem`, `diagnostic-text`, `explorer-git`.
 7. `finder-resume`, `finder-preview-gutter` (T2 user request, estimated small each, pushed back 1, reason: the waves); `grep-finish`, `explorer-filter` (T2 user request, estimated medium each, pushed back 1, same reason).
@@ -31,9 +33,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog.md`. Every feat
 
 ## Decisions
 
-- Security first (T0): none; sprint-24 review and sweep High 0, Medium 0; no periodic finding in the pending runs groom-evidence-only and tabs-only-dot.
-- Delivered (T2 user request): `border-vocabulary`, Sprint 25 item 1 at f95b02a; Sprint 25 stays 3 features, 3 backlog, `showtabline` next.
-- Size (T2): large; base medium, `BorderStyle` (`carat/domain/border_style.rb:12`) already holds the 5 styles and ASCII, like picker-styles 1,428,108 (a host request at 2.12); one up, the last two over medium 1.2M (listchars-folds 1,499,684, tabs-only-dot 1,736,609).
-- Split (T2): the 2.13 request and its drawing are one testable part; the separators (`frame_presenter.rb:107`, `:109`) are in no acceptance check, queued as `separator-styles` in Pool 4.
-- Critical (T2): d carat/plugin_api.rb (a new host request, API 2.13), also e large.
-- Retro (T1): tabs-only-dot notes 14, 15 to the findings file, the backlog queue being outside this lane; both near its `closing-loop-fold`.
+- Security first (T0): none; 0 periodic reviews in the 3 pending runs; sprint-24 High 0, Medium 0 at 8+.
+- Exception (T2 user request of 2026-11-21): `comment-operator` first, outside the 3; backticked for queue_class (tools/run_state.sh:2597); the facet line dropped, merged 4a84ece.
+- Size (T2): large; vim-case-operators, a g operator, 2,564,423 total, 190 min; last two over medium 1.2M (1,736,609, 1,499,684), one up.
+- No split (T2): 3 parts share one toggle rule and test table; the user asked all; a plan split misses the contributor (contributor-tier-high note 7).
+- Drift (T2 user design of 2026-11-18): `one-accent`, `glyph-audit`, 16 of 20 section 7 rows, 0 queue lines at 4a84ece (facet-design-doc note 16), to Pool 4.
+- Critical (T2): e carat/use_cases/operate.rb; tools/rules.sh untouched.
+- Retro (T1): facet-design-doc notes 16 to 18, review-in-openspec 9 to 11 to the findings file (2 merged), backlog lane untouched.

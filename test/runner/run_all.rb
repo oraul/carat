@@ -68,6 +68,7 @@ require_relative "../drivers_process_runner"
 require_relative "../editor_buffers"
 require_relative "../editor_case_operators"
 require_relative "../editor_cmdline"
+require_relative "../editor_comments"
 require_relative "../editor_completion"
 require_relative "../editor_explorer"
 require_relative "../editor_finder"
@@ -189,6 +190,7 @@ when "drivers_process_runner" then DriversProcessRunnerTest.main
 when "editor_buffers" then EditorBuffersTest.main
 when "editor_case_operators" then EditorCaseOperatorsTest.main
 when "editor_cmdline" then EditorCmdlineTest.main
+when "editor_comments" then EditorCommentsTest.main
 when "editor_completion" then EditorCompletionTest.main
 when "editor_explorer" then EditorExplorerTest.main
 when "editor_finder" then EditorFinderTest.main

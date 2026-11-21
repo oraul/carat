@@ -5,6 +5,7 @@ require_relative "buffer"
 require_relative "editor_state"
 require_relative "motions"
 require_relative "runs"
+require_relative "comments"
 
 module Carat
   module Domain
@@ -12,7 +13,8 @@ module Carat
     # the Range an operator works on, or nil when there is no such object
     # around the cursor. Word and sentence objects are charwise, paragraph
     # objects linewise, bracket objects charwise unless the inner form
-    # stands between brackets that end their lines.
+    # stands between brackets that end their lines. The comment object is
+    # the linewise block of adjacent commented lines (Comments.block).
     module TextObjects
       # Every text object this module implements, in the order of the case
       # statement below; the action table registers them with the kind
@@ -23,7 +25,7 @@ module Carat
         "textobject.inner_paren", "textobject.a_paren", "textobject.inner_bracket", "textobject.a_bracket",
         "textobject.inner_brace", "textobject.a_brace", "textobject.inner_angle", "textobject.a_angle",
         "textobject.inner_double_quote", "textobject.a_double_quote", "textobject.inner_single_quote",
-        "textobject.a_single_quote", "textobject.inner_backtick", "textobject.a_backtick"
+        "textobject.a_single_quote", "textobject.inner_backtick", "textobject.a_backtick", "textobject.comment"
       ]
 
       # The short descriptions of NAMES, in the same order, for the key
@@ -34,7 +36,7 @@ module Carat
         "Inside ()", "Around ()", "Inside []", "Around []",
         "Inside {}", "Around {}", "Inside <>", "Around <>",
         "Inside double quotes", "Around double quotes", "Inside single quotes",
-        "Around single quotes", "Inside backticks", "Around backticks"
+        "Around single quotes", "Inside backticks", "Around backticks", "Comment block"
       ]
 
       # Whether the action names a text object.
@@ -69,6 +71,7 @@ module Carat
         when "textobject.a_single_quote" then quote(state, "'", true)
         when "textobject.inner_backtick" then quote(state, "`", false)
         when "textobject.a_backtick" then quote(state, "`", true)
+        when "textobject.comment" then Comments.block(state.buffer, state.cursor.row, Comments.marker_for(state.buffer.filetype))
         else nil
         end
       end

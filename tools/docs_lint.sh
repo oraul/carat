@@ -25,6 +25,7 @@
 #             parenthesis without T0, and that one a defect, unless a line
 #             of that section begins "The user-approved exception"; both
 #             files together within QUEUE_BUDGET
+#   required  each file of REQUIRED exists (docs/design.md, the binding look)
 #   histories every non-blank row of each lane history, docs/metrics-*.tsv,
 #             has as many tab-separated fields as its line 1, the header
 set -u
@@ -64,6 +65,10 @@ QUEUE_BUDGET=17969
 # older entries as they were written, may still name: the one queue and
 # history the lanes replaced. Every other document names the lane files.
 RETIRED='docs/queue\.md|docs/metrics\.tsv'
+
+# The documents every checkout must hold: docs/design.md is the one binding
+# description of the look, which CLAUDE.md and docs/architecture.md name.
+REQUIRED="docs/design.md"
 
 # The documents an agent reads; the generated OpenSpec commands are not ours.
 documents() {
@@ -238,7 +243,17 @@ $hits"
   [ $failed -ne $start ] || ok "$files file(s)"
 }
 
+check_required() {
+  gate=required
+  start=$failed
+  for f in $REQUIRED; do
+    [ -f "$f" ] || bad "$f is missing"
+  done
+  [ $failed -ne $start ] || ok "$(printf '%s\n' $REQUIRED | grep -c .) file(s)"
+}
+
 check_budgets
+check_required
 check_content
 check_wraps
 check_paths
