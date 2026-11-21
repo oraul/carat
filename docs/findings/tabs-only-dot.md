@@ -27,3 +27,8 @@
 - Location: openspec/specs/buffer-tabs/spec.md, the scenario of that name
 - Why: a MODIFIED block must keep the current scenario's title, so this change could not rename it though it now asserts no gem
 - Fix: a later change renames the scenario in the spec, its test comment in test/adapters_tab_bar.rb, and its task text together
+
+### The MODIFIED scenario title still says gem
+- Location: openspec/changes/tabs-only-dot/specs/buffer-tabs/spec.md:14, test/adapters_tab_bar.rb:125, tasks.md 1.1
+- Why: the scenario "The ascii icons give the ascii gem and separator" asserts no gem; a MODIFIED block must keep its title to match the main spec.
+- Fix: a later change renames it to "The ascii icons give the ascii separator and no gem" in the main spec, the test label, and its tasks.
