@@ -17,3 +17,11 @@
 ## 4. Checks
 
 - [x] 4.1 Run `make spec-validate`, `make gates`, `make docs-lint`, and `make tools-test`, all pass.
+
+## 5. Review fixes
+
+- [x] 5.1 Add the git signs' `icons.rb:93`, `:94` row to Known drift (`glyph-audit`).
+- [x] 5.2 Mark the `▎` git sign row and the selection row as the open clash of section 4, so no glyph holds two decided meanings.
+- [x] 5.3 State one count order per surface: the status bar's counts `✖ ▲ ◇`, the sign cell `✖ ▲ ◆ ◇`.
+- [x] 5.4 Name `one-accent` and `glyph-audit` as planned items in section 7, since the queue does not hold them yet.
+- [x] 5.5 Split the glyph-pair row of Known drift into one row per pair with its two `icons.rb` lines.

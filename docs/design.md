@@ -60,18 +60,18 @@ One meaning per glyph. The AI owns `✦` and `◈`; nothing else uses them.
 | --- | --- | --- |
 | `✦` | The AI: insights, the status bar while a request waits, the file segment while the panel has focus (`✦ AI`) | AI only; shape and place, not color |
 | `◈` | The AI | AI only; the ruby and class icons give it up (section 7) |
-| `◇` | Any suggestion, language-server hints included | Counts read `✖ ▲ ◇` |
-| `✖` | Error | Shape first: `✖ ▲ ◆` |
+| `◇` | Any suggestion, language-server hints included | The status bar's counts read `✖ ▲ ◇` (error, warning, hint) |
+| `✖` | Error | Shape first; the sign cell reads `✖ ▲ ◆ ◇` (error, warning, information, hint) |
 | `▲` | Warning | Not `⚠`, which can turn into an emoji on the Mac |
 | `◆` | Information | The constant icon gives it up |
-| `▎` sapphire | This row: the selected row of every list | Full-width selection fill, bold label; the git sign gives it up |
+| `▎` sapphire | This row: the selected row of every list | Full-width selection fill, bold label; its clash with the git sign is open until the glyph audit (below) |
 | `│` solid | The cursor's indent block (GUIDE_SCOPE); a split between two windows of one color (BORDER) | Never a row mark |
 | `┊` | An indent guide (GUIDE) | Faint everywhere |
 | `┃` | A scrollbar thumb | Nothing else is heavy |
 | `●` after a name | State: a tab's modified mark, the language server, the AI | After the label |
 | `●` before a name | Type: the explorer's file-type dot (Ruby red, Markdown sapphire, data cyan, shell green, others faint) | Before the label; a tab has no type dot |
 | `M A ? D` | Git state, right-aligned: M cyan, A green, ? dim, D red; a folder with changes shows a cyan dot | |
-| `▎` green or cyan, `▁▔` red | Git signs in the sign column: added, changed, deleted | A diagnostic glyph wins the cell |
+| `▎` green or cyan, `▁▔` red | Git signs in the sign column: added, changed, deleted | A diagnostic glyph wins the cell; the `▎` is the open clash with the selected row, settled by the glyph audit (below) |
 | `▸` `▾` | A fold's closed gap; the chevrons of the tree | Faint |
 | `⋯` | A closed fold's count (`⋯ 12 lines`, dim) | |
 | `›` | A separator in the winbar (faint), the lead of a query, the user's words in the AI panel (sapphire) | Never a selection mark |
@@ -109,7 +109,7 @@ An empty surface says one dim sentence and names one key (`Empty folder`, `no ma
 
 ## 7. Known drift
 
-Where the shipped code differs from this file at `6bb8f2a`, and the queued item (`docs/queue-feature.md`) that closes it. A row leaves this table in the change that closes it.
+Where the shipped code differs from this file at `6bb8f2a`, and the item that closes it. `finder-rows`, `explorer-rows`, and `float-polish` are in `docs/queue-feature.md`; `one-accent` and `glyph-audit` are planned items, which reach the queue through the planner's plan and are named here until then. A row leaves this table in the change that closes it.
 
 | Gap | Where | Queued item |
 | --- | --- | --- |
@@ -124,7 +124,12 @@ Where the shipped code differs from this file at `6bb8f2a`, and the queued item 
 | Four selection marks: the explorer's `›` | `carat/plugins/explorer/tree.rb:167`, the icon `current` at `carat/domain/icons.rb:63` | `explorer-rows` |
 | Float titles are centered | `carat/adapters/frame_presenter.rb:737`, `:744` | `float-polish` |
 | Notice titles are centered | `carat/adapters/frame_presenter.rb:550` | `float-polish` |
-| `◆` is information and constant, `◈` ruby and class, `▸` folder and property, `◇` hint and keyword, `▣` JSON and module | `carat/domain/icons.rb:66`, `:68`, `:58`, `:87`, `:67`, `:88`, `:69`, `:86`, `:85`, `:90` | `glyph-audit` |
+| `◆` is information and constant | `carat/domain/icons.rb:66`, `:90` | `glyph-audit` |
+| `◈` is ruby and class | `carat/domain/icons.rb:68`, `:85` | `glyph-audit` |
+| `▸` is folder and property | `carat/domain/icons.rb:58`, `:87` | `glyph-audit` |
+| `◇` is hint and keyword | `carat/domain/icons.rb:67`, `:88` | `glyph-audit` |
+| `▣` is JSON and module | `carat/domain/icons.rb:69`, `:86` | `glyph-audit` |
+| The git signs ship `┃` added and `┇` changed, while `┃` is the scrollbar thumb only and the signs are `▎` green or cyan | `carat/domain/icons.rb:93`, `:94` | `glyph-audit` |
 | `+` is the closed folder, ahead, and added in ascii | `carat/domain/icons.rb:99`, `:132`, `:134` | `glyph-audit` |
 | TabLine and TabLineSel fall below the contrast target at 16 colors | `carat/domain/themes.rb:108`, `:109` | `one-accent` |
 
