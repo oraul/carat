@@ -146,6 +146,8 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `cmdline.delete` | cmdline | Remove the character under the cursor; at the end of the line act as `cmdline.backspace` |
 | `cmdline.delete_word` | cmdline | Remove the word before the cursor; nothing on an empty line |
 | `cmdline.delete_line` | cmdline | Remove everything before the cursor; nothing on an empty line |
+| `cmdline.complete_next` | cmdline | At the `:` prompt, complete the word before the cursor (a command name, or a path after `:e`, `:w`, `:sp`, `:vs`, `:tabe`) with its first match and show the matches in a popup above the line, or insert the next match, after the last the typed text; nothing at another prompt |
+| `cmdline.complete_previous` | cmdline | As `cmdline.complete_next`, starting from the last match and stepping back |
 | `message.quit_hint` | normal | Show the quit hint |
 | `history.undo` | normal | Undo count states along the current branch of the undo tree |
 | `history.redo` | normal | Redo count states along the current branch |

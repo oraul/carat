@@ -15,6 +15,9 @@ ok   a link to /dev/zero
 ok   a link to a regular file
 ok   a dangling link
 ok   nothing
+ok   list_first reads at most the limit
+ok   list_first under the limit lists every entry, sorted
+ok   list_first of a missing directory raises
 ok   real_path resolves every link
 ok   a file below a link leading out of the root
 ok   a directory below a link leading out of the root
@@ -27,4 +30,4 @@ ok   a rename below a link that stays inside
 ok   a delete below a linked root
 ok   a delete of the link leading out unlinks only the link
 ok   the link is gone and its target stays
-drivers_disk_files: 29 passed, 0 failed
+drivers_disk_files: 32 passed, 0 failed
