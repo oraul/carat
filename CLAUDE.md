@@ -9,6 +9,7 @@ Guidance for Claude Code when working in this repository.
 - Status: the delivered changes close `docs/codebase-map.md` and the roadmap is `docs/architecture.md` section 12; the next changes are `docs/queue-feature.md` and `docs/queue-backlog.md`, open items `docs/backlog.md`.
 - Architecture: `docs/architecture.md` is binding: the layers, the ports, the module names, the Spinel rules, the `.caratrc` format, and the roadmap order. Read the sections a change touches before planning it.
 - Code map: `docs/codebase-map.md` names every file under `carat/`, `bin/`, `test/`, `bench/`, and `tools/` in one area; start there. A change that adds, moves, or removes a file updates its area; `test/lint.rb` fails on a file in no area or a named path that does not exist.
+- Look: `docs/design.md` is binding for every UI change and wins over older text.
 - Writing code: `docs/examples.md` (a golden file and the wiring per kind, with its generator) and `docs/spinel-notes.md` (every Spinel pitfall).
 
 ## Hard rules
@@ -42,7 +43,7 @@ These apply to every commit, pull request, comment, file, and chat reply.
 
 ## Branch naming
 
-This repository follows the **Conventional Branch** specification, the branch-naming standard that pairs with Conventional Commits (used for commit messages below).
+This repository follows the **Conventional Branch** specification, which pairs with Conventional Commits (below).
 
 Format: `<type>/<description>`
 
@@ -115,7 +116,7 @@ Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exa
 
 ## Pull request description
 
-The PR description is the body of the squash commit on `main`. It follows the template in `.github/pull_request_template.md`, which GitHub pre-fills. This section is the specification for filling it in. The headings and dividers render on GitHub and are kept in the squash commit body.
+The PR description is the body of the squash commit on `main`. It follows the template in `.github/pull_request_template.md`, which GitHub pre-fills. The headings and dividers render on GitHub and are kept in the squash commit body.
 
 ### Output contract
 
