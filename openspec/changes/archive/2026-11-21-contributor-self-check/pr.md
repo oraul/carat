@@ -17,7 +17,7 @@ Lets the contributor run the delivery check itself at its head before returning 
 - Change the contributor's card rule 2 and its copy in the workflow to require a passing check at HEAD, and add a Checking section to docs/contributor-notes.md with the steps, the three-run limit, and how to read a failure.
 - Change the openspec/config.yaml apply guidance to order the session as tasks, quality fixes, commit, docs-lint and gates, merge-main if behind, then the check and its fixes.
 - Document the new phases in CLAUDE.md, README.md, the checker's agent file, docs/goals.md, and the code map.
-- Add tools-test cases for the guard, the backed head and its machinery fallback, a false claimed pass, a COMMIT other than phase.check, the caps formula, and the self_fix metric, and record the plan, the metrics history row, the Sprint 25 exception line, and the findings.
+- Add tools-test cases for the guard, the backed head and its machinery fallback, a false claimed pass, a COMMIT other than phase.check, and the self_fix metric, and record the plan, the metrics history row, the Sprint 25 exception line, and the findings.
 
 ---
 
