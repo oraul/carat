@@ -5579,6 +5579,13 @@ expect "self-check: rounds hands a check that finished at the head to finishChec
 # over the contributor's claim, the head, and phase.check.
 expect "self-check: rounds builds the check line on backedCommit over the claim, the head, and phase.check" 0 '^true$' \
   js "$wf" "rounds" "(() => { const r = rounds.toString(); const b = r.indexOf(\"const backed = backedCommit(claimedPass, head, state['phase.check'])\"); return b > -1 && r.indexOf('checkLines(state.change, backed,') > b })()"
+# contributor-self-check: the workflow queues phase.check until its rounds
+# end, and the run state backs a commit only from the record it holds, so a
+# fix round's check backing this run's last pass flushes that record first.
+expect "self-check: backedUnwritten holds only for a queued phase.check of a commit other than the head" 0 '^\[true,false,false,false,false\]$' \
+  js "$wf" "COMMIT sameCommit phaseLine backedUnwritten" "(() => { globalThis.state = { change: 'c' }; const q = ['sh tools/run_state.sh phase c check aaaaaaaaaaaa']; return [backedUnwritten('aaaaaaaaaaaa', 'bbbbbbbbbbbb', q), backedUnwritten('aaaaaaaaaaaa', 'aaaaaaaaaaaa', q), backedUnwritten('cccccccccccc', 'bbbbbbbbbbbb', q), backedUnwritten('', 'bbbbbbbbbbbb', q), backedUnwritten('aaaaaaaaaaaa', 'bbbbbbbbbbbb', [])] })()"
+expect "self-check: rounds flushes a queued phase.check it backs before the checker's start" 0 '^true$' \
+  js "$wf" "rounds" "(() => { const r = rounds.toString(); const f = r.indexOf('if (backedUnwritten(backed, head, pending) && !(await flush())) return false'); return f > r.indexOf('const backed = backedCommit(') && f < r.indexOf('checkLines(state.change, backed,') })()"
 expect "closing loop: the package step waits for the review pass, then the closing loop, and skips it when the review fails" 0 '^\[\["verify","close"\],\["verify"\]\]$' \
   closing_js "const order = []; let ok = true; globalThis.verify = async () => { order.push('verify'); return ok }; globalThis.closeAdvisories = async () => { order.push('close'); return true }; await readyToPackage(); const first = order.splice(0); ok = false; await readyToPackage(); return [first, order]"
 expect "quality step: the archive and package step runs the quality step first when none is recorded, refused without one, and not again once recorded" 0 '^\[\["implement quality"\],false,\["verify","close"\]\]$' \
@@ -5609,7 +5616,7 @@ expect "workflow: only this start's verdicts enter its records" 0 '^only verdict
   sh -c '[ "$(grep -c -E "ran\[" "$1")" = "$(grep -c -E "^  ran\[.(phase|review)[.]. [+] (name|kind)\] = |String[(]ran\[" "$1")" ] && ! grep -q -E "Object[.]assign[(]ran|settledRecords|gates[.]sh passed" "$1" && echo only verdicts' _ "$wf"
 expect "workflow: only check and review records need a record start" 0 '^\[true,false,false,true\]$' \
   speed_js '["sh tools/run_state.sh note c late-finding \"x (y) z\"", "sh tools/run_state.sh review c security pass \"high=0\" abc1234", "sh tools/run_state.sh phase c check abc1234", "sh tools/run_state.sh phase c implement abc1234"].map((l) => CLOSABLE.test(l))'
-expect "workflow: no record start runs at the close, only verify's and the closing loop's two (before and after its re-review)" 0 '^3$' grep -c 'await flush(' "$wf"
+expect "workflow: no record start runs at the close, only verify's, the closing loop's two (before and after its re-review), and a fix round's check backing a queued phase.check (contributor-self-check)" 0 '^4$' grep -c 'await flush(' "$wf"
 expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
   sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'

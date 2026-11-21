@@ -982,6 +982,14 @@ function backedCommit(claim, at, checked) {
   if (claim && COMMIT.test(at || '') && sameCommit(claim.at, at)) return at
   return COMMIT.test(checked || '') ? checked : ''
 }
+// True when the check would back BACKED, the last check this run passed,
+// at a head past it while its phase.check record still waits in the queue
+// (flush writes it only after the rounds): tools/run_state.sh backs a
+// commit only from the record it holds, so the check flushes it first and
+// a fix round's stages still carry from it.
+function backedUnwritten(backed, at, queued) {
+  return COMMIT.test(backed || '') && !sameCommit(backed, at) && queued.includes(phaseLine('check', backed))
+}
 // The check runs a start made after its first, from its check_runs.
 const extraRuns = (r) => (r && Number.isInteger(r.check_runs) && r.check_runs > 1 ? r.check_runs - 1 : 0)
 
@@ -1515,6 +1523,7 @@ async function rounds(fixes = true) {
       // checker's verdict is the one recorded.
       const backed = backedCommit(claimedPass, head, state['phase.check'])
       if (claimedPass && backed === head) note(`check: backs the contributor's passing check at ${head}; the stages it passed there are skipped`)
+      if (backedUnwritten(backed, head, pending) && !(await flush())) return false
       const again = rerunWhy ? ` The last check did not finish (${rerunWhy}); a check still running at this commit is rejoined.` : ''
       const from = settleBase(movedFrom, settleAt)
       settleAt = ''
