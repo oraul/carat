@@ -17,6 +17,7 @@ module DomainKeysTest
       ["sequence with named keys", ":w<CR>", [58, 119, 13]],
       ["escape", "<Esc>", [27]],
       ["case-insensitive name", "<esc>", [27]],
+      # Scenario: Control and Alt keys (the control and alt rows)
       ["control key", "<C-r>", [18]],
       ["control uppercase letter", "<C-R>", [18]],
       ["control bracket", "<C-[>", [27]],
@@ -38,6 +39,7 @@ module DomainKeysTest
       ["empty", "", []]
     ]) { |text| N.parse(text, " ").codes }
 
+    # Scenario: Malformed notation is an error
     bad = N.parse("<Nope>", " ")
     t.assert_equal(false, bad.ok?, "malformed notation is not ok")
     t.assert_equal("unknown key <Nope>", bad.error, "malformed notation names the key")
