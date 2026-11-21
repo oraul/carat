@@ -1,5 +1,0 @@
-### A project .caratrc can bind a key to a plugin's file action
-- Location: `carat/domain/config.rb` `binding?` (`PROJECT_REFUSED`, `COMMAND_LINE`); the explorer's file actions such as `plugin.explorer.delete` and `plugin.explorer.rename`.
-- Why: the project file may no longer bind a write, a quit, or a command-line action, but it may still bind a key, in a mode the plugin reads, to a plugin action that deletes, renames, or creates a file, so a key the user types can change files they did not choose; the domain cannot ask the plugin host which actions touch files.
-- Fix: let a plugin manifest mark an action as file-changing (a manifest flag the host reads), and have the plugin host refuse a project file's binding to a marked action, reported as the core refusals are, with a test per plugin action marked.
-None

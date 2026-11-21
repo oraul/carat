@@ -186,13 +186,6 @@ Known items to fix in later changes. A finding that a change does not fix, becau
 - Why it matters: Neovim shows such a byte as a four-cell `<xx>` marker, so two lines that differ only in an illegal byte look alike here, and the byte cannot be read from the screen.
 - Fix outline: decode an illegal byte to a code that keeps the byte (for example a private marker range), draw it as `<xx>` the way the C1 markers are drawn, measure it as four cells in `DecodedLine`, `DisplayWidth`, and the cursor placement, and add rows to `test/domain_utf8.rb` and `test/adapters_frame_presenter.rb`.
 
-## Options repeats its bounded-number and known-name checks
-
-- Where: `Options#apply` in `carat/domain/options.rb`: the `tabstop` and `shiftwidth` blocks (lines 107 to 120) and the `icons` and `theme` blocks (lines 125 to 136) are each the same check-then-set-or-note shape. Advisory of the periodic quality review at 389c118. At 38628bb `keyhints.delay` (line 156) repeated the shape too (periodic quality), and at 7711421 the `breadcrumbs` block (line 221, periodic quality); `layout-slots` shares `Options.range_problem` between it and the three slot sizes, leaving `tabstop`, `shiftwidth`, `icons`, and `theme`. Raised again at be4b63a (now six copies).
-- Why it matters: a third bounded option copies the block again, and a fix to one copy can miss the other.
-- Fix outline: one private helper that takes the line, the value, and the low bound and returns whether to set (or a `width_value?` check both call), and one for a name checked against a known set; the rows of `test/domain_options_config.rb` stay as they are.
-- Raised again as "Options#apply repeats one block four times": Where: `carat/domain/options.rb` line 172 (tabstop, shiftwidth, `keyhints.delay`, the layout sizes), at 31919d9. Periodic quality. Queue item: backlog items, `:set` checks. Why it matters: duplication: each branch computes a problem, assigns when empty, else notes it. Fix outline: one private helper taking the problem and the line, answering whether to assign.
-
 ## OpenFile asks the port about a path twice
 
 - Where: `OpenFile#call` in `carat/use_cases/files/open_file.rb` line 45, `@files.exist?(path)` and then `ProbePath` through `refusal`. Advisory of the periodic quality review at 389c118.
@@ -1811,6 +1804,14 @@ None
 - Where: `bin/carat-gen-config.rb` line 39 (the header written into `carat/domain/default_config.rb` line 2) and line 48, copied for the registry at line 57, at c1b3a12 (periodic quality). Queued in item 46, generators.
 - Why it matters: the header sends readers to a command CLAUDE.md forbids, and the write-only-when-changed block has two copies.
 - Fix outline: name make gen-config and regenerate; one write-if-changed helper for both targets.
+- Merged: ### gen-config repeats its write-if-changed block
+- Location: bin/carat-gen-config.rb:87 and :96 (sprint-4 sweep, quality advisory).
+- Why: the block is written twice.
+- Fix: one write_if_changed(path, text, summary).
+- Merged: ### Generated config headers tell the reader to run spin directly
+- Location: bin/carat-gen-config.rb:32; the headers of carat/domain/default_config.rb:2 and carat/plugins/registry.rb:2 (through carat/domain/registry_source.rb:57); docs/architecture.md:222. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
+- Why: `make gen-config` is the one documented way, with tools/noruby first on the PATH.
+- Fix outline: say make gen-config in both renderers and the architecture, then regenerate.
 
 ## The key decoder repeats the letter finals
 
@@ -2240,12 +2241,6 @@ None
 - Why it matters: the unexplained 2 already in the backlog lives in two places.
 - Fix outline: one domain helper for the cursor's screen row and the rows free below it, the 2 named.
 
-## A project .caratrc can bind a key to a write or quit
-
-- Where: keymap lines in `carat/domain/config.rb` line 213 at 847851d. Periodic security Low (4). Queue item `project-config-guards`. Raised again at bff9a02 (#96): project `.caratrc` binds keys to writing actions, periodic security Low (5) at `carat/domain/config.rb:211`.
-- Why it matters: a cloned project can turn an everyday keystroke into `quit.write_all` or `file.save`.
-- Fix outline: refuse project keymap lines whose action writes or quits, or read project bindings only under `language.trusted_roots`, with a `file:line` problem row.
-
 ## Creating a file follows a link that appears after the probe
 
 - Where: `carat/use_cases/files/make_path.rb` line 47 at 847851d: an existence probe, then `FilePort#write`. Periodic security Low (3). Queue item `file-access-tidy`.
@@ -2437,18 +2432,6 @@ None
 - Where: `DisplayWidth.bytes_within` in `carat/domain/display_width.rb` line 148, called only by `cut` and a test, at 6141633. Quality advisory of `palette-pad-crash`. Queue item: backlog items, needless public methods.
 - Why it matters: needless public surface, the same kind as the entry Seven more methods are public with no outside caller.
 - Fix outline: move the stray-byte rows of its test to `cut` and make `bytes_within` private to `DisplayWidth`.
-
-## A project .caratrc sets timeoutlen and undolevels without an upper bound
-
-- Where: `carat/domain/options.rb` line 187, at 5e4c140. Periodic security Low (4). Queue item `project-config-guards`.
-- Why it matters: a cloned project's `.caratrc` can set either to nine digits, so every pending key sequence waits about eleven days and undo states grow without limit.
-- Fix outline: bound both with `range_problem` as `keyhints.delay` is, or refuse them from the project file, with rows in `test/domain_options_config.rb`.
-
-## The project .caratrc is read by path after its link check
-
-- Where: `carat/adapters/rc_config_gateway.rb` line 59 (the stat refusing a link) and line 68 (the read by path), at 5e4c140. Periodic security Low (2). Queue item `project-config-guards`.
-- Why it matters: a link swapped in between the stat and the read is followed.
-- Fix outline: open once without following links and check the opened file, as `DiskFiles#read` checks regular files, with a case in `test/drivers_disk_files.rb`.
 
 ## The backlog has no byte budget
 
@@ -2936,6 +2919,10 @@ None
 - Where: `tools/spec_validate.sh` line 17 runs the unpinned `npx -y @fission-ai/openspec@latest`, Low (5), queued in `ci-hardening`; `JsonRpcLanguageGateway#path_of` (`carat/adapters/json_rpc_language_gateway.rb` line 789) keeps `.` and `..` segments, so `VisitTarget`'s lexical inside check passes a path only `ResolveInside` refuses, Low (4), queued in `bidi-controls`; `list_dir` and `read_file` in `carat/use_cases/plugins/file_requests.rb` (lines 47 and 72) take any path with no root, Low (3), queued in `file-access-tidy`.
 - Why it matters: a compromised npm release runs with push credentials; one file gets different titles and keys; a plugin joining an unchecked name reads outside the project.
 - Fix outline: pin the version in one `OPENSPEC_VERSION` variable used by CLAUDE.md, the Makefile, and the script; return `PluginApi::Paths.normalize(out)` from `path_of` with a `..` row; take a root and require `Paths.inside?` and `ResolveInside`, with rows.
+- Merged: ### Security Lows of the periodic review at 186ddfb
+- Location: the locations listed under this heading in the backlog; the queue line of review-trust-lows names tools/run_state.sh:201 and the sprint and delivery workflows
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
 
 ## Search and prompt findings of the periodic review at 186ddfb
 
@@ -3046,12 +3033,6 @@ None
 - Where, at 6cb3c55: the Windows row of `docs/compatibility.md` line 537, which credits `adapters_indent_guides` with the start screen showing no guide though no case draws the start screen; `docs/architecture.md` lines 113 and 257, which reword sentences the change does not touch (the Nerd Font glyph clause, reading the state, the two preallocated frames). Quality advisories in `indent-guides`.
 - Why it matters: a compatibility row naming a test that does not prove it hides a gap, and rewording unrelated sentences widens a change's scope and its review.
 - Fix outline: add a start-screen case to the guides table or drop the start screen from the row's claim; restore the untouched wording and keep only the additions that name `indentguides`, `IndentGuides`, and the guides in the row record.
-
-## A security review stays current after later instruction-file commits
-
-- Where: `tools/gates.sh:112` (`settled_at`). Periodic security Low (3) at ce6abdb; queue item `content-gate-gaps`. Raised again at 9a92265 (#99): the path list of `tools/gates.sh` line 112 is copied as `TEST_ONLY` in `tools/run_state.sh` line 201, so a fix must change both.
-- Why it matters: commits after the review that change `openspec/`, `docs/queue.md`, `docs/backlog.md`, or `docs/goals.md` keep the review current, though agents read those paths as instructions, so text added there reaches later agents unreviewed.
-- Fix outline: narrow the exemption to the archive move, the specs synced from the reviewed change, and `docs/metrics.tsv`, or have the reviewer re-read those paths; a `tools/tools_test.sh` case.
 
 ## The finder's open with no file window replaces the explorer's tree
 
@@ -3873,18 +3854,6 @@ None
 - Why it matters: an ls-remote failure in wait becomes empty refs, so a wait that never read origin ends with 'no pull request's head is', naming the wrong cause.
 - Fix outline: remember the failure and refuse with 'origin cannot be read' as push does.
 
-## pr-on-push security Low at tools/open_pr.sh:118
-
-- Where: `tools/open_pr.sh:118`. Delivery review of `pr-on-push` (security Low, confidence 4) at a2d4b6c.
-- Why it matters: wait records any pull request whose head equals the pushed sha (the largest number), so someone watching the repository could open a fork pull request at that sha before open-pr runs; the run would record it and the merger would squash it with their title as main's subject (the merged code is still the reviewed commit, because the merger passes the pushed sha as the expected head).
-- Fix outline: in wait, keep only pull requests whose head is in this repository and whose head branch is the delivery's branch (gh pr list --head BRANCH with headRefOid equal to the pushed sha and isCrossRepository false), or use the number open-pr reports.
-
-## pr-on-push security Low at .github/workflows/open-pr.yml:39
-
-- Where: `.github/workflows/open-pr.yml:39`. Delivery review of `pr-on-push` (security Low, confidence 3) at a2d4b6c.
-- Why it matters: the new PR_TOKEN (a token of the user's) is only as safe as the AI environment's deployment-branch rule, a repository setting outside the diff; without it any branch push could add a workflow naming environment: AI and read the token.
-- Fix outline: confirm the AI environment allows only main as its deployment branch, and make PR_TOKEN a fine-grained token scoped to this repository with only the pull-request permission it needs.
-
 ## pr-on-push quality advisory at tools/open_pr.sh:43
 
 - Where: `tools/open_pr.sh:43`. Delivery review of `pr-on-push` (quality advisory) at e873e89.
@@ -4438,12 +4407,6 @@ One clear way to do each thing: the boundary rule is applied by hand at seven `b
 - Why it matters: a new `byteindex(needle, offset)` call that skips `Utf8.boundary` raises under the pinned Spinel on a continuation byte, and only memory keeps the rule.
 - Fix outline: a `test/lint.rb` rule refusing a `byteindex` with an offset argument outside `Utf8.boundary`, the `plugin_api.rb` copy allowed. Queue item `spinel-workarounds`.
 
-### Restrict the open-pr edit path to same-repository pull requests (security Low, confidence 4)
-
-- Where: `tools/open_pr.sh:190`
-- Why it matters: the new edit path picks the open pull request by bare branch name, and `gh pr list --head` matches the ref name for any owner, so a fork's pull request with the same head ref name opened before open-pr runs gets pr.md's title and body written onto it with PR_TOKEN instead of the delivery's own being opened. It needs a trusted push and only changes pull request text; the reviewed code and the merge gates are unaffected.
-- Fix outline: have `gh pr list` return `number` and `isCrossRepository`, keep only same-repository pull requests (refuse when there are none or more than one), then call `gh pr view` and `gh pr edit` with that number instead of the branch name.
-
 ### One title and body equality helper in open_pr.sh (quality advisory)
 
 - Where: `tools/open_pr.sh:186`
@@ -4681,12 +4644,6 @@ The file's opening says each note holds at the pinned compiler, but the byteinde
 - Location: carat/use_cases/operate.rb:204, carat/use_cases/repeat_last.rb:116, carat/domain/editor_state.rb:97 (sprint-4 sweep, quality).
 - Why: two private clamps duplicate clamp_col.
 - Fix: call state.clamp_col and delete both.
-
-### gen-config repeats its write-if-changed block
-
-- Location: bin/carat-gen-config.rb:87 and :96 (sprint-4 sweep, quality advisory).
-- Why: the block is written twice.
-- Fix: one write_if_changed(path, text, summary).
 
 ### The development compile is copied in three targets
 
@@ -5108,12 +5065,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Location: carat/use_cases/handle_key.rb:253, the timeout comment at :166. Sprint-6 sweep, quality. Queue item `input-core-tidy`.
 - Why: when pending keys stop matching, or time out at a prefix, every pending key is dropped even when a shorter prefix is bound (with `a` bound beside `abc`, typing `abx` loses the `a` action), where Vim fires the longest bound prefix and replays the rest.
 - Fix outline: dispatch the longest bound prefix and push the remaining keys back on the queue, with a table test in test/editor_leader.rb.
-
-### Generated config headers tell the reader to run spin directly
-
-- Location: bin/carat-gen-config.rb:32; the headers of carat/domain/default_config.rb:2 and carat/plugins/registry.rb:2 (through carat/domain/registry_source.rb:57); docs/architecture.md:222. Sprint-6 sweep, quality. Queue item `tools-docs-tidy`.
-- Why: `make gen-config` is the one documented way, with tools/noruby first on the PATH.
-- Fix outline: say make gen-config in both renderers and the architecture, then regenerate.
 
 ### RcLine splits the key at a literal byte
 
@@ -5912,11 +5863,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: the benchmark still runs as its own phase, so the list misleads a reader of the agent; the fix did not fit the file's budget without a trim after the reviews
 - Fix: restore benchmark to the list, trimming six bytes elsewhere in the file
 
-
-### open-pr pins its actions by tag beside PR_TOKEN (security Low, confidence 6)
-- Location: .github/workflows/open-pr.yml:46
-- Why: actions/checkout and actions/cache are pinned by tag in the job that holds PR_TOKEN, so a moved tag would run foreign code beside the token
-- Fix: pin every action to a full commit sha with the tag in a comment
 
 ### Incremental sync misses a reload that only changes the line ending
 - Location: carat/adapters/json_rpc_language_gateway.rb:1356
@@ -8741,12 +8687,6 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Why: checkout keeps the default persist-credentials, leaving the read-only GITHUB_TOKEN in .git/config while later steps run the pull request's code (main.yml:34 likewise)
 - Fix: set persist-credentials: false, the scope step already gets GH_TOKEN through env
 
-### The project .caratrc is checked with lstat and then opened by path (sprint-20 sweep security Low (3), rc_config_gateway.rb:61)
-
-- Location: `carat/adapters/rc_config_gateway.rb:61`
-- Why: the project .caratrc is checked with lstat and then opened by path (DiskFiles#read follows links), so a link swapped in between escapes the link refusal
-- Fix: open untrusted files with O_NOFOLLOW and judge the opened descriptor's stat
-
 ### The normal-mode count has no upper bound (sprint-20 sweep quality, command_grammar.rb:98)
 
 - Location: `carat/domain/command_grammar.rb:98`
@@ -9563,12 +9503,6 @@ none
 - Why: Unicode format characters (bidi overrides U+202A-U+202E, isolates U+2066-U+2069, zero-width U+200B-U+200F, U+FEFF) in file text are painted raw as one-cell glyphs by FramePresenter#paint_text (carat/adapters/frame_presenter.rb:1103), so a crafted file can display differently from its content (Trojan Source) and shift columns
 - Fix: treat general category Cf as control in DisplayWidth.control?/code_cells and paint it as <u+xxxx> like the C1 controls, as Finder::Grep#safe already does for the picker
 
-### A project .caratrc can bind keys to the command line actions in any mode (sprint-22 sweep security Low (3))
-
-- Location: `carat/domain/config.rb:246`
-- Why: the project .caratrc may bind any key in any mode to any known action (Config#binding? and Keymap#bind_text check no mode), e.g. keymap.insert <Space> mode.cmdline or keymap.cmdline <Space> cmdline.execute, so text the user types in insert mode can become an ex command line the key-sequence refusal meant to keep out
-- Fix: refuse from an untrusted file bindings of mode.cmdline, cmdline.execute, and cmdline.history_* outside their documented modes, or check each action against its documented modes in docs/actions.md
-
 ### carat/use_cases/dispatcher.rb:114: duplication: re-derives the tab width as tabstop > 0 (sprint-22 sweep quality)
 
 - Location: `carat/use_cases/dispatcher.rb:114`
@@ -9665,12 +9599,6 @@ none
 - Location: `tools/ci_scope.sh:80`
 - Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
 - Fix: one call whose jq prints both, split with read
-
-### scroll, scrolloff, timeoutlen, and undolevels take any integer (sprint-22 sweep quality)
-
-- Location: `carat/domain/options.rb:274`
-- Why: scroll, scrolloff, timeoutlen (:276), and undolevels (:291) take any integer the kind check passes, while tabstop, shiftwidth, keyhints.delay, and the layout sizes are range-checked; a negative timeoutlen or scrolloff reaches the input controller and the view unchecked
-- Fix: give each a range_problem bound (undolevels allowing -1 as in Vim) with domain_options_config cases
 
 ### carat/use_cases/search/find_match.rb:140: duplication: blank? re-states the blank class Motions.code_class answers as (sprint-22 sweep quality)
 
@@ -10013,3 +9941,458 @@ None
 - Location: carat/use_cases/plugins/window_requests.rb:370 (`unlisted_float_tab`), :281 (`set_float_lines`), :308 (`style_float`).
 - Why: unlisted_float_tab resolves the float through float_in after own_float_tab already did, and both requests call float_in(index, id) again, three lookups per request; picker-styles-b's quality advisory (its run state note 2) raised the same copy.
 - Fix: one private helper returning the plugin's unlisted float or nil, used by both requests in place of unlisted_float_tab plus float_in, with the existing float tests unchanged.
+
+### PRUNE_ALL_SPRINT dead after the sprint-24 close at tools/run_state.sh:439
+
+- Location: tools/run_state.sh:439 (`PRUNE_ALL_SPRINT=sprint-24`, read by `backlog_oldest`), its case "run_state: backlog-oldest lists every entry at the close of PRUNE_ALL_SPRINT" in tools/tools_test.sh, and its mentions in the run_state.sh header and docs/codebase-map.md.
+- Why: the constant makes the sprint-24 close's scan whole, the user's one whole-backlog scan of 2026-11-20; once sprint-24 closes it never matches again, dead code beside `PRUNE_COUNT`.
+- Fix: after the sprint-24 close, remove `PRUNE_ALL_SPRINT`, its line in `backlog_oldest`, `sprint_next` when nothing else reads it, its test cases, and its header and code-map words.
+
+### A lane's check fails on another lane's write into the main checkout's build/metrics
+- Location: tools/run_state.sh escaped_paths and main_scan (about :1158), clone_drop (about :1282, the copy to the relative metrics_out), bench (build/metrics/last.tsv)
+- Why: groom-stale-prune's check at b46fe59 passed every stage, then failed as "stage none" because /home/user/carat/build/metrics/current.tsv changed at 19:13:45, the moment the feature lane's check runner (status-winbar-tabs-b) dropped its clone and wrote its carry, and last.tsv changed at 19:13:53; no stage of this lane wrote there (its own measurement went to the worktree's build/metrics at 19:20:15). A runner or bench whose working directory is the main checkout copies its figures into the main checkout's build/, and main_scan counts any such write against whichever lane's check is running, so two lanes at once can fail each other's check with a false escape.
+- Fix: make clone_drop and bench write metrics_out under the runner's own top (an absolute path from check_run's pwd, refused when it is the main checkout while the clone is a lane), and leave the main checkout's build/metrics out of main_scan or attribute it by the writing runner's pid file; add a tools-test case running two lanes' runners where one writes the main checkout's build/metrics and the other's check still passes.
+
+### The second groom-stale-prune finding lacks a blank line and names an absolute path
+
+- Location: docs/findings/groom-stale-prune.md:8, the second entry (reported by two quality review passes, unchanged between them).
+- Why: it has no blank line after its heading, unlike the first entry and the other findings files, and it names the absolute checkout path of build/metrics/current.tsv, which ties the note to one machine.
+- Fix: in the grooming that folds this file in, add the blank line after the heading and name the path relative to the main checkout (build/metrics/current.tsv).
+
+### Advisory-only rounds chain on their own fixes (status-winbar-tabs-b retro note 16)
+- Location: `.claude/workflows/deliver-change.js` (the rework loop), joining the queued backlog Pool 9 `closing-loop-fold`; `test/editor_tab_flows.rb` (the helper the advisories hit).
+- Why: every quality pass of status-winbar-tabs-b was blocking=0 (4 passes, 4+1+3+1 advisories) and every security pass found 0, yet two fix rounds and a closing start ran 3 more check and review chains; 6 of 9 advisories (notes 4 to 8, 14) were on the helper the previous advisory fix wrote; output 231,243 at the first check pass and 419,768 at the last, so 188,525 of 544,079 (34.7 percent) went to advisory-only rounds; rework 2 or more in 11 of the last 20 lane rows.
+- Fix: a run whose quality passes are all blocking=0 runs at most one fix-and-review chain after its first pass, and an advisory on code an advisory fix added is recorded, not fixed again; accepted when the next such run shows one chain.
+
+### The check reports main's commit, not the head (status-winbar-tabs-b retro note 17)
+- Location: the checker start in `.claude/workflows/deliver-change.js`, evidence for the queued backlog Pool 11 `check-at-head`.
+- Why: 2 of 6 check starts of status-winbar-tabs-b reported a pass at main's 3af2fc9099f3 instead of heads b5df62c55abd and 535eafb3312b, each needing a rerun; check 100,640 of 544,079 output (18.5 percent) on 18 calls, against 9,588 to 45,667 in the last five lane rows.
+- Fix: the check start reports and is judged by the head it ran at; accepted when no check start reports a commit other than the head over the next five runs and the check phase stays under 10 percent of output.
+
+### A head-form refusal restarts a start whose work is committed (status-winbar-tabs-b retro note 18, notes 12, 13)
+- Location: `.claude/workflows/deliver-change.js` (the head check and escalation of a closing start).
+- Why: a closing start whose commit 535eafb was already HEAD was refused for its head string's form, escalated, and restarted; the restart spent 18,885 output tokens on 13 calls and made 0 commits; 1 head-refused note across all run states.
+- Fix: when the committed work is at HEAD and only the reported head's form differs, take the head from git and neither escalate nor restart; accepted when no head-refused note appears over the next five runs.
+
+### A project .caratrc can bind a key to a plugin's file action
+- Location: `carat/domain/config.rb` `binding?` (`PROJECT_REFUSED`, `COMMAND_LINE`); the explorer's file actions such as `plugin.explorer.delete` and `plugin.explorer.rename`.
+- Why: the project file may no longer bind a write, a quit, or a command-line action, but it may still bind a key, in a mode the plugin reads, to a plugin action that deletes, renames, or creates a file, so a key the user types can change files they did not choose; the domain cannot ask the plugin host which actions touch files.
+- Fix: let a plugin manifest mark an action as file-changing (a manifest flag the host reads), and have the plugin host refuse a project file's binding to a marked action, reported as the core refusals are, with a test per plugin action marked.
+None
+
+### ci, main, and scan workflows pin their actions by tag
+- Location: `.github/workflows/ci.yml` (`actions/checkout@v4`, `actions/cache@v4`), `.github/workflows/main.yml` (the same), `.github/workflows/scan.yml` (`actions/checkout@v4`)
+- Why: review-trust-lows-b pinned only open-pr, the job holding PR_TOKEN; a moved tag still runs in the other jobs, which hold the cache and the scan's verdict, though no token beyond GITHUB_TOKEN.
+- Fix: pin each by the commit its tag names (`git ls-remote` of the action's repository), the tag in a comment, and extend the open-pr pin test of `tools/tools_test.sh` to every workflow.
+### A fork's pull request on the pushed commit still delays a first push's wait
+- Location: `tools/open_pr.sh` `wait` (the several-numbers refusal)
+- Why: git shows no head repository, so a fork that opens a pull request on the pushed commit before the run state records a number makes the wait refuse; the merger now refuses a fork's pull request, but the delivery stops until the number is set by hand.
+- Fix: have the open-pr workflow publish the number it opened or edited where git can read it (for example a check run name on the head the wait reads through the merger), or let the merger resolve the number from the branch with the GitHub read tool.
+### A merge-main carry keeps a review pass across a docs/goals.md commit (review-trust-lows quality, notes 1, 4)
+- Location: `tools/run_state.sh:3673` (moved_change filters only RECORDS_RE), `tools/run_state.sh:1561` and `:1563` (settled_round's inline copy of the filter); queued as backlog Pool 11 `moved-change-instructions`.
+- Why: #266 settled no pass across a docs/goals.md commit in reviewed_edits, but the merge-main carry still lets a review stand across a branch commit to an instruction record after the pass, the same stale-pass defect by another path; settled_round keeps its own copy of the outside_records filter #266 extracted.
+- Fix: count INSTRUCTION_RECORDS_RE paths as changed in moved_change (or refuse the carry when moved_names holds one) and use outside_records in settled_round, keeping the docs/sprints.tsv line; accepted when a tools-test case of a carried pass across a docs/goals.md commit fails before the fix.
+
+### Advisory-only rounds and the closing start re-offer recorded advisories (review-trust-lows retro notes 12, 13)
+- Location: `.claude/workflows/deliver-change.js` (the rework loop and the closing start); evidence for "### Advisory-only rounds chain on their own fixes (status-winbar-tabs-b retro note 16)", queued as backlog Pool 10 `closing-loop-fold`.
+- Why: both rework rounds of review-trust-lows came from 0-blocking quality passes at 0d96eeaaa041 and d6685eb87eca; output 168,806 at the first check pass, then 263,524 and 326,416 (157,610, 39 percent of 404,092), turning the medium budget from under to over; the INSTRUCTION_RECORDS_RE advisory was offered 3 times and plan_apply's 4 times; closing closed 0 of 6; across the last 20 history rows the closing phase ran in 9 and closed advisories in 3.
+- Fix: at most one fix round after the first check when no review blocks; an advisory already in the change's findings file reaches no later round or closing start; accepted when advisory-only runs show rework of 1 or less and no closing phase closes 0.
+
+### A plan's queues exceed the docs-lint queue budget at the package step (review-trust-lows retro note 14)
+- Location: `.claude/agents/planner.md` step 5 and `tools/docs_lint.sh:61` (QUEUE_BUDGET 17969); queued as backlog Pool 13 `queue-fit`.
+- Why: after plan-apply docs-lint failed with 18,149 lane-queue bytes against 17,969; the contributor trimmed the backlog queue in 88ae4ef and dropped a planner decision line; package took 27 calls, the most of the last 10 backlog rows (range 11 to 24).
+- Fix: the plan is checked against the budget with the other lane's current queue before it is returned; accepted when no package step trims a queue after plan-apply and package calls stay at or under 22.
+
+### A security review after a quality-only fix reads the whole branch again
+- Location: the locations listed under this heading in the backlog; the queue line of review-trust-lows names tools/run_state.sh:201 and the sprint and delivery workflows
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+
+### The review continuations run one after the other
+- Location: .claude/workflows/sprint-planning.js:185-195 (the security continuation inside its own branch)
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+
+### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))
+- Location: .claude/workflows/sprint-planning.js:105 (mergeSecurity, an exact string match)
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+
+### The sprint quality review gets no continuation at its cap (`sprint-1` review quality)
+- Location: .claude/workflows/sprint-planning.js:195 (one quality start)
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+
+### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
+- Location: tools/open_pr.sh:142-151 (several numbers on the pushed head refused)
+- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
+- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
+
+### plan-apply copies a planned goals.md after the security review
+- Location: tools/run_state.sh plan_apply (goals.md over docs/goals.md, in the package step)
+- Why: since review-trust-lows the push gate settles no pass across a docs/goals.md commit, so a planner-written goals.md applied in the package step makes the security pass stale and reviewed-edits names it; the planned goals change is then restored away instead of landing.
+- Fix: apply a planned goals.md in the implement step, where the reviews read it, or have plan-apply refuse it with a note that the goals change needs its own delivery.
+- Merged: ### plan-apply copies goals.md after the security review that reviewed-edits says to restore (`review-trust-lows` quality advisory)
+- Location: `tools/run_state.sh` `plan_apply` (about line 1960) against `reviewed_edits` (about line 2103)
+- Why: the package step runs `plan-apply`, which copies `build/plan/CHANGE/goals.md` over `docs/goals.md` after the security review, while `reviewed-edits` now tells the contributor to restore any `docs/goals.md` change since that review, so the two rules contradict and a planned goals edit cannot land through a package step.
+- Fix: have `plan-apply` leave `goals.md` and name it when a security pass is recorded (or apply it in the implement step, before the reviews), with a tools-test case.
+- Merged: ### plan-apply copies a planned goals.md after the security review that reviewed-edits then asks to restore (review-trust-lows quality advisory, raised three times)
+- Location: tools/run_state.sh:1970 plan_apply (also reported at :1960) and tools/run_state.sh:2112 reviewed_edits (also reported at :2103 and :2113)
+- Why: the package step's plan-apply copies build/plan/CHANGE/goals.md over docs/goals.md after the security review, which makes the pass stale, and reviewed-edits then tells the contributor to restore the file, so the two rules contradict.
+- Fix: have plan-apply leave docs/goals.md and name it when a security pass is recorded, or apply it in the implement step, with a tools-test case.
+
+### INSTRUCTION_RECORDS_RE is defined twice beside the rules file both scripts source (`review-trust-lows` quality advisory)
+- Location: `tools/gates.sh:117`, `tools/run_state.sh:465`, `tools/tools_test.sh` ("rules: the instruction records are the gates'"), `tools/rules.sh:69`
+- Why: the same pattern lives in two scripts that both source `tools/rules.sh`, held equal only by a test, so a later edit of one copy is a test failure rather than one edit; this change may not edit `tools/rules.sh`, the merge gate's own rules.
+- Fix: in a separate rules change landing first, alone, move `INSTRUCTION_RECORDS_RE` beside `RECORDS_RE` in `tools/rules.sh`, drop the two copies and the equality test.
+- Merged: ### INSTRUCTION_RECORDS_RE is defined twice and held equal by a test (review-trust-lows quality advisory, raised twice)
+- Location: tools/gates.sh:117 and tools/run_state.sh:465 (also reported at :466)
+- Why: both scripts source tools/rules.sh, yet each keeps its own copy of the line, held equal only by the tools-test case "rules: the instruction records are the gates'", so one rule has two homes.
+- Fix: in a separate tools/rules.sh change landing first and alone, move INSTRUCTION_RECORDS_RE beside RECORDS_RE in tools/rules.sh, drop both copies and the equality test.
+
+### moved_change carried reviews across a branch-side docs/goals.md edit (review-trust-lows security Low (6))
+- Location: tools/run_state.sh:3666 moved_change (reported at :3673, before the branch's moved_change fix)
+- Why: dropping every RECORDS_RE path, docs/goals.md included, from REVIEWED, CURRENT, and MOVED let a goals.md edit committed after the security pass and before merge-main go uncompared, so moved recorded the carry and the review was rewritten at the new head, where settled_at trivially passes, reopening the stale-pass path settled_at, settled_round, and reviewed_edits close.
+- Fix: moved_change now filters through outside_records (keeping INSTRUCTION_RECORDS_RE paths), with the tools-test case "run_state: moved reruns the reviews when an instruction record changed after the pass"; confirm at review that the case covers an edit after the review, then merge-main, then moved, expecting the refusal, and close this entry if it does.
+
+### groom folds none/None placeholder lines from findings files
+- Location: docs/backlog.md:922 (a stray None in the LIMIT-doubles entry), :9956 and :9962 (none and None after a doubled blank line); tools/run_state.sh groom
+- Why: the placeholder lines of syntax-tidy.md, contributor-tier-medium.md, and metrics-header-fix.md were folded verbatim into the backlog.
+- Fix: have groom skip a findings file holding only none or None and drop a trailing none or None line, with a tools-test case; remove the three lines in the next records change.
+
+### Removal of the byte basename heading dropped the gateway File.basename calls
+- Location: docs/backlog.md:230, the removed heading '## Three copies of the byte basename'; carat/adapters/json_rpc_language_gateway.rb (File.basename calls near :394, :408, :425)
+- Why: syntax-tidy left the gateway calls out of scope and they still stand, so the removal dropped that part of the entry.
+- Fix: re-add a short entry for the gateway's File.basename calls, or record why they need no change.
+
+### Two queue items do not cite the headings folded for them
+- Location: docs/queue-backlog.md:17 (groom-findings-refs, Pool 5) and :18 (records-bench-skip, Pool 6)
+- Why: the headings 'groom folds findings entries that still name the findings files it deletes (sprint-22-records retro note 4)' and 'A records-only change still runs the benchmark and rebuilds the lane (sprint-22-records retro note 3)' are not in their Backlog lists, so those deliveries are not handed them and leave them open.
+- Fix: add each heading to its item's Backlog list in the next plan.
+
+### The groom removed the Ruby nesting limit entry though the limits still stand
+- Location: docs/backlog.md:101 (the removed heading 'Ruby constructs nested deeper than the state encodes'); carat/plugins/ruby/line_state.rb:19 and :28-30
+- Why: line_state.rb still keeps MAX_HEREDOCS = 2, MAX_FRAMES = 2, MAX_TERMINATORS = 255 and its header still says a third frame or heredoc is dropped, so a still-open limit is dropped against none dropped.
+- Fix: re-add the entry narrowed to the third string frame, the third heredoc, and the 256th terminator, in the next records change.
+
+### The ascii gem and the ascii modified mark are both `*`
+- Location: carat/adapters/tab_bar.rb (ASCII_GEM) and the ascii `modified` icon in carat/domain/icons.rb
+- Why: under option.icons ascii a tab reads `* . a.txt * |` when it is both selected and modified, the two marks differing only by position, so the selection reads less clearly than with the unicode set.
+- Fix: choose another ascii gem (for example `>`) or an ascii modified mark such as `+`, with the tests of both rows, once the user picks the glyph.
+### The winbar has no direct unit test of its own
+- Location: test/editor_breadcrumbs.rb
+- Why: the winbar's groups and the no-name word are proved only through the whole editor rig; a frame-level test with a held SymbolRequest would pin the unnamed-buffer row and the ascii separator without a language server double.
+- Fix: add test/adapters_winbar.rb (make new-test) with a Window, a SymbolRequest holding names, and rows for the unnamed buffer, the ascii separator, and the accent group.
+### tab_boundary? takes a digit after a gem as a tab boundary
+- Location: test/editor_tab_flows.rb:147
+- Why: tab_boundary? accepts a digit after a gem as well as after a space, so a separator before a name such as "*1.txt" is now dropped, while the comment says only a trailing counter " N> " (space then digit) is meant.
+- Fix: accept the digit only when chars[i] == " ".
+### A split part may deliver no behavior (status-winbar-tabs retro note 6)
+- Location: `.claude/agents/planner.md` step 3 (the split rule); status-winbar-tabs (#262) run state notes.
+- Why: status-winbar-tabs was split by painter size and the status-bar part it kept already had the Facet look, so the run spent 182,285 output tokens and 136 tool calls on one constant move and tests (plan 21196/13, scout 41011/25), merged as a refactor with skip_specs.
+- Fix: every part a split delivers or queues names a frame row or test that fails at the split commit (applied by hand in the status-winbar-tabs-b plan); accepted when the next two split deliveries each change a row their acceptance names.
+
+### Contributor rule 10 is reported skipped and advisories follow (status-winbar-tabs retro note 7)
+- Location: `.claude/agents/contributor.md` rule 10 (re-read the diff with the quality-reviewer instructions).
+- Why: both editing starts of status-winbar-tabs reported rule 10 skipped; the quality review then raised 5 advisories at 8573c94c2735, all on added lines, costing rework round 1; quality first pass 126/218 (57.8 percent) against check 206/218 and security 210/218.
+- Fix: remove rule 10, or make it bind; accepted when the next five deliveries average no more advisories on contributor-added lines than now (removed) or under 1 (bound).
+
+### An advisory-only fix round reruns the full check (status-winbar-tabs retro note 8)
+- Location: `.claude/workflows/deliver-change.js` (the rework loop), joining the queued closing-loop-fold.
+- Why: 5 test-duplication advisories at 8573c94c2735 led to a second full check at d3d5af52bbae; check 45667/6 was 25.1 percent of 182,285 output tokens against syntax-tidy 4.6 and metrics-header-fix 5.6 percent, stages summing about 846 s.
+- Fix: on a run whose only rework is an advisory fix touching tests and snapshots, rerun only the stages those paths need; accepted when the check phase stays under 10 percent of output tokens on such a run.
+
+### The medium budget sits below one delivery's floor
+- Location: `docs/goals.md:23` (sizes), `docs/metrics-feature.tsv` total_tokens.
+- Why: the refactor-only status-winbar-tabs (#262) took 1,226,138 total tokens against medium's 1.2M, and every medium-estimated feature row of the last ten went over: message-styling 1,470,193, finder-match-strict 1,971,222, finder-grep-preview 2,075,638, background-detect 1,756,083, so the medium estimate does not separate one change from another.
+- Fix: the sprint planner's calibration weighs a medium budget from these rows (or a fixed per-delivery floor plus a per-part figure); accepted when the next six medium rows split about evenly over and under the budget.
+
+### A records change sends quality advisories to fix rounds it cannot close (sprint-23-records retro note 9)
+- Location: `.claude/workflows/deliver-change.js`, the records lane's quality and closing phases; joins the queued closing-loop-fold.
+- Why: sprint-23-records ran 2 rework rounds and 1 closing start and closed 0 of 7 advisories, the quality phase 12270 of 63840 output tokens (19.2 percent); sprint-21-records rework 2 with 4 left, sprint-20-records 3 left.
+- Fix: route a records change's advisories on groom output to its findings file without a fix round; accepted when the next three records runs show rework 0 from advisory-only rounds, no closing start, and quality under 8 percent of output, every advisory still recorded.
+
+### The benchmark runs on records changes with no carat file (sprint-23-records retro note 10)
+- Location: `.claude/workflows/deliver-change.js`, the bench phase; complements the queued records-bench-skip.
+- Why: 5144 of 63840 output tokens (8.1 percent) and 9 of 114 calls, allocations and rounds unchanged; sprint-22-records 5455/10 (11.6 percent), sprint-20-records 4548/5 (9.3 percent).
+- Fix: a records change with 0 files under `carat/` records the bench as carried with 0 calls and its pull request Testing line says so.
+
+### groom folds the none/None lines of findings files (sprint-23-records retro note 11)
+- Location: `tools/run_state.sh` groom's findings fold; `docs/backlog.md:922`, `:9956`, `:9962`; merge into the entry sprint-23-records recorded for its notes 1 and 4.
+- Why: 3 stray lines raised 2 of the run's 7 advisories and one of its 2 rework rounds.
+- Fix: accepted when a tools-test folds a findings file holding only none/None, or ending in such a line, without that line, and the next records run raises no placeholder advisory.
+### Queue edits after a security pass reach the next brief unreviewed (sprint-24 review security Low (3))
+
+- Location: `tools/gates.sh:117`, `tools/run_state.sh:466`
+- Why: INSTRUCTION_RECORDS_RE names only `docs/goals.md`, so a commit after the security pass that edits only a `docs/queue-*.md` line merges under the earlier review, and the line reaches the next contributor as instructions nobody reviewed.
+- Fix: add the lane queues' item lines to the instruction records, or re-review a queue-only diff with the scanner and a light review; a tools-test case fails before the fix.
+
+### Trailing whitespace marks stop at a tab (sprint-24 review and sweep quality)
+
+- Location: `carat/adapters/whitespace_marks.rb:86`
+- Why: the trailing run backs up over spaces only, while Neovim's drawline backs over spaces and tabs, so in `a  <Tab>` the two spaces get no trail mark; `docs/compatibility.md` and `test/adapters_whitespace_marks.rb` do not say so.
+- Fix: back over 9 and 32 while marking only spaces, with a table row, or list the difference in `docs/compatibility.md`.
+
+### Tab-flow tests guess gems and separators with about 60 lines of heuristics (sprint-24 review quality)
+
+- Location: `test/editor_tab_flows.rb:105`
+- Why: strip_tab_cells, counter_end, and tab_boundary? guess which painted cells are gems or separators so old rows still match, and need tests of their own.
+- Fix: assert the names and the tab count directly, or update the expected rows to the painted text.
+
+### The frame presenter's guide local packs the marks bit (sprint-24 review quality)
+
+- Location: `carat/adapters/frame_presenter.rb:872`, `:900`, `:907`, `:917`
+- Why: the local named guide now holds `(key * 2) + mark`, the repaint input passed to PaintedRows, so its name misleads.
+- Fix: rename it to `repaint_key` wherever it is passed.
+
+### named_history and named_since repeat the groom pathspec (sprint-24 review quality)
+
+- Location: `tools/run_state.sh:2999`, `:3013`, `:431`
+- Why: both hard-code the backlog, findings, and queue pathspec, which must agree for the rev-list to match the log, and the queue glob repeats queue_files.
+- Fix: build the pathspec once from queue_files and use it in both git calls.
+
+### toolchain-clean deletes every lane worktree under tmp (sprint-24 sweep quality)
+
+- Location: `Makefile:209`
+- Why: `rm -rf tmp` deletes the kept worktrees of stopped runs with their uncommitted work, the review and merge-gate worktrees, and the scout packs, leaves stale worktree records, and ignores the SPINEL_SRC and PREFIX overrides `docs/architecture.md` section 2 promises.
+- Fix: remove `$(SPINEL_SRC)` and `$(PREFIX)` only and correct the README row and the help line.
+
+### Six use cases restate Options#tab_width (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/dispatcher.rb:114`, `repeat_last.rb:105`, `arrange_view.rb:50`, `insert_tab.rb:25`, `leave_insert.rb:71`, `carat/adapters/frame_presenter.rb:241`
+- Why: `tabstop > 0 ? tabstop : 8` repeats the rule `Options#tab_width` (`carat/domain/options.rb:157`) names.
+- Fix: call `state.options.tab_width` in each.
+
+### metrics compare passes a strict base name the current run lacks (sprint-24 sweep quality)
+
+- Location: `tools/metrics.sh:104`
+- Why: compare walks only CURRENT's names, so an allocs or rounds name in BASE that the bench did not print passes, and an empty value counts as 0, though the usage says a value not measured fails.
+- Fix: fail in END for every unseen strict base name and treat an empty value as unmeasured.
+
+### ci_scope splits changed paths on whitespace and globs (sprint-24 sweep quality)
+
+- Location: `tools/ci_scope.sh:99`, `:123`
+- Why: `for path in $changed` splits on whitespace and expands globs without `set -f`, so a path is judged by its fragments.
+- Fix: read the names line by line with `while IFS= read -r path`.
+
+### HandleKey#step drops the queue dispatch returns (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/handle_key.rb:259`, `:290`
+- Why: dispatch's comment says the caller must assign the returned queue because appends on the pinned Spinel are lost, while step discards it and replay mutates in place.
+- Fix: settle one contract, timeout's path included, and make the comment match.
+
+### HandleKey clears the message twice and compares bare key codes (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/handle_key.rb:236`, `:391`
+- Why: the list-message path calls `state.clear_message` twice, and line 391 compares with bare 40 and 44.
+- Fix: clear once and name the `(` and `,` codes as constants.
+
+### KeyDecoder#ss3_key repeats csi_key's letter finals (sprint-24 sweep quality)
+
+- Location: `carat/adapters/key_decoder.rb:193`
+- Why: the ten letter finals are written twice.
+- Fix: csi_key handles 126 and delegates every other final to ss3_key.
+
+### The LSP command handlers take services positionally (sprint-24 sweep quality)
+
+- Location: `carat/adapters/editor_assembly.rb:502`
+- Why: LspStartCommandHandler.register and LspRestartCommandHandler.register take `@services` positionally while every other register call takes keywords.
+- Fix: a `services:` keyword in both.
+
+### ci" on empty quotes fails where Neovim enters insert (sprint-24 sweep quality)
+
+- Location: `carat/domain/text_objects.rb:356`
+- Why: `i"` on `""` returns nil, so `ci"` fails instead of entering insert mode between the quotes.
+- Fix: return the empty range at `q1 + 1`, with a row in `test/editor_text_objects.rb`.
+
+### Operate and RepeatLast restate EditorState#clamp_col (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/operate.rb:247`, `carat/use_cases/repeat_last.rb:117`, `carat/domain/editor_state.rb:100`
+- Why: two private clamp methods copy `clamp_col`, which ChangeFolds already calls.
+- Fix: call `state.clamp_col(row, col)` at the eight call sites and delete both.
+
+### The area 11 map lines omit the zR and zM names (sprint-24 sweep quality)
+
+- Location: `docs/codebase-map.md:395`, `:396`, `:397`, `:363`
+- Why: the Folds, ChangeFolds, FoldHandler, and Window lines omit open_all, close_all, next_fold_row, open_fold_row, folded?, zR, zM, fold.open_all, fold.close_all, and open_cursor_folds.
+- Fix: add the names to the four lines.
+
+### Operate#big? tests an operator every caller has (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/operate.rb:225`, `:61`, `:71`
+- Why: every caller reaches Operate with an operator, and call switches on `command.operator` beside the local it read.
+- Fix: drop the `empty?` test and use the local operator in the case.
+
+### PluginRouter#answer hands the prompt id uncopied (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/plugin_router.rb:81`, `:91`
+- Why: answer passes `ui.prompt_id` uncopied while follow_prompt copies it, against the strings-copied rule of the plugin boundary.
+- Fix: `id: id.dup`.
+
+### The plugin timeout is told by a literal message (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/file_requests.rb:144`, `carat/plugins/git_signs/plugin.rb:42`, `carat/plugin_api.rb:693`, `carat/drivers/process_runner.rb:30`
+- Why: "ran past 2 seconds" restates CAPTURE_SECONDS and GitSigns matches its suffix, so a changed deadline silently breaks both.
+- Fix: a PluginApi constant or a timed-out flag on TextResponse, derived from the one deadline.
+
+### The explorer keeps a deleted directory's expansions and marks (sprint-24 sweep quality)
+
+- Location: `carat/plugins/explorer/plugin.rb:444`
+- Why: finish_delete collapses only the deleted path, so a directory later made there reopens with its old subdirectories expanded.
+- Fix: a `Tree#forget(path)` dropping the path, every key under it, and its marks, with a test in `test/plugins_explorer.rb`.
+
+### Explorer Tree takes positional arguments (sprint-24 sweep quality)
+
+- Location: `carat/plugins/explorer/tree.rb:23`
+- Why: behavior classes take required keyword arguments.
+- Fix: `initialize(root:, show_hidden:, ignore:)` and update the callers.
+
+### The lint reads the library in four passes (sprint-24 sweep quality)
+
+- Location: `test/lint.rb:1343`, `:1487`, `:1496`, `:1525`
+- Why: each pass globs and reads every library file and repeats the default_config skip.
+- Fix: read the library once into a path-to-text table.
+
+### Comment lines left unwrapped in three files (sprint-24 sweep quality)
+
+- Location: `carat/adapters/tab_bar.rb:19`, `carat/use_cases/plugins/plugin_router.rb:60`, `carat/use_cases/plugins/file_requests.rb:28`
+- Why: unwrapped lines amid wrapped prose.
+- Fix: rewrap to the surrounding width.
+
+### The area 13 flow omits the guides and whitespace marks (sprint-24 sweep quality)
+
+- Location: `docs/codebase-map.md:471`
+- Why: the Flow sentence leaves out IndentGuides#paint and WhitespaceMarks#paint over each file row.
+- Fix: add both.
+
+### Every sweep leaves area 1 partial (sprint-24 sweep quality)
+
+- Location: `.claude/workflows/periodic-review.js:65`
+- Why: QUALITY_SLICES splits 18 areas by count, but area 1 (about 14,000 lines of shell) exceeds one 53-call start, so both starts cap (`review.periodic-quality` partial 17/18).
+- Fix: split area 1 in the map or slice by size.
+
+### docs_lint and the map say a backlog sprint holds 0 to 2 items (sprint-24 sweep quality)
+
+- Location: `tools/docs_lint.sh:23`, `docs/codebase-map.md:55`
+- Why: check_queue allows 3, as CLAUDE.md's three backlog changes ask.
+- Fix: say 0 to 3 in both.
+
+### The README names a PRUNE_COUNT all value that does not exist (sprint-24 sweep quality)
+
+- Location: `README.md:196`
+- Why: backlog_oldest has no such value.
+- Fix: drop the clause.
+
+### SPRINT_HEADER is never read (sprint-24 sweep quality)
+
+- Location: `tools/run_state.sh:571`
+- Why: dead since the sprints change.
+- Fix: delete it, or write it into an absent `docs/sprints.tsv`.
+
+### TAB is set and unused in two scripts (sprint-24 sweep quality)
+
+- Location: `tools/gates.sh:85`, `tools/docs_lint.sh:35`
+- Why: dead lines.
+- Fix: delete both.
+
+### The gates usage header misstates stages and pushes (sprint-24 sweep quality)
+
+- Location: `tools/gates.sh:44`, `:47`, `:385`
+- Why: stage_list reads FAST_STAGES first, and gate_pushes also allows the main-moved and pull request text pushes.
+- Fix: update both entries.
+
+### The gate_cases comment asks a case per script (sprint-24 sweep quality)
+
+- Location: `tools/gates.sh:351`
+- Why: the gate passes on one expect line for any number of changed scripts.
+- Fix: reword to the one-case rule, or check per script.
+
+### The map's gates entry omits the findings gate (sprint-24 sweep quality)
+
+- Location: `docs/codebase-map.md:49`
+- Why: gate_findings runs in static, pre-push, and merge.
+- Fix: add findings to the list.
+
+### ci_scope calls the same pulls endpoint twice (sprint-24 sweep quality)
+
+- Location: `tools/ci_scope.sh:80`
+- Why: one call for the head sha and one for the number.
+- Fix: one call whose jq prints both.
+
+### spec_validate hard-codes the OpenSpec version (sprint-24 sweep quality)
+
+- Location: `tools/spec_validate.sh:18`
+- Why: a copy of the Makefile's OPENSPEC_PACKAGE kept equal only by a tools case.
+- Fix: pass OPENSPEC_CMD from the target and drop the literal.
+
+### Generator TODO placeholders can reach a merge (sprint-24 sweep quality)
+
+- Location: `tools/new.sh:176`, `:231`
+- Why: the generators write TODO placeholders into `docs/actions.md`, `docs/codebase-map.md`, and Ruby, and no check refuses one.
+- Fix: a docs-lint or lint check failing on a left placeholder.
+
+### The map's run_state entry is one 10,700-character line (sprint-24 sweep quality)
+
+- Location: `docs/codebase-map.md:48`
+- Why: it restates the script header, so every area 1 reader pays for it and the 157 KB map outgrows a start.
+- Fix: list the command names and point to the header.
+
+### make bench leaves five scenarios unrun (sprint-24 sweep quality)
+
+- Location: `bench/run.sh:69`, `bench/keys.rb`
+- Why: the default list omits lh-float, lh-winbar, n, palette, and grep, though the help and the map say every scenario runs.
+- Fix: loop over the names `bench/keys.rb` defines.
+
+### PluginHost builds its own file use cases (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/plugin_host.rb:84`, `carat/adapters/editor_assembly.rb:469`
+- Why: a second ResolveInside, MakePath, RenamePath, DeletePath, and ListTree, against the one-instance rule the assembly test checks.
+- Fix: build them in the assembly and pass them as keywords.
+
+### GitSigns repeats its safe git prefix (sprint-24 sweep quality)
+
+- Location: `carat/plugins/git_signs/plugin.rb:43`
+- Why: BRANCH, COUNTS, and TEXT each spell the protocol and fsmonitor options.
+- Fix: one SAFE_GIT prefix constant.
+
+### PluginRouter#action respells the registry's refusal (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/plugin_router.rb:41`
+- Why: PluginRegistry#refusal already builds both messages.
+- Fix: return `Outcome.failure(@registry.refusal(plugin_name))` when it is not empty.
+
+### Two plugin requests copy the keymap error loop (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/window_requests.rb:101`, `carat/use_cases/plugins/ui_requests.rb:83`
+- Why: open_scratch and live_prompt repeat the loop recording each binding error.
+- Fix: one `PluginRegistry#record_bindings(name, keymap)`.
+
+### follow_prompt takes the state the host holds (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/plugin_host.rb:233`, `carat/use_cases/handle_key.rb:175`
+- Why: it re-checks prompt_live the caller checked, and the map's PluginHost list omits six methods.
+- Fix: drop the parameter and one check, and list the methods.
+
+### Testing.new takes a positional name (sprint-24 sweep quality)
+
+- Location: `carat/testing.rb:13`, `:4`, `test/lint.rb:1354`
+- Why: CLAUDE.md lists Carat::Testing among keyword-constructor classes, lint skips it, and its comment says spin diffs the output where `tools/run_tests.sh` does.
+- Fix: take `name:` or document the exemption, and correct the comment.
+
+### The trusted= comment says activation decides trust (sprint-24 sweep quality)
+
+- Location: `carat/use_cases/plugins/file_requests.rb:59`
+- Why: PluginHost#prepare_all decides it before any activation.
+- Fix: correct the comment.
+
+### bench/run.sh leaves its report in TMPDIR on an early exit (sprint-24 sweep quality)
+
+- Location: `bench/run.sh:22`
+- Why: the report is made before the binary check and removed only by per_key.
+- Fix: create it after the check and remove it from an EXIT trap.
+
+### MemoryFiles#write checks the unwritable path unnormalized (sprint-24 sweep quality)
+
+- Location: `carat/doubles/memory_files.rb:121`
+- Why: every other method normalizes with `key(path)`, so two spellings of one file behave differently.
+- Fix: compare normalized paths.
