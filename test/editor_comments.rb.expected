@@ -1,0 +1,44 @@
+ok   gcc comments the line
+ok   gc with a motion and a count
+ok   gc with a count after the operator
+ok   gcc with a count
+ok   gc with a text object
+ok   gcc never deletes text
+ok   gcc twice never deletes text
+ok   gcc on the last line
+ok   a count past the last line stops there
+ok   gc on a motion that fails does nothing
+ok   gc then another operator cancels
+ok   another g operator then c still cancels
+ok   Uncomment removes the marker and one space
+ok   A line of only the marker becomes empty
+ok   A mixed range is commented
+ok   Blank lines are untouched
+ok   Blank lines are untouched when uncommenting
+ok   The marker goes at the smallest indent
+ok   tabs of indent keep their place
+ok   trailing blanks are kept
+ok   a multi-byte line is commented and uncommented
+ok   a multi-byte line takes the marker before it
+ok   CRLF lines toggle as lines
+ok   a blank line alone stays as it is
+ok   an empty buffer stays empty
+ok   An unknown filetype uses the default marker
+ok   One undo restores the toggled lines
+ok   One undo restores the uncommented lines
+ok   Dot repeats the toggle
+ok   Dot repeats the count
+ok   Dot repeats a visual toggle
+ok   Visual gc
+ok   Visual line gc uncomments
+ok   Visual block gc toggles whole lines
+ok   visual gc upward puts the cursor on the first line
+ok   dgc deletes the comment block
+ok   dgc off a comment does nothing
+ok   a blank line ends the comment block
+ok   gcgc uncomments the comment block
+ok   ygc yanks the comment block
+ok   a toggle of blank lines does not modify the buffer
+ok   gcc in insert mode is text
+ok   the marker is the filetype's row, # by default
+editor_comments: 43 passed, 0 failed

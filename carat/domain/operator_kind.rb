@@ -15,6 +15,7 @@ module Carat
       SWAP_CASE = "operator.swap_case"
       LOWERCASE = "operator.lowercase"
       UPPERCASE = "operator.uppercase"
+      COMMENT = "operator.comment"
       FOLD = "fold.create"
     end
   end
