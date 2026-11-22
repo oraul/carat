@@ -23,6 +23,21 @@ ok   Enter with no match keeps the finder open
 ok   Enter with no match on a wide screen still shows no preview
 ok   typing after Enter with no match filters again
 ok   A narrow screen shows no preview
+ok   Space f b lists the open buffers
+ok   The buffer picker filters and opens the pick: typing filters
+ok   the buffer picker previews on a wide screen
+ok   Unnamed buffers are not listed
+ok   A deleted buffer leaves the buffer picker
+ok   Space f r lists the recent files most recent first
+ok   A file shown again moves to the top
+ok   A deleted buffer stays recent
+ok   the recent files filter
+ok   Space f R resumes the file finder after Esc
+ok   Space f R resumes the file finder after Esc on an empty prompt
+ok   Space f R resumes after a pick
+ok   Space f R resumes after a split pick, the text typed kept
+ok   The resumed highlight is clamped
+ok   Nothing to resume
 ok   Typing keeps the list float: one float, the one the finder opened with
 ok   the kept list float shows each key's title
 ok   Moving the highlight keeps both floats
@@ -40,6 +55,10 @@ ok   The query is kept for a correction
 ok   Esc after Enter with no match closes the finder
 ok   Esc opens nothing
 ok   the finder opens again after a pick
+ok   The buffer picker filters and opens the pick
+ok   the buffer picker opens its pick in a vertical split
+ok   A deleted buffer stays recent: Enter opens it again
+ok   Esc closes the recent files picker
 ok   Ctrl-T opens it in a tab page
 ok   Ctrl-T opens a buffer tab: the file before it stays listed
 ok   Ignored directories are not listed
@@ -55,4 +74,9 @@ ok   the configuration removes the Ctrl-P binding
 ok   and Space f f still opens the finder
 ok   The finder boxes share an edge: the list from column 1, the preview from the column after it to one before the right edge
 ok   The finder boxes share an edge without a border: the host's frame closes the gap
-editor_finder: 57 passed, 0 failed
+ok   Space f R resumes the grep picker: the prompt keeps b and the matching line of lib/beta.rb is listed
+ok   The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under carat-dark
+ok   The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under carat-light
+ok   The buffer picker's rows in both themes: the same rows, the title on the top edge
+ok   The recent files picker's rows in ASCII: + and - on the edges, | at the sides
+editor_finder: 81 passed, 0 failed
