@@ -99,3 +99,11 @@
 - Fix: drop the clause.
 - Category: design
 - Added: 2026-11-21
+
+### the commands table omits make pack, clean, spinel-rev, and at README.md:21 (sprint-26 sweep quality, note 48)
+
+- Location: README.md:21
+- Why: the commands table omits make pack, clean, spinel-rev, and help, while the rule of map area 1 gives every command a target, a Commands line, and a README line
+- Fix: add the four rows
+- Category: design
+- Added: 2026-11-22

@@ -479,3 +479,11 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Fix: re-add a short entry for the gateway's File.basename calls, or record why they need no change.
 - Category: ide
 - Added: 2026-11-21
+
+### one adapter of 1539 lines and about 110 methods at carat/adapters/json_rpc_language_gateway.rb:1 (sprint-26 sweep quality, note 34)
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1
+- Why: one adapter of 1539 lines and about 110 methods holds the server lifecycle, document sync, diagnostics, and five request kinds, each with its own near-identical send, cancel, and answer trio (cancel :628, cancel_resolve :699, cancel_definition :753, cancel_hover :900, cancel_symbols :980, cancel_signature :1033)
+- Fix: move each request kind into its own adapter collaborator sharing request, cancel_request, and running_server through a small session object built in EditorAssembly
+- Category: ide
+- Added: 2026-11-22

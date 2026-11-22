@@ -55,3 +55,12 @@
 - Fix: split area 1 in the map or slice by size.
 - Category: pipeline
 - Added: 2026-11-21
+
+### areaSlices gives map area 1 (about 18,000 lines: run_state.sh at .claude/workflows/periodic-review.js:70 (sprint-26 sweep quality, note 49)
+
+- Location: .claude/workflows/periodic-review.js:70
+- Why: areaSlices gives map area 1 (about 18,000 lines: run_state.sh 4,269, tools_test.sh 6,145, deliver-change.js 1,961, agent_guard.sh 1,161) the same share as every other area, more than one 53-call start can read, so the sweep of area 1 stays partial after its continuation
+- Fix: split area 1 in docs/codebase-map.md (CI and gates, the run state, the guard and the workflows) or weight the slices by size
+- Also: docs/codebase-map.md
+- Category: pipeline
+- Added: 2026-11-22

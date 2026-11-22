@@ -8,3 +8,12 @@
 - Also: carat/use_cases/insert_tab.rb, carat/use_cases/repeat_last.rb, carat/use_cases/arrange_view.rb, carat/use_cases/dispatcher.rb, carat/use_cases/visual/extend_visual.rb, carat/adapters/frame_presenter.rb, carat/domain/operators.rb, carat/domain/display_width.rb, carat/domain/options.rb
 - Category: editor
 - Added: 2026-11-09
+
+### duplication: tabstop > 0 ? tabstop : 8 is at carat/use_cases/leave_insert.rb:71 (sprint-26 sweep quality, note 23)
+
+- Location: carat/use_cases/leave_insert.rb:71
+- Why: duplication: tabstop > 0 ? tabstop : 8 is re-implemented here and in carat/use_cases/repeat_last.rb:105, carat/use_cases/insert_tab.rb:25, carat/use_cases/arrange_view.rb:50 (also dispatcher.rb:114, frame_presenter.rb:243) though Options#tab_width holds the rule
+- Fix: use state.options.tab_width everywhere
+- Also: carat/use_cases/repeat_last.rb, carat/use_cases/insert_tab.rb, carat/use_cases/arrange_view.rb
+- Category: editor
+- Added: 2026-11-22

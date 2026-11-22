@@ -46,3 +46,11 @@
 - Also: test/drivers_ansi_terminal.rb
 - Category: editor
 - Added: 2026-11-20
+
+### a read that times out with no held reply at carat/drivers/ansi_terminal.rb:83 (sprint-26 sweep quality, note 51)
+
+- Location: carat/drivers/ansi_terminal.rb:83
+- Why: a read that times out with no held reply leaves @awaiting true, so against a terminal that never answers OSC 11 every read for the whole session still scans for and strips \e]11; from the keys (a paste or key sequence starting with it would be eaten as a reply)
+- Fix: end the awaiting at the first timeout or after a fixed bound of reads or seconds, with a driver test of a terminal that never answers
+- Category: editor
+- Added: 2026-11-22

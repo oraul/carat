@@ -161,3 +161,20 @@
 - Fix: one private parse_keys(keys, leader) returning the codes or the problem
 - Category: editor
 - Added: 2026-11-20
+
+### needless wrapper: Keymap.leader_from now only returns config.leader after the at carat/domain/keymap.rb:61 (sprint-26 review quality, note 10)
+
+- Location: carat/domain/keymap.rb:61
+- Why: needless wrapper: Keymap.leader_from now only returns config.leader after the leader logic moved to Config
+- Fix: have the callers (keymap.rb:73 and 126, carat/adapters/editor_assembly.rb:351, test/adapters_assembly.rb, test/adapters_config_gateway.rb, test/config_sync.rb) call config.leader and drop the wrapper
+- Also: carat/adapters/editor_assembly.rb, test/adapters_assembly.rb, test/adapters_config_gateway.rb, test/config_sync.rb
+- Category: editor
+- Added: 2026-11-22
+
+### Keymap.leader_from is now a one-line pass-through to Config#leader (since at carat/domain/keymap.rb:61 (sprint-26 sweep quality, note 2)
+
+- Location: carat/domain/keymap.rb:61
+- Why: Keymap.leader_from is now a one-line pass-through to Config#leader (since config-guards-b), kept only for keymap.rb:73 and :126, editor_assembly.rb:351, and four tests
+- Fix: call config.leader at those sites, remove leader_from, and update the keymap.rb line of the map
+- Category: editor
+- Added: 2026-11-22

@@ -211,3 +211,19 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Fix: clear once and name the `(` and `,` codes as constants.
 - Category: editor
 - Added: 2026-11-21
+
+### step clears the message inside the list_message? branch and at carat/use_cases/handle_key.rb:253 (sprint-26 sweep quality, note 5)
+
+- Location: carat/use_cases/handle_key.rb:253
+- Why: step clears the message inside the list_message? branch and again on the next line, so the inner clear_message is dead
+- Fix: drop the inner call and keep the early return
+- Category: editor
+- Added: 2026-11-22
+
+### the signature triggers are the bare code points 40 at carat/use_cases/handle_key.rb:407 (sprint-26 sweep quality, note 6)
+
+- Location: carat/use_cases/handle_key.rb:407
+- Why: the signature triggers are the bare code points 40 and 44, and options.rb:234, :495, :504 scan listchars for bare 44 and 58, where Key names CR and SPACE and RcParser names NEWLINE
+- Fix: name the bytes (OPEN_PAREN, COMMA, COLON) beside the existing constants
+- Category: editor
+- Added: 2026-11-22

@@ -78,3 +78,11 @@
 - Fix: create it after the check and remove it from an EXIT trap.
 - Category: code-quality
 - Added: 2026-11-21
+
+### the default scenario list omits lh-float, lh-winbar, n, palette at bench/run.sh:69 (sprint-26 sweep quality, note 31)
+
+- Location: bench/run.sh:69
+- Why: the default scenario list omits lh-float, lh-winbar, n, palette, cmdline-tab, and grep, though its usage at :13 and make bench's help say every scenario runs when none is named, so make bench silently skips the float, winbar, and grep scenarios the map's areas 13 and 15 name
+- Fix: have bench/keys print its SCENARIOS names and use them as the default, or add the six names
+- Category: code-quality
+- Added: 2026-11-22

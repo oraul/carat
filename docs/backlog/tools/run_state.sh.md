@@ -1477,3 +1477,27 @@ none
 - Why: `backlog_move` and its tools-test cases remain with nothing left to move since docs/backlog.md was removed, and RECORDS_RE and its comment still name docs/backlog.md.
 - Fix: remove backlog-move with its tests and map text; drop the docs/backlog.md alternative from RECORDS_RE in the next rules.sh edit, alone, keeping docs_lint's RETIRED entry; accepted when tools-test passes and `grep -c backlog_move tools/run_state.sh` prints 0.
 - Category: pipeline
+
+### In this sprint's diff (contributor-self-check). The checker now skips at tools/run_state.sh:1077 (sprint-26 review security Low (3), note 3)
+
+- Location: tools/run_state.sh:1077
+- Why: In this sprint's diff (contributor-self-check). The checker now skips the stages that the contributor's own check passed at HEAD. Those stage records are written by the run_state.sh copy in the contributor's working tree. The contributor can edit that copy and run it before restoring it, so the waiter writes 'passed' records at a committed HEAD whose diff is reported as touching no machinery. The design documents and limits this: CI reruns every fast stage except diagnose and gates, the merge gates rerun gates, and the checker reruns diagnose (RERUN_STAGES). The remaining exposure is that local-only results can be faked until CI runs; no unchecked merge path was found.
+- Fix: No change needed for merge safety. To close the local gap, start the runner from the main checkout's copy of tools/run_state.sh at origin/main, or from a copy of HEAD's blob (git show HEAD:tools/run_state.sh), instead of the working tree's file, so an uncommitted edit cannot write records.
+- Category: security
+- Added: 2026-11-22
+
+### duplication: backed_commit and check_stages (1082) each read phase.check and at tools/run_state.sh:681 (sprint-26 review quality, note 11)
+
+- Location: tools/run_state.sh:681
+- Why: duplication: backed_commit and check_stages (1082) each read phase.check and convert it to its twelve-digit form with the same two lines
+- Fix: one helper, for example recorded_check, used by both
+- Category: pipeline
+- Added: 2026-11-22
+
+### the runner refuses a dirty tracked tree with its at tools/run_state.sh:1204 (sprint-26 sweep quality, note 13)
+
+- Location: tools/run_state.sh:1204
+- Why: the runner refuses a dirty tracked tree with its own copy of check_wait refusal (run_state.sh:1557), and the verdict line check: stage none failed at HEAD; read LOG is written at five places (1119, 1146, 1206, 1456, 1514), while check_verdict matches the verdict forms by pattern
+- Fix: one dirty_tracked helper and one function that writes the failed verdict, beside check_verdict
+- Category: pipeline
+- Added: 2026-11-22

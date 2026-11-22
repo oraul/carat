@@ -79,3 +79,11 @@ Location: `carat/adapters/input_controller.rb:62` (constructor takes `show_compl
 - Fix: dismiss when showing, then return handle(...) || dismissed
 - Category: editor
 - Added: 2026-11-20
+
+### pump calls handle(state, @decoder.feed(bytes)) in the start-screen branch and at carat/adapters/input_controller.rb:135 (sprint-26 sweep quality, note 14)
+
+- Location: carat/adapters/input_controller.rb:135
+- Why: pump calls handle(state, @decoder.feed(bytes)) in the start-screen branch and again after it
+- Fix: dismiss the start screen when it shows, then one handle call, returning true when it was dismissed
+- Category: editor
+- Added: 2026-11-22

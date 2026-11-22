@@ -56,3 +56,11 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Fix: a `services:` keyword in both.
 - Category: editor
 - Added: 2026-11-21
+
+### Domain::Options.shipped parses the embedded defaults a second time at at carat/adapters/editor_assembly.rb:509 (sprint-26 sweep quality, note 10)
+
+- Location: carat/adapters/editor_assembly.rb:509
+- Why: Domain::Options.shipped parses the embedded defaults a second time at startup, built inline rather than kept in a reader, and lines 515-516 hand services to LspStartCommandHandler and LspRestartCommandHandler positionally where every other register takes keywords
+- Fix: build the shipped options once into a reader, and take services: as a keyword
+- Category: editor
+- Added: 2026-11-22

@@ -121,3 +121,11 @@
 - Also: carat/use_cases/plugins/ui_requests.rb
 - Category: plugins
 - Added: 2026-11-21
+
+### own_float_tab repeats float_in's lookup (floats.at(floats.index_of(window_or_current(id)))) at carat/use_cases/plugins/window_requests.rb:379 (sprint-26 sweep quality, note 53)
+
+- Location: carat/use_cases/plugins/window_requests.rb:379
+- Why: own_float_tab repeats float_in's lookup (floats.at(floats.index_of(window_or_current(id))))
+- Fix: return float_in(index, id).window.buffer.owner == name ? index : -1
+- Category: plugins
+- Added: 2026-11-22

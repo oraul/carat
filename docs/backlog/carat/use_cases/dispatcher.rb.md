@@ -74,3 +74,11 @@
 - Also: carat/adapters/frame_presenter.rb, carat/domain/options.rb
 - Category: editor
 - Added: 2026-11-21
+
+### the tab-width rule tabstop > 0 ? tabstop  at carat/use_cases/dispatcher.rb:114 (sprint-26 sweep quality, note 4)
+
+- Location: carat/use_cases/dispatcher.rb:114
+- Why: the tab-width rule tabstop > 0 ? tabstop : 8 is repeated instead of Options#tab_width, also in repeat_last.rb:105, leave_insert.rb:71, insert_tab.rb:25, arrange_view.rb:50, and frame_presenter.rb:243 (operators.rb:172, :320, :341 and display_width.rb:57 repeat it over plain integers)
+- Fix: call state.options.tab_width wherever an Options is at hand, and one helper for the integer form
+- Category: editor
+- Added: 2026-11-22

@@ -9,11 +9,17 @@
 - Category: editor
 - Added: 2026-11-05
 
-## Two shipped options are accepted and dropped, and Config settings are untyped
-
-- Where: `carat/domain/options.rb:78` (`option.wrap`, `option.clipboard`, set at `config/default.caratrc` lines 23 and 26); `carat/domain/config.rb:27`. Periodic quality at ce6abdb; queue item `project-config-guards`, the type in the batches.
-- Why it matters: a user's value for either option is dropped with no note; `settings` is `Array[untyped]` though it holds only `RcLine` values.
-- Fix outline: note both as not implemented in `apply` or drop them from `KINDS` and the shipped file, with a `test/domain_options_config.rb` row; type `settings` as `Array[RcLine]` or state the compiler's reason.
-- Also: config/default.caratrc, carat/domain/config.rb, test/domain_options_config.rb
+### wrap and clipboard are still accepted and dropped by the configuration
+- Location: carat/domain/options.rb (KINDS, assign), the queue entry's backlog heading "Two shipped options are accepted and dropped, and Config settings are untyped"
+- Why: set-options split apply into problem and assign but left wrap and clipboard as kinds with no member, so a line setting them is checked and dropped silently, and :set answers E518 for them; the heading's problem is unchanged.
+- Fix: either drop the two names from KINDS (a line then reports unknown option) or give them members when a change reads them; config-guards-b in the backlog lane names them.
 - Category: editor
-- Added: 2026-11-10
+- Added: 2026-11-22
+
+### KINDS, problem, assign, and value_of are four parallel lists at carat/domain/options.rb:98 (sprint-26 sweep quality, note 7)
+
+- Location: carat/domain/options.rb:98
+- Why: KINDS, problem, assign, and value_of are four parallel lists keyed by option name, so a new option needs four edits that nothing checks against each other (a member missing from value_of answers an empty value to :set)
+- Fix: a test that every KINDS name that is a member round-trips through assign and value_of, and rewrap the class comment, whose line 17 breaks mid-paragraph
+- Category: editor
+- Added: 2026-11-22

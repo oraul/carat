@@ -1,23 +1,9 @@
 # Backlog: .claude/agents/quality-reviewer.md
 
-### The skeptic's disputed-note command double-quotes the finding text (`sprint-security` security Low (4))
-- Location: .claude/agents/quality-reviewer.md:41
-- Why: the skeptic is told to record a disputed security finding as a double-quoted shell argument, so `$(...)` or backticks in the finding text, which can echo attacker-controlled diff content, would be expanded when the skeptic runs the note command; the shape existed before, and sprint-security narrows it to disputed findings only.
-- Fix: have the skeptic single-quote the note text (escape ' as '\'' and turn control characters into spaces), as the workflow's shellWord does, or have the workflow build the disputed-note commands itself from a structured disputed list in the skeptic's result.
-- Category: security
-- Added: 2026-11-17
-
 ### A security finding both reviewers missed may go unrecorded (`sprint-security` quality advisory)
 - Location: .claude/agents/quality-reviewer.md:41
 - Why: "Record what both missed the same way" now follows the disputed-only form, so a security finding both missed may be noted with a disputed: prefix or not at all.
 - Fix: say a missed finding is noted as note CHANGE security "FINDING" (quality as in Periodic mode step 4).
-- Category: security
-- Added: 2026-11-17
-
-### The skeptic records a disputed security finding as a double-quoted shell argument (sprint-13 security Low (4))
-- Location: .claude/agents/quality-reviewer.md:41 (sprint-security).
-- Why: $(...) or backticks in the finding text, which can echo diff content, expand when the skeptic runs the note command; the workflow's own Notes step single-quotes with shellWord, this path does not.
-- Fix: the skeptic returns a structured disputed list and the workflow builds the note commands with shellWord; accepted when a tools-test finding holding $(...) is recorded literally. Queue item `sprint-security-b`.
 - Category: security
 - Added: 2026-11-17
 
@@ -84,3 +70,11 @@
 - Why: since review-in-openspec no delivery starts the quality reviewer for a fix round, yet its steps describe fix rounds, the scope command, fixed_in_place, and the quality-blocking and quality-advisory notes; `fix_scope` (`run_state.sh scope`) is reached only by `tools/tools_test.sh`.
 - Fix: trim the agent file to its sprint, periodic, skeptic, pull request text, and self-review uses; remove `scope` with its tests and its codebase-map mention; accepted when tools-test passes and no workflow names `scope`.
 - Category: pipeline
+
+### The periodic quality reviewer records its notes as double-quoted shell arguments
+- Location: `.claude/agents/quality-reviewer.md` Periodic mode step 4 (`sh tools/run_state.sh note <change> quality "<file>:<line> ..."`), run by `.claude/workflows/periodic-review.js`
+- Why: a finding that quotes reviewed code holding `$(...)` or a backquote expands when the reviewer runs its own note command, the exposure pipeline-lows-a closed for the sprint skeptic (security Low class, found by its quality step).
+- Fix: have the periodic quality reviewer return its findings only and let periodic-review.js record each with a `shellWord`-quoted note command, as sprint-planning.js `skepticNotes` does, with a tools-test case recording a finding holding `$(...)` literally.
+- Also: tools/run_state.sh, .claude/workflows/periodic-review.js
+- Category: security
+- Added: 2026-11-22

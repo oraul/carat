@@ -42,3 +42,12 @@
 - Also: carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
 - Category: editor
 - Added: 2026-11-20
+
+### drift: the comment says every file is pulled in at carat.rb:2 (sprint-26 sweep quality, note 41)
+
+- Location: carat.rb:2
+- Why: drift: the comment says every file is pulled in here once and CLAUDE.md calls carat.rb the production require graph, but six production files are not named: carat/domain/border_style.rb, carat/domain/folds.rb, carat/adapters/indent_guides.rb, carat/adapters/whitespace_marks.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb, reached only through other files
+- Fix: add each in its layer block, or reword the comment
+- Also: CLAUDE.md, carat/domain/border_style.rb, carat/domain/folds.rb, carat/adapters/indent_guides.rb, carat/adapters/whitespace_marks.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
+- Category: editor
+- Added: 2026-11-22

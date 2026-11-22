@@ -31,3 +31,11 @@ The header (line 3) says open notes are rechecked when the pin is bumped, but th
 The file's opening says each note holds at the pinned compiler, but the byteindex IndexError rule now describes 84aa303b1, after the pin 6af548c9, with no recheck marker like the other notes about other commits. Why: a reader takes it as true at the pin, which it is not. Fix: mark it as not at the pin and rechecked when a bump passes 84aa303b1, the reason Utf8.boundary is kept.
 - Category: design
 - Added: 2026-11-14
+
+### Spinel now enforces private_constant, so its backlog entry is fixed by the pin
+- Location: docs/spinel-notes.md, Known miscompilations (the `private_constant` note); the backlog entry "Spinel compiles private_constant without enforcing it"
+- Why: since Spinel ae6a3602, in the pin from 2f6c2486, a read of a private constant from another class raises `NameError`, as CRuby's does (a reduced probe read it at 0d1a7ca3 and raised at 2f6c2486), so the backlog entry describes a defect the pin no longer has; the `lint` rule stays because carat's layering asks for it whatever the compiler does, so no workaround code is to be dropped.
+- Fix: the planner's grooming closes the backlog entry as fixed, citing this change; nothing in carat's code changes.
+none
+- Category: design
+- Added: 2026-11-22

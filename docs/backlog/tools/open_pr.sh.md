@@ -149,3 +149,11 @@
 - Fix: as that entry; accepted when pr-text-blocked appears in at most 1 of the next 6 runs.
 - Category: pipeline
 - Added: 2026-11-21
+
+### WAIT_STEP is matched by [0-9]{1,3}, so 0 is accepted at tools/open_pr.sh:138 (sprint-26 sweep quality, note 44)
+
+- Location: tools/open_pr.sh:138
+- Why: WAIT_STEP is matched by [0-9]{1,3}, so 0 is accepted and wait never advances waited, polling ls-remote past SECONDS forever
+- Fix: match [1-9][0-9]{0,2}
+- Category: pipeline
+- Added: 2026-11-22

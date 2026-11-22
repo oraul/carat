@@ -447,21 +447,6 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### checks-and-pr-lows security Low (5): a planted held-finding note is relabeled as a merged-stamped late finding
-- Location: .claude/workflows/deliver-change.js:471
-- Why: branch code a check runs can call `sh tools/run_state.sh note CHANGE held-finding TEXT`, since add_note accepts any lowercase kind before the merge; on a resume seed reads it back through heldFindings and the merged close records it with `note late-finding`, stamped with the real squash commit, so it passes the history stamp check and lands in docs/findings/CHANGE.md, bypassing the provenance stamp; the text stays within noteText and 400 characters, and a planted quality-advisory reaches the findings file the same way (design.md, Risks, records this tradeoff).
-- Fix: keep held findings where branch code cannot write them, for example notes carrying a token the workflow holds (the reviewed HEAD plus a per-start nonce) checked by heldFindings, or add_note refusing held-finding outside the close profile; at minimum have heldFindings keep only texts shaped like a recorded security Low or quality-advisory note.
-- Also: tools/run_state.sh
-- Category: security
-- Added: 2026-11-17
-
-### checks-and-pr-lows security Low (4): unpushed-finding notes accepted from any run-state writer before the merge
-- Location: .claude/workflows/deliver-change.js:515
-- Why: branch code a check runs could plant an unpushed-finding note that an unpushed resume's seed hands to the package step, which appends it to docs/findings/CHANGE.md; the text is held to noteText's shell-safe shape and reaches only the reviewed PR diff, the reach design.md line 36 accepts for held-finding and quality-advisory notes, but that accepted-risk paragraph does not name the new kind.
-- Fix: add unpushed-finding to the accepted-risk decision in design.md beside held-finding, or have seed accept an unpushed-finding note only when the run state also records a close phase or stop marker written by the workflow at a commit.
-- Category: security
-- Added: 2026-11-17
-
 ### A phase's recorded output differs from its agent starts' output
 - Location: `.claude/workflows/deliver-change.js` phase accounting, `metric.phases` (markdown-reading-c retro note 18).
 - Why: phase.check recorded 150,693 output and 27 calls (37.9% of 397,894) while its three checker starts summed 5,213; git-signs-status-b check 57,747 and checks-and-pr-lows 38,907 against 2,029 to 6,432 earlier, so `check-skip` and share-based proposals judge a number the checker did not spend.
@@ -1379,3 +1364,10 @@ none
 - Fix: on a diff touching only docs/ records and the archived change, keep the reviews under 20 percent of output while the security review still runs on the committed diff; accepted when a records run shows it.
 - Category: pipeline
 - Added: 2026-11-21
+
+### Packaging and the pull request text are two starts for one text (hidden-option retro)
+- Location: .claude/workflows/deliver-change.js, the package and prtext contributor starts
+- Why: hidden-option spent package 8,032 output tokens in 14 calls plus prtext 8,397 in 8, 16,429 output tokens (8.2 percent) and 22 of 172 calls (12.8 percent), with 0 findings appended; prtext's 8,397 is the highest of the last 11 feature rows (set-options 8,192, cmdline-editing 1,350); near backlog Pool 10 pr-claims.
+- Fix: run the archive, the gated pr.md, and the push in one start when no finding is appended; accepted when that start finishes in at most 12 calls on the next three runs with no prtext round.
+- Category: pipeline
+- Added: 2026-11-22

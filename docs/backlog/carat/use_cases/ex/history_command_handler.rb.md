@@ -49,3 +49,12 @@
 - Fix: add one E474 message to Domain::Messages and use it in both handlers
 - Category: editor
 - Added: 2026-11-19
+
+### duplication: the literal "E474: Invalid argument" is spelled here at carat/use_cases/ex/history_command_handler.rb:74 (sprint-26 sweep quality, note 26)
+
+- Location: carat/use_cases/ex/history_command_handler.rb:74
+- Why: duplication: the literal "E474: Invalid argument" is spelled here and in carat/use_cases/ex/messages_command_handler.rb:27 (with an argument three times in set_command_handler.rb) while Domain::Messages holds the shared messages
+- Fix: a Messages::E474 constant and an invalid_value(text) helper used by all
+- Also: carat/use_cases/ex/messages_command_handler.rb
+- Category: editor
+- Added: 2026-11-22

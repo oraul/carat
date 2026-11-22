@@ -306,3 +306,11 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Fix: rename it to `repaint_key` wherever it is passed.
 - Category: editor
 - Added: 2026-11-21
+
+### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)
+
+- Location: carat/adapters/frame_presenter.rb:1
+- Why: 1469 lines and 60 methods paint windows, headers, winbars, separators, floats and their borders, notifications, the message row, diagnostics, and the bracket pair in one class
+- Fix: extract float and notification painting into collaborators as StatusBar, Winbar, and TabBar were, keeping the hot window path explicit
+- Category: editor
+- Added: 2026-11-22

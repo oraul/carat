@@ -27,3 +27,19 @@
 - Why: `col = 1 + text_width(...) - 1 - PAD`: the prompt colon and the border cancel, which the reader must work out.
 - Fix: write `text_width(...) - PAD` with a one-line comment naming the two terms; accepted when the popup frame rows are unchanged.
 - Category: quality
+
+### duplication: collect_themes repeats the prefix-filter loop of collect_names (166-178) at carat/use_cases/complete_command_line.rb:182 (sprint-26 sweep quality, note 20)
+
+- Location: carat/use_cases/complete_command_line.rb:182
+- Why: duplication: collect_themes repeats the prefix-filter loop of collect_names (166-178) line for line over another list
+- Fix: one private collect_prefixed(names, typed) called with ExTable#full_names and Domain::Themes::NAMES
+- Category: editor
+- Added: 2026-11-22
+
+### cleverness: col = 1 + text_width(...) - 1 - at carat/use_cases/complete_command_line.rb:305 (sprint-26 sweep quality, note 21)
+
+- Location: carat/use_cases/complete_command_line.rb:305
+- Why: cleverness: col = 1 + text_width(...) - 1 - PAD, the +1 and -1 cancel
+- Fix: col = Domain::DisplayWidth.text_width(state.cmdline[0, name_start].to_s, 0) - Domain::FloatWindow::PAD
+- Category: editor
+- Added: 2026-11-22

@@ -25,3 +25,12 @@
 - Also: carat/use_cases/plugins/window_requests.rb
 - Category: plugins
 - Added: 2026-11-10
+
+### and carat/use_cases/plugins/ui_requests.rb:83 duplicate building a plugin keymap from lines at carat/use_cases/plugins/window_requests.rb:101 (sprint-26 sweep quality, note 33)
+
+- Location: carat/use_cases/plugins/window_requests.rb:101
+- Why: and carat/use_cases/plugins/ui_requests.rb:83 duplicate building a plugin keymap from lines and recording each error; open_scratch passes the plugin's bindings uncopied while live_prompt copies them through Boundary.copied_lines, against the strings-copied rule
+- Fix: one helper (for example PluginRegistry#keymap_for(name, lines)) that copies, builds, and records, used by both
+- Also: carat/use_cases/plugins/window_requests.rb
+- Category: plugins
+- Added: 2026-11-22
