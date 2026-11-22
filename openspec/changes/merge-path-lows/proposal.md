@@ -19,7 +19,7 @@ One Medium (6) and four Lows on the guard and merge path, from the periodic revi
 - The merger's `git read-tree` is accepted only with `-C tmp/.merge-gates`.
 - The green line adds, after `diff --quiet`, a check that `git ls-files --others` lists nothing in the copy, so an untracked or ignored file there stops it before the merge gates.
 - `tools/spec_validate.sh` refuses, before any preview, when `openspec/` holds a symbolic link, naming it.
-- The Notes phase runs its command through the quality reviewer in its record mode, whose hook runs the guard's read profile, as the skeptic notes already do.
+- The Notes phase runs its command through the quality reviewer in its record mode, whose hook runs the guard's read profile, as the skeptic notes already do. So that no finding is refused there, the guard stores the text word of `sh tools/run_state.sh note CHANGE KIND TEXT` without its word rules (a parent step, the run state's directory), since `run_state.sh` only stores it; the change and kind words keep them. Without this, a security finding naming `build/pipeline` or a parent step, 3 of the 101 recorded so far, would refuse the whole notes command and hold the sprint.
 - The report's Security line moves into the helper `securityReport`, which a tools-test case runs for the not-recorded suffix.
 - `tools/tools_test.sh` gains a case per fix, each failing before it.
 
@@ -36,7 +36,7 @@ None: the change alters the delivery pipeline's guard and workflows, which no sp
 ## Impact
 
 - `tools/agent_guard.sh`, `tools/spec_validate.sh`, `.claude/workflows/deliver-change.js`, `.claude/workflows/sprint-planning.js`, `tools/tools_test.sh`, `docs/codebase-map.md` (the guard and `spec_validate.sh` rows).
-- README.md: unchanged, its pipeline section names the guard but none of the forms or checks this change tightens.
+- README.md: changed, the green line's untracked-file check, the guard's refusal while a local settings file stands untracked, and the security notes run by the guarded quality reviewer.
 - CLAUDE.md: unchanged, it describes neither the guard's forms nor the green line's steps.
 - docs/architecture.md: unchanged, it does not describe the delivery guard or the merge gates' green line.
 - docs/codebase-map.md: changed, the `tools/agent_guard.sh` and `tools/spec_validate.sh` rows.

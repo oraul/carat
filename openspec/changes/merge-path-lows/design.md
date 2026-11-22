@@ -26,7 +26,7 @@
 - `read-tree` compares the `-C` path, made relative, with `tmp/.merge-gates`, after the worktree check; a lane's green line runs after a `cd` into its worktree, so the relative form is the one it writes.
 - The green line's added step is `git -C tmp/.merge-gates ls-files --others | wc -c | grep -q -x -E ' *0'`: `--others` without `--exclude-standard` lists ignored files too, and every word is a form the merger's profile already runs, with no `$` or `!` the guard refuses.
 - `spec_validate.sh` runs `find openspec -type l` once before the strict validation and exits 1 naming the links, so neither validation nor preview runs over them. Alternative: `cp -RL`, which would follow a link to a large or special file.
-- The Notes phase passes `agentType: 'quality-reviewer'` and `Mode: record.`, the record mode the skeptic notes use; the read profile runs `sh tools/run_state.sh note CHANGE security TEXT`.
+- The Notes phase passes `agentType: 'quality-reviewer'` and `Mode: record.`, the record mode the skeptic notes use; the read profile runs `sh tools/run_state.sh note CHANGE security TEXT`. The read profile's word rules refuse a word naming `build/pipeline` or holding a parent step, which a finding's text may do, refusing the whole `&&` chain; `run_state_form` marks the sixth word of a four-argument `note` as data (`data_at`), which `judge` skips as it skips the body file, so the text is stored as written. Alternative: rewrite such words in the text, which would alter the finding.
 - `securityReport(r, blocking, disputed, missedBoth, noted)` returns the whole Security line, so the `js` helper of the tools test runs it.
 
 ## Risks / Trade-offs
