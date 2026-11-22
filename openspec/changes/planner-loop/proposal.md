@@ -29,12 +29,13 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 
 - `.claude/workflows/sprint-planning.js`, `.claude/workflows/deliver-change.js`, `.claude/agents/planner.md`, `.claude/agents/quality-reviewer.md`, `.claude/agents/security-reviewer.md`, `.claude/agents/contributor.md`, `.claude/agents/runner.md`, `.claude/agents/retrospective.md`, `.claude/commands/sprint.md`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/gates.sh`, `tools/docs_lint.sh`, `tools/tools_test.sh`.
 - README.md: changed, the pipeline steps naming the skeptic and the sprint close.
-- CLAUDE.md: changed, the Phases, planner and retrospective, Sprints, Backlog, and Lanes lines.
+- CLAUDE.md: changed, the Sprints line (the planner's review, the next delivery applying the plan) and the Lanes line (no records change beside others, merge-main keeping each lane's queue); the Phases, planner and retrospective, and Backlog lines stay, since none names the skeptic, the quality reviewer's sprint start, or the records change, and the retrospective still runs review-due.
 - docs/architecture.md: unchanged, it does not describe the sprint close.
 - docs/codebase-map.md: changed, the `run_state.sh` and `docs_lint.sh` rows and the flow line.
 - docs/compatibility.md, docs/actions.md: unchanged, no editor behavior changes.
 - docs/goals.md: unchanged, a planning record the planner writes only when asked; its lines naming the sprint quality review and the notes starts are left for the user (see the design).
 - `tools/rules.sh`: not edited.
+- docs/codebase-map.md also notes the security reviewer's record mode through `recordNotes`.
 
 Outside the roadmap of `docs/architecture.md` section 12: a pipeline change by the user's request and priority, an extra beyond Sprint 29's 3 by the user's exception.
 

@@ -2623,7 +2623,7 @@ add_tokens() {
     label=$(sed -n 's/.*"description":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1)
     case $label in
       record) key=record ;;
-      sprint:*|*': sprint'*|*': skeptic'|*periodic*) key=sprint ;;
+      sprint:*|*': sprint'*|*periodic*) key=sprint ;;
       *) key=$(sed -n 's/.*"workflowPhase":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9') ;;
     esac
     [ -n "$key" ] || key=other
