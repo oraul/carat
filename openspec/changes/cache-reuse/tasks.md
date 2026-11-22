@@ -13,3 +13,10 @@
 ## 3. Docs
 
 - [x] 3.1 Update README.md and CLAUDE.md, and the header of `tools/run_state.sh`
+
+## Quality review
+
+- [x] 4.1 The carry reads the stage list from the lane's own Makefile, safe only because it is tried on the contributor's claim, which needs the check's machinery untouched; add the comment to `carried_check`, fixed
+- [x] 4.2 Stored figures trust the saving lane's measuring script; recorded in `docs/findings/cache-reuse.md`, recorded
+- [x] 4.3 The check round's carry has no end-to-end workflow test; recorded in `docs/findings/cache-reuse.md`, recorded
+- [x] 4.4 The release timing of the benchmark runs only for a brief with a time target; recorded in `docs/findings/cache-reuse.md`, recorded

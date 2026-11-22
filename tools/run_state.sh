@@ -2058,6 +2058,9 @@ carried_check() {
   [ "$want" = "$head" ] || { echo "carried: no: $want is not HEAD $head"; return 1; }
   dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
   [ -z "$dirty" ] || { echo "carried: no: tracked files differ from HEAD"; return 1; }
+  # The stage list is the lane's own Makefile's, read outside the clone: the
+  # workflow asks only on the contributor's claim, which needs the check's
+  # machinery (the Makefile included) untouched.
   stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
   [ -n "$stages" ] || { echo "carried: no: no stages"; return 1; }
   paths=$(scope_paths)
