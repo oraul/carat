@@ -279,19 +279,16 @@ module AdaptersFramePresenterTest
   # The 24-bit color a palette gives the role.
   #: (Array[Integer], Integer) -> Integer
   def self.palette_rgb(palette, role)
-    i = 0
-    while i + 3 < palette.length
-      return palette[i + 1] if palette[i] == role
-      i += 4
-    end
-    -1
+    palette_entry(palette, role, 1)
   end
 
-  # The 16-color index of a role in a palette, -1 for none.
-  def self.palette_basic(palette, role)
+  # The value at offset (1 the 24-bit color, 3 the 16-color index) of a
+  # role's row in a palette, -1 for a role it lacks.
+  #: (Array[Integer], Integer, Integer) -> Integer
+  def self.palette_entry(palette, role, offset)
     i = 0
     while i + 3 < palette.length
-      return palette[i + 3] if palette[i] == role
+      return palette[i + offset] if palette[i] == role
       i += 4
     end
     -1
@@ -329,7 +326,7 @@ module AdaptersFramePresenterTest
       hl = f.cell(0, 4).hl
       text = f.cell(1, 4).hl
       dim = palette_rgb(palette, D::Themes::DIM)
-      basic = palette_basic(palette, D::Themes::DIM)
+      basic = palette_entry(palette, D::Themes::DIM, 3)
       t.assert_equal([dim, basic, -1], [theme.fg(hl), theme.fg16(hl), theme.bg(hl)], "the fold row is dim at 24 bits and at 16 colors, on the terminal's background: #{name}")
       t.assert_equal([true, true], [theme.fg(text) != theme.fg(hl), theme.fg16(text) != theme.fg16(hl)], "the fold row differs from the Normal text beside it at 24 bits and at 16 colors: #{name}")
     end

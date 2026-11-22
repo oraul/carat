@@ -4,7 +4,7 @@
 The text of a closed fold's row, its fold text and its fill, SHALL be drawn in the `Folded` group, in every theme, at every color depth, under `option.icons ascii`, and under `NO_COLOR`; its gutter SHALL keep the line number and sign groups. On the cursor line the row SHALL take `Folded` over `CursorLine`'s background. The rows of open folds and of lines outside a fold SHALL keep their own groups.
 
 #### Scenario: A closed fold's row is in Folded
-- **WHEN** "zfj" is typed on the first of the lines "one", "two", "three" and the window is drawn
+- **WHEN** the first two of the lines "one", "two", "three" are one closed fold and the window is drawn
 - **THEN** every text cell of the fold row is in `Folded` and the row of "three" is in `Normal`
 
 #### Scenario: The fold row in both carat themes
