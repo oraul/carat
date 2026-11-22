@@ -6000,7 +6000,7 @@ expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^
 # start running them is the quality reviewer in its record mode, whose hook
 # runs tools/agent_guard.sh, never an unguarded general agent.
 expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 1 1$" \
-  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
