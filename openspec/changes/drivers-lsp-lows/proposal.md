@@ -38,7 +38,7 @@ None.
 
 ## Impact
 
-- `carat/ports/file_port.rb`, `carat/drivers/disk_files.rb`, `carat/doubles/memory_files.rb`, `carat/use_cases/files/make_path.rb`, `carat/drivers/process_runner.rb`, `carat/adapters/json_rpc_language_gateway.rb`, `carat/domain/utf8.rb`; tests `test/drivers_disk_files.rb`, `test/drivers_ansi_terminal.rb`, `test/adapters_language_gateway.rb`, `test/adapters_server_completions.rb`, `test/domain_utf8.rb`, `test/adapters_plugin_files.rb` or the plugin file-request test that covers creates.
+- `carat/ports/file_port.rb`, `carat/drivers/disk_files.rb`, `carat/doubles/memory_files.rb`, `carat/use_cases/files/make_path.rb`, `carat/drivers/process_runner.rb`, `carat/adapters/json_rpc_language_gateway.rb`, `carat/domain/utf8.rb`; tests `test/drivers_disk_files.rb`, `test/drivers_ansi_terminal.rb`, `test/adapters_language_gateway.rb`, `test/adapters_server_completions.rb`, `test/domain_utf8.rb`, `test/adapters_hover.rb`; `docs/spinel-notes.md` (the stat handle and the FIFO open).
 - README.md: unchanged, no user-visible command, option, or key changes; the refusals are security hardening of existing creates and reads.
 - docs/architecture.md: changed, the `FilePort` row gains `create(path)` and the fstat read.
 - docs/codebase-map.md: changed, the area 17 lines of `FilePort`, `DiskFiles`, and the gateway, and the `Utf8` line.
