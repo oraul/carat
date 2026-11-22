@@ -1,0 +1,11 @@
+# Tasks
+
+## 1. Planning records
+
+- [ ] 1.1 `tools/run_state.sh merge-main sprint-28-records`: take in a moved main. Checked by its output, "holds origin/main".
+- [ ] 1.2 `tools/run_state.sh history sprint-28-records`: append the pending rows to the metrics files. Checked by the rows in the diff.
+- [ ] 1.3 `tools/run_state.sh groom sprint-28-records`: file the findings, copy the queues, append the sprint row. Checked by its output, "applied sprint-28".
+
+## 2. Checks
+
+- [ ] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
