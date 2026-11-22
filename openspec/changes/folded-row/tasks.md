@@ -12,5 +12,5 @@
 
 ## 3. Docs
 
-- [ ] 3.1 Update `docs/compatibility.md` (the fold differences, the UI group count), `docs/architecture.md` (the Highlight paragraph's count), `docs/codebase-map.md` (areas 13 and 14), and README.md (the fold sentence)
-- [ ] 3.2 Append the planner's backlog notes (`build/plan/folded-row/backlog.md`) and the label-text and ascii-fill findings to `docs/findings/folded-row.md`
+- [x] 3.1 Update `docs/compatibility.md` (the fold differences, the UI group count), `docs/architecture.md` (the Highlight paragraph's count), `docs/codebase-map.md` (areas 13 and 14), and README.md (the fold sentence)
+- [x] 3.2 Append the planner's backlog notes (`build/plan/folded-row/backlog.md`) and the label-text and ascii-fill findings to `docs/findings/folded-row.md`
