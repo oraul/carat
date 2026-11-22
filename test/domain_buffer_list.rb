@@ -216,6 +216,26 @@ module DomainBufferListTest
     t.assert_equal(["open 1 a.txt 0 -0 +0  []", "open 2 o.txt 0 -0 +0  []", "change 1 a.txt 1 -1 +0  []", "rename 2 p.txt 0 -0 +0 o.txt [probe]", "change 2 p.txt 0 -1 +1  [probe]", "close 2 p.txt 0 -0 +0  []"], lines, "every listed buffer's events are in the feed in order, with the cause at the time")
     t.assert_true(feed.tabs.equal?(w.tabs), "the feed reports to the list's tab list")
 
+    # The recent files: each file buffer entering a window moves its path
+    # to the top, kept after the buffer leaves the list; an unnamed
+    # buffer never enters. Scenario: Recent files most recent first.
+    lists = lists_over(buffer_named("a.rb"))
+    b = buffer_named("b.rb")
+    lists.buffers.load(b)
+    lists.buffers.load(buffer_named("c.rb"))
+    lists.buffers.load(lists.buffers.buffer_at(0))
+    lists.buffers.remove(b)
+    lists.buffers.load(D::Buffer.from_text("", nil))
+    t.assert_equal([["a.rb", "c.rb", "b.rb"], ["a.rb", "c.rb"]], [lists.buffers.recent, lists.buffers.file_paths], "Recent files most recent first: a.rb shown again moves to the top, b.rb stays after it leaves the list, the unnamed buffer never enters; the file paths are the listed named buffers")
+    # Scenario: The recent files are bounded.
+    lists = lists_over(buffer_named("f0.rb"))
+    i = 1
+    while i <= 100
+      lists.buffers.load(buffer_named("f#{i}.rb"))
+      i += 1
+    end
+    recent = lists.buffers.recent
+    t.assert_equal([100, "f100.rb", "f1.rb", false], [recent.length, recent[0].to_s, recent[99].to_s, recent.include?("f0.rb")], "The recent files are bounded: 101 files keep 100 paths, the last opened first and the first opened gone")
     t.finish
   end
 end

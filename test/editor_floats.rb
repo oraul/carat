@@ -410,7 +410,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.13", API::VERSION, "the plugin API is 2.13")
+    t.assert_equal("2.14", API::VERSION, "the plugin API is 2.14")
 
     # Scenario: An offset out of range is refused.
     h = editor

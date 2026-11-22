@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 13
-    VERSION = "2.13"
+    MINOR = 14
+    VERSION = "2.14"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -632,6 +632,23 @@ module Carat
       # @rbs text: String
       def run_ex(text)
         raise NotImplementedError, "Host#run_ex"
+      end
+
+      # Returns a Response whose lines are the paths of the listed file
+      # buffers in the order :ls shows them, each as the buffer holds it,
+      # scratch, unlisted, and unnamed buffers left out (from 2.14).
+      # @rbs skip
+      def list_buffers
+        raise NotImplementedError, "Host#list_buffers"
+      end
+
+      # Returns a Response whose lines are the recent files (from 2.14):
+      # the path of every file buffer shown in a window since the editor
+      # started, most recent first, each once, kept after the buffer is
+      # deleted, at most 100.
+      # @rbs skip
+      def recent_files
+        raise NotImplementedError, "Host#recent_files"
       end
 
       # Returns a Response whose lines are the sorted entries of the

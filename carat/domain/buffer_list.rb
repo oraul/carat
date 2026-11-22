@@ -15,16 +15,21 @@ module Carat
     # edit is lost and the buffer keeps its number; a scratch buffer
     # leaves as soon as no window shows it. The feed reports closed
     # transactions to the tab list, which keeps the cursors inside the
-    # text. A Struct record: mutable, with a reader and a writer per
-    # member.
-    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, keyword_init: true)
+    # text. It also keeps the recent files: the path of every file buffer
+    # that entered a window, most recent first, at most RECENT_LIMIT, kept
+    # after the buffer leaves the list, for the finder's recent picker.
+    # A Struct record: mutable, with a reader and a writer per member.
+    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, :recent, keyword_init: true)
       # The number of the buffer the editor starts with, listed first.
       STARTUP_ID = 1
+      # The most paths the recent files keep.
+      RECENT_LIMIT = 100
 
       # @rbs @tabs: TabList
       # @rbs @buffers: Array[untyped]
       # @rbs @next_id: Integer
       # @rbs @feed: BufferFeed
+      # @rbs @recent: Array[String]
 
       # An empty list over the tab list. The list is stored through the
       # writer, so it takes the pinned type.
@@ -35,6 +40,8 @@ module Carat
         self.buffers = []
         self.next_id = 1
         self.feed = BufferFeed.new
+        self.recent = [""]
+        recent.clear
         feed.tabs = tabs
       end
 
@@ -262,10 +269,12 @@ module Carat
       # Lists a buffer that is not listed yet, or lists again one a jump
       # left unlisted. A buffer entering the list for the first time
       # receives the next id, which it keeps for as long as the editor
-      # runs, also after leaving the list.
+      # runs, also after leaving the list. Its path, for a file buffer,
+      # becomes the most recent file.
       #: (Buffer) -> void
       def add(target)
         target.listed = true
+        note_recent(target)
         return if index_of(target) >= 0
         if target.id == 0
           target.id = next_id
@@ -274,6 +283,21 @@ module Carat
         buffers << target
         target.feed = feed
         feed.note("open", target.id, target.path_text, "")
+      end
+
+      # The listed file buffers' paths in list order, as :ls shows them:
+      # scratch, unlisted, and unnamed buffers left out.
+      #: () -> Array[String]
+      def file_paths
+        out = [""]
+        out.clear
+        i = 0
+        while i < buffers.length
+          candidate = buffer_at(i)
+          out << candidate.path_text unless candidate.tabless? || candidate.path_text.empty?
+          i += 1
+        end
+        out
       end
 
       #: (Buffer) -> void
@@ -497,6 +521,21 @@ module Carat
       end
 
       private
+
+      # Moves the file buffer's path to the top of the recent files, the
+      # oldest dropped past RECENT_LIMIT; a scratch or unnamed buffer is
+      # never recorded, and a path already first costs one comparison.
+      #: (Buffer) -> void
+      def note_recent(target)
+        path = target.path_text
+        return if path.empty? || target.scratch?
+        list = recent
+        return if !list.empty? && list[0] == path
+        at = list.index(path)
+        list.delete_at(at) unless at.nil?
+        list.unshift(path)
+        list.pop while list.length > RECENT_LIMIT
+      end
 
       # Records where the window's cursor is in the buffer it shows.
       #: (Window) -> void
