@@ -225,9 +225,9 @@ module EditorPaletteTest
   def self.main
     t = Carat::Testing.new("editor_palette")
 
-    # Scenarios: Open with the leader, Open with F1, and Ex commands are
-    # listed (the rows "leader p opens the palette", "F1 opens the palette",
-    # and "an ex command is found").
+    # Scenario: Open with the leader (the row "leader p opens the palette").
+    # Scenario: Open with F1 (the row "F1 opens the palette").
+    # Scenario: Ex commands are listed (the row "an ex command is found").
     # Rows are [label, keys, [floats, mode, title, first row's name]].
     t.table([
       ["leader p opens the palette", "<Space>p", [1, "cmdline", "Commands", "motion.repeat_find"]],
