@@ -93,7 +93,8 @@ module Carat
       end
 
       # Adds layer to the highlight of the cells [from, to) of a row whose
-      # group is below it, as the presenter puts a row on the cursor line.
+      # id is a plain group's, as the presenter puts a row on the cursor
+      # line or in a sidebar.
       #: (Integer, Integer, Integer, Integer) -> void
       def lift(row, from, to, layer)
         return if row < 0 || row >= rows
@@ -102,7 +103,7 @@ module Carat
         i = row * cols + c
         last = row * cols + stop
         while i < last
-          hls[i] += layer if hls[i] < layer
+          hls[i] += layer if hls[i] < Highlight::COUNT
           i += 1
         end
       end

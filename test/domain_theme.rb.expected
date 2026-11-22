@@ -225,6 +225,16 @@ ok   The whitespace marks take the guide color: dark_plus
 ok   The whitespace marks take the guide color: light_plus
 ok   The border colors: carat-dark
 ok   The border colors: carat-light
+ok   WinSeparator is the quiet border tone: carat-dark
+ok   WinSeparator stays visible on the editor: carat-dark at 24 bits
+ok   WinSeparator stays visible on the editor: carat-dark at 256 colors
+ok   WinSeparator is the quiet border tone: carat-light
+ok   WinSeparator stays visible on the editor: carat-light at 24 bits
+ok   WinSeparator stays visible on the editor: carat-light at 256 colors
+ok   WinSeparator is the quiet border tone: one_dark
+ok   WinSeparator is the quiet border tone: one_light
+ok   WinSeparator is the quiet border tone: dark_plus
+ok   WinSeparator is the quiet border tone: light_plus
 ok   The border stays apart from the float: carat-dark on the float at 24 bits
 ok   The border stays apart from the float: carat-dark on the float at 256 colors
 ok   The border stays apart from the float: carat-dark on the cursor line at 24 bits
@@ -321,6 +331,34 @@ ok   dark_plus: at 16 colors the painted cursor line keeps the background
 ok   light_plus: at 16 colors the painted cursor line keeps the background
 ok   base strips the cursor-line layer
 ok   base strips the float layer
+ok   base strips the sidebar layer
+ok   a group in a sidebar keeps its color over PanelNC's background
+ok   a group with a background of its own keeps it in a sidebar, Normal takes PanelNC's
+ok   at 16 colors a sidebar group is the group itself
+ok   carat-dark: the sidebar's background is PanelNC's
+ok   carat-dark: on the terminal's background the sidebar takes the palette's text color
+ok   carat-dark: the sidebar layer meets the contrast rule at 24 bits
+ok   carat-dark: the sidebar layer meets the contrast rule at 256 colors
+ok   carat-light: the sidebar's background is PanelNC's
+ok   carat-light: on the terminal's background the sidebar takes the palette's text color
+ok   carat-light: the sidebar layer meets the contrast rule at 24 bits
+ok   carat-light: the sidebar layer meets the contrast rule at 256 colors
+ok   one_dark: the sidebar's background is PanelNC's
+ok   one_dark: on the terminal's background the sidebar takes the palette's text color
+ok   one_dark: the sidebar layer meets the contrast rule at 24 bits
+ok   one_dark: the sidebar layer meets the contrast rule at 256 colors
+ok   one_light: the sidebar's background is PanelNC's
+ok   one_light: on the terminal's background the sidebar takes the palette's text color
+ok   one_light: the sidebar layer meets the contrast rule at 24 bits
+ok   one_light: the sidebar layer meets the contrast rule at 256 colors
+ok   dark_plus: the sidebar's background is PanelNC's
+ok   dark_plus: on the terminal's background the sidebar takes the palette's text color
+ok   dark_plus: the sidebar layer meets the contrast rule at 24 bits
+ok   dark_plus: the sidebar layer meets the contrast rule at 256 colors
+ok   light_plus: the sidebar's background is PanelNC's
+ok   light_plus: on the terminal's background the sidebar takes the palette's text color
+ok   light_plus: the sidebar layer meets the contrast rule at 24 bits
+ok   light_plus: the sidebar layer meets the contrast rule at 256 colors
 ok   a group in a float is drawn over NormalFloat's background
 ok   a group with a background of its own keeps it in a float, one without a foreground takes NormalFloat's
 ok   one_dark's markup groups: blue bold headings, bold and italic text, green code, underlined cyan links, gray blocks
@@ -380,4 +418,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 382 passed, 0 failed
+domain_theme: 420 passed, 0 failed

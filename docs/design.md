@@ -7,7 +7,7 @@ Facet means: calm, readable, carat's own personality, never a copy of another ed
 ## 1. The rules
 
 - One cell of padding. Every surface keeps one cell of space inside its edges: tabs, tree rows, gutter, floats, status bar, winbar. Text never touches a border or the screen edge.
-- Edges by background. Two surfaces meet where their backgrounds change (the sidebar is darker than the editor), with no glyph. A line is drawn only between two windows of the same color, in the quiet BORDER tone.
+- Edges by background. Two surfaces meet where their backgrounds change (the sidebar is darker than the editor), with no glyph. A line is drawn only between two windows of the same color, in the quiet BORDER tone. Where the terminal cannot show the background change (NO_COLOR, and 16 colors, which have no darker background that keeps every text color readable), the sidebar's edge keeps the line.
 - Quiet frames. A float has rounded corners `╭╮╰╯` in BORDER, a tone quieter than its text; its title sits on the left of the top border with a dim count (`Files 2069`); the keys that matter sit in the bottom border; a query lives inside the float, on its first row, never on the command line. Panes inside one frame are joined by `├ ┤ ┬ ┴`. Heavy `┃` is only a scrollbar thumb. No double lines, no shadows.
 - Alignment. Numbers are right-aligned; the sign column is always present, so text never shifts; two cells separate the gutter and the code; git letters and keycaps are right-aligned in the last cells.
 - Hierarchy by tone. Bright, dim, and faint carry importance. Bold is only for the one thing that leads (the file name, the position, the selected row). A long name ends in a dim `…`.

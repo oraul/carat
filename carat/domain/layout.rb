@@ -328,6 +328,12 @@ module Carat
         end
       end
 
+      # Whether node id is a fixed-width leaf, a sidebar at the root's end.
+      #: (Integer) -> bool
+      def sidebar?(id)
+        node(id).leaf? && window_at(id).fixed_width
+      end
+
       private
 
       # Adds a leaf for window beside node target_id along a split of kind
@@ -410,12 +416,6 @@ module Carat
         group.width = size
         top.children = kept
         group_id
-      end
-
-      # Whether node id is a fixed-width leaf, a sidebar at the root's end.
-      #: (Integer) -> bool
-      def sidebar?(id)
-        node(id).leaf? && window_at(id).fixed_width
       end
 
       # Builds the list on the way back up rather than filling one passed

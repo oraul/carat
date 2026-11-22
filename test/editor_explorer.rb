@@ -408,18 +408,18 @@ module EditorExplorerTest
     # Icons in their file type's color, through the tree's own syntax.
     h = editor_on("a.md", config_with("unicode", ""))
     h.type(" e")
-    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [h.frame.hl_at(1, 1), h.frame.hl_at(2, 3), H.base(h.frame.hl_at(4, 3)), h.frame.hl_at(5, 3)], "each icon is drawn in its file type's group, after a marker of any width")
-    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [h.frame.hl_at(5, 0), h.frame.hl_at(5, 4), h.frame.hl_at(5, 5)], "the rest of the line keeps the normal group")
+    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [H.base(h.frame.hl_at(1, 1)), H.base(h.frame.hl_at(2, 3)), H.base(h.frame.hl_at(4, 3)), H.base(h.frame.hl_at(5, 3))], "each icon is drawn in its file type's group, after a marker of any width")
+    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [H.base(h.frame.hl_at(5, 0)), H.base(h.frame.hl_at(5, 4)), H.base(h.frame.hl_at(5, 5))], "the rest of the line keeps the normal group")
     h.type(":set syntax?<CR>")
     t.assert_equal("  syntax=explorer", h.message, "the tree buffer takes the explorer's filetype")
     h.type(":syntax off<CR>")
-    t.assert_equal(H::NORMAL, h.frame.hl_at(5, 3), ":syntax off draws the icons plain")
+    t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(5, 3)), ":syntax off draws the icons plain")
     h.type(":syntax on<CR>")
-    t.assert_equal(H::ICON_RUBY, h.frame.hl_at(5, 3), ":syntax on colors them again")
+    t.assert_equal(H::ICON_RUBY, H.base(h.frame.hl_at(5, 3)), ":syntax on colors them again")
 
     h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
-    t.assert_equal(["|", "~"], [h.row(0)[30, 1], h.row(6)[0, 1]], "the tree has no line numbers and a separator at its right")
+    t.assert_equal([" ", H::SIDEBAR_LAYER, "~"], [h.row(0)[30, 1], h.frame.hl_at(0, 30), h.row(6)[0, 1]], "the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer")
     t.assert_equal([" explorer", H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's header names the explorer over the tree")
 
     # Names with a space or a bar open as named, never parsed as an ex
