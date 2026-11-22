@@ -9,11 +9,11 @@ Sprint 28 closed with its changes merged, its sprint-end review recorded, and it
 - `sh tools/run_state.sh history sprint-28-records` appends the pending history rows of every lane to `docs/metrics-feature.tsv` and `docs/metrics-backlog.tsv`.
 - `sh tools/run_state.sh groom sprint-28-records` applies the sprint-28 plan: grooms the backlog headings it names, files each entry of the findings files into the backlog file of its first named path under `docs/backlog/`, copies the sprint plan's two lane queues over `docs/queue-feature.md` and `docs/queue-backlog.md`, and appends the sprint-28 row to `docs/sprints.tsv`.
 
-Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes.
+Out of scope: any code, test, tool, or spec change, and any hand edit of what `groom` writes but the queue fixes the user approved on 2026-11-22: the backlog sprint trimmed to its 3 items, the two moved to Pool item 1 for Sprint 30, the exception line and the Sprint 29 decision reworded, "estimated" added before each Pool size, and the backticks dropped on a nonexistent path.
 
 Assumptions:
 
-- The queues are the planner's output, applied as they stand.
+- The queues are the planner's output, applied as they stand but for those queue fixes.
 
 ## Capabilities
 
