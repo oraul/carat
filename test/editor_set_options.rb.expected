@@ -1,0 +1,154 @@
+ok   Setting a number: ts=1
+ok   Adding, subtracting, and multiplying a number: ts+=1
+ok   Adding, subtracting, and multiplying a number: ts-=1
+ok   Adding, subtracting, and multiplying a number: ts^=2
+ok   A number out of range keeps the old value: ts=10000
+ok   A number out of range keeps the old value: tabstop after ts=10000
+ok   A number out of range keeps the old value: ts-=2 below the least
+ok   A value that is not a number: ts=x
+ok   Resetting an option: ts&
+ok   A flag prefix on a number: nots
+ok   Setting a number: sw=1
+ok   Adding, subtracting, and multiplying a number: sw+=1
+ok   Adding, subtracting, and multiplying a number: sw-=1
+ok   Adding, subtracting, and multiplying a number: sw^=2
+ok   A number out of range keeps the old value: sw=10000
+ok   A number out of range keeps the old value: shiftwidth after sw=10000
+ok   A number out of range keeps the old value: sw-=2 below the least
+ok   A value that is not a number: sw=x
+ok   Resetting an option: sw&
+ok   A flag prefix on a number: nosw
+ok   Setting a number: scr=1
+ok   Adding, subtracting, and multiplying a number: scr+=1
+ok   Adding, subtracting, and multiplying a number: scr-=1
+ok   Adding, subtracting, and multiplying a number: scr^=2
+ok   A number out of range keeps the old value: scr=10000
+ok   A number out of range keeps the old value: scroll after scr=10000
+ok   A number out of range keeps the old value: scr-=2 below the least
+ok   A value that is not a number: scr=x
+ok   Resetting an option: scr&
+ok   A flag prefix on a number: noscr
+ok   Setting a number: so=1
+ok   Adding, subtracting, and multiplying a number: so+=1
+ok   Adding, subtracting, and multiplying a number: so-=1
+ok   Adding, subtracting, and multiplying a number: so^=2
+ok   A number out of range keeps the old value: so=10000
+ok   A number out of range keeps the old value: scrolloff after so=10000
+ok   A number out of range keeps the old value: so-=2 below the least
+ok   A value that is not a number: so=x
+ok   Resetting an option: so&
+ok   A flag prefix on a number: noso
+ok   Setting a number: tm=1
+ok   Adding, subtracting, and multiplying a number: tm+=1
+ok   Adding, subtracting, and multiplying a number: tm-=1
+ok   Adding, subtracting, and multiplying a number: tm^=2
+ok   A number out of range keeps the old value: tm=10001
+ok   A number out of range keeps the old value: timeoutlen after tm=10001
+ok   A number out of range keeps the old value: tm-=2 below the least
+ok   A value that is not a number: tm=x
+ok   Resetting an option: tm&
+ok   A flag prefix on a number: notm
+ok   Setting a number: ul=1
+ok   Adding, subtracting, and multiplying a number: ul+=1
+ok   Adding, subtracting, and multiplying a number: ul-=1
+ok   Adding, subtracting, and multiplying a number: ul^=2
+ok   A number out of range keeps the old value: ul=10001
+ok   A number out of range keeps the old value: undolevels after ul=10001
+ok   A number out of range keeps the old value: ul-=2 below the least
+ok   A value that is not a number: ul=x
+ok   Resetting an option: ul&
+ok   A flag prefix on a number: noul
+ok   Setting a number: stal=1
+ok   Adding, subtracting, and multiplying a number: stal+=1
+ok   Adding, subtracting, and multiplying a number: stal-=1
+ok   Adding, subtracting, and multiplying a number: stal^=2
+ok   A number out of range keeps the old value: stal=3
+ok   A number out of range keeps the old value: showtabline after stal=3
+ok   A number out of range keeps the old value: stal-=2 below the least
+ok   A value that is not a number: stal=x
+ok   Resetting an option: stal&
+ok   A flag prefix on a number: nostal
+ok   Turning a flag on, off, and over: nonu
+ok   Turning a flag on, off, and over: nu
+ok   Turning a flag on, off, and over: invnu
+ok   Turning a flag on, off, and over: nu!
+ok   A value for a flag: nu=1
+ok   Resetting an option: nu&
+ok   Turning a flag on, off, and over: nornu
+ok   Turning a flag on, off, and over: rnu
+ok   Turning a flag on, off, and over: invrnu
+ok   Turning a flag on, off, and over: rnu!
+ok   A value for a flag: rnu=1
+ok   Resetting an option: rnu&
+ok   Turning a flag on, off, and over: noet
+ok   Turning a flag on, off, and over: et
+ok   Turning a flag on, off, and over: invet
+ok   Turning a flag on, off, and over: et!
+ok   A value for a flag: et=1
+ok   Resetting an option: et&
+ok   Turning a flag on, off, and over: noai
+ok   Turning a flag on, off, and over: ai
+ok   Turning a flag on, off, and over: invai
+ok   Turning a flag on, off, and over: ai!
+ok   A value for a flag: ai=1
+ok   Resetting an option: ai&
+ok   Turning a flag on, off, and over: nolist
+ok   Turning a flag on, off, and over: list
+ok   Turning a flag on, off, and over: invlist
+ok   Turning a flag on, off, and over: list!
+ok   A value for a flag: list=1
+ok   Resetting an option: list&
+ok   Turning a flag on, off, and over: noreducedmotion
+ok   Turning a flag on, off, and over: reducedmotion
+ok   Turning a flag on, off, and over: invreducedmotion
+ok   Turning a flag on, off, and over: reducedmotion!
+ok   A value for a flag: reducedmotion=1
+ok   Resetting an option: reducedmotion&
+ok   Setting a word: winborder=single
+ok   Setting a word: the bare winborder shows it
+ok   A word the configuration refuses: winborder=bold
+ok   A word the configuration refuses: winborder kept
+ok   Resetting an option: winborder&
+ok   A list form of a word is not implemented: winborder+=x
+ok   A flag prefix on a word: nowinborder
+ok   Setting a word: icons=ascii
+ok   Setting a word: the bare icons shows it
+ok   A word the configuration refuses: icons=emoji
+ok   A word the configuration refuses: icons kept
+ok   Resetting an option: icons&
+ok   A list form of a word is not implemented: icons+=x
+ok   A flag prefix on a word: noicons
+ok   Setting a word: breadcrumbs=never
+ok   Setting a word: the bare breadcrumbs shows it
+ok   A word the configuration refuses: breadcrumbs=sometimes
+ok   A word the configuration refuses: breadcrumbs kept
+ok   Resetting an option: breadcrumbs&
+ok   A list form of a word is not implemented: breadcrumbs+=x
+ok   A flag prefix on a word: nobreadcrumbs
+ok   Setting a word: lcs=tab:>-,trail:~
+ok   Setting a word: the bare lcs shows it
+ok   A word the configuration refuses: lcs=eol:$
+ok   A word the configuration refuses: listchars kept
+ok   Resetting an option: lcs&
+ok   A list form of a word is not implemented: lcs+=x
+ok   A flag prefix on a word: nolcs
+ok   A blank kept by a backslash
+ok   a backslash kept by a backslash
+ok   several arguments in one command
+ok   a refused argument stops the command, the ones before it kept
+ok   a trailing ! on a number is E474
+ok   Not implemented: resetting every option
+ok   an option outside :set's is unknown
+ok   & on filetype is not implemented
+ok   a flag prefix on filetype is E474
+ok   startscreen is read only at startup
+ok   startscreen is read only at startup: the value kept
+ok   startscreen is read only at startup: & too
+ok   A bare set lists the changed options
+ok   a bare set lists the filetype and syntax once set
+ok   Set all lists every option
+ok   The number column follows set number
+ok   A tab is drawn at the new tabstop
+ok   Fewer undo levels
+ok   :set list and :set lcs draw the marks at once
+editor_set_options: 153 passed, 0 failed

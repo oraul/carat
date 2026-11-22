@@ -283,6 +283,32 @@ module DomainOptionsConfigTest
     end
     t.assert_equal([D::Options::GT_BUFFERS, true], [options.gt, options.gt_follows_buffers?], "the shipped configuration moves gt and gT between the buffer tabs")
 
+    # The rule :set shares with a line: problem gives a line's message or
+    # "" for a value it stores, assign stores it, and value_of words the
+    # value back as a line does. Rows are [label, [name, word], [problem,
+    # value after assign when there is none]].
+    t.cases([
+      ["a number in range is stored", ["tabstop", "4"], ["", "4"]],
+      ["a number out of range is the line's message", ["tabstop", "0"], ["option.tabstop takes a number from 1 to 9999", "8"]],
+      ["showtabline past 2", ["showtabline", "3"], ["option.showtabline takes a number from 0 to 2", "1"]],
+      ["undolevels past its limit", ["undolevels", "10001"], ["option.undolevels takes a number from 0 to 10000", "1000"]],
+      ["a flag", ["number", "true"], ["", "true"]],
+      ["a known word", ["winborder", "single"], ["", "single"]],
+      ["an unknown word", ["icons", "emoji"], ["unknown icon set emoji", "unicode"]],
+      ["listchars that does not read", ["listchars", "eol:$"], ["option.listchars takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide", "tab:> ,trail:-,nbsp:+"]],
+      ["empty listchars draws no mark", ["listchars", ""], ["", ""]],
+      ["a name that is no member has no value", ["wrap", "true"], ["", ""]]
+    ]) do |pair|
+      name = pair[0].to_s
+      word = pair[1].to_s
+      read = D::Options.new
+      message = read.problem(name, "option.#{name}", word)
+      read.assign(name, word) if message.empty?
+      [message, read.value_of(name)]
+    end
+    shipped = D::Options.shipped
+    t.assert_equal(["2", "true", "rounded", "1000"], [shipped.value_of("tabstop"), shipped.value_of("number"), shipped.value_of("winborder"), shipped.value_of("undolevels")], "Options.shipped reads config/default.caratrc alone")
+
     t.finish
   end
 end

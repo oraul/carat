@@ -102,4 +102,15 @@ ok   buffers is stored
 ok   tabpages is stored after buffers
 ok   An unknown gt mode is refused and keeps the earlier value
 ok   the shipped configuration moves gt and gT between the buffer tabs
-domain_options_config: 104 passed, 0 failed
+ok   a number in range is stored
+ok   a number out of range is the line's message
+ok   showtabline past 2
+ok   undolevels past its limit
+ok   a flag
+ok   a known word
+ok   an unknown word
+ok   listchars that does not read
+ok   empty listchars draws no mark
+ok   a name that is no member has no value
+ok   Options.shipped reads config/default.caratrc alone
+domain_options_config: 115 passed, 0 failed
