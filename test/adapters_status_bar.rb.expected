@@ -24,10 +24,10 @@ ok   crashed names the restart command
 ok   untrusted names the start command
 ok   setting the same server again changes nothing
 ok   40 columns keep every segment
-ok   30 columns drop the encoding
+ok   32 columns drop the encoding
 ok   25 columns drop the file type
-ok   22 columns drop the percent
-ok   17 columns drop the position
+ok   20 columns drop the percent
+ok   19 columns drop the position
 ok   12 columns cut the file
 ok   6 columns cut the pill
 ok   at 40 columns the counts stay with the position
@@ -43,6 +43,9 @@ ok   replace
 ok   operator pending
 ok   command line
 ok   the pill ends at its closing space and the status group fills the rest
+ok   each group's color and the spacing between the groups
+ok   NO_COLOR keeps the groups and the spacing
+ok   the branch, the type, and the encoding step back; the file, the position, and the percent do not
 ok   starting
 ok   ready
 ok   indexing
@@ -66,4 +69,4 @@ ok   plain done cells in StatusLine
 ok   an ascii bar reads #### and ------ with the done cells in StatusLineLspReady
 ok   a narrow bar drops the progress (35) before the branch (40)
 ok   clearing ends the progress once
-adapters_status_bar: 68 passed, 0 failed
+adapters_status_bar: 71 passed, 0 failed

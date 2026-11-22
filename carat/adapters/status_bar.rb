@@ -16,8 +16,13 @@ module Carat
     # the modified icon, the git branch, and the diagnostics counts at the
     # left; the plugins' segments, the progress of long work, the lsp slot, the file type, the
     # encoding, the position, and the percent at the right end. Each
-    # segment is its text with a space on each side, so the bar has no
-    # separator glyphs. An empty slot (branch, diagnostics, lsp, file
+    # segment is its text with a space on each side, and one more cell
+    # before it where an independent group starts (GAP), so the bar has no
+    # separator glyphs: two cells between the pill and the file and
+    # between the position and the percent, three between the other
+    # groups. The file and the position lead in StatusLine, bold; the
+    # branch, the file type, the encoding, and the server while it shows
+    # no state step back in StatusLineDim, the quiet PANEL_DIM text. An empty slot (branch, diagnostics, lsp, file
     # type, a plugin without a segment) takes no cells but keeps its
     # place in the order.
     #
@@ -45,6 +50,9 @@ module Carat
       PRIORITIES = [100, 90, 40, 70, 0, 60, 30, 20, 80, 50, 35]
 
       ENCODING_TEXT = "utf-8"
+      # The cells before a segment that starts an independent group: with
+      # the segment's own padding, three cells between groups.
+      GAP = 1
       # The cells of the progress bar, and the done cells of one without a
       # percent, which move one cell for each report.
       BAR_CELLS = 10
@@ -133,13 +141,13 @@ module Carat
 
       # The group of the lsp slot in a state: starting and indexing share
       # one, a crash is an error, and a stopped server or one waiting in an
-      # untrusted directory is plain.
+      # untrusted directory is quiet.
       #: (Symbol) -> Integer
       def self.lsp_group(state)
         return Domain::Highlight::STATUS_LSP_STARTING if state == :starting || state == :indexing
         return Domain::Highlight::STATUS_LSP_READY if state == :ready
         return Domain::Highlight::STATUS_LSP_ERROR if state == :crashed
-        Domain::Highlight::STATUS
+        Domain::Highlight::STATUS_DIM
       end
 
       private
@@ -182,10 +190,19 @@ module Carat
       #: (Integer, Integer, Integer) -> void
       def add(kind, width, owner)
         @kinds << kind
-        @widths << width
+        @widths << (gap?(kind) ? width + GAP : width)
         @priorities << (owner >= 0 ? @plugin_ui.priorities[owner] : PRIORITIES[kind])
         @shown << 1
         @owners << owner
+      end
+
+      # Whether a segment of the kind starts an independent group, so a
+      # cell of gap goes before it: every one but the pill, which the file
+      # follows two cells after, and the percent, which follows the
+      # position two cells after.
+      #: (Integer) -> bool
+      def gap?(kind)
+        kind != MODE && kind != FILE && kind != PERCENT
       end
 
       # Drops the entry of lowest priority, the later one on a tie, while
@@ -223,6 +240,7 @@ module Carat
         buffer = window.buffer
         set = state.options.icons
         slots = @slots
+        x = frame.put_within(row, x, " ", hl, limit) if gap?(kind)
         if kind == MODE
           hl = StatusBar.mode_group(state.mode)
           x = frame.put_within(row, x, " ", hl, limit)
@@ -235,6 +253,7 @@ module Carat
             x = frame.put_within(row, x, Domain::Icons.glyph("modified", set), hl, limit)
           end
         elsif kind == BRANCH
+          hl = Domain::Highlight::STATUS_DIM
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, Domain::Icons.glyph("git", set), hl, limit)
           x = frame.put_within(row, x, " ", hl, limit)
@@ -257,9 +276,11 @@ module Carat
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, slots.lsp_label, hl, limit)
         elsif kind == FILETYPE
+          hl = Domain::Highlight::STATUS_DIM
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, buffer.filetype, hl, limit)
         elsif kind == ENCODING
+          hl = Domain::Highlight::STATUS_DIM
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, ENCODING_TEXT, hl, limit)
         elsif kind == POSITION

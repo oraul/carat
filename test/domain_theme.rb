@@ -247,14 +247,14 @@ module DomainThemeTest
     out
   end
 
-  # The groups on the status bar, StatusLine, the lsp groups, and the
-  # count groups, whose 16-color foreground falls below 4.5:1 on their
+  # The groups on the status bar, StatusLine, StatusLineDim, the lsp groups,
+  # and the count groups, whose 16-color foreground falls below 4.5:1 on their
   # 16-color background under xterm's default colors, each with its
   # ratio, or that lack a basic color on either side.
   #: (Carat::Domain::Theme) -> Array[String]
   def self.bar_low_contrast_16(theme)
     out = []
-    ([H::STATUS] + LSP_GROUPS + COUNT_GROUPS).each do |id|
+    ([H::STATUS, H::STATUS_DIM] + LSP_GROUPS + COUNT_GROUPS).each do |id|
       fg = theme.fg16(id)
       bg = theme.bg16(id)
       if fg < 0 || bg < 0
@@ -334,12 +334,12 @@ module DomainThemeTest
     # UI group is -1), The search groups have colors,
     # Every UI group has a color in every palette,
     # Every palette passes (the contrast tables), and Comments are readable.
-    # The group table: the 66 UI groups first, then the thirty syntax
+    # The group table: the 67 UI groups first, then the thirty syntax
     # groups, then the thirteen file-icon groups, then the six markup
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, and Folded are the last UI groups")
-    t.assert_equal([66, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "66 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "StatusLineDim", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::STATUS_DIM], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups")
+    t.assert_equal([67, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "67 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
     # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
@@ -459,6 +459,30 @@ module DomainThemeTest
       t.assert_equal([], bar_low_contrast_16(D::Themes.find(name, "terminal")), "The bar reads at 16 colors: #{name}")
     end
     t.assert_equal([135, 171], [contrast(XTERM_16[3], XTERM_16[7]), contrast(XTERM_16[2], XTERM_16[7])], "the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1")
+
+    # Scenario: StatusLineDim is the bar's quiet text in every palette.
+    # PANEL_DIM on the bar's PANEL background reaches 4.5:1 at 24 bits, at
+    # 256 colors, and at 16 colors under xterm's default colors, the
+    # carat themes' values being the design's, with the bar's background
+    # and no attributes, on either background choice.
+    D::Themes::NAMES.each_with_index do |name, i|
+      row = role_row(D::Themes::PALETTES[i], D::Themes::PANEL_DIM)
+      panel = role_row(D::Themes::PALETTES[i], D::Themes::PANEL)
+      D::Themes::BACKGROUNDS.each do |background|
+        theme = D::Themes.find(name, background)
+        t.assert_equal([row[0], panel[0], 0, 0], [theme.fg(H::STATUS_DIM), theme.bg(H::STATUS_DIM), theme.attr(H::STATUS_DIM), theme.attr16(H::STATUS_DIM)], "StatusLineDim is PANEL_DIM on the bar's background, not bold: #{name} on the #{background}'s background")
+        t.assert_equal([], bar_holes(theme, [H::STATUS_DIM]), "StatusLineDim shares the bar's background: #{name} on the #{background}'s background")
+      end
+      theme = D::Themes.find(name, "terminal")
+      ratios = [contrast(theme.fg(H::STATUS_DIM), theme.bg(H::STATUS_DIM)), contrast(shown_256(theme.fg(H::STATUS_DIM), theme.fg256(H::STATUS_DIM)), shown_256(theme.bg(H::STATUS_DIM), theme.bg256(H::STATUS_DIM))), contrast(XTERM_16[theme.fg16(H::STATUS_DIM)], XTERM_16[theme.bg16(H::STATUS_DIM)])]
+      t.assert_equal([true, true, true], [ratios[0] >= 450, ratios[1] >= 450, ratios[2] >= 450], "PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: #{name} #{ratios}")
+      # StatusLine is bold and StatusLineDim is not, so the lead and the
+      # quiet text differ at 16 colors, where their colors may match.
+      t.assert_equal([D::Theme::BOLD, 0], [theme.attr16(H::STATUS) & D::Theme::BOLD, theme.attr16(H::STATUS_DIM) & D::Theme::BOLD], "StatusLine leads in bold and StatusLineDim does not at 16 colors: #{name}")
+    end
+    carat = [role_row(D::Themes::CARAT_DARK, D::Themes::PANEL_DIM)[0], role_row(D::Themes::CARAT_LIGHT, D::Themes::PANEL_DIM)[0]]
+    t.assert_equal([0xa4aabd, 0x5c6173], carat, "the carat themes' PANEL_DIM are the design's values")
+    t.assert_equal(["StatusLineDim", false], [H.name_of(H::STATUS_DIM), H.token?(H::STATUS_DIM)], "the bar's quiet group is named StatusLineDim and is a UI group")
 
     # Every palette's selected tab stands out: TabLineSel on its accent
     # at 3:1 from the tab row, another basic color, and bold, on either
