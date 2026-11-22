@@ -140,6 +140,7 @@ ok   a trailing ! on a number is E474
 ok   Not implemented: resetting every option
 ok   an option outside :set's is unknown
 ok   & on filetype is not implemented
+ok   a flag prefix on filetype is E474
 ok   startscreen is read only at startup
 ok   startscreen is read only at startup: the value kept
 ok   startscreen is read only at startup: & too
@@ -150,4 +151,4 @@ ok   The number column follows set number
 ok   A tab is drawn at the new tabstop
 ok   Fewer undo levels
 ok   :set list and :set lcs draw the marks at once
-editor_set_options: 152 passed, 0 failed
+editor_set_options: 153 passed, 0 failed
