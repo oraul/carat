@@ -595,22 +595,6 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### The merge gates' fsck misses an object swapped back after the worktree add (security Low (5))
-- Location: .claude/workflows/deliver-change.js:595 (the comment above the green line) and the archived ci-trust-gaps design.md
-- Why: the comment and design say an fsck after the worktree add still catches an object swapped back in between, which is backwards: a process left running by branch code can plant the loose object before the add and restore main's real content before the fsck, so the add writes the planted tools/gates.sh into tmp/.merge-gates and fsck passes; such a process could also write the worktree directly, so this is defence in depth (security Low (5), and the quality review's advisory at the same line).
-- Fix: correct the comment and the design: fsck catches an object still planted, not one swapped back; to close the gap, verify the checked-out files against main's tree after the fsck (hash each with git hash-object against git ls-tree origin/main under --no-replace-objects), or fsck both before and after the add, and say which window remains.
-- Also: tools/gates.sh
-- Category: security
-- Added: 2026-11-17
-
-### The merge gates' worktree file can be rewritten on disk after the fsck (security Low (5))
-- Location: .claude/workflows/deliver-change.js:650 (the green line's sh tmp/.merge-gates/tools/gates.sh merge)
-- Why: a process left running by branch code, such as a background job of a check or the other lane's checks, can overwrite tmp/.lane-CHANGE/tmp/.merge-gates/tools/gates.sh between the worktree add and the run, which no object check sees; the fsck now between those steps (2 s warm, 47 s cold) widens that existing window.
-- Fix: run main's gates from the verified store instead of the checked-out file, for example git --no-replace-objects cat-file blob origin/main:tools/gates.sh piped to sh -s merge after the fsck, or compare the checked-out tools/ against git ls-tree blob ids in the same command right before the run; record that a lingering branch process is outside the merge gates' threat model.
-- Also: tools/gates.sh
-- Category: security
-- Added: 2026-11-17
-
 ### The benchmark runs on a diff that touches no code (retro, third recording)
 - Location: `.claude/workflows/deliver-change.js`, the bench phase start.
 - Why: sprint-14-records spent 4,178 of 32,743 output tokens (12.8%) and 8 of 68 calls on bench for allocations all equal to main's and a us.insert 24% warning on a docs-only diff; over sprint-10 to sprint-14 records bench took 33,140 of 203,003 output tokens (16.3%) and 37 calls, first pass in all five; recorded before as sprint-12-records note 4 and sprint-13-records note 6.
@@ -637,14 +621,6 @@
 - Why: ruby-structure-remove's scout spent 33,374 output tokens and 17 calls, 24.6% of 135,491 output tokens and 14.4% of 118 calls, with 1 area, while the plan cited every file and line range and the contributor reversed the earlier diff exactly; scout share over recent feature rows 11.0% to 28.3%.
 - Fix: the next one-area removal or revert runs without a scout start, or under 10,000 scout output tokens, keeping first.check, first.quality, and first.security at 1.
 - Category: pipeline
-- Added: 2026-11-17
-
-### The green line's refs/replace check fails open when for-each-ref errors (sprint-15 review security Low (3))
-
-- Location: .claude/workflows/deliver-change.js:688
-- Why: branch code that corrupts the ref store (for example a malformed packed-refs line) makes for-each-ref exit non-zero with no output; wc still prints 0, so the stop meant to catch any refs/replace entry passes, leaving only the --no-replace-objects flag on each pinned git.
-- Fix outline: test for-each-ref's own exit status and output before the worktree add, so an error stops the line, with a tools_test case of a corrupt packed-refs file.
-- Category: security
 - Added: 2026-11-17
 
 ### Quality re-reviews re-raise recorded advisories (vim-folds-a retro 25)
@@ -1369,5 +1345,77 @@ none
 - Location: .claude/workflows/deliver-change.js, the package and prtext contributor starts
 - Why: hidden-option spent package 8,032 output tokens in 14 calls plus prtext 8,397 in 8, 16,429 output tokens (8.2 percent) and 22 of 172 calls (12.8 percent), with 0 findings appended; prtext's 8,397 is the highest of the last 11 feature rows (set-options 8,192, cmdline-editing 1,350); near backlog Pool 10 pr-claims.
 - Fix: run the archive, the gated pr.md, and the push in one start when no finding is appended; accepted when that start finishes in at most 12 calls on the next three runs with no prtext round.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The scout re-packs lines the plan already cites (folded-row retro note 2)
+- Location: .claude/workflows/deliver-change.js, the areas and scout phases; a near-same note of "### A one-area change still gets a scout pack (buffer-picker retro note 3, merge-gate-lows retro note 4)" and backlog queue Pool 14 `areas-in-plan`, `scout-prune`: merge into them.
+- Why: folded-row scout 35,225/40 (23.6 percent of 149,066 output, 25.3 percent of 158 calls, 91 percent of implement's 44 calls) for 2 areas after the plan named `frame_presenter.rb:881` to `:883` and `themes.rb:226`, `:278`, `:330`, `:382`; set-options 28.7 percent, hidden-option 31.3 percent.
+- Fix: no scout pack for an area whose edits the plan cites by path and line; accepted when, over the next 5 feature runs whose plan cites every edit, scout is at most 10 percent of output tokens and first-pass check stays 1.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A first-pass green CI still costs the merger 33,972 output tokens (folded-row retro note 3)
+- Location: the merge phase of .claude/workflows/deliver-change.js; a near-same note of "### The merger spends about half its calls polling CI (buffer-picker retro note 4)" and backlog queue Pool 14 `merge-wait-bound`: merge into them.
+- Why: folded-row merge 33,972/13 (22.8 percent of output), ci_wait_calls 6, CI green in 10 min; the same 13 calls cost 14,637 (colorscheme-command) and 16,600 (buffer-picker); border-vocabulary 142,172 (27.4 percent).
+- Fix: a bounded, cheap wait for a green first CI; accepted when the next 5 runs with first.ci 1 and rework 0 keep merge at or under 17,000 output tokens in 13 calls or fewer.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The checker starts when every stage is carried from the contributor's pass (buffer-picker retro note 2)
+- Location: .claude/workflows/deliver-change.js, the check phase; near backlog queue Pool 16 `check-at-head`, merge into it.
+- Why: buffer-picker check 33,344/2 (9.0 percent of 369,656 output) with every stage skipped as passed at the same head; check 59,290/2, 24,047/2, 32,471/2 in cmdline-completion, set-options, colorscheme-command.
+- Fix: no check agent when all stages are carried at the head; accepted when the next 3 such runs record no check agent tokens and first.check stays 1.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A one-area change still gets a scout pack (buffer-picker retro note 3, merge-gate-lows retro note 4)
+- Location: .claude/workflows/deliver-change.js, the areas and scout phases; near backlog queue Pool 14 `scout-prune` and `areas-in-plan`, merge into them.
+- Why: buffer-picker scout 37,539/22 (10.2 percent of output) for 1 area, implement still 74 calls; merge-gate-lows plan 20,300/13 relocated the lines, scout 18,783/13 packed the same area, the contributor relocated them again.
+- Fix: no scout for one area or for lines the plan names; accepted when the next 3 one-area feature runs record no scout phase, implement at or under 83.5 calls, first.check 1.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The merger spends about half its calls polling CI (buffer-picker retro note 4)
+- Location: the merge phase of .claude/workflows/deliver-change.js; near backlog queue Pool 14 `merge-wait-bound`, merge into it.
+- Why: ci_wait_calls 6 of merge's 13 calls (46 percent) for a 12.0 min CI; 6 in 8 of the last 10 feature rows.
+- Fix: wait outside the agent; accepted when the next 3 runs record ci_wait_calls 0 or 1 and merge at most 8 calls, first.ci unchanged.
+- Category: pipeline
+- Added: 2026-11-22
+
+### Packaging spends two agent starts on a fixed sequence (merge-gate-lows retro note 3)
+- Location: .claude/workflows/deliver-change.js, the package and prtext starts.
+- Why: package plus prtext 23 of 128 calls (18.0 percent) in merge-gate-lows; 24 of 258, 32 of 241, 47 of 239, 48 of 297 in config-guards-b, pipeline-lows-a, contributor-harness, contributor-self-check.
+- Fix: accepted when package and prtext take at most 10 calls together over the next 3 backlog runs, gates and ci first passes unchanged.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The checker starts when every stage is carried from the contributor's pass (buffer-picker retro note 2)
+- Location: .claude/workflows/deliver-change.js, the check phase; near backlog queue Pool 16 `check-at-head`, merge into it.
+- Why: buffer-picker check 33,344/2 (9.0 percent of 369,656 output) with every stage skipped as passed at the same head; check 59,290/2, 24,047/2, 32,471/2 in cmdline-completion, set-options, colorscheme-command.
+- Fix: no check agent when all stages are carried at the head; accepted when the next 3 such runs record no check agent tokens and first.check stays 1.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A one-area change still gets a scout pack (buffer-picker retro note 3, merge-gate-lows retro note 4)
+- Location: .claude/workflows/deliver-change.js, the areas and scout phases; near backlog queue Pool 14 `scout-prune` and `areas-in-plan`, merge into them.
+- Why: buffer-picker scout 37,539/22 (10.2 percent of output) for 1 area, implement still 74 calls; merge-gate-lows plan 20,300/13 relocated the lines, scout 18,783/13 packed the same area, the contributor relocated them again.
+- Fix: no scout for one area or for lines the plan names; accepted when the next 3 one-area feature runs record no scout phase, implement at or under 83.5 calls, first.check 1.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The merger spends about half its calls polling CI (buffer-picker retro note 4)
+- Location: the merge phase of .claude/workflows/deliver-change.js; near backlog queue Pool 14 `merge-wait-bound`, merge into it.
+- Why: ci_wait_calls 6 of merge's 13 calls (46 percent) for a 12.0 min CI; 6 in 8 of the last 10 feature rows.
+- Fix: wait outside the agent; accepted when the next 3 runs record ci_wait_calls 0 or 1 and merge at most 8 calls, first.ci unchanged.
+- Category: pipeline
+- Added: 2026-11-22
+
+### Packaging spends two agent starts on a fixed sequence (merge-gate-lows retro note 3)
+- Location: .claude/workflows/deliver-change.js, the package and prtext starts.
+- Why: package plus prtext 23 of 128 calls (18.0 percent) in merge-gate-lows; 24 of 258, 32 of 241, 47 of 239, 48 of 297 in config-guards-b, pipeline-lows-a, contributor-harness, contributor-self-check.
+- Fix: accepted when package and prtext take at most 10 calls together over the next 3 backlog runs, gates and ci first passes unchanged.
+
+none
 - Category: pipeline
 - Added: 2026-11-22

@@ -56,16 +56,6 @@ Match the existing style: the domain require is wedged between the `../files` us
 - Category: plugins
 - Added: 2026-11-18
 
-### carat/use_cases/plugins/file_requests.rb:144: the message "ran past 2 seconds" repeats ProcessRunner::CAPTURE_SECONDS (carat/drivers/process_runner.rb:30) (sprint-22 sweep quality)
-
-- Location: `carat/use_cases/plugins/file_requests.rb:144`
-- Why: the message "ran past 2 seconds" repeats ProcessRunner::CAPTURE_SECONDS (carat/drivers/process_runner.rb:30), and git_signs matches the text (carat/plugins/git_signs/plugin.rb:42,182), so changing the deadline quietly breaks git_signs backing off
-- Fix: report the timeout as a TextResponse field, or as one PluginApi constant for the seconds and the message, and have git_signs check that
-- Also reported: sprint-22 sweep note 60
-- Also: carat/drivers/process_runner.rb, carat/plugins/git_signs/plugin.rb
-- Category: plugins
-- Added: 2026-11-20
-
 ### The plugin timeout is told by a literal message (sprint-24 sweep quality)
 
 - Location: `carat/use_cases/plugins/file_requests.rb:144`, `carat/plugins/git_signs/plugin.rb:42`, `carat/plugin_api.rb:693`, `carat/drivers/process_runner.rb:30`
@@ -99,6 +89,12 @@ Match the existing style: the domain require is wedged between the `../files` us
 - Also: carat/drivers/process_runner.rb, carat/plugins/git_signs/plugin.rb
 - Category: plugins
 - Added: 2026-11-22
+- Merged: ### carat/use_cases/plugins/file_requests.rb:144: the message "ran past 2 seconds" repeats ProcessRunner::CAPTURE_SECONDS (carat/drivers/process_runner.rb:30) (sprint-22 sweep quality)
+- Location: `carat/use_cases/plugins/file_requests.rb:144`
+- Why: the message "ran past 2 seconds" repeats ProcessRunner::CAPTURE_SECONDS (carat/drivers/process_runner.rb:30), and git_signs matches the text (carat/plugins/git_signs/plugin.rb:42,182), so changing the deadline quietly breaks git_signs backing off
+- Fix: report the timeout as a TextResponse field, or as one PluginApi constant for the seconds and the message, and have git_signs check that
+- Also reported: sprint-22 sweep note 60
+- Also: carat/drivers/process_runner.rb, carat/plugins/git_signs/plugin.rb
 
 ### and :75, carat/use_cases/plugins/file_requests.rb:28, and carat/drivers/process_runner.rb:20 have class comments with at carat/use_cases/plugins/window_requests.rb:32 (sprint-26 sweep quality, note 39)
 

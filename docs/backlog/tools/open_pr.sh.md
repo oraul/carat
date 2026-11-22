@@ -50,14 +50,6 @@
 - Category: pipeline
 - Added: 2026-11-14
 
-### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
-
-- Location: tools/open_pr.sh:180 (sprint-4 review and sweep, security Low (5)).
-- Why: `gh pr list --head` counts fork pull requests with the predictable head name while view and edit by branch resolve only the same-repository head, so any user can make the count wrong (open refused) or have the title and body edit target the wrong one with PR_TOKEN.
-- Fix: count only same-repository heads, resolve one number, pass it to view and edit; a tools_test case with a cross-repository stand-in.
-- Category: security
-- Added: 2026-11-14
-
 ### open_pr.sh's wait step, double read, and branch pattern
 
 - Location: tools/open_pr.sh:121, :82, :45 (sprint-4 sweep, quality).
@@ -132,14 +124,6 @@
 - Why: git shows no head repository, so a fork that opens a pull request on the pushed commit before the run state records a number makes the wait refuse; the merger now refuses a fork's pull request, but the delivery stops until the number is set by hand.
 - Fix: have the open-pr workflow publish the number it opened or edited where git can read it (for example a check run name on the head the wait reads through the merger), or let the merger resolve the number from the branch with the GitHub read tool.
 - Category: pipeline
-- Added: 2026-11-21
-
-### Fork pull requests sharing the branch name block open_pr.sh (security Low (5))
-- Location: tools/open_pr.sh:142-151 (several numbers on the pushed head refused)
-- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
-- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
-- Also: docs/queue-backlog.md
-- Category: security
 - Added: 2026-11-21
 
 ### Pull request text claim check blocks a first pass (showtabline evidence for the package step's over-claim entry)

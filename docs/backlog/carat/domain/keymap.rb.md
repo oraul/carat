@@ -170,11 +170,8 @@
 - Also: carat/adapters/editor_assembly.rb, test/adapters_assembly.rb, test/adapters_config_gateway.rb, test/config_sync.rb
 - Category: editor
 - Added: 2026-11-22
-
-### Keymap.leader_from is now a one-line pass-through to Config#leader (since at carat/domain/keymap.rb:61 (sprint-26 sweep quality, note 2)
-
+- Merged: ### Keymap.leader_from is now a one-line pass-through to Config#leader (since at carat/domain/keymap.rb:61 (sprint-26 sweep quality, note 2)
 - Location: carat/domain/keymap.rb:61
 - Why: Keymap.leader_from is now a one-line pass-through to Config#leader (since config-guards-b), kept only for keymap.rb:73 and :126, editor_assembly.rb:351, and four tests
 - Fix: call config.leader at those sites, remove leader_from, and update the keymap.rb line of the map
-- Category: editor
-- Added: 2026-11-22
+

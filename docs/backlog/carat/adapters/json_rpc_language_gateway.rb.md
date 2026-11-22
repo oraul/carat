@@ -1,59 +1,5 @@
 # Backlog: carat/adapters/json_rpc_language_gateway.rb
 
-## The language server client repeats itself and names little of what it uses
-
-- Where: `carat/adapters/json_rpc_language_gateway.rb` at `lsp-diagnostics`: `start` and `restart` (lines 88 and 112 to 118) repeat the no-server message and the Cannot start tail; `hold` (line 228) repeats `launch`'s name computation (line 242); the private `forget(language)` (line 171) shares its name with `LanguageServer#forget(uri)` (line 455) and rescans the list `server_for` just scanned. `LspStartCommandHandler#call` (`carat/use_cases/ex/lsp_start_command_handler.rb` line 24) copies `LspRestartCommandHandler#call`. `Json` has the same plain ASCII byte predicate three times (`ascii_text?` line 234, `plain?` line 413, inlined in `write_string` line 392). Quality advisories of `lsp-diagnostics`.
-- Why it matters: duplication and a shared name for two different operations make the next change to one copy miss the other.
-- Fix outline: one private helper answering the start message, one `name_of(words)`, `forget` renamed `drop_server` taking the index `start` holds, one `Json` module function for the byte test; keep the two ex handlers separate if section 5 asks one handler per command, else share the argument check and the outcome mapping. Queued in `lsp-client-tidy`.
-- Merged: ### The language server client repeats itself and names little of what it uses
-- Location: carat/adapters/json_rpc_language_gateway.rb `start` and `restart` (the same "No language server for this buffer" and "Cannot start" blocks), `stop` and `restart` (the per-server forget loops), `request` and `notify` (each builds the envelope)
-- Why: the duplicated blocks drift apart on the next edit, and the client's long header comment carries what named helpers would; split from lsp-tidy by the plan and queued as `lsp-tidy-c`
-- Fix: one private `launch_shown(language)` for the shared start tail, one `forget_all` loop, and `notify` built on one `envelope(name, params)` that `request` adds the id to; the gateway's tests pass unchanged
-- Also: carat/use_cases/ex/lsp_start_command_handler.rb
-- Category: ide
-- Added: 2026-11-07
-
-## Published diagnostics keep any number of URIs
-
-- Where: the `publishDiagnostics` handling of `carat/adapters/json_rpc_language_gateway.rb` (line 1059 at 5e4c140). Periodic security Low (4) at eb63fb4, confirmed again as a periodic security Low (3) at 5e4c140.
-- Why it matters: a server publishing for many distinct URIs grows the map without limit.
-- Fix outline: keep only the documents the gateway opened, or cap the map and drop the oldest, with a gateway row. Queued in `lsp-client-tidy`.
-- Category: security
-- Added: 2026-11-07
-
-## The gateway's apply has an unclear name and a needless branch
-
-- Where: `apply(set)` in `carat/adapters/json_rpc_language_gateway.rb` (lines 440 and 453 at 38d8c47). Quality advisory at `diagnostics-display`.
-- Why it matters: the name says neither what is applied nor that `set` is the icon set name, and the `list.empty?` branch calls `clear_diagnostics`, which `Buffer#set_diagnostics` already does for an empty list.
-- Fix outline: rename it `show_published(icon_set)` at its call sites and call `buffer.set_diagnostics(list, glyphs)` unconditionally.
-- Category: ide
-- Added: 2026-11-07
-
-## The gateway's listed is public
-
-- Where: `listed(uri)` in `carat/adapters/json_rpc_language_gateway.rb` (line 165 at fb09c6b) sits above `private` (line 186), though only `diagnostics(path)` and `apply` call it. Periodic quality at fb09c6b.
-- Why it matters: it widens the adapter's public surface with a helper no caller outside the class uses.
-- Fix outline: move `listed` below `private`. Queued in `diagnostics-tidy`.
-- Category: ide
-- Added: 2026-11-07
-
-## A failed completion send leaves the input polling
-
-- Where: `complete` in `carat/adapters/json_rpc_language_gateway.rb` (line 474 at 376d264). Quality advisory in `completion-request`.
-- Why it matters: a write failure inside `request` crashes the server and `forget_completion` zeroes `sent_id`, but the returned id is then assigned to `sent_id`, so `waiting?` stays true and the input polls every 0.02 s until `ANSWER_LIMIT`.
-- Fix outline: `id = request(...)`, then `ask.sent_id = server.running? ? id : 0`, with a gateway row whose server fails the write.
-- Category: ide
-- Added: 2026-11-07
-
-## UTF-16 length is computed in the language gateway
-
-- Where: `utf16_length` in `carat/adapters/json_rpc_language_gateway.rb` (line 521 at 376d264); only an ASCII column is tested. Quality advisory in `completion-request`.
-- Why it matters: pure encoding math sits in an adapter beside protocol code, and a multibyte or non-BMP character before the cursor sends an untested column.
-- Fix outline: move it to `Domain::Utf8` beside the other code-unit helpers, with rows for a multibyte and a non-BMP character in `test/domain_utf8.rb`.
-- Also: test/domain_utf8.rb
-- Category: ide
-- Added: 2026-11-07
-
 ## Completion text edits ignore their range
 
 - Where: `candidate_of` in `carat/adapters/json_rpc_language_gateway.rb` (line 519 at 376d264), which takes `textEdit.newText` and drops the edit's range, while the menu replaces only the word from `FuzzyMatch.word_start`. Quality advisory in `completion-request`; the design leaves range edits out of scope.
@@ -485,5 +431,13 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Location: carat/adapters/json_rpc_language_gateway.rb:1
 - Why: one adapter of 1539 lines and about 110 methods holds the server lifecycle, document sync, diagnostics, and five request kinds, each with its own near-identical send, cancel, and answer trio (cancel :628, cancel_resolve :699, cancel_definition :753, cancel_hover :900, cancel_symbols :980, cancel_signature :1033)
 - Fix: move each request kind into its own adapter collaborator sharing request, cancel_request, and running_server through a small session object built in EditorAssembly
+- Category: ide
+- Added: 2026-11-22
+
+### Two blank lines in a row after the completion item method at carat/adapters/json_rpc_language_gateway.rb:1175 (sprint-27 review quality, note 7)
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1175
+- Why: removing utf16_length left two consecutive blank lines, against the file's style.
+- Fix: remove one.
 - Category: ide
 - Added: 2026-11-22

@@ -55,14 +55,6 @@
 - Category: pipeline
 - Added: 2026-11-19
 
-### tools/spec_validate.sh:26: rm -rf of build/spec-preview for every active change removes (sprint-22 sweep quality)
-
-- Location: `tools/spec_validate.sh:26`
-- Why: rm -rf of build/spec-preview for every active change removes the preview of an earlier failed change, so the message the preview is in build/spec-preview (line 37) and the header claim a failed preview is kept are wrong with two active changes
-- Fix: one preview directory per change (build/spec-preview/NAME), or stop after the first failure
-- Category: pipeline
-- Added: 2026-11-20
-
 ### spec_validate hard-codes the OpenSpec version (sprint-24 sweep quality)
 
 - Location: `tools/spec_validate.sh:18`
@@ -79,3 +71,7 @@
 - Fix: one preview directory per change (build/spec-preview/NAME), or stop at the first failure
 - Category: pipeline
 - Added: 2026-11-22
+- Merged: ### tools/spec_validate.sh:26: rm -rf of build/spec-preview for every active change removes (sprint-22 sweep quality)
+- Location: `tools/spec_validate.sh:26`
+- Why: rm -rf of build/spec-preview for every active change removes the preview of an earlier failed change, so the message the preview is in build/spec-preview (line 37) and the header claim a failed preview is kept are wrong with two active changes
+- Fix: one preview directory per change (build/spec-preview/NAME), or stop after the first failure

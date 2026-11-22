@@ -1,14 +1,5 @@
 # Backlog: carat.rb
 
-## ProcessRunner compiles only through carat.rb's require order
-
-- Where: `carat/drivers/process_runner.rb` line 1 at cd87445 requires only the process port yet builds `Domain::RpcFramer` and `Domain::ServiceMessage`. Periodic quality at cd87445; `carat/drivers/runtime_queue.rb` also builds `Domain::ServiceMessage` without requiring it, still present at b0dd342.
-- Why it matters: requiring the file alone fails, unlike DiskFiles, which requires its domain record.
-- Fix outline: require both domain files. Queued in `lsp-client-tidy`.
-- Also: carat/drivers/process_runner.rb, carat/drivers/runtime_queue.rb
-- Category: editor
-- Added: 2026-11-07
-
 ## carat.rb misses two production files
 
 - Where: `carat.rb:2`; `carat/domain/border_style.rb`, `carat/use_cases/actions/search_handler.rb`. Periodic quality. Raised again at 9a92265 (#99): `carat/adapters/indent_guides.rb` is missing too, making three.
@@ -34,15 +25,6 @@
 - Category: editor
 - Added: 2026-11-18
 
-### carat.rb:2: the comment says every file is pulled in here (sprint-22 sweep quality)
-
-- Location: `carat.rb:2`
-- Why: the comment says every file is pulled in here once, but carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, and carat/use_cases/concerns/undo_syncing.rb are reached only through other files require_relative lines
-- Fix: add them to carat.rb in layer order, or reword the comment
-- Also: carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
-- Category: editor
-- Added: 2026-11-20
-
 ### drift: the comment says every file is pulled in at carat.rb:2 (sprint-26 sweep quality, note 41)
 
 - Location: carat.rb:2
@@ -51,3 +33,8 @@
 - Also: CLAUDE.md, carat/domain/border_style.rb, carat/domain/folds.rb, carat/adapters/indent_guides.rb, carat/adapters/whitespace_marks.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### carat.rb:2: the comment says every file is pulled in here (sprint-22 sweep quality)
+- Location: `carat.rb:2`
+- Why: the comment says every file is pulled in here once, but carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, and carat/use_cases/concerns/undo_syncing.rb are reached only through other files require_relative lines
+- Fix: add them to carat.rb in layer order, or reword the comment
+- Also: carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
