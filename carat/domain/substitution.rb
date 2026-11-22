@@ -10,9 +10,11 @@ module Carat
     # pattern, or every one, replaced by the expanded string, or only
     # counted. Matches are found as a search finds them, every scan paid
     # from the budget, and every character of replacement text is charged
-    # OUTPUT_COST units more, so a command produces at most
-    # SearchBudget::SEARCH / OUTPUT_COST characters however the string and
-    # the matches multiply. An empty match at the end of the previous one
+    # OUTPUT_COST units more, before the replacement is built (counted by
+    # Replacement.size, a recased piece's difference settled after), so a
+    # replacement the budget cannot pay for is never built and a command
+    # produces at most SearchBudget::SEARCH / OUTPUT_COST characters
+    # however the string and the matches multiply. An empty match at the end of the previous one
     # does not count, as in Vim, which also ends the loop.
     module Substitution
       OUTPUT_COST = 16
@@ -41,8 +43,13 @@ module Carat
           count += 1
           unless count_only
             out << line[copied, start - copied].to_s
+            cost = Replacement.size(text, line, found) * OUTPUT_COST
+            budget.charge(cost)
+            break if budget.stopped
             piece = Replacement.expand(text, line, found)
-            budget.charge(piece.bytesize * OUTPUT_COST)
+            extra = piece.bytesize * OUTPUT_COST - cost
+            budget.charge(extra) if extra > 0
+            budget.refund(-extra)
             out << piece
             copied = stop
           end

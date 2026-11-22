@@ -2,7 +2,7 @@
 
 ## 1. Security: a replacement is charged before it is built
 
-- [ ] 1.1 `Replacement.size` (`carat/domain/replacement.rb`) and `Substitution.line` (`carat/domain/substitution.rb`) charging it before `Replacement.expand`, the recased difference charged or refunded after (proved by `test/domain_substitute.rb`, "the size of a replacement is the bytes expand builds" and "a replacement past the budget is never built", scenario "A replacement past the budget is never built"; the second fails with the fix reverted)
+- [x] 1.1 `Replacement.size` (`carat/domain/replacement.rb`) and `Substitution.line` (`carat/domain/substitution.rb`) charging it before `Replacement.expand`, the recased difference charged or refunded after (proved by `test/domain_substitute.rb`, "the size of a replacement is the bytes expand builds" and "a replacement past the budget is never built", scenario "A replacement past the budget is never built"; the second fails with the fix reverted)
 
 ## 2. One question about the path opened
 
