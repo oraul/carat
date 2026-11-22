@@ -18,3 +18,7 @@
 ## 4. Docs
 
 - [x] 4.1 Update `docs/plugins.md`, `docs/codebase-map.md`, `docs/compatibility.md`, `docs/actions.md`, `docs/design.md`, and README.md (`docs/architecture.md` stays at its size budget, unchanged)
+- [x] 5.1 A wide character before the cursor had no test of its cells; add it to `test/editor_finder.rb`, fixed
+- [x] 5.2 A query wider than the float had no test of the cursor's clamp; add it to `test/editor_finder.rb`, fixed
+- [x] 5.3 A query wider than its float is cut, not scrolled; recorded in `docs/findings/prompt-in-float.md`
+- [x] 5.4 The grep picker's title keeps its two-count form; recorded in `docs/findings/prompt-in-float.md`
