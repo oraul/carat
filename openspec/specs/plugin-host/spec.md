@@ -800,8 +800,8 @@ The request `set_float_lines(window, lines, title)` (API 2.11) SHALL replace the
 - **THEN** the request fails with "No float N" and the scratch buffer keeps its lines and title
 
 #### Scenario: A plugin written against 2.10 still loads
-- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.13
-- **THEN** the plugin is accepted, while a manifest naming "2.14" is refused naming both versions
+- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.14
+- **THEN** the plugin is accepted, while a manifest naming "2.15" is refused naming both versions
 
 ### Requirement: A plugin styles its float
 The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the style of one of the plugin's floats, 0 for the current window: `selected` is the row drawn in `PmenuSel`, the others then in `Pmenu`, or -1; `spans` are flat quadruples of row, column, length, and group id, drawn as tokens, `PmenuMatch` on the selected row in `PmenuMatchSel`. A refill SHALL drop the style.
@@ -827,7 +827,7 @@ The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the 
 - **THEN** the float's rows are drawn in `NormalFloat` with no span
 
 #### Scenario: A plugin written against 2.11 still loads
-- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.13
+- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.14
 - **THEN** the plugin is accepted
 
 ### Requirement: A float span admits only the popup menu's two groups beside the token groups
@@ -884,7 +884,7 @@ The request `set_float_border(window, style)` (API 2.13) SHALL give one of the p
 - **THEN** the request succeeds and the float takes the double style with a border, while a disabled plugin's request is refused with "Plugin NAME is disabled" and the float keeps its border
 
 #### Scenario: A plugin written against 2.12 still loads
-- **WHEN** a plugin's manifest names API version "2.12" and the host has 2.13
+- **WHEN** a plugin's manifest names API version "2.12" and the host has 2.14
 - **THEN** the plugin is accepted, its bordered float takes `option.winborder` with an edge, and its unbordered float has no edge
 
 ### Requirement: A bad border style request is refused
@@ -893,3 +893,25 @@ The request `set_float_border(window, style)` (API 2.13) SHALL give one of the p
 #### Scenario: Bad border requests are refused
 - **WHEN** the plugin sets its float's border to `thick`, another plugin sets it to `double`, or the plugin sets the border of an id no float has
 - **THEN** each request fails with its message and the float keeps its border
+
+### Requirement: A plugin lists the open buffers
+The request `list_buffers()` (API 2.14) SHALL answer the paths of the listed file buffers, in the order `:ls` shows them, each as the buffer holds it; scratch buffers, buffers a jump left unlisted, and unnamed buffers SHALL be left out. A disabled plugin's request SHALL be refused.
+
+#### Scenario: The listed file buffers
+- **WHEN** `lib/alpha.rb` and `lib/beta.rb` are open beside an unnamed buffer and a plugin's scratch buffer, and a plugin requests `list_buffers`
+- **THEN** the response succeeds with the lines `lib/alpha.rb` and `lib/beta.rb`
+
+#### Scenario: A disabled plugin lists no buffers
+- **WHEN** a disabled plugin requests `list_buffers` or `recent_files`
+- **THEN** the request fails with "Plugin NAME is disabled"
+
+### Requirement: A plugin reads the recent files
+The request `recent_files()` (API 2.14) SHALL answer the paths of the files shown in a window since the editor started, most recent first, each once: a file shown again SHALL move to the top, a file whose buffer was deleted SHALL stay, scratch and unnamed buffers SHALL never enter, and the list SHALL keep at most 100 paths, the oldest leaving first.
+
+#### Scenario: Recent files most recent first
+- **WHEN** `a.rb`, `b.rb`, and `c.rb` are opened in that order, then `a.rb` again, and `b.rb` is deleted with `:bd`
+- **THEN** `recent_files` answers `a.rb`, `c.rb`, and `b.rb`
+
+#### Scenario: The recent files are bounded
+- **WHEN** 101 files are opened one after another
+- **THEN** `recent_files` answers 100 paths, the last opened first and the first opened gone

@@ -12,7 +12,8 @@ module Carat
   module UseCases
     # The buffer requests of the plugin API: reading a buffer, editing it
     # as one validated transaction, moving the cursor, and placing and
-    # clearing signs. Buffers are addressed by id, 0 for the current one.
+    # clearing signs, and listing the file buffers and the recent files.
+    # Buffers are addressed by id, 0 for the current one.
     # The plugin link has checked that the plugin is enabled.
     class BufferRequests
       attr_reader :state #: Domain::EditorState
@@ -24,6 +25,18 @@ module Carat
         @state = state
         @buffers = buffers
         @registry = registry
+      end
+
+      # A copy of the listed file buffers' paths, in list order.
+      #: (String) -> PluginApi::Response
+      def list_buffers(name)
+        PluginApi::Response.listing(Boundary.copied_lines(@buffers.file_paths))
+      end
+
+      # A copy of the recent files, most recent first.
+      #: (String) -> PluginApi::Response
+      def recent_files(name)
+        PluginApi::Response.listing(Boundary.copied_lines(@buffers.recent))
       end
 
       # A copy of the buffer's lines and path, with the cursor when it is

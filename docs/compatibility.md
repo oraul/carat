@@ -557,6 +557,9 @@ The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow
 | Keys | Where | Action name | Behavior |
 | --- | --- | --- | --- |
 | `<leader>ff`, `<C-p>` | normal mode | `plugin.finder.open` | List the files below the working directory, without the names of `plugin.finder.ignore` (`.git build tmp`), links leading out of it, or the inside of linked directories, in a float titled `Files N/M` with the `> ` prompt on the command line |
+| `<leader>fb` | normal mode | `plugin.finder.buffers` | The same picker over the listed file buffers in `:ls` order, scratch and unnamed buffers left out, titled `Buffers N/M` |
+| `<leader>fr` | normal mode | `plugin.finder.recent` | The same picker over the recent files, most recent first, titled `Recent N/M`: every file shown in a window since the editor started, kept after `:bd`, at most 100, for this run only (no shada `oldfiles`) |
+| `<leader>fR` | normal mode | `plugin.finder.resume` | Open the last picker closed again with its typed text, its list read again, and its highlight (on the last row when fewer match); `No search to resume` before any |
 | typed text | finder | none | Filter by a match of the path ignoring case, best first: the text (or each space-separated term, in any order) as a substring of the path, or as initials (a few runs each after the first at a word start), never scattered letters; a substring ranks above initials, the file name above a directory, a shorter path breaks a tie; `No match` when nothing matches |
 | `<C-n>`, `<Down>`, `<C-p>`, `<Up>` | finder | `plugin.finder.next`, `previous` | Move the highlight, stopping at the ends |
 | `<CR>` | finder | none | Open the highlighted file in the editing window and close the finder; with no match the finder stays open on the typed text, so it can be corrected |
