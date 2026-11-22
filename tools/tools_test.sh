@@ -6234,5 +6234,58 @@ expect "spinel warnings: check fails on a warning without a location" 1 "^label:
 expect "spinel warnings: the wrapper keeps spinel's status and logs its warnings" 0 "^1$" \
   sh -c 'PATH="$1/bin:$PATH" SPINEL_WARNINGS_LOG="$1/out/wrapped.log" "$2" a.rb -o "$1/out/a" 2> /dev/null && grep -c "warning:" "$1/out/wrapped.log"' _ "$tc" "$here/spinel_warnings.sh"
 
+# ------------------------------------------------------------- bench/run.sh
+
+# A fake benchmark program: what a run allocates is 1000 objects of setup
+# and the keys it was given times the figure the file FAKE_FIGURES lists for
+# its scenario (10 when unlisted), times FAKE_MULT, so the difference of two
+# runs per key is that figure, as with the real program.
+mkdir -p "$work/budget"
+cat > "$work/bin/fake-keys" <<'EOF'
+#!/bin/sh
+if [ -n "${SPINEL_ALLOC_REPORT:-}" ]; then
+  awk -v s="$1" -v k="${2:-0}" -v m="${FAKE_MULT:-1}" -v f="${FAKE_FIGURES:-/dev/null}" '
+    BEGIN { per = 10; while ((getline line < f) > 0) { split(line, a, " "); if (a[1] == s) per = a[2] }
+            printf "alloc;Object %d\n", 1000 + k * per * m }' > "$SPINEL_ALLOC_REPORT"
+fi
+echo "$1 lines=1 keys=1 total=   1.0us"
+EOF
+chmod +x "$work/bin/fake-keys"
+printf 'a 10\nb 10\n' > "$work/budget/figures"
+printf 'a 30\nb 10\n' > "$work/budget/figures_a_high"
+printf 'lh-float 25.0\nfinder 376.0\npalette 280.5\n' > "$work/budget/picker_figures"
+# The benchmark runner, found from the tools directory's parent.
+bench_sh=$(dirname "$here")/bench/run.sh
+# bench_run ARGS...: the runner over the fake at the keys make bench-budget
+# gives the pickers, the figures of FIGURES, doubled by MULT=2.
+FIGURES="$work/budget/figures"
+MULT=1
+bench_run() {
+  env BENCH_BIN="$work/bin/fake-keys" BENCH_SMALL=20 BENCH_LARGE=120 FAKE_FIGURES="$FIGURES" FAKE_MULT="$MULT" sh "$bench_sh" "$@"
+}
+expect "bench/run.sh: budgets pass when each figure is under its maximum" 0 "budget: b allocates 10[.]0 objects .* under 15" bench_run --budgets "a:15 b:15"
+expect "bench/run.sh: a figure equal to its maximum fails" 1 "exceeded: a allocates 10[.]0 objects" bench_run --budgets "a:10 b:15"
+MULT=2
+expect "bench/run.sh: a doubled figure fails its budget" 1 "exceeded: b allocates 20[.]0 objects .* under 15" bench_run --budgets "a:25 b:15"
+MULT=1
+FIGURES="$work/budget/figures_a_high"
+expect "bench/run.sh: every scenario of the list is checked, the later ones after a failure" 1 "budget: b allocates 10[.]0 objects" bench_run --budgets "a:15 b:15"
+FIGURES="$work/budget/figures"
+expect "bench/run.sh: a budget pair without a maximum is refused" 2 "nothing is not NAME:MAX" bench_run --budgets "nothing"
+expect "bench/run.sh: the default scenarios hold the float scenario" 0 "^lh-float " bench_run
+expect "bench/run.sh: the default scenarios hold the finder scenario" 0 "^finder " bench_run
+expect "bench/run.sh: the default scenarios hold the palette scenario" 0 "^palette " bench_run
+# The maxima make bench-budget runs, read from its recipe without running it.
+picker_budgets=$(env -u MAKEFLAGS -u MFLAGS -u MAKELEVEL make -n -s --no-print-directory -C "$here/.." bench-budget 2> /dev/null | sed -n 's/.*--budgets "\([^"]*\)".*/\1/p')
+expect "make bench-budget: the recipe checks the float, finder, and palette maxima" 0 "^lh-float:[0-9]+ finder:[0-9]+ palette:[0-9]+$" echo "$picker_budgets"
+# The figures the maxima were set from, in objects per key.
+FIGURES="$work/budget/picker_figures"
+expect "make bench-budget: the maxima pass the recorded figures" 0 "budget: palette allocates 280[.]5 objects" bench_run --budgets "$picker_budgets"
+MULT=2
+expect "make bench-budget: a doubled float figure fails" 1 "exceeded: lh-float allocates 50[.]0 objects" bench_run --budgets "$picker_budgets"
+expect "make bench-budget: a doubled finder figure fails" 1 "exceeded: finder allocates 752[.]0 objects" bench_run --budgets "$picker_budgets"
+expect "make bench-budget: a doubled palette figure fails" 1 "exceeded: palette allocates 561[.]0 objects" bench_run --budgets "$picker_budgets"
+MULT=1
+
 echo "$passed/$total passed"
 test "$passed" -eq "$total"

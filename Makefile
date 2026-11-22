@@ -23,6 +23,10 @@ FILE       ?= README.md
 # The most objects one key of the cursor scenario of the benchmark may
 # allocate; make bench-budget fails at this number or above.
 ALLOC_BUDGET ?= 100
+# The most objects one key of the float, finder, and palette scenarios may
+# allocate, as name:maximum pairs: each is about 1.6 times its figure at the
+# commit that set it (25.0, 376.0, 280.5), so a doubled figure fails.
+PICKER_BUDGETS ?= lh-float:40 finder:600 palette:450
 # The test runner: every test program under test/ in one Spinel program,
 # compiled once into TEST_BIN and run once per test (test/runner/run_all.rb
 # and tools/run_tests.sh). Each test program used to be its own compile of
@@ -379,7 +383,7 @@ bench:
 	  $(SPINEL_WARNINGS) bench $(BENCH_KEYS).log
 	BENCH_BIN=$(BENCH_KEYS) sh bench/run.sh $(SCENARIOS)
 
-## bench-budget: build the key benchmark with the development flags into build/bench/keys-budget (allocations are the same at -O 0 as at -O 2) and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100), then print the time per key of the grep scenario over 150,000 lines (no time budget, since machines differ) through bench/run.sh, its allocation runs at 20 and 120 keys since a grep key takes milliseconds; CI runs it
+## bench-budget: build the key benchmark with the development flags into build/bench/keys-budget (allocations are the same at -O 0 as at -O 2) and fail when one key of the cursor scenario (lh) allocates ALLOC_BUDGET objects or more (default 100) or one key of the float, finder, or palette scenario allocates its maximum of PICKER_BUDGETS or more (default lh-float:40 finder:600 palette:450, each under twice its figure, at 20 and 120 keys), then print the time per key of the grep scenario over 150,000 lines (no time budget, since machines differ) through bench/run.sh, its allocation runs at 20 and 120 keys since a grep key takes milliseconds; CI runs it
 bench-budget:
 	@mkdir -p build/bench
 	@rm -f $(BUDGET_BIN)
@@ -390,6 +394,7 @@ bench-budget:
 	  $(SPINEL_WARNINGS) bench-budget $(BUDGET_BIN).timing
 	@$(UNIT_SUMMARY) $(BUDGET_BIN).timing
 	BENCH_BIN=$(BUDGET_BIN) sh bench/run.sh --budget lh $(ALLOC_BUDGET)
+	BENCH_BIN=$(BUDGET_BIN) BENCH_SMALL=20 BENCH_LARGE=120 sh bench/run.sh --budgets "$(PICKER_BUDGETS)"
 	BENCH_BIN=$(BUDGET_BIN) BENCH_SMALL=20 BENCH_LARGE=120 sh bench/run.sh grep
 
 ## metrics: measure the tree into build/metrics/current.tsv from the reports and the binary of dev-build, test-build, and bench-budget: the re-narrowing rounds and analysis milliseconds of both compile roots, and allocations and time per key of nine scenarios, grep's over 150,000 lines among them (or SCENARIOS="lh j")
