@@ -1,6 +1,6 @@
 ok   every id has a name
-ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, and MsgDim are the last UI groups
-ok   65 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, and Folded are the last UI groups
+ok   66 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   the status bar's count groups follow its lsp groups
@@ -238,6 +238,13 @@ ok   the message groups' colors: light_plus
 ok   the message groups' attributes: light_plus
 ok   MsgDim has no background of its own: light_plus
 ok   the dim message group's name
+ok   Folded is dim at every depth, with no background and no attributes: carat-dark
+ok   Folded is dim at every depth, with no background and no attributes: carat-light
+ok   Folded is dim at every depth, with no background and no attributes: one_dark
+ok   Folded is dim at every depth, with no background and no attributes: one_light
+ok   Folded is dim at every depth, with no background and no attributes: dark_plus
+ok   Folded is dim at every depth, with no background and no attributes: light_plus
+ok   the fold row's group is named Folded and is a UI group
 ok   The command pill is cyan: carat-dark
 ok   The command pill is cyan: carat-light
 ok   The command pill is cyan: one_dark
@@ -327,4 +334,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 329 passed, 0 failed
+domain_theme: 336 passed, 0 failed

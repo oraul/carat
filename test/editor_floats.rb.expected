@@ -52,7 +52,7 @@ ok   Spans without a selected row: the rows stay in NormalFloat, the spans in Pm
 ok   Visual is refused
 ok   PmenuMatchSel is refused
 ok   Normal is refused
-ok   MsgDim, the last UI group, is refused
+ok   Folded, the last UI group, is refused
 ok   a negative id is refused
 ok   an id past the last group is refused
 ok   Other UI groups are refused and the float keeps its previous style

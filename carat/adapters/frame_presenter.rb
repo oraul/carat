@@ -112,6 +112,10 @@ module Carat
       ASCII_SEPARATOR = "|"
       ASCII_ROW_SEPARATOR = "-"
       FAR = 1 << 30
+      # The tokens of a closed fold's row: its text, cut at the label's
+      # end, in Folded. One shared value, so the row cache's identity key
+      # stays the same from frame to frame.
+      FOLD_SYNTAX = Domain::SyntaxLine.new(text: String.new("fold"), start: -1, tokens: [0, FAR, Domain::Highlight::FOLDED], end_state: -1)
       FLOAT_STRIDE = 11
       # The title of a notification box by its level.
       NOTICE_TITLES = ["Info", "Warning", "Error"]
@@ -811,7 +815,7 @@ module Carat
       # marked dirty when it differs from the base frame's, a scroll
       # recorded for a full-width window, then the separator row under it
       # unless that row is the status bar's, bar. A closed fold is one row
-      # of its fold text, numbered by its first line; a window with one
+      # of its fold text in Folded, numbered by its first line; a window with one
       # records no scroll and draws no indent guides, its rows no longer
       # one per line.
       #: (Domain::Frame, Domain::Window, Integer, bool, Domain::Options, Integer, Integer, Domain::Selection, Integer, bool) -> void
@@ -881,6 +885,7 @@ module Carat
           if fold >= 0
             shown_last = folds.last_of(fold)
             line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
+            syntax = FOLD_SYNTAX
             number = number_shown(row, cursor.row, options, gutter, signs)
             if cursor.row >= row && cursor.row <= shown_last
               cur = 0

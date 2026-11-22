@@ -164,6 +164,7 @@ module Carat
         Highlight::REMOVED, RED, NONE, 0, 0,
         Highlight::LINE_NUMBER_FIFTH, DIM, NONE, 0, 0,
         Highlight::MESSAGE_DIM, DIM, NONE, 0, 0,
+        Highlight::FOLDED, DIM, NONE, 0, 0,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
         Highlight::STRING, STRING, NONE, 0, 0,

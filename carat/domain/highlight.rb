@@ -5,7 +5,7 @@ module Carat
     # the status bar's mode pills and slots after them, then the indent
     # guides' two, then FloatTitle, then the popup menu's
     # match and extra groups, then Neovim's Added, Changed, and Removed,
-    # which the git signs are drawn in, LineNrFifth, and MsgDim; then the syntax
+    # which the git signs are drawn in, LineNrFifth, MsgDim, and Folded; then the syntax
     # groups, from SYNTAX_FIRST on, with Neovim's standard
     # names in the order of its group-name help; then the file-icon groups,
     # from ICON_FIRST on, named as nvim-web-devicons names them; then the
@@ -80,62 +80,63 @@ module Carat
       REMOVED = 62
       LINE_NUMBER_FIFTH = 63
       MESSAGE_DIM = 64
+      FOLDED = 65
 
-      SYNTAX_FIRST = 65
-      COMMENT = 65
-      CONSTANT = 66
-      STRING = 67
-      CHARACTER = 68
-      NUMBER = 69
-      BOOLEAN = 70
-      FLOAT = 71
-      IDENTIFIER = 72
-      FUNCTION = 73
-      STATEMENT = 74
-      CONDITIONAL = 75
-      REPEAT = 76
-      LABEL = 77
-      OPERATOR = 78
-      KEYWORD = 79
-      EXCEPTION = 80
-      PRE_PROC = 81
-      INCLUDE = 82
-      DEFINE = 83
-      MACRO = 84
-      TYPE = 85
-      STORAGE_CLASS = 86
-      STRUCTURE = 87
-      TYPEDEF = 88
-      SPECIAL = 89
-      SPECIAL_CHAR = 90
-      DELIMITER = 91
-      SPECIAL_COMMENT = 92
-      TODO = 93
-      ERROR = 94
+      SYNTAX_FIRST = 66
+      COMMENT = 66
+      CONSTANT = 67
+      STRING = 68
+      CHARACTER = 69
+      NUMBER = 70
+      BOOLEAN = 71
+      FLOAT = 72
+      IDENTIFIER = 73
+      FUNCTION = 74
+      STATEMENT = 75
+      CONDITIONAL = 76
+      REPEAT = 77
+      LABEL = 78
+      OPERATOR = 79
+      KEYWORD = 80
+      EXCEPTION = 81
+      PRE_PROC = 82
+      INCLUDE = 83
+      DEFINE = 84
+      MACRO = 85
+      TYPE = 86
+      STORAGE_CLASS = 87
+      STRUCTURE = 88
+      TYPEDEF = 89
+      SPECIAL = 90
+      SPECIAL_CHAR = 91
+      DELIMITER = 92
+      SPECIAL_COMMENT = 93
+      TODO = 94
+      ERROR = 95
 
-      ICON_FIRST = 95
-      ICON_DEFAULT = 95
-      ICON_FOLDER = 96
-      ICON_SYMLINK = 97
-      ICON_RUBY = 98
-      ICON_JSON = 99
-      ICON_MARKDOWN = 100
-      ICON_TOML = 101
-      ICON_MAKEFILE = 102
-      ICON_SHELL = 103
-      ICON_C = 104
-      ICON_YAML = 105
-      ICON_GIT = 106
-      ICON_LOCK = 107
+      ICON_FIRST = 96
+      ICON_DEFAULT = 96
+      ICON_FOLDER = 97
+      ICON_SYMLINK = 98
+      ICON_RUBY = 99
+      ICON_JSON = 100
+      ICON_MARKDOWN = 101
+      ICON_TOML = 102
+      ICON_MAKEFILE = 103
+      ICON_SHELL = 104
+      ICON_C = 105
+      ICON_YAML = 106
+      ICON_GIT = 107
+      ICON_LOCK = 108
 
-      MARKUP_FIRST = 108
-      MARKUP_HEADING = 108
-      MARKUP_STRONG = 109
-      MARKUP_ITALIC = 110
-      MARKUP_RAW = 111
-      MARKUP_LINK = 112
-      MARKUP_RAW_BLOCK = 113
-      COUNT = 114
+      MARKUP_FIRST = 109
+      MARKUP_HEADING = 109
+      MARKUP_STRONG = 110
+      MARKUP_ITALIC = 111
+      MARKUP_RAW = 112
+      MARKUP_LINK = 113
+      MARKUP_RAW_BLOCK = 114
+      COUNT = 115
 
       # A cell on the cursor line carries its group's id plus this layer:
       # the group drawn over the CursorLine background, unless it has a
@@ -157,7 +158,7 @@ module Carat
         "StatusLineModeNormal", "StatusLineModeInsert", "StatusLineModeVisual", "StatusLineModeReplace", "StatusLineModeCommand",
         "StatusLineLspStarting", "StatusLineLspReady", "StatusLineLspError",
         "StatusLineDiagnosticError", "StatusLineDiagnosticWarn", "StatusLineDiagnosticInfo", "StatusLineDiagnosticHint",
-        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim",
+        "IblIndent", "IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded",
         "Comment", "Constant", "String", "Character", "Number", "Boolean", "Float", "Identifier", "Function",
         "Statement", "Conditional", "Repeat", "Label", "Operator", "Keyword", "Exception",
         "PreProc", "Include", "Define", "Macro",

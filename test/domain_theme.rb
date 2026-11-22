@@ -334,12 +334,12 @@ module DomainThemeTest
     # UI group is -1), The search groups have colors,
     # Every UI group has a color in every palette,
     # Every palette passes (the contrast tables), and Comments are readable.
-    # The group table: the 65 UI groups first, then the thirty syntax
+    # The group table: the 66 UI groups first, then the thirty syntax
     # groups, then the thirteen file-icon groups, then the six markup
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, and MsgDim are the last UI groups")
-    t.assert_equal([65, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "65 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, and Folded are the last UI groups")
+    t.assert_equal([66, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "66 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
     # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
@@ -619,6 +619,16 @@ module DomainThemeTest
       t.assert_equal(-1, theme.bg(H::MESSAGE_DIM), "MsgDim has no background of its own: #{name}")
     end
     t.assert_equal("MsgDim", H.name_of(H::MESSAGE_DIM), "the dim message group's name")
+
+    # Scenario: Folded in the carat themes. The closed fold's row is the
+    # dim role at every depth, with no background and no attributes, in
+    # every palette.
+    D::Themes::NAMES.each_with_index do |name, i|
+      theme = D::Themes.find(name, "terminal")
+      dim = role_row(D::Themes::PALETTES[i], D::Themes::DIM)
+      t.assert_equal([dim[0], theme.fg256(H::MESSAGE_DIM), dim[2], -1, -1, 0, 0], [theme.fg(H::FOLDED), theme.fg256(H::FOLDED), theme.fg16(H::FOLDED), theme.bg(H::FOLDED), theme.bg16(H::FOLDED), theme.attr(H::FOLDED), theme.attr16(H::FOLDED)], "Folded is dim at every depth, with no background and no attributes: #{name}")
+    end
+    t.assert_equal(["Folded", false], [H.name_of(H::FOLDED), H.token?(H::FOLDED)], "the fold row's group is named Folded and is a UI group")
 
     # Scenario: The command pill is cyan. Every palette's command pill,
     # which the query pickers' prompts draw too, is on its cyan.
