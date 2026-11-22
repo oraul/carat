@@ -819,7 +819,7 @@ module Carat
         end
         decoded = @cache.fetch(line, tabstop)
         @lines.paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
-        @lines.paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
+        @lines.paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0, false) unless syntax.tokens.empty?
         @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
         @marks.paint(frame, frame_row, x + gutter, decoded, text_width, left) if @mark_here
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0

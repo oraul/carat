@@ -64,6 +64,8 @@ ok   a negative column
 ok   a length of zero
 ok   Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style
 ok   An empty style clears it: every row in NormalFloat again
+ok   The selected row's mark and label groups style a span: the first cell in PmenuMarkSel, the rest of alpha in PmenuLabelSel, the padding in PmenuSel
+ok   Selected row spans under NO_COLOR: the PmenuMarkSel and PmenuLabelSel spans are drawn, the Comment and PmenuMatch spans are not
 ok   A refill drops the style: the rows are drawn in NormalFloat with no span
 ok   a span over a multi-byte line counts code points, and a span past the line's end is cut there
 ok   Another plugin's float is not styled, nor an unknown id or a layout window
@@ -77,7 +79,7 @@ ok   an unknown anchor
 ok   no rows
 ok   a z out of range
 ok   a tab page holds sixteen floats
-ok   the plugin API is 2.14
+ok   the plugin API is 2.15
 ok   An offset out of range is refused when a float opens
 ok   and when it moves, the float staying where it was
 ok   The frame under each border: the edge, padding, margin, and a 10-column text's box
@@ -115,4 +117,4 @@ ok   The empty style follows winborder: double, then single again, the other flo
 ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
 ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
 ok   a refill keeps the border style
-editor_floats: 117 passed, 0 failed
+editor_floats: 119 passed, 0 failed

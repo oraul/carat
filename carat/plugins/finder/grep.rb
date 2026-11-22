@@ -142,12 +142,17 @@ module Carat
           "#{shown} of #{@matched_files}#{more} files, #{@found.length}#{more} of #{stored} lines"
         end
 
-        # The row as shown: path, line number, and the line's text, safe
-        # for the terminal.
-        #: (Integer) -> String
-        def row_text(row)
+        # The row as shown after mark, the list's own prefix: path, line
+        # number, and the line's text, safe for the terminal. A row whose
+        # path and text are plain is built in one string, since every key
+        # builds a screen of rows.
+        #: (Integer, String) -> String
+        def row_text(row, mark)
           i = @hits[row]
-          safe("#{@files[@file_of[i]]}:#{@numbers[i]}: #{@texts[i]}")
+          file = @files[@file_of[i]]
+          text = @texts[i]
+          return "#{mark}#{file}:#{@numbers[i]}: #{text}" if plain?(file) && plain?(text)
+          mark + safe("#{file}:#{@numbers[i]}: #{text}")
         end
 
         #: (Integer) -> String

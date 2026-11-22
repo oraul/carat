@@ -8,9 +8,11 @@ module DomainThemeTest
   D = Carat::Domain
   H = D::Highlight
 
-  # The groups drawn as decorations, held to 3:1 rather than 4.5:1, and
+  # The groups drawn as decorations, held to 3:1 rather than 4.5:1 (the
+  # selected row's bar among them, a glyph beside the fill and the bold
+  # label that already mark the row), and
   # the groups that carry no text, exempt from the contrast rule.
-  DECORATIONS = [H::LINE_NUMBER, H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE]
+  DECORATIONS = [H::LINE_NUMBER, H::NON_TEXT, H::END_OF_BUFFER, H::WINDOW_SEPARATOR, H::FLOAT_BORDER, H::WHITESPACE, H::SIGN_COLUMN, H::INDENT_GUIDE, H::INDENT_GUIDE_SCOPE, H::POPUP_MENU_MARK_SELECTED]
   NO_TEXT = [H::TAB_LINE_FILL, H::POPUP_MENU_SCROLLBAR, H::POPUP_MENU_THUMB]
   # The palettes whose indent guides recede behind the text, ordered
   # below Comment rather than held to 3:1, and whose float border keeps
@@ -339,7 +341,7 @@ module DomainThemeTest
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
     t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "StatusLineDim", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::STATUS_DIM], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups")
-    t.assert_equal([67, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "67 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal([69, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "69 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
     # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
@@ -368,6 +370,7 @@ module DomainThemeTest
     t.assert_equal([true, true, true, false, false, false, false, false], [H.float_style?(H::COMMENT), H.float_style?(H::POPUP_MENU_SELECTED), H.float_style?(H::POPUP_MENU_MATCH), H.float_style?(H::VISUAL), H.float_style?(H::POPUP_MENU_MATCH_SELECTED), H.float_style?(H::NORMAL), H.float_style?(-1), H.float_style?(H::COUNT)], "float_style? admits the token groups, PmenuSel, and PmenuMatch only")
     t.assert_equal([H::POPUP_MENU_SELECTED, H::POPUP_MENU_MATCH, H::COMMENT, -1, -1], [H.float_style_id("PmenuSel"), H.float_style_id("PmenuMatch"), H.float_style_id("Comment"), H.float_style_id("Visual"), H.float_style_id("PmenuMatchSel")], "float_style_id resolves PmenuSel, PmenuMatch, and the token groups only")
     t.assert_equal([false, false], [H.token?(H::POPUP_MENU_SELECTED), H.token?(H::POPUP_MENU_MATCH)], "token? still refuses PmenuSel and PmenuMatch, so a tokenizer cannot paint them")
+    t.assert_equal([true, true, false, false, H::POPUP_MENU_MARK_SELECTED, H::POPUP_MENU_LABEL_SELECTED], [H.float_style?(H::POPUP_MENU_MARK_SELECTED), H.float_style?(H::POPUP_MENU_LABEL_SELECTED), H.token?(H::POPUP_MENU_MARK_SELECTED), H.token?(H::POPUP_MENU_LABEL_SELECTED), H.float_style_id("PmenuMarkSel"), H.float_style_id("PmenuLabelSel")], "a float span may carry PmenuMarkSel and PmenuLabelSel, which a tokenizer still cannot paint")
     t.assert_equal(["Visual", ""], [H.name_of(H::VISUAL), H.name_of(H::COUNT + 1)], "name_of")
 
     # The palettes and the backgrounds.
@@ -459,6 +462,21 @@ module DomainThemeTest
       t.assert_equal([], bar_low_contrast_16(D::Themes.find(name, "terminal")), "The bar reads at 16 colors: #{name}")
     end
     t.assert_equal([135, 171], [contrast(XTERM_16[3], XTERM_16[7]), contrast(XTERM_16[2], XTERM_16[7])], "the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1")
+
+    # Scenario: The mark and label groups in every palette. PmenuMarkSel
+    # is the sapphire bar and PmenuLabelSel the bold label of a selected
+    # list row, both on PmenuSel's selection background, reverse and
+    # bold at 16 colors where the selection fill is reverse.
+    D::Themes::NAMES.each_with_index do |name, i|
+      theme = D::Themes.find(name, "terminal")
+      fill = theme.bg(H::POPUP_MENU_SELECTED)
+      blue = role_row(D::Themes::PALETTES[i], D::Themes::MARK)[0]
+      both = D::Theme::REVERSE | D::Theme::BOLD
+      expected = [[blue, fill, D::Theme::BOLD, both], [theme.fg(H::POPUP_MENU_SELECTED), fill, D::Theme::BOLD, both], ["PmenuMarkSel", "PmenuLabelSel"]]
+      got = [[theme.fg(H::POPUP_MENU_MARK_SELECTED), theme.bg(H::POPUP_MENU_MARK_SELECTED), theme.attr(H::POPUP_MENU_MARK_SELECTED), theme.attr16(H::POPUP_MENU_MARK_SELECTED)], [theme.fg(H::POPUP_MENU_LABEL_SELECTED), theme.bg(H::POPUP_MENU_LABEL_SELECTED), theme.attr(H::POPUP_MENU_LABEL_SELECTED), theme.attr16(H::POPUP_MENU_LABEL_SELECTED)], [H.name_of(H::POPUP_MENU_MARK_SELECTED), H.name_of(H::POPUP_MENU_LABEL_SELECTED)]]
+      t.assert_equal(expected, got, "The mark and label groups in every palette: #{name}")
+    end
+    t.assert_equal([role_row(D::Themes::PALETTES[0], D::Themes::BLUE)[0], role_row(D::Themes::PALETTES[1], D::Themes::BLUE)[0]], [role_row(D::Themes::PALETTES[0], D::Themes::MARK)[0], role_row(D::Themes::PALETTES[1], D::Themes::MARK)[0]], "the bar is the carat themes' sapphire")
 
     # Scenario: StatusLineDim is the bar's quiet text in every palette.
     # PANEL_DIM on the bar's PANEL background reaches 4.5:1 at 24 bits, at

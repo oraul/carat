@@ -49,9 +49,13 @@ module UseCasesPluginSyntaxTest
       @log << "CursorLine=#{ui.ok} #{ui.message}"
       selected = host.syntax_group("PmenuSel")
       match = host.syntax_group("PmenuMatch")
+      mark = host.syntax_group("PmenuMarkSel")
+      label = host.syntax_group("PmenuLabelSel")
       visual = host.syntax_group("Visual")
       @log << "PmenuSel=#{selected.ok} #{selected.number}"
       @log << "PmenuMatch=#{match.ok} #{match.number}"
+      @log << "PmenuMarkSel=#{mark.ok} #{mark.number}"
+      @log << "PmenuLabelSel=#{label.ok} #{label.number}"
       @log << "Visual=#{visual.ok} #{visual.message}"
     end
 
@@ -108,7 +112,9 @@ module UseCasesPluginSyntaxTest
     # The requests below are asked of the plugin directly: activate it.
     h.plugins.activate("first")
     syntax = h.plugins.syntax
-    t.assert_equal(["Comment=true #{H::COMMENT}", "StatusLine=false No highlight group named StatusLine", "Banana=false No highlight group named Banana", "DevIconRb=true #{H::ICON_RUBY}", "CursorLine=false No highlight group named CursorLine", "PmenuSel=true #{H::POPUP_MENU_SELECTED}", "PmenuMatch=true #{H::POPUP_MENU_MATCH}", "Visual=false No highlight group named Visual"], first.log, "syntax_group answers syntax and file-icon groups by name and refuses others; The popup menu groups resolve: PmenuSel and PmenuMatch answer their ids and Visual is refused")
+    # Scenario: The popup menu groups resolve (PmenuSel, PmenuMatch,
+    # PmenuMarkSel, and PmenuLabelSel; Visual refused).
+    t.assert_equal(["Comment=true #{H::COMMENT}", "StatusLine=false No highlight group named StatusLine", "Banana=false No highlight group named Banana", "DevIconRb=true #{H::ICON_RUBY}", "CursorLine=false No highlight group named CursorLine", "PmenuSel=true #{H::POPUP_MENU_SELECTED}", "PmenuMatch=true #{H::POPUP_MENU_MATCH}", "PmenuMarkSel=true #{H::POPUP_MENU_MARK_SELECTED}", "PmenuLabelSel=true #{H::POPUP_MENU_LABEL_SELECTED}", "Visual=false No highlight group named Visual"], first.log, "syntax_group answers syntax and file-icon groups by name and refuses others; The popup menu groups resolve: PmenuSel and PmenuMatch answer their ids and Visual is refused")
 
     # The provider: the first enabled plugin that declares the syntax.
     names = ["toy", "other", "lazy", "ruby"].map do |type|

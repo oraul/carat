@@ -109,9 +109,9 @@ module Carat
         PluginApi::TextResponse.success(glyph)
       end
 
-      # The id of a syntax, file-icon, or markup group, or of PmenuSel or
-      # PmenuMatch for a float's spans, by its name, as the number of a
-      # response.
+      # The id of a syntax, file-icon, or markup group, or of PmenuSel,
+      # PmenuMatch, PmenuMarkSel, or PmenuLabelSel for a float's spans, by
+      # its name, as the number of a response.
       #: (String, String) -> PluginApi::Response
       def syntax_group(name, group)
         id = Domain::Highlight.float_style_id(group)

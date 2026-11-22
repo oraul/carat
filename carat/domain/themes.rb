@@ -90,7 +90,11 @@ module Carat
       # The status bar's quiet text, apart from DIM so it reads on PANEL at
       # 4.5:1 or more, where DIM is held to the editor's background.
       PANEL_DIM = 47
-      ROLES = 48
+      # The bar of a selected list row, drawn on SELECTION: the palette's
+      # blue, or a lighter one where the blue reads below 3:1 on its
+      # selection (dark_plus).
+      MARK = 48
+      ROLES = 49
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -168,6 +172,8 @@ module Carat
         Highlight::LINE_NUMBER_FIFTH, DIM, NONE, 0, 0,
         Highlight::MESSAGE_DIM, DIM, NONE, 0, 0,
         Highlight::FOLDED, DIM, NONE, 0, 0,
+        Highlight::POPUP_MENU_MARK_SELECTED, MARK, SELECTION, BOLD, REVERSE | BOLD,
+        Highlight::POPUP_MENU_LABEL_SELECTED, FG, SELECTION, BOLD, REVERSE | BOLD,
         Highlight::STATUS_DIM, PANEL_DIM, PANEL, 0, 0,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
@@ -234,6 +240,7 @@ module Carat
         PANEL, 0x2e3346, -1, 7,
         PANEL_FG, 0xe2e5ee, -1, 0,
         PANEL_DIM, 0xa4aabd, -1, 0,
+        MARK, 0x7fa6ff, -1, 12,
         PANEL_NC, 0x15171e, 233, 7,
         FLOAT, 0x15171e, -1, 0,
         SELECTION, 0x323a55, -1, -1,
@@ -287,6 +294,7 @@ module Carat
         PANEL, 0xe3e6ef, -1, 7,
         PANEL_FG, 0x2f3340, -1, 0,
         PANEL_DIM, 0x5c6173, -1, 0,
+        MARK, 0x2c58d0, -1, 4,
         PANEL_NC, 0xeceef3, -1, 7,
         FLOAT, 0xeceef3, -1, 7,
         SELECTION, 0xc2ccef, -1, -1,
@@ -340,6 +348,7 @@ module Carat
         PANEL, 0x3e4452, -1, 7,
         PANEL_FG, 0xd7dae0, -1, 0,
         PANEL_DIM, 0xb0b6c2, -1, 0,
+        MARK, 0x61afef, -1, 12,
         PANEL_NC, 0x21252b, -1, 7,
         FLOAT, 0x21252b, -1, 0,
         SELECTION, 0x3e4452, -1, -1,
@@ -393,6 +402,7 @@ module Carat
         PANEL, 0xe5e5e6, -1, 7,
         PANEL_FG, 0x383a42, -1, 0,
         PANEL_DIM, 0x5c5f6a, -1, 0,
+        MARK, 0x2f63d6, -1, 4,
         PANEL_NC, 0xf0f0f1, -1, 7,
         FLOAT, 0xf0f0f1, -1, 7,
         SELECTION, 0xe5e5e6, -1, -1,
@@ -446,6 +456,7 @@ module Carat
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_DIM, 0xe0ecf5, -1, 15,
+        MARK, 0x9cdcfe, -1, 12,
         PANEL_NC, 0x252526, -1, 7,
         FLOAT, 0x252526, -1, 0,
         SELECTION, 0x264f78, -1, -1,
@@ -500,6 +511,7 @@ module Carat
         PANEL, 0x0068ad, -1, 4,
         PANEL_FG, 0xffffff, -1, 15,
         PANEL_DIM, 0xe0ecf5, -1, 15,
+        MARK, 0x0000ff, -1, 4,
         PANEL_NC, 0xf3f3f3, -1, 7,
         FLOAT, 0xf3f3f3, -1, 7,
         SELECTION, 0xadd6ff, -1, -1,

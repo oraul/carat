@@ -127,6 +127,19 @@ module EditorFinderTest
     shown.empty? ? "" : shown[0].to_s.split("|")[0].to_s
   end
 
+  # The group of each listed column of a screen row, without its layer.
+  def self.row_groups(h, row, cols)
+    out = []
+    cols.each { |c| out << Carat::Domain::Highlight.base(h.frame.hl_at(row.to_i, c.to_i)) }
+    out
+  end
+
+  # A 24-bit color as the r;g;b of an SGR sequence.
+  def self.rgb(color)
+    c = color.to_i
+    "#{(c >> 16) & 255};#{(c >> 8) & 255};#{c & 255}"
+  end
+
   # The window id of each float of the current tab page.
   def self.float_ids(h)
     layer = h.state.tab.floats
@@ -145,63 +158,63 @@ module EditorFinderTest
     # Rows are [label, [keys, columns], [mode, command line, floats]].
     t.cases([
       # Space f f opens the finder
-      ["Space f f opens the finder", ["<Space>ff", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Space f f opens the finder", ["<Space>ff", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # Ctrl-P opens the finder
-      ["Ctrl-P opens the finder", ["<C-p>", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Ctrl-P opens the finder", ["<C-p>", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # Typing filters the files
-      ["Typing filters the files", ["<Space>ffbet", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
-      ["case is ignored", ["<Space>ffBET", 80], [:cmdline, "> BET", ["Files 1/3|> lib/beta.rb"]]],
-      ["two terms match in any order", ["<Space>ffbeta lib", 80], [:cmdline, "> beta lib", ["Files 1/3|> lib/beta.rb"]]],
-      ["two terms match in the other order", ["<Space>fflib beta", 80], [:cmdline, "> lib beta", ["Files 1/3|> lib/beta.rb"]]],
+      ["Typing filters the files", ["<Space>ffbet", 80], [:cmdline, "> bet", ["Files 1/3|▎ lib/beta.rb"]]],
+      ["case is ignored", ["<Space>ffBET", 80], [:cmdline, "> BET", ["Files 1/3|▎ lib/beta.rb"]]],
+      ["two terms match in any order", ["<Space>ffbeta lib", 80], [:cmdline, "> beta lib", ["Files 1/3|▎ lib/beta.rb"]]],
+      ["two terms match in the other order", ["<Space>fflib beta", 80], [:cmdline, "> lib beta", ["Files 1/3|▎ lib/beta.rb"]]],
       ["a term that matches nothing leaves no match", ["<Space>fflib zzz", 80], [:cmdline, "> lib zzz", ["Files 0/3|No match"]]],
-      ["initials match", ["<Space>ffla", 80], [:cmdline, "> la", ["Files 1/3|> lib/alpha.rb"]]],
+      ["initials match", ["<Space>ffla", 80], [:cmdline, "> la", ["Files 1/3|▎ lib/alpha.rb"]]],
       ["a run that starts mid-word does not match", ["<Space>ffibh", 80], [:cmdline, "> ibh", ["Files 0/3|No match"]]],
-      ["a query of spaces lists every file in listing order", ["<Space>ff  ", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
-      ["a backspace widens the match again", ["<Space>ffbet<BS><BS><BS>", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["a query of spaces lists every file in listing order", ["<Space>ff  ", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["a backspace widens the match again", ["<Space>ffbet<BS><BS><BS>", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # No file matches
       ["No file matches", ["<Space>ffzzz", 80], [:cmdline, "> zzz", ["Files 0/3|No match"]]],
       # Ctrl-N and Ctrl-P move the highlight
-      ["Ctrl-N and Ctrl-P move the highlight", ["<Space>ff<C-n><C-n><C-n><C-p>", 80], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n> lib/alpha.rb\n  lib/beta.rb"]]],
-      ["Down and Up move it too", ["<Space>ff<Down><Down><Up>", 80], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n> lib/alpha.rb\n  lib/beta.rb"]]],
-      ["the highlight stops at the first row", ["<Space>ff<C-p>", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
-      ["typing returns the highlight to the first row", ["<Space>ff<C-n><C-n>a", 80], [:cmdline, "> a", ["Files 2/3|> lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Ctrl-N and Ctrl-P move the highlight", ["<Space>ff<C-n><C-n><C-n><C-p>", 80], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n▎ lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Down and Up move it too", ["<Space>ff<Down><Down><Up>", 80], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n▎ lib/alpha.rb\n  lib/beta.rb"]]],
+      ["the highlight stops at the first row", ["<Space>ff<C-p>", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["typing returns the highlight to the first row", ["<Space>ff<C-n><C-n>a", 80], [:cmdline, "> a", ["Files 2/3|▎ lib/alpha.rb\n  lib/beta.rb"]]],
       # Esc closes the finder
       ["Esc closes the finder", ["<Space>ff<Esc>", 80], [:normal, "", []]],
       ["a backspace on the empty prompt closes it", ["<Space>ff<BS>", 80], [:normal, "", []]],
       # A wide screen shows the preview
-      ["A wide screen shows the preview", ["<Space>ffbet", 120], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb", "lib/beta.rb|b = 2"]]],
-      ["the preview follows the highlight", ["<Space>ff<C-n>", 120], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n> lib/alpha.rb\n  lib/beta.rb", "lib/alpha.rb|a = 1"]]],
+      ["A wide screen shows the preview", ["<Space>ffbet", 120], [:cmdline, "> bet", ["Files 1/3|▎ lib/beta.rb", "lib/beta.rb|b = 2"]]],
+      ["the preview follows the highlight", ["<Space>ff<C-n>", 120], [:cmdline, ">", ["Files 3/3|  docs/guide.md\n▎ lib/alpha.rb\n  lib/beta.rb", "lib/alpha.rb|a = 1"]]],
       ["no match shows no preview", ["<Space>ffzzz", 120], [:cmdline, "> zzz", ["Files 0/3|No match"]]],
       # Enter with no match keeps the finder open
       ["Enter with no match keeps the finder open", ["<C-p>zzqx<CR>", 80], [:cmdline, "> zzqx", ["Files 0/3|No match"]]],
       ["Enter with no match on a wide screen still shows no preview", ["<C-p>zzqx<CR>", 120], [:cmdline, "> zzqx", ["Files 0/3|No match"]]],
-      ["typing after Enter with no match filters again", ["<C-p>zzqx<CR><BS><BS><BS><BS>bet", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
+      ["typing after Enter with no match filters again", ["<C-p>zzqx<CR><BS><BS><BS><BS>bet", 80], [:cmdline, "> bet", ["Files 1/3|▎ lib/beta.rb"]]],
       # A narrow screen shows no preview
-      ["A narrow screen shows no preview", ["<Space>ffbet", 99], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
+      ["A narrow screen shows no preview", ["<Space>ffbet", 99], [:cmdline, "> bet", ["Files 1/3|▎ lib/beta.rb"]]],
       # Space f b lists the open buffers
-      ["Space f b lists the open buffers", [":e lib/beta.rb<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 2/2|> lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Space f b lists the open buffers", [":e lib/beta.rb<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 2/2|▎ lib/alpha.rb\n  lib/beta.rb"]]],
       # The buffer picker filters and opens the pick (its open row is in the table below)
-      ["The buffer picker filters and opens the pick: typing filters", [":e lib/beta.rb<CR><Space>fbalp", 80], [:cmdline, "> alp", ["Buffers 1/2|> lib/alpha.rb"]]],
-      ["the buffer picker previews on a wide screen", [":e lib/beta.rb<CR><Space>fb<C-n>", 120], [:cmdline, ">", ["Buffers 2/2|  lib/alpha.rb\n> lib/beta.rb", "lib/beta.rb|b = 2"]]],
+      ["The buffer picker filters and opens the pick: typing filters", [":e lib/beta.rb<CR><Space>fbalp", 80], [:cmdline, "> alp", ["Buffers 1/2|▎ lib/alpha.rb"]]],
+      ["the buffer picker previews on a wide screen", [":e lib/beta.rb<CR><Space>fb<C-n>", 120], [:cmdline, ">", ["Buffers 2/2|  lib/alpha.rb\n▎ lib/beta.rb", "lib/beta.rb|b = 2"]]],
       # Unnamed buffers are not listed
-      ["Unnamed buffers are not listed", [":new<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      ["Unnamed buffers are not listed", [":new<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|▎ lib/alpha.rb"]]],
       # A deleted buffer leaves the buffer picker
-      ["A deleted buffer leaves the buffer picker", [":e lib/beta.rb<CR>:bd<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      ["A deleted buffer leaves the buffer picker", [":e lib/beta.rb<CR>:bd<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|▎ lib/alpha.rb"]]],
       # Space f r lists the recent files most recent first
-      ["Space f r lists the recent files most recent first", [":e lib/beta.rb<CR>:e docs/guide.md<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|> docs/guide.md\n  lib/beta.rb\n  lib/alpha.rb"]]],
+      ["Space f r lists the recent files most recent first", [":e lib/beta.rb<CR>:e docs/guide.md<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|▎ docs/guide.md\n  lib/beta.rb\n  lib/alpha.rb"]]],
       # A file shown again moves to the top
-      ["A file shown again moves to the top", [":e lib/beta.rb<CR>:e docs/guide.md<CR>:e lib/alpha.rb<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|> lib/alpha.rb\n  docs/guide.md\n  lib/beta.rb"]]],
+      ["A file shown again moves to the top", [":e lib/beta.rb<CR>:e docs/guide.md<CR>:e lib/alpha.rb<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|▎ lib/alpha.rb\n  docs/guide.md\n  lib/beta.rb"]]],
       # A deleted buffer stays recent (its Enter row is in the table below)
-      ["A deleted buffer stays recent", [":e lib/beta.rb<CR>:bd<CR><Space>fr", 80], [:cmdline, ">", ["Recent 2/2|> lib/alpha.rb\n  lib/beta.rb"]]],
-      ["the recent files filter", [":e lib/beta.rb<CR><Space>frbet", 80], [:cmdline, "> bet", ["Recent 1/2|> lib/beta.rb"]]],
+      ["A deleted buffer stays recent", [":e lib/beta.rb<CR>:bd<CR><Space>fr", 80], [:cmdline, ">", ["Recent 2/2|▎ lib/alpha.rb\n  lib/beta.rb"]]],
+      ["the recent files filter", [":e lib/beta.rb<CR><Space>frbet", 80], [:cmdline, "> bet", ["Recent 1/2|▎ lib/beta.rb"]]],
       # Space f R resumes the file finder after Esc
-      ["Space f R resumes the file finder after Esc", ["<Space>ffa<C-n><Esc><Space>fR", 80], [:cmdline, "> a", ["Files 2/3|  lib/alpha.rb\n> lib/beta.rb"]]],
-      ["Space f R resumes the file finder after Esc on an empty prompt", ["<Space>ff<Esc><Space>fR", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      ["Space f R resumes the file finder after Esc", ["<Space>ffa<C-n><Esc><Space>fR", 80], [:cmdline, "> a", ["Files 2/3|  lib/alpha.rb\n▎ lib/beta.rb"]]],
+      ["Space f R resumes the file finder after Esc on an empty prompt", ["<Space>ff<Esc><Space>fR", 80], [:cmdline, ">", ["Files 3/3|▎ docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
       # Space f R resumes after a pick
-      ["Space f R resumes after a pick", [":e lib/beta.rb<CR><Space>fbalp<CR><Space>fR", 80], [:cmdline, "> alp", ["Buffers 1/2|> lib/alpha.rb"]]],
-      ["Space f R resumes after a split pick, the text typed kept", ["<Space>ffbet<C-x><Space>fR", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
+      ["Space f R resumes after a pick", [":e lib/beta.rb<CR><Space>fbalp<CR><Space>fR", 80], [:cmdline, "> alp", ["Buffers 1/2|▎ lib/alpha.rb"]]],
+      ["Space f R resumes after a split pick, the text typed kept", ["<Space>ffbet<C-x><Space>fR", 80], [:cmdline, "> bet", ["Files 1/3|▎ lib/beta.rb"]]],
       # The resumed highlight is clamped
-      ["The resumed highlight is clamped", [":e lib/beta.rb<CR><Space>fb<C-n><Esc>:bd<CR><Space>fR", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      ["The resumed highlight is clamped", [":e lib/beta.rb<CR><Space>fb<C-n><Esc>:bd<CR><Space>fR", 80], [:cmdline, ">", ["Buffers 1/1|▎ lib/alpha.rb"]]],
       # Nothing to resume
       ["Nothing to resume", ["<Space>fR", 80], [:normal, "No search to resume", []]]
 
@@ -292,11 +305,11 @@ module EditorFinderTest
     files.put("a.rb", "a\n")
     h = editor_on(files, 80)
     h.type("<Space>ff")
-    t.assert_equal(["Files 1/1|> a.rb"], floats(h), "Ignored directories are not listed")
+    t.assert_equal(["Files 1/1|▎ a.rb"], floats(h), "Ignored directories are not listed")
     h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("plugin.finder.ignore build"), rows: 24, cols: 80, plugins: [Carat::Plugins::Finder::Plugin.new])
     h.open("a.rb")
     h.type("<Space>ff")
-    t.assert_equal(["Files 2/2|> .git/HEAD\n  a.rb"], floats(h), "the configuration's ignore list replaces the default")
+    t.assert_equal(["Files 2/2|▎ .git/HEAD\n  a.rb"], floats(h), "the configuration's ignore list replaces the default")
 
     # A link leaving the project is skipped; a linked directory is not
     # entered.
@@ -310,7 +323,7 @@ module EditorFinderTest
     files.link_to("/p/alias", "/p/lib")
     h = editor_on(files, 80)
     h.type("<Space>ff")
-    t.assert_equal(["Files 4/4|> docs/guide.md\n  in.rb\n  lib/alpha.rb\n  lib/beta.rb"], floats(h), "A link leaving the project is skipped")
+    t.assert_equal(["Files 4/4|▎ docs/guide.md\n  in.rb\n  lib/alpha.rb\n  lib/beta.rb"], floats(h), "A link leaving the project is skipped")
     t.assert_equal(false, floats(h)[0].to_s.include?("alias"), "A linked directory is not entered")
 
     # The file name match ranks first
@@ -320,7 +333,7 @@ module EditorFinderTest
     files.put("lib/plugin.rb", "p\n")
     h = editor_on(files, 80)
     h.type("<Space>ffplugin")
-    t.assert_equal(["Files 2/2|> lib/plugin.rb\n  plugins/finder/x.rb"], floats(h), "The file name match ranks first")
+    t.assert_equal(["Files 2/2|▎ lib/plugin.rb\n  plugins/finder/x.rb"], floats(h), "The file name match ranks first")
 
     # A scattered path is not listed, and explorer ranks a file name, then a directory, then initials
     files = Carat::Doubles::MemoryFiles.new
@@ -331,7 +344,7 @@ module EditorFinderTest
     files.put("test/editor_explorer.rb", "e\n")
     h = editor_on(files, 80)
     h.type("<Space>ffexplorer")
-    t.assert_equal(["Files 3/4|> test/editor_explorer.rb\n  carat/plugins/explorer/plugin.rb\n  tools/explain_pl_or_err.sh"], floats(h), "A scattered path is not listed: a file name match, a directory match, then initials")
+    t.assert_equal(["Files 3/4|▎ test/editor_explorer.rb\n  carat/plugins/explorer/plugin.rb\n  tools/explain_pl_or_err.sh"], floats(h), "A scattered path is not listed: a file name match, a directory match, then initials")
 
     # A multi-byte path matches by its bytes
     files = Carat::Doubles::MemoryFiles.new
@@ -340,7 +353,7 @@ module EditorFinderTest
     files.put("src/cafe.rb", "c\n")
     h = editor_on(files, 80)
     h.type("<Space>ffcaf\u00e9")
-    t.assert_equal(["Files 1/2|> src/caf\u00e9.rb"], floats(h), "A multi-byte path matches by its bytes")
+    t.assert_equal(["Files 1/2|▎ src/caf\u00e9.rb"], floats(h), "A multi-byte path matches by its bytes")
 
     # Ten thousand files are listed and filtered
     files = Carat::Doubles::MemoryFiles.new
@@ -388,11 +401,49 @@ module EditorFinderTest
       shown << "#{top}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}"
       t.assert_equal([theme.fg(Carat::Domain::Highlight::FLOAT_BORDER), theme.fg(Carat::Domain::Highlight::FLOAT_TITLE)], [theme.fg(h.frame.cell(1, 1).hl), theme.fg(h.frame.cell(1, at).hl)], "The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under #{name}")
     end
-    rounded = " ╭#{"─" * 31} Buffers 2/2 #{"─" * 32}╮\n~│ > lib/alpha.rb#{" " * 61}│\n~│   lib/beta.rb#{" " * 62}│\n~╰#{"─" * 76}╯"
+    rounded = " ╭#{"─" * 31} Buffers 2/2 #{"─" * 32}╮\n~│ ▎ lib/alpha.rb#{" " * 61}│\n~│   lib/beta.rb#{" " * 62}│\n~╰#{"─" * 76}╯"
     t.assert_equal([rounded, rounded], shown, "The buffer picker's rows in both themes: the same rows, the title on the top edge")
     # Scenario: The recent files picker's rows in ASCII.
     h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
-    t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| > lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
+    t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| ▎ lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
+
+    # The selected row: the sapphire bar, the selection fill, and a bold
+    # label (design section 5). The list float's first row is screen row 2,
+    # its padding at column 2, the bar at 3, the label from 5.
+    hl = Carat::Domain::Highlight
+    mark = hl::POPUP_MENU_MARK_SELECTED
+    label = hl::POPUP_MENU_LABEL_SELECTED
+    fill = hl::POPUP_MENU_SELECTED
+    menu = hl::POPUP_MENU
+    dark = Carat::Domain::Themes.find("carat-dark", "terminal")
+    # Scenario: The selected row under truecolor.
+    h = session("<Space>ff", 80)
+    sgr = Carat::Adapters::SgrTable.from_theme(dark, Carat::Domain::ColorDepth::TRUECOLOR)
+    t.assert_equal(["~│ ▎ docs/guide.md", "~│   lib/alpha.rb", [fill, mark, fill, label, label, fill], [menu, menu, menu]], [h.row(2)[0, 18], h.row(3)[0, 17], row_groups(h, 2, [2, 3, 4, 5, 17, 18]), row_groups(h, 3, [2, 3, 5])], "The selected row under truecolor: ▎ in PmenuMarkSel, the label in PmenuLabelSel, the padding in PmenuSel, the next row in Pmenu")
+    t.assert_equal([false, "\e[0;1;38;2;#{rgb(dark.fg(mark))};48;2;#{rgb(dark.bg(fill))}m", sgr.at(h.frame.hl_at(2, 2)).sub("\e[0", "\e[0;1")], [floats(h)[0].to_s.include?(">"), sgr.at(h.frame.hl_at(2, 3)), sgr.at(h.frame.hl_at(2, 5))], "no > on any row, the bar sapphire and bold and the label bold, in the selection fill's colors")
+    t.assert_equal([dark.fg(hl::DIRECTORY), dark.bg(fill), dark.bg(fill)], [dark.fg(mark), dark.bg(mark), dark.bg(label)], "the bar is the theme's sapphire on the selection color")
+    # Scenario: The selected row at 16 colors.
+    sgr16 = Carat::Adapters::SgrTable.from_theme(dark, Carat::Domain::ColorDepth::COLORS_16)
+    t.assert_equal([true, true], [sgr16.at(h.frame.hl_at(2, 3)).start_with?("\e[0;1;7"), sgr16.at(h.frame.hl_at(2, 5)).start_with?("\e[0;1;7")], "The selected row at 16 colors: the bar and the label reverse and bold, as the fill is reverse")
+    # Scenario: The selected row under NO_COLOR.
+    config = Carat::Doubles::FixedConfig.with("")
+    h = Carat::Doubles::EditorHarness.new(files: disk, config: config, rows: 24, cols: 80, plugins: [Carat::Plugins::Finder::Plugin.new])
+    h.terminal.no_color = true
+    h.open("lib/alpha.rb")
+    h.type("<Space>ff")
+    t.assert_equal(["~| ▎ docs/guide.md", [fill, mark, label, label], true], [h.row(2)[0, 18], row_groups(h, 2, [2, 3, 5, 17]), dark.attr(label) & Carat::Domain::Theme::BOLD != 0], "The selected row under NO_COLOR: ▎, the bar and the bold label in their groups, the edge in ASCII")
+    # Scenario: The selected row under option.icons ascii.
+    h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
+    t.assert_equal(["~| ▎ lib/beta.rb", [fill, mark, label, label]], [h.row(2)[0, 16], row_groups(h, 2, [2, 3, 5, 15])], "The selected row under option.icons ascii: ▎ in PmenuMarkSel and the label in PmenuLabelSel")
+    # Scenario: The style follows the highlight.
+    h = session("<Space>ff<C-n>", 80)
+    t.assert_equal(["~│   docs/guide.md", "~│ ▎ lib/alpha.rb", [menu, menu], [mark, label]], [h.row(2)[0, 18], h.row(3)[0, 17], row_groups(h, 2, [3, 5]), row_groups(h, 3, [3, 5])], "The style follows the highlight: Ctrl-N moves the bar, the fill, and the bold label to the second row")
+    # Scenario: A grep row is styled as a file row.
+    h = session("<Space>fgb = 2", 80)
+    t.assert_equal(["~│ ▎ lib/beta.rb", [mark, label]], [h.row(2)[0, 16], row_groups(h, 2, [3, 5])], "A grep row is styled as a file row: ▎ in PmenuMarkSel and the row in PmenuLabelSel")
+    # Scenario: No match shows no highlighted row.
+    h = session("<Space>fflib zzz", 80)
+    t.assert_equal(["~│ No match", [hl::NORMAL_FLOAT, hl::NORMAL_FLOAT]], [h.row(2)[0, 11], row_groups(h, 2, [3, 5])], "No match shows no highlighted row: the float reads No match in NormalFloat")
 
     # Scenario: Ctrl-G switches the file finder to the grep picker.
     h = session("<Space>ffb<C-g>", 80)

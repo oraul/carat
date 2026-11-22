@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 14
-    VERSION = "2.14"
+    MINOR = 15
+    VERSION = "2.15"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -791,7 +791,10 @@ module Carat
       # id, in code point columns, drawn as tokenize's tokens are, a later
       # span over an earlier one, a PmenuMatch span on the selected row in
       # PmenuMatchSel. A span's group is a syntax, file-icon, or markup
-      # group, PmenuSel, or PmenuMatch, by its id from syntax_group. Fails
+      # group, PmenuSel, PmenuMatch, or (from 2.15) PmenuMarkSel and
+      # PmenuLabelSel, a selected row's mark and bold label on its fill,
+      # by its id from syntax_group; under NO_COLOR only the spans in
+      # PmenuMarkSel and PmenuLabelSel are drawn. Fails
       # with "No float N" as set_float_lines does, "No row N" for a
       # selected row or a span row outside the float's lines, "Spans are
       # row, column, length, and group" for a length not a multiple of
@@ -911,10 +914,11 @@ module Carat
       # Returns a Response whose number is the id of the syntax highlight
       # group ("Comment", "String", ... "Todo", "Error") or the file-icon
       # group ("DevIconDefault", "DevIconRb", ... "DevIconLock", API 2.1)
-      # with that name, or PmenuSel or PmenuMatch for style_float's spans
-      # (2.12), failed with "No highlight group named x" for any other
-      # name. A tokenizer resolves its groups once, in activate, and gives
-      # the ids in its tokens; a token in PmenuSel or PmenuMatch is dropped.
+      # with that name, or PmenuSel or PmenuMatch (2.12), PmenuMarkSel or
+      # PmenuLabelSel (2.15) for style_float's spans, failed with "No
+      # highlight group named x" for any other name. A tokenizer resolves
+      # its groups once, in activate, and gives the ids in its tokens; a
+      # token in one of those four is dropped.
       # @rbs name: String
       def syntax_group(name)
         raise NotImplementedError, "Host#syntax_group"

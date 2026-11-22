@@ -343,6 +343,24 @@ module EditorFloatsTest
     h.redraw
     t.assert_equal([true, false, [plain, plain, plain], [plain, plain, plain]], [cleared.ok, float.window.buffer.styled?, float_groups(h, 0, 3), float_groups(h, 2, 3)], "An empty style clears it: every row in NormalFloat again")
 
+    # Scenario: The selected row's mark and label groups style a span.
+    mark = hl::POPUP_MENU_MARK_SELECTED
+    label = hl::POPUP_MENU_LABEL_SELECTED
+    styled = h.plugins.window_requests.style_float("test", id, 0, ints([0, 0, 1, mark, 0, 1, 4, label]))
+    h.redraw
+    window = float.window
+    t.assert_equal([true, [mark, label, label, label, label, sel], sel], [styled.ok, float_groups(h, 0, 6), hl.base(h.frame.hl_at(window.row, window.col - 1))], "The selected row's mark and label groups style a span: the first cell in PmenuMarkSel, the rest of alpha in PmenuLabelSel, the padding in PmenuSel")
+    h.plugins.window_requests.style_float("test", id, -1, ints([]))
+
+    # Scenario: Selected row spans under NO_COLOR.
+    bare = configured("", 12, 40)
+    bare.terminal.no_color = true
+    bare.open("a.txt")
+    bare_id = open(bare, options("editor", 2, 4, 3, 10, true, "", 50, false), ["alpha", "beta", "gamma"])
+    styled = bare.plugins.window_requests.style_float("test", bare_id, -1, ints([0, 0, 1, mark, 0, 1, 2, label, 1, 0, 2, hl::COMMENT, 2, 0, 2, match]))
+    bare.redraw
+    t.assert_equal([true, [mark, label, label, plain], [plain, plain, plain], [plain, plain, plain]], [styled.ok, float_groups(bare, 0, 4), float_groups(bare, 1, 3), float_groups(bare, 2, 3)], "Selected row spans under NO_COLOR: the PmenuMarkSel and PmenuLabelSel spans are drawn, the Comment and PmenuMatch spans are not")
+
     # Scenario: A refill drops the style.
     h.plugins.window_requests.style_float("test", id, 0, ints([1, 0, 2, match]))
     h.redraw
@@ -410,7 +428,7 @@ module EditorFloatsTest
       i += 1
     end
     t.assert_equal("Too many floating windows", h.plugins.window_requests.open_float("test", API::FloatOptions.at(0, 0, 1, 1), ["x"]).message, "a tab page holds sixteen floats")
-    t.assert_equal("2.14", API::VERSION, "the plugin API is 2.14")
+    t.assert_equal("2.15", API::VERSION, "the plugin API is 2.15")
 
     # Scenario: An offset out of range is refused.
     h = editor
