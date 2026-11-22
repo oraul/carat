@@ -23,4 +23,4 @@
 ## Quality review
 
 - [x] 5.1 The `request` fix also changes the hover, definition, signature, and symbol asks, untested: add the failed hover send to `test/adapters_hover.rb` (fixed)
-- [x] 5.2 A parent directory swapped for a link after `ResolveInside` still redirects the create: needs `openat`, which Spinel lacks; recorded in `docs/findings/drivers-lsp-lows.md`
+- [x] 5.2 A parent directory swapped for a link after `ResolveInside` still redirects the create: needs `openat`, which Spinel lacks; recorded in `docs/findings/drivers-lsp-lows.md`; the interim delete after a second resolve is not applied, since a link swapped again before the delete could remove an existing file elsewhere (design, Risks)

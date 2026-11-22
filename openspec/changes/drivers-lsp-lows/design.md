@@ -18,3 +18,4 @@
 
 - A server publishing workspace diagnostics before a didOpen loses them until the file opens; ruby-lsp publishes per opened document.
 - A parent directory swapped for a link after `ResolveInside` still redirects the create; closing it needs `openat` on a held directory descriptor, which Spinel lacks; recorded in the findings file.
+- The interim outline for that swap, resolving the parent again after the create and deleting the file when it landed outside the root, is not applied: the link can be swapped once more between that resolve and the delete, so the delete could remove a file of the same name that already existed in another directory, and a `FilePort` gives no file identity (no inode) to tell the file just made from it. It would also add a failure outcome to `MakePath`, which is behavior this tidy-up does not specify; the finding stays recorded with this reason.
