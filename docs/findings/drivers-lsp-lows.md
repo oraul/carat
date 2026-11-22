@@ -1,0 +1,4 @@
+### MakePath's create still follows a parent directory swapped for a link after ResolveInside
+- Location: carat/use_cases/files/make_path.rb:41 (ResolveInside) and :47 (FilePort#create); carat/drivers/disk_files.rb create
+- Why: the exclusive, no-follow create refuses a link at the target itself, but a directory on the path to it that is replaced by a link to a directory outside the tree between ResolveInside's real_path and the open still redirects the new empty file outside the root (an untrusted-project Low, left by drivers-lsp-lows because Spinel offers no openat).
+- Fix: when Spinel offers openat or Dir#fileno with an *at open, hold a descriptor of the resolved parent and create the name relative to it with O_CREAT, O_EXCL, and O_NOFOLLOW; until then, re-resolve the parent after the create and delete the file when it landed outside the root.
