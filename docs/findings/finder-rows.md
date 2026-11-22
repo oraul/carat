@@ -12,3 +12,4 @@
 - Location: carat/plugins/finder/plugin.rb (activate, style_list)
 - Why: activate keeps the number of syntax_group("PmenuMarkSel") and syntax_group("PmenuLabelSel") without checking the response; on a host that refused the names the ids would be 0 and every style_float would fail with "No float group 0", leaving the highlighted row with no fill. It cannot arise today, since the finder is compiled with the host at API 2.15, so it was recorded rather than given an untestable branch.
 - Fix: when either response fails, style the row with no spans (the selection fill alone), and test it with a host double that refuses the names.
+none
