@@ -346,3 +346,10 @@ A keymap line in the project file, `none` excepted, whose keys start with keys h
 #### Scenario: The project file binds keys around a held key
 - **WHEN** the project file's first line is "keymap.normal :w cursor.down", its second "keymap.normal <Space>q cursor.down", and its third "keymap.normal <C-w>qa none"
 - **THEN** ".caratrc:1: :w overlaps keys that run mode.cmdline, which a project file may not unbind or rebind" and ".caratrc:2: <Space>q overlaps keys that run quit.all, which a project file may not unbind or rebind" are reported, and the third line is kept
+
+### Requirement: A file read is judged on its opened descriptor
+A configuration or plugin file read SHALL judge the kind of what it opened on the opened descriptor, never by its path again, and SHALL refuse a FIFO at once, without waiting for a writer, even while a language server's threads run.
+
+#### Scenario: A FIFO is refused at once while threads run
+- **WHEN** a FIFO with no writer is read while another thread runs
+- **THEN** the read raises "Not a regular file" without waiting for the writer
