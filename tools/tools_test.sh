@@ -484,6 +484,35 @@ commit "test: claim again"
 env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 expect "run_state: check skips the stages the contributor's own check passed at the backed head" 0 "^stage b: passed at $(git rev-parse --short=12 HEAD), skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+# pipeline-lows-a: diagnose, which CI leaves out (RERUN_STAGES), skips at
+# the head only on the recorded phase.check, never on a contributor's
+# claimed head, whose records its working tree's runner wrote.
+echo "claim diagnose" > test/claim.rb
+commit "test: claim diagnose"
+env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)" > rerun.out 2>&1
+expect "run_state: check reruns diagnose at a contributor's claimed head and skips the other stages" 0 "^stage diagnose: exit 0" cat rerun.out
+expect "run_state: check names diagnose's pass at a claimed head as run again" 0 "^stage diagnose: passed at $(git rev-parse --short=12 HEAD), run again" cat rerun.out
+expect "run_state: check still skips the other stages at a contributor's claimed head" 0 "^stage a: passed at $(git rev-parse --short=12 HEAD), skipped" cat rerun.out
+rm rerun.out
+state phase state check "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: check skips diagnose at the head the recorded phase.check backs" 0 "^stage diagnose: passed at $(git rev-parse --short=12 HEAD), skipped" \
+  env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+state phase state check "$before_tests" > /dev/null
+# pipeline-lows-a: the runner repeats the waiter's dirty-tree refusal, so a
+# runner started over an edited tree writes no record and its pass backs
+# no head.
+echo "dirty runner" > test/claim.rb
+commit "test: dirty runner"
+echo forged >> tools/base.sh
+env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check-run state > dirty.out 2>&1
+echo "exit $?" >> dirty.out
+git_q checkout -q tools/base.sh
+expect "run_state: a runner started over a dirty tree refuses at its own start" 0 "refused: tracked files differ from HEAD at the runner's start" cat dirty.out
+expect "run_state: a refused runner ends with a failed verdict" 0 "^exit 1$" cat dirty.out
+rm dirty.out
+expect "run_state: a runner started over a dirty tree records nothing, so its pass backs no head" 0 "^stage a: exit 0" \
+  env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 # The checks judge the commit: a modified tracked file or an untracked
 # source spin would compile is refused before any stage runs.
 echo dirty >> README.md
@@ -1091,7 +1120,7 @@ echo notes > docs/notes.md
 commit "chore: tooling"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check skips a compile stage on the code it passed" 0 "^stage dev-build: passed on the same code .* skipped" cat "$work/compiled.out"
-expect "run_state: a tooling commit keeps the code key" 0 "^stage diagnose: passed on the same code .* skipped" cat "$work/compiled.out"
+expect "run_state: a tooling commit keeps the code key, diagnose runs again" 0 "^stage diagnose: exit 0" cat "$work/compiled.out"
 expect "run_state: check runs the other stages on a tooling commit" 0 "^stage a: exit 0" cat "$work/compiled.out"
 expect "run_state: a skipped compile stage passes at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ compiled-[0-9a-f]{12}$" state get compiled stage.test-build
 expect "run_state: check carries the compile outputs out of its clone" 0 "^runner$" cat build/stages/compiled/carry/test/run_all

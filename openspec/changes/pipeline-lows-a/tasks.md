@@ -2,8 +2,8 @@
 
 ## 1. Check records a contributor's runner cannot back
 
-- [ ] 1.1 `tools/run_state.sh` `check_run`: refuse a tracked file differing from HEAD at the runner's start, before the clone, with a `stage none failed` verdict and no record. Test: `tools/tools_test.sh` "run_state: a runner started over a dirty tree records nothing, so its pass backs no head".
-- [ ] 1.2 `tools/run_state.sh` `check_stages`, `RERUN_STAGES`, `COMPILE_STAGES`: `diagnose` skipped at the head only when the backed commit is the recorded `phase.check`, never compiled-skipped; header and comments. Test: "run_state: check reruns diagnose at a contributor's claimed head and skips the other stages", "run_state: check skips diagnose at the head the recorded phase.check backs", "run_state: a tooling commit keeps the code key, diagnose runs again".
+- [x] 1.1 `tools/run_state.sh` `check_run`: refuse a tracked file differing from HEAD at the runner's start, before the clone, with a `stage none failed` verdict and no record. Test: `tools/tools_test.sh` "run_state: a runner started over a dirty tree refuses at its own start", "run_state: a runner started over a dirty tree records nothing, so its pass backs no head".
+- [x] 1.2 `tools/run_state.sh` `check_stages`, `RERUN_STAGES`, `COMPILE_STAGES`: `diagnose` skipped at the head only when the backed commit is the recorded `phase.check`, never compiled-skipped; header and comments. Test: "run_state: check reruns diagnose at a contributor's claimed head and skips the other stages", "run_state: check still skips the other stages at a contributor's claimed head", "run_state: check skips diagnose at the head the recorded phase.check backs", "run_state: a tooling commit keeps the code key, diagnose runs again".
 
 ## 2. Skeptic notes recorded literally
 

@@ -147,7 +147,11 @@
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT; a stage of
 #                               COMPILE_STAGES is skipped on the code key of
-#                               its last pass with its outputs unchanged.
+#                               its last pass with its outputs unchanged;
+#                               a stage of RERUN_STAGES (diagnose, which CI
+#                               leaves out) is skipped only when COMMIT is
+#                               the recorded phase.check, and never on a
+#                               code key.
 #                               Whoever started it, the contributor (CHANGE
 #                               alone, its own head) or the checker, a check
 #                               writes its stage records from the runner,
@@ -159,14 +163,18 @@
 #                               machinery), and records phase.check from the
 #                               checker's verdict alone. The runner is the
 #                               contributor's working tree's copy, so an
-#                               uncommitted edit of it or of the Makefile,
-#                               restored before the commit, could write
-#                               records at HEAD that machinery no does not
-#                               see: a backed head trusts the contributor's
-#                               session; CI reruns docs-lint, the builds,
-#                               test-run, bench-budget, metrics, and
-#                               tools-test, main's merge gates rerun gates,
-#                               and diagnose rests on it as before. The
+#                               uncommitted edit of it, restored before
+#                               the commit, could write records at HEAD
+#                               that machinery no does not see: a backed
+#                               head trusts the contributor's session only
+#                               where a later run checks it again; CI
+#                               reruns docs-lint, the builds, test-run,
+#                               bench-budget, metrics, and tools-test,
+#                               main's merge gates rerun gates, and the
+#                               checker's own check reruns diagnose
+#                               (RERUN_STAGES). The runner refuses a dirty
+#                               tracked tree at its own start too, so one
+#                               started over an edit writes no record. The
 #                               stages run in a runner (check-run, no agent's)
 #                               detached from the caller, rejoined by a check
 #                               at the same HEAD and stopped by one at another;
@@ -521,11 +529,20 @@ outside_records() {
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
-# BUILD_TOOLS, the scripts dev-build, test-build, and diagnose run: the
-# analysis budget and the Spinel warning check, whose pattern decides a
-# pass. COMPILED keeps each stage's last pass, "STAGE KEY SUM", across
-# changes, in the run state's directory, which only this script writes.
-COMPILE_STAGES="dev-build test-build diagnose"
+# BUILD_TOOLS, the scripts dev-build and test-build run: the analysis
+# budget and the Spinel warning check, whose pattern decides a pass.
+# COMPILED keeps each stage's last pass, "STAGE KEY SUM", across changes,
+# in the run state's directory, which only this script writes.
+COMPILE_STAGES="dev-build test-build"
+# The stages CI leaves out of a pull request's checks and no later gate
+# reruns (main's merge gates rerun the gates): diagnose. A pass of theirs
+# is skipped at the head only when the backed commit is the recorded
+# phase.check, which the workflow writes from the checker's verdict, never
+# on a contributor's claimed head, whose records its working tree's
+# runner wrote, and never on a compiled line, which any runner writes; so
+# the checker runs them again wherever a contributor's runner could have
+# written their pass.
+RERUN_STAGES="diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/(analysis_budget|spinel_warnings)[.]sh$'
 # The path scope: the stages a change's paths need, from the paths changed
@@ -643,7 +660,8 @@ commit_at() {
 # the recorded phase.check, the last check the workflow passed, or HEAD,
 # where the stage records the check skips are the runner's at that very
 # commit (the working tree's runner, so at HEAD they are only as trusted
-# as the session that ran it: the header's check entry). Any other commit
+# as the session that ran it, and RERUN_STAGES skip only on phase.check:
+# the header's check entry). Any other commit
 # backs nothing: its records are refused, a note says so on stderr, and
 # the check runs every stage, since the workflow queues its phase.check
 # record and writes it only after its rounds, so a fix round's check may
@@ -1054,17 +1072,23 @@ check_stages() {
   backed=$1
   key=$(code_key)
   paths=$(scope_paths)
+  # The recorded phase.check, twelve digits, which alone backs a pass of
+  # RERUN_STAGES at the head.
+  recorded=$(read_key phase.check)
+  [ -z "$recorded" ] || recorded=$(git rev-parse --verify -q --short=12 "$recorded^{commit}" 2>/dev/null) || recorded=""
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
     from=$(echo "$record" | sed -n 's/.* carried-from-\([0-9a-f]*\)$/\1/p')
     case "$record" in
       "0 "*)
-        if [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
+        if one_of "$s" "$RERUN_STAGES" && { [ -z "$recorded" ] || [ "$backed" != "$recorded" ]; }; then
+          [ -z "$backed" ] || [ "$at" != "$head" ] ||
+            echo "stage $s: passed at $head, run again: CI leaves it out and only the recorded phase.check backs its pass"
+        elif [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
           echo "stage $s: passed at $head, skipped"
           continue
-        fi
-        if [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
+        elif [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
             ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
           stage_record "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
           echo "stage $s: passed at $backed, carried to $head (only tests changed since)"
@@ -1162,6 +1186,16 @@ check_run() {
   trap 'check_signalled INT' INT
   trap 'check_signalled TERM' TERM
   trap 'clone_drop; own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  # The waiter's refusal again, at the runner's own start: a runner
+  # started over an edited tree (after the waiter's check, or by hand)
+  # writes no record, so its pass backs no head; an edit after this line
+  # is voided by the escape scan.
+  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  if [ -n "$dirty" ]; then
+    echo "check: refused: tracked files differ from HEAD at the runner's start, so no stage record stands: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
+    echo "check: stage none failed at $head; read $(check_log)"
+    exit 1
+  fi
   clone_make
   escape_mark
   check_stages "$1"
