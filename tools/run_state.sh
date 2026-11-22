@@ -1168,10 +1168,15 @@ runner_alive() {
     ps -p "$1" -o args= 2>/dev/null | grep -q 'run_state[.]sh check-run'
 }
 
-# The verdict line ending the runner's output, empty while it has none.
+# The verdict line ending the runner's output, empty while it has none:
+# only the header's verdict forms, never another line the runner starts
+# with "check: " (the escape scan's heading, a refusal, a backing note),
+# so a waiter polling between such a line and the verdict keeps waiting.
 check_verdict() {
   last=$(tail -1 "$(check_log)" 2>/dev/null)
-  case "$last" in "check: "*) echo "$last" ;; esac
+  case "$last" in
+    "check: every stage passed at "*|"check: stage "*" at "*"; read "*) echo "$last" ;;
+  esac
 }
 
 # check-run BACKED: the runner, started detached by check_wait. It writes

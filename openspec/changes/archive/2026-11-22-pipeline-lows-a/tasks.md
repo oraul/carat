@@ -30,3 +30,7 @@
 ## Security review
 
 - [x] 6.1 security Low (4) `.claude/workflows/sprint-planning.js`: the skeptic's notes ran in an unguarded general agent, though their texts quote reviewed code; the start is now the quality reviewer in a new `Mode: record` of `.claude/agents/quality-reviewer.md`, whose hook runs `tools/agent_guard.sh`'s read profile. Test: "sprint: the skeptic's notes run under the guarded quality reviewer's record mode". The security findings' runner (`securityNotes`), the same exposure before this change, recorded in `docs/findings/pipeline-lows-a.md`.
+
+## CI fix
+
+- [x] 7.1 CI tools-test: "a write to HOME's git configuration from a lane ends in a failed verdict line" read a check log ending on an escaped path, since the waiter's `check_verdict` took the escape scan's heading `check: files outside its clone changed ...` for a verdict and returned before the runner printed one; `check_verdict` now reads only the header's verdict forms. Test: "run_state: a check log ending on the escape heading holds no verdict", failing with the fix reverted.

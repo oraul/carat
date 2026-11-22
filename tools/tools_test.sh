@@ -959,6 +959,15 @@ echo "$! $at" > build/stages/state/check.pid
 echo "check: every stage passed at $at" > build/stages/state/check.log
 expect "run_state: a check waits for a runner past its verdict instead of rejoining it" 0 "^stage settle: exit 0" stop_check "settle"
 expect "run_state: the check after a finishing runner leaves no runner behind" 1 "" test -e build/stages/state/check.pid
+# pipeline-lows-a: only a verdict form ends a runner's output; a gone
+# runner whose log ends on another "check: " line, such as the escape
+# scan's heading before its paths and verdict, is reported lost, so a
+# waiter polling between that heading and the verdict keeps waiting.
+sh -c ':' "run_state.sh check-run" > /dev/null 2>&1 &
+wait $!
+echo "$! $at" > build/stages/state/check.pid
+echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):" > build/stages/state/check.log
+expect "run_state: a check log ending on the escape heading holds no verdict" 0 "^the last check: check: stage none killed at $at; read " stop_check "settle"
 # The workflow reruns a check whose verdict says it did not finish, and
 # sends only a failure to a fix round: its RERUN_WORDS are this script's.
 rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")
