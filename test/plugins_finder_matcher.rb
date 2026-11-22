@@ -140,6 +140,27 @@ module PluginsFinderMatcherTest
       M.word_end?(row[0].to_s, row[1].to_i)
     end
 
+    # Rows are [label, [line, code point column], the word there].
+    t.cases([
+      ["the first character of a word", ["hello world", "0"], "hello"],
+      ["the middle of a word", ["hello world", "8"], "world"],
+      ["the last character of a word at the end of the line", ["hello world", "10"], "world"],
+      ["the character just before a space", ["hello world", "4"], "hello"],
+      ["a space is on no word", ["hello world", "5"], ""],
+      ["a column past the line is on no word", ["hello", "5"], ""],
+      ["an empty line has no word", ["", "0"], ""],
+      ["trailing blanks are on no word", ["hello  ", "6"], ""],
+      ["a carriage return ends a word and is on none", ["hello\r", "5"], ""],
+      ["a word before a carriage return stops at it", ["hello\r", "2"], "hello"],
+      ["an underscore is part of the word", ["a foo_bar b", "4"], "foo_bar"],
+      ["punctuation ends the word", ["x.foo(1)", "3"], "foo"],
+      ["a multi-byte word is read by code point columns", ["caf\u00e9 x", "3"], "caf\u00e9"],
+      ["a column after multi-byte characters counts them once", ["\u00e9\u00e9 ab", "3"], "ab"],
+      ["a byte that is not UTF-8 gives no word", ["a\xFF", "1"], ""]
+    ]) do |row|
+      M.word_at(row[0].to_s, row[1].to_i)
+    end
+
     t.assert_equal(true, score_of("abcd", "a/b/c/d.rb") < score_of("ab", "x/zzabz/y.rb"), "every substring match scores above every initials match")
     t.assert_equal(0, score_of("", "lib/beta.rb"), "an empty query scores 0")
     t.assert_equal([7, 0, 99_999], [M.index_of(M.key(5, 3, 7)), M.index_of(M.key(0, 2000, 0)), M.index_of(M.key(1, 1, 99_999))], "a key keeps its index")
