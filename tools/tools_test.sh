@@ -2251,6 +2251,85 @@ echo more >> README.md
 commit "docs: more"
 expect "run_state: bench refuses a measurement of another commit" 1 "passed at another commit" bench
 
+# cache-reuse: main's measured figures are stored once per main commit and a
+# bench compares with them, building nothing; a regression is the one
+# difference that needs the benchmark agent, which then builds nothing.
+fresh bench-store
+state init bench-store chore/bench-store > /dev/null
+state stage bench-store metrics true > /dev/null
+mkdir -p build/metrics
+printf 'rounds.carat\t2\nallocs.lh\t28.0\nus.lh\t60.0\n' > build/metrics/current.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
+cat > "$work/bin/fail-make" <<'EOF2'
+#!/bin/sh
+echo "make $*"
+exit 1
+EOF2
+chmod +x "$work/bin/fail-make"
+store_bench() {
+  env BASE=main MAKE="${1:-$work/bin/echo-make}" sh "$here/run_state.sh" bench bench-store
+}
+store_figures() {
+  env BASE=main sh "$here/run_state.sh" base-figures bench-store "$@"
+}
+expect "run_state: base-figures says none are stored for main's commit" 1 "none stored for main $(git rev-parse --short=12 main)" store_figures
+expect "run_state: bench without stored figures compares with the recorded ones and names the difference" 1 "^allocs[.]lh 27 -> 28[.]0$" store_bench
+git_q worktree add -q --detach tmp/.base main
+mkdir -p tmp/.base/build/metrics
+printf 'rounds.carat\t2\nallocs.lh\t28.0\nus.lh\t55.0\nus.j\t?\n' > tmp/.base/build/metrics/current.tsv
+expect "run_state: base-figures save stores the measurement of the base worktree at main" 0 "stored the figures of main $(git rev-parse --short=12 main)" store_figures save
+expect "run_state: base-figures stores the commit and the figures, dropping an unmeasured one" 0 "^main $(git rev-parse main) allocs[.]lh 28[.]0 rounds[.]carat 2 us[.]lh 55[.]0$" \
+  sh -c "{ sed -n 1p build/pipeline/main-figures.tsv | tr '\n' ' '; sed '1d' build/pipeline/main-figures.tsv | sort | tr '\t\n' '  '; } | sed 's/ \$//'"
+expect "run_state: base-figures says the figures are stored and nothing is built" 0 "are stored; build nothing" store_figures
+expect "run_state: bench compares with the stored figures of main, passing when no more allocations or rounds" 0 "^bench: no regression against the figures of main stored at $(git rev-parse --short=12 main)$" store_bench
+expect "run_state: bench against stored figures runs only metrics-compare, building nothing" 0 "^make --no-print-directory metrics-compare BASE_METRICS=build/metrics/last[.]tsv METRICS_OUT=build/metrics/current[.]tsv$" store_bench
+expect "run_state: bench takes the stored figures as the base" 0 "^allocs[.]lh[[:space:]]28[.]0$" grep allocs build/metrics/last.tsv
+expect "run_state: bench against stored figures fails on a regression" 1 "^bench: regression against the figures of main stored at" store_bench "$work/bin/fail-make"
+printf 'rounds.carat\t2\nallocs.lh\t20.0\n' > build/metrics/current.tsv
+expect "run_state: bench against stored figures passes on fewer allocations, which need no agent" 0 "^bench: no regression against" store_bench
+git_q checkout -q main
+echo moved >> README.md
+commit "docs: main moved"
+git_q checkout -q chore/bench-store
+{ printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > docs/metrics-backlog.tsv
+expect "run_state: base-figures stored for an older main commit are stale" 1 "none stored for main $(git rev-parse --short=12 main)" store_figures
+expect "run_state: base-figures save refuses a base worktree that is not at main" 1 "tmp/.base is not at main" store_figures save
+expect "run_state: bench falls back to the recorded figures once main moved" 1 "^bench: differs from the history row of prev:$" store_bench
+git_q worktree remove --force tmp/.base
+
+# cache-reuse: the carried check. When every stage holds a pass record at the
+# head, the command says so with the spent line and bench's result, which
+# the workflow takes in place of a checker start; any other state is not
+# carried and starts the checker.
+fresh carried
+state init carried chore/carried > /dev/null
+echo notes > docs/notes.md
+commit "docs: notes"
+carried_stages="docs-lint dev-build diagnose metrics gates"
+{ printf '%s\n' "$HISTORY_HEADER"; printf 'prev\t-\t-\t-\t-\t-\t-\tcarat=2\tlh=27\tlh=50.0\t-\t-\t-\t-\n'; } > "$work/carried-history-backlog.tsv"
+carried_run() {
+  env BASE=main STAGES="$carried_stages" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check carried
+}
+carried_cmd() {
+  env BASE=main STAGES="$carried_stages" METRICS_PREFIX="$work/carried-history" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" carried carried "$@"
+}
+carried_run > /dev/null
+carried_head=$(git rev-parse --short=12 HEAD)
+expect "run_state: carried says every stage passed at the head when each holds a pass record and diagnose is scoped out" 0 "^carried: every stage passed at $carried_head; no stage ran$" carried_cmd "$carried_head"
+expect "run_state: carried gives the spent line the checker would" 0 "^spent: (no estimate|under|over): " carried_cmd "$carried_head"
+expect "run_state: carried gives bench's result" 0 "^carried: bench same$" carried_cmd "$carried_head"
+expect "run_state: carried refuses a commit that is not the head" 1 "^carried: no: $(git rev-parse --short=12 main) is not HEAD $carried_head$" carried_cmd "$(git rev-parse --short=12 main)"
+echo more >> docs/notes.md
+commit "docs: more notes"
+expect "run_state: carried is not carried when a stage passed at another commit" 1 "^carried: no: stage docs-lint passed at another commit$" carried_cmd "$(git rev-parse --short=12 HEAD)"
+carried_run > /dev/null
+echo code > carat-code.rb
+commit "feat: code"
+carried_run > /dev/null
+expect "run_state: carried is not carried when diagnose ran, since check runs it again" 1 "^carried: no: stage diagnose runs again$" carried_cmd "$(git rev-parse --short=12 HEAD)"
+rm -f build/pipeline/carried.json
+state init carried chore/carried > /dev/null
+expect "run_state: carried is not carried when a stage has no pass record" 1 "^carried: no: stage docs-lint has no pass record$" carried_cmd "$(git rev-parse --short=12 HEAD)"
 # A recorded CI head is the pushed head, and a merged commit the pull
 # request's squash commit on main, resolved with git; an agent's swapped or
 # mistyped value is refused naming both (merge-record-check).
@@ -5487,6 +5566,19 @@ expect "workflow: an escaped check starts no checker relay and reruns with no fi
 expect "workflow: the check lines run spent and bench only after the check" 0 '^\["sh tools/run_state[.]sh metric c rework=0; sh tools/run_state[.]sh check c abc1234","sh tools/run_state[.]sh spent c; sh tools/run_state[.]sh bench c","",true,true\]$' \
   check_js "(l => [l.check, l.passed, l.moved, checkRunTask(l).indexOf(l.check) < checkRunTask(l).indexOf('Only when that line begins'), checkRunTask(l).includes('read nothing else')])(checkLines('c', 'abc1234', '', 'sh tools/run_state.sh metric c rework=0'))"
 expect "guard: the checker's run start may run the check lines" 0 "^$" guard read 'sh tools/run_state.sh metric c rework=0; sh tools/run_state.sh check c abc1234; sh tools/run_state.sh spent c; sh tools/run_state.sh bench c; sh tools/run_state.sh moved c abc1234'
+# cache-reuse: the runner's carried command and the workflow's use of it.
+expect "guard: the runner may run carried with a change and a commit" 0 "^$" guard runner 'sh tools/run_state.sh carried c abc1234'
+expect "guard: the runner refuses carried without a commit" 2 "carried other than CHANGE COMMIT" guard runner 'sh tools/run_state.sh carried c'
+expect "guard: the runner refuses carried with a non-commit" 2 "carried other than CHANGE COMMIT" guard runner 'sh tools/run_state.sh carried c main'
+expect "guard: the benchmark may check and save the stored figures of main" 0 "^$" guard read 'sh tools/run_state.sh base-figures c; sh tools/run_state.sh base-figures c save'
+expect "workflow: a carried head asks for the carried check only on the contributor's backing at the head, with no settle or moved line" 0 '^\[true,false,false,false,false,false\]$' \
+  js "$wf" "COMMIT sameCommit carryWanted" "[carryWanted({ at: 'abc1234' }, 'abc1234', 'abc1234', '', ''), carryWanted(null, 'abc1234', 'abc1234', '', ''), carryWanted({ at: 'abc1234' }, 'def5678', 'abc1234', '', ''), carryWanted({ at: 'abc1234' }, 'abc1234', 'abc1234', 'fff1234', ''), carryWanted({ at: 'abc1234' }, 'abc1234', 'abc1234', '', 'fff1234'), carryWanted({ at: 'def5678' }, 'def5678', 'abc1234', '', '')]"
+expect "workflow: a carried result stands in for the checker's, with its budget, bench result, and report" 0 '^\{"verdict":"check: every stage passed at abc1234","budget":"under: 1 output tokens so far","bench_same":true,"moved":"","bench_report":\["bench: same allocations and rounds as the history row of prev"\]\}$' \
+  js "$wf" "COMMIT sameCommit CARRIED_FIRST carriedRun" "carriedRun('carried: every stage passed at abc1234; no stage ran\nspent: under: 1 output tokens so far\nbench: same allocations and rounds as the history row of prev\ncarried: bench same\n', 'abc1234')"
+expect "workflow: a carried line for another commit, or with no bench result, is no carry" 0 '^\[null,null,null\]$' \
+  js "$wf" "COMMIT sameCommit CARRIED_FIRST carriedRun" "[carriedRun('carried: every stage passed at def5678; no stage ran\ncarried: bench same', 'abc1234'), carriedRun('carried: every stage passed at abc1234; no stage ran\nspent: x', 'abc1234'), carriedRun('carried: no: stage a has no pass record', 'abc1234')]"
+expect "workflow: the carried check runs before the checker start, which runs only when it is not carried" 0 '^yes$' \
+  sh -c "awk '/carryWanted\\(claimedPass/ { a = NR } /if \\(!c\\) c = await measured\\(.check., \\(\\) => agent/ { b = NR } END { print (a > 0 && b > a) ? \"yes\" : \"no\" }' '$wf'"
 # An advisory-only round whose fix changed only records stands on the
 # check, security, and bench passes of the commit it started from; no
 # review runs (review-lite).

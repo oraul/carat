@@ -1103,6 +1103,31 @@ function checkRunTask(lines) {
   const settle = lines.settle ? `\nFirst \`${lines.settle}\`: when it exits 0, return its last line, verbatim, as verdict, and run nothing else; when it exits 1, go on.` : ''
   return `Mode: run. Run each line below exactly as written, as your Mode run section says, and read nothing else.${settle}\n1. \`${lines.check}\`: while it exits 3, run it again, at most three times; return its last line, verbatim, as verdict.\n2. Only when that line begins \`check: every stage passed\`: \`${lines.passed}\`; return the line spent printed as budget, bench_same true when the line exited 0, and the last 20 lines bench printed as bench_report.${lines.moved ? `\n3. Then \`${lines.moved}\`; return its last line, verbatim, as moved.` : ''}`
 }
+// The carried check (cache-reuse): when the contributor's pass at the head
+// is the backing, and nothing asks for a settle or a moved line, the
+// workflow asks the runner start for tools/run_state.sh carried, which says
+// whether every stage holds a pass record at the head (diagnose only scoped
+// out) and gives the spent line and bench's result the checker would have
+// returned; a carried head starts no checker. The line only decides: the
+// phase.check record is the workflow's own, written at the head by flush,
+// where the pre-push and merge gates read the stage records themselves.
+const CARRIED_FIRST = /^carried: every stage passed at ([0-9a-f]{7,40}); no stage ran$/
+const carriedLine = (change, backed) => `sh tools/run_state.sh carried ${change} ${backed}`
+function carryWanted(claim, backed, at, settle, moved) {
+  return !!claim && COMMIT.test(at || '') && sameCommit(claim.at, at) && sameCommit(backed, at) && !settle && !moved
+}
+function carriedRun(output, at) {
+  const lines = String(output || '').split('\n').map((l) => l.trim().replace(/^run_state: /, ''))
+  const first = lines.findIndex((l) => CARRIED_FIRST.test(l))
+  if (first < 0 || !sameCommit(CARRIED_FIRST.exec(lines[first])[1], at)) return null
+  const same = lines.includes('carried: bench same')
+  if (!same && !lines.includes('carried: bench differs')) return null
+  const spent = lines.find((l) => l.startsWith('spent: '))
+  return {
+    verdict: `check: every stage passed at ${at}`, budget: spent ? spent.slice('spent: '.length) : '', bench_same: same, moved: '',
+    bench_report: lines.slice(first + 1).filter((l) => l && !l.startsWith('spent: ') && !l.startsWith('carried: ')).slice(-20),
+  }
+}
 function checkerLogTask(v) {
   return `Mode: log. The check failed at stage ${v.stage} at ${v.at}: read only its log, ${v.log}, as your Mode log section says, and return passed false, the verdict \`check: stage ${v.stage} failed at ${v.at}; read ${v.log}\`, and the lines that show the cause. Run no check.`
 }
@@ -1506,7 +1531,13 @@ async function rounds(fixes = true) {
       const from = settleBase(movedFrom, settleAt)
       settleAt = ''
       const lines = checkLines(state.change, backed, movedFrom, metricLine(), from)
-      const c = await measured('check', () => agent(`${intro()} ${checkRunTask(lines)}${again}${capLine('run')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK_RUN), label: 'checker: run' })), callCap('run'))
+      let c = null
+      if (carryWanted(claimedPass, backed, head, from, movedFrom)) {
+        const r = await recordStart(carriedLine(state.change, backed), 'record: carried check')
+        c = r && r.ok ? carriedRun(r.output, head) : null
+        note(c ? `check: every stage already passed at ${head}; carried, no checker start` : `check: not carried at ${head}; the checker runs`)
+      }
+      if (!c) c = await measured('check', () => agent(`${intro()} ${checkRunTask(lines)}${again}${capLine('run')}`, calibrate('checker', { agentType: 'checker', schema: withCalls(CHECK_RUN), label: 'checker: run' })), callCap('run'))
       if (!c) { stopped = 'the check start returned no result'; return false }
       // Only a pass or a failure at the head is a result: a check that did
       // not finish, or one at another commit, runs again with no fix round.
@@ -1550,14 +1581,16 @@ async function rounds(fixes = true) {
       phase('Benchmark')
       if (benchSameAt && benchSameAt === state['phase.check']) {
         // The check measured the same allocations and rounds as main's
-        // recorded figures (the newest merged change without a history row,
-        // else the last row): nothing to compare with main.
+        // figures (those stored for main's current commit, else the newest
+        // merged change without a history row, else the last row), or no
+        // more of either when main's stored figures are the base: nothing
+        // to compare with main.
         verdict('bench', true)
         note(`benchmark at ${benchSameAt}: allocations and rounds equal main's recorded figures; no agent`)
         reviewed('bench', true, benchSameAt, { blocking: 0 })
       } else {
         const b = await measured('bench', () => agent(
-          `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Build the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache, as your step 1 says.${capLine('bench')}`,
+          `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Measure main only when your step 1 finds no stored figures of its current commit, building the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache.${capLine('bench')}`,
           calibrate('bench', { agentType: 'benchmark', schema: withCalls(BENCH) })), callCap('bench'))
         if (!b) { stopped = 'the benchmark agent returned no result'; return false }
         verdict('bench', !b.blocking.length)

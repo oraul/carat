@@ -109,7 +109,9 @@
 #                no variable); sh tools/run_state.sh show get trusted
 #                plan-needed review-due, lane-open and init as CHANGE
 #                BRANCH (a Conventional Branch or main), and the
-#                workflow's records phase review metric ci-stages note
+#                workflow's records phase review metric ci-stages note,
+#                carried CHANGE COMMIT (the check's stage records as a
+#                pass, in place of a checker start),
 #                (never a late, held, or unpushed finding), set
 #                CHANGE records skip, and set CHANGE hold
 #                security-first: the resume and record starts and
@@ -677,7 +679,7 @@ make_form() {
 run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
-    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:base-figures|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     # The runner: the resume recipe and the records the workflow wrote
@@ -694,6 +696,11 @@ run_state_form() {
           refuse "tools/run_state.sh note of ${3}, which only the workflow's close profile records" ;;
       esac
       [ $# -ne 4 ] || data_at=6 ;;
+    runner:carried)
+      # The carried check (cache-reuse): the workflow's one command in place
+      # of a checker start, a CHANGE and the commit it backs.
+      [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
+        refuse "tools/run_state.sh carried other than CHANGE COMMIT" ;;
     runner:lane-open|runner:init)
       [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && { [ "$3" = main ] || matches "$3" "$BRANCH"; } ||
         refuse "tools/run_state.sh $verb other than CHANGE BRANCH" ;;
