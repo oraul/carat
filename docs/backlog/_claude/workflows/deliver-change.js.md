@@ -504,29 +504,6 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### A post-review prose edit in the package step refuses the push
-- Location: the package step of `.claude/workflows/deliver-change.js` and the check and security records it invalidates
-- Why: in lsp-container-b a docs-only wording fix (`docs/architecture.md:275`, Open3) invalidated the recorded check and security review, the push was refused, the edit reverted and the stale sentence left on main; package 21 of 210 tool calls (10.0%) (retro note 12).
-- Fix: settle the advisories the package step may fix before the last review, or let pure prose edits of docs keep the records; accepted when no package step over the next 10 runs has a refused push from a post-review prose edit. Queued in `check-skip`.
-- Also: docs/architecture.md
-- Category: pipeline
-- Added: 2026-11-17
-
-### The in-run budget line prices total tokens at 6 per output token
-- Location: the check-pass budget line of `.claude/workflows/deliver-change.js`
-- Why: sprint-12-records spent 36,282 output against 2,147,268 total (59 per output), 4.3x over small's 500,000, while 6 per output predicted 217,692; the last ten backlog rows ran 3.5 to 59 per output; windows-tabs-tidy 1,433,283 and windows-buffers-tidy 1,373,899 were over 1,200,000 at 4.8 and 10.7; sprint-security's line said under at 131,132 output (lsp-container-b note 13, sprint-security note 8).
-- Fix: derive the multiplier from the lane history or drop the in-run total estimate; accepted when the line, replayed over the last ten rows of both lanes, says over for every row whose final total exceeded its budget. Queued in `budget-prediction`.
-- Category: pipeline
-- Added: 2026-11-17
-
-### Scout packs whose facts the contributor redoes
-- Location: the scout phase of `.claude/workflows/deliver-change.js`, `.claude/agents/scout.md`
-- Why: in sprint-security the scout took 34,911 of 181,413 output (19.2%) and 19 of 126 calls, its pack found the brief's lines stale and the contributor re-checked them at the same commit; backlog rows' scout share 18.4% to 40.1% (sprint-security note 7).
-- Fix: start a scout only where its facts change a decision, or let the contributor take the pack as read; accepted when over the next five runs that start a scout its output stays under 10% of the run's with no drop in the quality first-pass rate. Queued in `scout-value`.
-- Also: .claude/agents/scout.md
-- Category: pipeline
-- Added: 2026-11-17
-
 ### The benchmark phase measures records and docs-only runs that build nothing it measures
 - Location: `.claude/workflows/deliver-change.js` (the benchmark phase's start condition)
 - Why: sprint-12-records bench took 6,460 of 36,282 output tokens (17.8%) and 10 of 79 tool calls, stopped at its cap; over the three sprint records runs bench took 15,099 of 127,367 output tokens (11.9%) and 23 of 222 calls, each finding allocations and rounds equal to main (bench first pass 3 of 3), so its result changed no decision (sprint-12-records retro note 4).
@@ -542,6 +519,11 @@
 - Also: tools/run_state.sh, docs/architecture.md
 - Category: pipeline
 - Added: 2026-11-17
+- Merged: ### A post-review prose edit in the package step refuses the push
+- Location: the package step of `.claude/workflows/deliver-change.js` and the check and security records it invalidates
+- Why: in lsp-container-b a docs-only wording fix (`docs/architecture.md:275`, Open3) invalidated the recorded check and security review, the push was refused, the edit reverted and the stale sentence left on main; package 21 of 210 tool calls (10.0%) (retro note 12).
+- Fix: settle the advisories the package step may fix before the last review, or let pure prose edits of docs keep the records; accepted when no package step over the next 10 runs has a refused push from a post-review prose edit. Queued in `check-skip`.
+- Also: docs/architecture.md
 
 ### The in-run budget line prices total tokens at 6 per output token (lsp-container-b retro note 13, sprint-security retro note 8)
 - Location: the check-pass budget line of `.claude/workflows/deliver-change.js`
@@ -549,14 +531,10 @@
 - Fix: derive the multiplier from the lane history or drop the in-run total estimate; accepted when the line, replayed over the last ten rows of both lanes, says over for every row whose final total exceeded its size budget.
 - Category: pipeline
 - Added: 2026-11-17
-
-### The scout's pack is redone by the contributor (sprint-security retro note 7)
-- Location: the scout phase of `.claude/workflows/deliver-change.js`, `.claude/agents/scout.md`
-- Why: sprint-security scout 34,911 of 181,413 output (19.2%) and 19 of 126 calls, its pack found the brief's lines stale and the contributor re-checked them; backlog rows scout share 18.4% to 40.1% over five runs. Folds into `scout-value`.
-- Fix: accepted when, over the next five runs that start a scout, scout output stays under 10% of the run's output with no drop in the quality first-pass rate.
-- Also: .claude/agents/scout.md
-- Category: pipeline
-- Added: 2026-11-17
+- Merged: ### The in-run budget line prices total tokens at 6 per output token
+- Location: the check-pass budget line of `.claude/workflows/deliver-change.js`
+- Why: sprint-12-records spent 36,282 output against 2,147,268 total (59 per output), 4.3x over small's 500,000, while 6 per output predicted 217,692; the last ten backlog rows ran 3.5 to 59 per output; windows-tabs-tidy 1,433,283 and windows-buffers-tidy 1,373,899 were over 1,200,000 at 4.8 and 10.7; sprint-security's line said under at 131,132 output (lsp-container-b note 13, sprint-security note 8).
+- Fix: derive the multiplier from the lane history or drop the in-run total estimate; accepted when the line, replayed over the last ten rows of both lanes, says over for every row whose final total exceeded its budget. Queued in `budget-prediction`.
 
 ### The benchmark phase measures records and docs-only runs (sprint-12-records retro note 4)
 - Location: `.claude/workflows/deliver-change.js` benchmark phase; sprint-12-records run state note.4.
@@ -1460,5 +1438,23 @@ none
 - Location: the check phase of `.claude/workflows/deliver-change.js`; near the backlog queue's Pool 14 `check-carry`
 - Why: review-in-openspec spent 121,585 of 724,443 output tokens (16.8 percent) on check over 3 passes, all passing.
 - Fix: merge into `check-carry`; accepted when over the next three deliveries with first.check 1 the check phase stays under 8 percent of output tokens and CI finds no stage failure the check left out.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A delivery planned before a sprint close can carry the plan with an older lane queue
+
+- Location: .claude/workflows/deliver-change.js:1666 (packagePlan), tools/run_state.sh plan_apply
+- Why: a delivery whose planner wrote build/plan/<change>/ before the sprint plan existed and that packages after it runs groom (copying the sprint's queues) and then plan-apply, which overwrites its lane queue with the plan written from the older queue, so the sprint's queue for that lane is lost from the pull request.
+- Fix: have plan-apply refuse, or skip with a note, when PLAN_DIR/sprint.carrier names this change and the change's lane queue in its plan directory is older than PLAN_DIR/sprint, leaving the groomed queue less the change's item.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-22
+
+### A restored run state may repeat a calibration profile of a dropped kind
+
+- Location: `.claude/workflows/deliver-change.js` (`restoreCalibration`, `metricLine`).
+- Why: a run state written before scout-drop may carry `metric.calib.scout` or `metric.calib.areas`; `restoreCalibration` keeps any well-formed `metric.calib.KIND`, so a resumed older run repeats it in its metric line though no start of that kind runs any more. The figure is recorded data and harms nothing, but a history row could show a profile for a phase that did not run.
+- Fix: restore only the kinds `CALIBRATION` names (`m[1] in CALIBRATION`), with a tools-test case giving a saved `metric.calib.scout` that is not restored.
+none
 - Category: pipeline
 - Added: 2026-11-22
