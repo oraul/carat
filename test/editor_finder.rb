@@ -414,29 +414,35 @@ module EditorFinderTest
     # Scenario: The switched picker is picked from as any other.
     h = session("<Space>ffbet<C-g><C-g><CR>", 80)
     t.assert_equal([:normal, "lib/beta.rb"], [h.mode, h.buffer.path.to_s], "A switched picker is picked from as any other: Enter opens lib/beta.rb")
-    # Scenario: Ctrl-G resumes as the picker last shown.
+    # Scenario: A switched picker is the one resumed.
     h = session("<Space>ffbet<C-g><Esc><Space>fR", 80)
     t.assert_equal([:cmdline, "> bet|Grep"], [h.mode, prompt_and_kind(h)], "Space f R resumes the grep picker the switch ended on, with its text")
 
-    # Scenario: Space f w greps the word under the cursor.
+    # Scenario: Space f w on a word opens the grep picker with it.
     h = word_session("hello world\n", "w<Space>fw")
     t.assert_equal([:cmdline, "> world|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on a word opens the grep picker with the word on the prompt")
     t.assert_equal(true, floats(h)[0].to_s.include?("lib/alpha.rb"), "and the grep rows list the line of the word")
+    # Scenario: Space f w takes the whole word.
     h = word_session("hello world\n", "<Space>fw")
     t.assert_equal("> hello", prompt_and_title(h).split("|")[0].to_s, "Space f w on the first character of a word takes the whole word")
+    # Scenario: Space f w on a multi-byte word.
     h = word_session("caf\u00e9 x\n", "3l<Space>fw")
     t.assert_equal("> caf\u00e9", prompt_and_title(h).split("|")[0].to_s, "Space f w on a multi-byte character takes the word by code point columns")
+    # Scenario: Space f w keeps underscores in the word.
     h = word_session("foo_bar baz\n", "<Space>fw")
     t.assert_equal("> foo_bar", prompt_and_title(h).split("|")[0].to_s, "Space f w takes the underscore as part of the word")
-    # Scenario: Space f w on no word opens the grep picker empty.
+    # Scenario: Space f w on a blank opens the grep picker empty.
     h = word_session("hello world\n", "5l<Space>fw")
     t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on a blank opens the grep picker on the empty prompt")
+    # Scenario: Space f w in an empty buffer or on an empty line.
     h = word_session("", "<Space>fw")
     t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w in an empty buffer opens the grep picker on the empty prompt")
     h = word_session("hello\n\nworld\n", "j<Space>fw")
     t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on an empty line opens the grep picker on the empty prompt")
+    # Scenario: Space f w on the last character of the last line.
     h = word_session("hello world\n", "$<Space>fw")
     t.assert_equal("> world", prompt_and_title(h).split("|")[0].to_s, "Space f w on the last character of the last line takes the word")
+    # Scenario: Ctrl-G after Space f w switches on the word.
     h = word_session("hello world\n", "<Space>fw<C-g>")
     t.assert_equal([:cmdline, "> hello|Files 0/3"], [h.mode, prompt_and_title(h)], "Ctrl-G after Space f w switches to the file finder on the word")
     t.finish
