@@ -16,7 +16,7 @@ Creating a file through MakePath no longer writes through a symbolic link plante
 - Refactor the gateway: start and restart share their tail, apply(set) becomes draw_published(icons) without the branch Buffer#set_diagnostics already makes, listed becomes private, and the UTF-16 length moves to Domain::Utf8.utf16_length, counting each malformed byte as one unit
 - Change ProcessRunner to require the framer, service message, and queue port it names instead of relying on the require order of carat.rb
 - Add tests for the exclusive create, the descriptor-judged reads, the published-diagnostics bound, the failed completion and hover sends, the UTF-16 length, and the NO_COLOR read of AnsiTerminal
-- Document the FilePort create and the descriptor read in the architecture and the code map, the two Spinel facts behind them in the Spinel notes, and the four added scenarios in the config-files, language-server, and plugin-host specs
+- Document the FilePort create in the FilePort row of the architecture, the create and the descriptor-judged read in the code map, the two Spinel facts behind them in the Spinel notes, and the four added scenarios in the config-files, language-server, and plugin-host specs
 
 ---
 
