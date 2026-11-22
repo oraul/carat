@@ -146,11 +146,12 @@ module EditorSyntaxTest
     h.type(":set syn=ON<CR>")
     t.assert_equal(["Define:def Function:go String:\"hi\" Comment:# note", "ruby"], [spans(h, 0), h.buffer.syntax], ":set syn=ON goes back to the filetype")
     # Scenario "An option set does not handle yet" (syntax-highlighting):
-    # theme and background wait for :colorscheme.
-    h.type(":set theme=carat-light<CR>")
-    t.assert_equal("Not implemented: :set theme=carat-light", h.message, "theme is an option :set does not handle yet")
-    h.type(":set bg=terminal<CR>")
-    t.assert_equal("Not implemented: :set bg=terminal", h.message, "and background, by its short name too")
+    # an option only a configuration line sets is unknown to :set, and
+    # theme, which waited for :colorscheme, is taken.
+    h.type(":set jumptab=keep<CR>")
+    t.assert_equal("E518: Unknown option: jumptab", h.message, "an option only a configuration line sets is unknown to :set")
+    h.type(":set theme=carat-light<CR>:set theme?<CR>")
+    t.assert_equal("  theme=carat-light", h.message, "theme is set by :set, no longer Not implemented")
     # Scenario "An unknown option" (syntax-highlighting).
     h.type(":set bogus<CR>")
     t.assert_equal("E518: Unknown option: bogus", h.message, "an unknown option")

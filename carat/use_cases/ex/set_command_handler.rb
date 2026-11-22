@@ -28,8 +28,9 @@ module Carat
     # the case options compiles the last pattern again, setting hlsearch
     # shows its matches again after :noh, and undolevels reaches the feed
     # the buffers record their undo states through. startscreen, read
-    # only at startup, is not changed live; theme and background answer
-    # Not implemented, any other name E518.
+    # only at startup, is not changed live; theme and background (bg) are
+    # words the screen presenter picks up at the next frame, repainting
+    # every group; any other name is E518.
     class SetCommandHandler < ExHandler
       attr_reader :last_search #: Domain::LastSearch
       attr_reader :last_substitute #: Domain::LastSubstitute
@@ -38,11 +39,9 @@ module Carat
 
       # The options :set handles, by full name in the order the listings
       # show them, and their short names, "" for none.
-      NAMES = ["autoindent", "breadcrumbs", "cursorline", "expandtab", "filetype", "hidden", "hlsearch", "icons", "ignorecase", "incsearch", "list", "listchars", "number", "reducedmotion", "relativenumber", "scroll", "scrolloff", "shiftwidth", "showtabline", "smartcase", "startscreen", "syntax", "tabstop", "timeoutlen", "undolevels", "winborder"]
-      SHORT_NAMES = ["ai", "", "cul", "et", "ft", "hid", "hls", "", "ic", "is", "", "lcs", "nu", "", "rnu", "scr", "so", "sw", "stal", "scs", "", "syn", "ts", "tm", "ul", ""]
-      # The options Carat has that :set does not handle yet.
-      PENDING = ["theme", "background", "bg"]
-      private_constant :NAMES, :SHORT_NAMES, :PENDING
+      NAMES = ["autoindent", "background", "breadcrumbs", "cursorline", "expandtab", "filetype", "hidden", "hlsearch", "icons", "ignorecase", "incsearch", "list", "listchars", "number", "reducedmotion", "relativenumber", "scroll", "scrolloff", "shiftwidth", "showtabline", "smartcase", "startscreen", "syntax", "tabstop", "theme", "timeoutlen", "undolevels", "winborder"]
+      SHORT_NAMES = ["ai", "bg", "", "cul", "et", "ft", "hid", "hls", "", "ic", "is", "", "lcs", "nu", "", "rnu", "scr", "so", "sw", "stal", "scs", "", "syn", "ts", "", "tm", "ul", ""]
+      private_constant :NAMES, :SHORT_NAMES
 
       #: (spec: String, last_search: Domain::LastSearch, last_substitute: Domain::LastSubstitute, shipped: Domain::Options, feed: Domain::BufferFeed) -> void
       def initialize(spec:, last_search:, last_substitute:, shipped:, feed:)
@@ -133,7 +132,6 @@ module Carat
           option = full_name(name.delete_prefix(prefix)) unless prefix.empty?
         end
         if option.empty?
-          return "Not implemented: :set #{word}" if PENDING.include?(name) || PENDING.include?(name.delete_prefix(prefix))
           return "E518: Unknown option: #{name}"
         end
         value = value_part(word, op)

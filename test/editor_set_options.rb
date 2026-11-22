@@ -56,7 +56,9 @@ module EditorSetOptionsTest
     ["winborder", "winborder", "single", "bold", "rounded"],
     ["icons", "icons", "ascii", "emoji", "unicode"],
     ["breadcrumbs", "breadcrumbs", "never", "sometimes", "auto"],
-    ["listchars", "lcs", "tab:>-,trail:~", "eol:$", "tab:→ ,trail:·,nbsp:␣"]
+    ["listchars", "lcs", "tab:>-,trail:~", "eol:$", "tab:→ ,trail:·,nbsp:␣"],
+    ["theme", "theme", "one_dark", "solarized", "carat-dark"],
+    ["background", "bg", "terminal", "dark", "theme"]
   ]
 
   #: (Array[untyped], Integer) -> String
@@ -158,6 +160,12 @@ module EditorSetOptionsTest
       ["startscreen is read only at startup", ":set nostartscreen<CR>", "Not implemented: :set startscreen live"],
       ["startscreen is read only at startup: the value kept", ":set nostartscreen<CR>:set startscreen?<CR>", "  startscreen"],
       ["startscreen is read only at startup: & too", ":set startscreen&<CR>", "Not implemented: :set startscreen live"],
+      # Scenarios "Setting the theme and the background" and "A theme the
+      # configuration refuses" (set-command).
+      ["Setting the theme and the background", ":set theme=one_light bg=terminal<CR>:set theme? bg?<CR>", "  theme=one_light\n  background=terminal"],
+      ["Setting the theme and the background: & gives back the shipped ones", ":set theme=one_light bg=terminal<CR>:set theme& bg&<CR>:set theme? bg?<CR>", "  theme=carat-dark\n  background=theme"],
+      ["A theme the configuration refuses", ":set theme=solarized<CR>", "E474: Invalid argument: theme=solarized"],
+      ["A theme the configuration refuses: the theme kept", ":set theme=solarized<CR>:set theme?<CR>", "  theme=carat-dark"],
       # Scenario "A bare set lists the changed options" (set-command): the
       # test configuration's showtabline 1 differs from the shipped 2.
       ["A bare set lists the changed options", ":set ts=4 nonu<CR>:set<CR>", "--- Options ---\nnonumber\n  showtabline=1\n  tabstop=4"],
@@ -165,11 +173,11 @@ module EditorSetOptionsTest
     ]) { |keys| message_after(keys) }
 
     # Scenario "Set all lists every option" (set-command): the heading and
-    # one line for each of the 26 options.
+    # one line for each of the 28 options.
     h = editor("abcd\n")
     h.type(":set all<CR>")
     lines = h.message.split("\n")
-    t.assert_equal(["--- Options ---", 27, true, true, true], [lines[0].to_s, lines.length, lines.include?("  tabstop=2"), lines.include?("  number"), lines.include?("  filetype=")], "Set all lists every option")
+    t.assert_equal(["--- Options ---", 29, true, true, true, true, true], [lines[0].to_s, lines.length, lines.include?("  tabstop=2"), lines.include?("  number"), lines.include?("  filetype="), lines.include?("  theme=carat-dark"), lines.include?("  background=theme")], "Set all lists every option")
 
     # Scenario "The number column follows set number" (set-command).
     h = editor("one\n")

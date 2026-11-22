@@ -382,6 +382,30 @@ module AdaptersScreenPresenterTest
     t.assert_equal([16, 231, 232, 255, 103], [Carat::Adapters::SgrTable.index_256(0x000000), Carat::Adapters::SgrTable.index_256(0xffffff), Carat::Adapters::SgrTable.index_256(0x080808), Carat::Adapters::SgrTable.index_256(0xeeeeee), Carat::Adapters::SgrTable.index_256(0x7f849c)], "the nearest palette colors: cube corners and grays")
     t.assert_equal(Carat::Adapters::SgrTable.sequence(DARK, H::NORMAL, C256), Carat::Adapters::SgrTable.from_theme(DARK, C256).at(H::LIMIT), "an id out of range is drawn as Normal")
 
+    # Scenario "Switching at 16 colors" (color-themes), and at 256 and
+    # 24-bit colors: use_theme naming another palette builds every group's
+    # sequence again at the presenter's own depth and drops the last frame,
+    # so the next frame clears the screen in the new Normal and writes each
+    # cell in its new sequence; the palette it holds writes no clear.
+    [C16, C256, T].each do |depth|
+      switched = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 1, cols: 6)
+      live = Carat::Adapters::ScreenPresenter.new(terminal: switched, theme: D::Themes.find(D::Themes::DEFAULT, "theme"), colors: depth)
+      cells = D::Frame.new(rows: 1, cols: 6)
+      cells.put(0, 0, "x", H::COMMENT)
+      live.present(cells)
+      live.use_theme(D::Themes::DEFAULT, "theme")
+      live.present(cells)
+      unchanged = switched.last_write
+      live.use_theme("carat-light", "theme")
+      live.present(cells)
+      out = switched.last_write
+      light = D::Themes.find("carat-light", "theme")
+      fresh = Carat::Adapters::SgrTable.from_theme(light, depth)
+      t.assert_equal([false, true, true, true], [unchanged.include?("\e[2J"), live.sgr_table.codes == fresh.codes, out.include?("#{fresh.at(H::NORMAL)}\e[2J"), out.include?("#{fresh.at(H::COMMENT)}x")], "Switching at #{depth} colors: every group in the new palette, the frame drawn in full")
+      live.use_theme("carat-light", "terminal")
+      live.present(cells)
+      t.assert_equal([true, true], [live.sgr_table.codes == Carat::Adapters::SgrTable.from_theme(D::Themes.find("carat-light", "terminal"), depth).codes, switched.last_write.include?("\e[?25l\e[2J")], "Switching at #{depth} colors: the terminal's background clears the screen with no palette color")
+    end
     t.finish
   end
 end
