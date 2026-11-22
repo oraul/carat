@@ -29,7 +29,7 @@ Assumptions: the `▎` stays under `option.icons ascii` and `NO_COLOR`, as the a
 
 ## Impact
 
-- Code: `carat/plugins/finder/plugin.rb`, `carat/domain/highlight.rb`, `carat/domain/themes.rb`, `carat/adapters/float_painter.rb`, `carat/adapters/line_painter.rb`, `carat/plugin_api.rb`.
-- Tests: `test/editor_finder.rb`, `test/editor_finder_grep.rb`, `test/editor_finder_grep_preview.rb`, `test/editor_floats.rb`, `test/domain_theme.rb`, `test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, and their snapshots.
+- Code: `carat/plugins/finder/plugin.rb`, `carat/domain/highlight.rb`, `carat/domain/themes.rb`, `carat/adapters/float_painter.rb`, `carat/adapters/line_painter.rb`, `carat/adapters/frame_presenter.rb` (the plain flag), `carat/use_cases/plugins/ui_requests.rb` (a comment), `carat/plugin_api.rb`.
+- Tests: `test/editor_finder.rb`, `test/editor_finder_grep.rb`, `test/editor_finder_grep_preview.rb`, `test/editor_floats.rb`, `test/domain_theme.rb`, `test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/use_cases_plugin_syntax.rb`, and their snapshots, with `test/use_cases_toggle_reading.rb`'s snapshot (a markup id moved by two).
 - Docs: `docs/design.md` (the drift row removed), `docs/plugins.md` (2.15, `style_float`, `syntax_group`), `docs/compatibility.md` (the UI group count, the finder rows), `docs/architecture.md` (the `Highlight` count), `docs/codebase-map.md` (the plugin API version, `Highlight`).
 - README.md: the finder sentence names the highlighted row's mark.
