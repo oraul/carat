@@ -13,7 +13,8 @@ Closes five security Lows of the delivery pipeline: a check's runner over a dirt
 - Change the sprint skeptic to return its kept, missed, and disputed notes instead of recording them, the workflow building each note command with `shellWord` and running them in one start of the quality reviewer's new record mode, whose hook runs the agent guard.
 - Change `tools/agent_guard.sh` so the read profile's `note` refuses the kinds `late-finding`, `held-finding`, and `unpushed-finding`, which only the close profile writes.
 - Change `tools/run_state.sh note` to refuse a `held-finding` before the push or after the merge and an `unpushed-finding` once a push is recorded.
-- Add `tools/tools_test.sh` cases for each fix, each failing before it: a dirty-tree runner's pass backing no head, a finding holding `$(...)` recorded literally, and the refused note kinds.
+- Fix the check waiter reading a non-verdict `check: ` line, such as the escape scan heading, as the runner's verdict, so it no longer returns before the verdict and a check log always ends on it.
+- Add `tools/tools_test.sh` cases for each fix, each failing before it: a dirty-tree runner's pass backing no head, a finding holding `$(...)` recorded literally, the refused note kinds, and a check log ending on the escape heading holding no verdict.
 - Document the diagnose rerun, the skeptic's notes, and the note kinds in the README, the checker, quality reviewer, and security reviewer agent files, the contributor notes, and the code map.
 - Record the plan's queue, the metrics history row, and the findings left open in `docs/findings/pipeline-lows-a.md`.
 
@@ -26,6 +27,7 @@ Closes five security Lows of the delivery pipeline: a check's runner over a dirt
 - Run the benchmark review at 95e5d1d07425, pass with no blocking finding.
 - Run `make spec-validate` after the archive, 56 passed and 0 failed.
 - Run `make gates` and `make docs-lint` on the packaged branch, all pass.
+- Run `make tools-test` after the CI fix of the check waiter, 2126 of 2126 pass.
 
 ---
 
