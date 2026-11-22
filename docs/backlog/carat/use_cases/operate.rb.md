@@ -137,3 +137,12 @@
 - Fix: cursor.move_to(range.from.row, clamp_col(...)), or a comment saying the kept wanted column is intended
 - Category: editor
 - Added: 2026-11-22
+
+### clamp duplicates EditorState#clamp_col at carat/use_cases/operate.rb:262 (sprint-28 sweep quality, note 22)
+
+- Location: carat/use_cases/operate.rb:262; carat/use_cases/repeat_last.rb:117
+- Why: two private copies of a method PutOverSelection and GlobalCommand already call.
+- Fix: call state.clamp_col and remove both.
+- Also: carat/use_cases/repeat_last.rb
+- Category: editor
+- Added: 2026-11-22

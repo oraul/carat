@@ -1,14 +1,5 @@
 # Backlog: .claude/workflows/sprint-planning.js
 
-### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))
-
-- Location: `.claude/workflows/sprint-planning.js:97` `mergeSecurity`.
-- Why it matters: it keeps only the continuation's `not_reviewed` entries that exactly match the first start's free-form file names, so a differently spelled path (for example `./tools/run_state.sh`) is dropped and the sprint security review records pass with that file never reviewed.
-- Fix outline: fail closed: use `again.not_reviewed` unchanged, or normalize both lists against `git diff --name-only BASE TIP` before intersecting, or constrain the SECURITY schema's `not_reviewed` items to an enum of the combined diff's files as `periodic-review.js` does with its areas.
-- Also: tools/run_state.sh
-- Category: security
-- Added: 2026-11-11
-
 ### Rerun of /sprint duplicates the skeptic's notes (`sprint-planning` quality advisory)
 
 - Location: `.claude/workflows/sprint-planning.js:116`.
@@ -26,14 +17,6 @@
 - Category: pipeline
 - Added: 2026-11-11
 
-### The sprint quality review gets no continuation at its cap (`sprint-1` review quality)
-
-- Location: `.claude/workflows/sprint-planning.js:123`.
-- Why it matters: the security review gets a continued start over the files it left at its cap, the quality review none, so a capped quality review is recorded partial and never covered in that run.
-- Fix outline: give quality the same one continuation, or say in the header why it gets none. Queue item `sprint-tidy`.
-- Category: pipeline
-- Added: 2026-11-12
-
 ### The sprint workflow copies the periodic review's caps (`sprint-1` review quality)
 
 - Location: `.claude/workflows/sprint-planning.js:22` (CALLS, FINDING, capLine, the cap 53) against `.claude/workflows/periodic-review.js:17` to `:28` and `:54` (PERIODIC_CAP); the comment at line 71 says they must stay equal.
@@ -42,20 +25,6 @@
 - Also: .claude/workflows/periodic-review.js
 - Category: pipeline
 - Added: 2026-11-12
-
-### The sprint's records change merges past a blocking sprint security finding
-- Location: .claude/workflows/sprint-planning.js:196
-- Why: security Low (4): the records change sprint-N-records is delivered even when the sprint plan returns security_first or the sprint's combined-diff review found blocking findings; it skips the planner (plan_needed returns not needed for a records change and checks only periodic security reviews), so the security-first stop never runs for it, weakening the rule that blocking security fixes go first. A process-gate gap, not directly exploitable: the change writes only docs records and gets its own security review.
-- Fix: deliver the records change only when `!(plan.security_first || []).length && !blocking.length` holds at line 196, otherwise report that it waits for the security fix; or have plan_needed treat a blocking sprint-N security review record as needing the planner.
-- Category: security
-- Added: 2026-11-17
-
-### A /sprint rerun records every security finding again (`sprint-security` quality advisory)
-- Location: .claude/workflows/sprint-planning.js:196
-- Why: the Notes step runs on every /sprint run and init resumes sprint-N, so a rerun after an incomplete review (partial, a sweep hold, a capped skeptic, now more frequent) appends every security finding again and the planner reads duplicates.
-- Fix: skip a note whose text the run state already holds.
-- Category: pipeline
-- Added: 2026-11-17
 
 ### The report's not-recorded suffix and new Sweep line have no test (`sprint-security` quality advisory)
 - Location: .claude/workflows/sprint-planning.js:267
@@ -89,22 +58,6 @@
 
 ### The review continuations run one after the other
 - Location: .claude/workflows/sprint-planning.js:185-195 (the security continuation inside its own branch)
-- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
-- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
-- Also: docs/queue-backlog.md
-- Category: security
-- Added: 2026-11-21
-
-### Sprint security continuation drops differently spelled unreviewed files (`sprint-planning` security Low (5))
-- Location: .claude/workflows/sprint-planning.js:105 (mergeSecurity, an exact string match)
-- Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
-- Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
-- Also: docs/queue-backlog.md
-- Category: security
-- Added: 2026-11-21
-
-### The sprint quality review gets no continuation at its cap (`sprint-1` review quality)
-- Location: .claude/workflows/sprint-planning.js:195 (one quality start)
 - Why: a security or review Low handed to review-trust-lows, whose first part fixed only the instruction-record settle; left open here.
 - Fix: queued by this heading in review-trust-lows-b (docs/queue-backlog.md Sprint 24) or review-trust-lows-c (Pool), the later parts of review-trust-lows; each part adds a tools-test case that fails before its fix.
 - Also: docs/queue-backlog.md

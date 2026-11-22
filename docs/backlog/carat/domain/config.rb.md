@@ -9,14 +9,6 @@
 - Category: editor
 - Added: 2026-11-03
 
-## Config pins its settings as untyped
-
-- Where: `carat/domain/config.rb:27`; `carat/domain/search_pattern.rb:9`. Periodic quality advisory.
-- Fix outline: `Array[RcLine]` or a comment naming the Spinel limit; a comment for the dropped Regexp signature. Backlog batches (RBS pins).
-- Also: carat/domain/search_pattern.rb
-- Category: editor
-- Added: 2026-11-10
-
 ### An untrusted project .caratrc may bind keys to destructive actions
 
 - Location: carat/domain/config.rb:236 (sweep, security Low (4)).
@@ -82,22 +74,6 @@
 - Why: PROMPT_MODES covers only the actions that open a prompt directly; a project can still bind an insert-mode key such as <CR> to mode.normal or another mode.* action, so the text the user types next runs as normal-mode commands, their own ':' and Enter or ZZ included (typing 'x:wq' after Enter writes and quits). Less direct than the fixed case and already possible before this change.
 - Fix: Refuse mode.* actions other than the insert-entry ones in the insert, replace, and completion modes, or limit project insert-mode bindings to keys outside the printable range and <CR>. Add a gateway test for 'keymap.insert <CR> mode.normal'.
 none
-- Category: security
-- Added: 2026-11-22
-
-### In this sprint's diff (config-guards-b). A project .caratrc can at carat/domain/config.rb:47 (sprint-26 review security Low (5), note 1)
-
-- Location: carat/domain/config.rb:47
-- Why: In this sprint's diff (config-guards-b). A project .caratrc can get around the PROMPT_ACTIONS guard. It cannot bind mode.cmdline to insert <CR>, but it can bind insert <CR> (held by nothing, because insert.newline is bindable) to mode.normal, which is in the bindable mode. family. The next line the user types then runs as normal-mode keys, and the held ':' plus the default cmdline <CR> run whatever text follows the first colon as an ex command. That is the outcome the guard exists to prevent, reached with one extra step.
-- Fix: Hold, or refuse from a project file, bindings in insert, replace and cmdline mode to actions that leave that mode (mode.normal, mode.insert*, mode.visual*). Alternatively, hold the defaults' insert and cmdline keys whose action changes mode, as held_keys already does for the key that opens the command line. Add a config gateway test for 'keymap.insert <CR> mode.normal' from a project file.
-- Category: security
-- Added: 2026-11-22
-
-### In this sprint's diff (config-guards-b). A project file may at carat/domain/config.rb:52 (sprint-26 review security Low (4), note 2)
-
-- Location: carat/domain/config.rb:52
-- Why: In this sprint's diff (config-guards-b). A project file may bind palette.open and mode.cmdline in normal mode and the visual modes to any key the user has not claimed, for example 'o' or 'j'. A user who types text while in normal mode (pressing 'o' and then a line of code) opens the palette or the command line without noticing, and Enter runs any action or ex command that the typed text fuzzy-matches or spells out. This is the accepted PROMPT_MODES design and tighter than before the change, so it is recorded as advisory.
-- Fix: Think about restricting project bindings of PROMPT_ACTIONS to keys that are not single printable characters (for example only <C-..>, <leader> or multi-key sequences). Or require that the key the project binds was unbound in the defaults, so a common motion or insert key cannot become a prompt opener.
 - Category: security
 - Added: 2026-11-22
 

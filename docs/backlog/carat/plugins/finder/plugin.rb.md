@@ -112,3 +112,11 @@
 - quality advisory docs/findings/finder-grep-preview.md:31 duplication: the entry 'File finder rows and preview title show the listed path unsanitized' restates the entry at line 26 ('The file finder shows paths as the file lists them') with the same fix; fix: merge the two into one entry, keeping the security rating and the U+202E test outline
 - Category: security
 - Added: 2026-11-20
+
+### Space f w takes no word to the right of a blank cursor
+- Location: carat/plugins/finder/plugin.rb `word_under_cursor`, carat/plugins/finder/matcher.rb `word_at`.
+- Why: Neovim's cword takes the next word to the right on the line when the cursor is on a blank; the queue entry asks for the empty grep on a blank, so this change opens it empty, which differs from Neovim for a user who expects the nearest word.
+- Fix: when word_at finds no word at the column, scan right on the same line for the first keyword byte and return its run; add a table row and a spec scenario, and change the compatibility row.
+- Also: carat/plugins/finder/matcher.rb
+- Category: plugins
+- Added: 2026-11-22

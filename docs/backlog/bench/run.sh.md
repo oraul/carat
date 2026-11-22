@@ -82,3 +82,32 @@
 - Why: the default scenario list (documented as every scenario when none is named, and the one make bench runs without SCENARIOS) leaves out lh-float, lh-winbar, n, palette, and grep, which bench/keys.rb defines
 - Fix: have bench/keys.rb print its SCENARIOS names (for example with a --list argument) and loop over that output, so the list cannot fall out of date
 - Also: bench/keys.rb
+- Merged: ### lh-winbar and n stay out of the default scenario list at bench/run.sh:69 (picker-speed plan, rest of sprint-26 sweep quality note 31)
+- Location: `bench/run.sh:69`; scenarios at `bench/keys.rb:123` (`lh-winbar`), `:147` (`n`).
+- Why: the sprint-26 heading names four scenarios the default list omits; picker-speed's item covers `lh-float` and `palette` only, so `lh-winbar` and `n` still run only when named and no budget covers them.
+- Fix: run both by default with a budget; accepted when `make bench` runs them and `bench-budget` fails on a doubled figure.
+
+### TOOLS_RE does not match bench/run.sh, which tools-test now reads
+- Location: `tools/rules.sh:98` (`TOOLS_RE`), `tools/tools_test.sh` (the bench/run.sh section).
+- Why: `tools-test` now runs `bench/run.sh` over a fake program, but a change to that file alone does not match `TOOLS_RE`, so the scoped check skips `tools-test` for it. The test finds the runner from the tools directory's parent without the `$here/../` spelling that the coverage test scans, since an edit of `tools/rules.sh` goes first and alone, so the gap is left open on purpose.
+- Fix: add `bench/run[.]sh$` to `TOOLS_RE` in its own change, then spell the path in the test as `$here/../bench/run.sh` so the coverage test checks it.
+- Also: tools/rules.sh, tools/tools_test.sh
+- Category: code-quality
+- Added: 2026-11-22
+
+### An empty PICKER_BUDGETS passes bench-budget without checking a picker
+- Location: `bench/run.sh` (`--budgets`), `Makefile` (`PICKER_BUDGETS`).
+- Why: `make bench-budget PICKER_BUDGETS=` runs `--budgets ""`, which checks no scenario and exits 0, so an override can turn the gate off without a message.
+- Fix: refuse an empty list in `--budgets` with exit 2 and a message, with a `tools/tools_test.sh` case.
+- Also: Makefile, tools/tools_test.sh
+- Category: code-quality
+- Added: 2026-11-22
+
+
+### The benchmark's report file is left behind at bench/run.sh:24 (sprint-28 review quality note 2, sweep notes 10, 34)
+
+- Location: bench/run.sh:23, :24, :72
+- Why: REPORT is made by mktemp before the argument checks and never removed on --budgets, the missing-binary exit, or a failed run under set -e, so each `make bench-budget` leaves a file in TMPDIR; per_key removes it after the first scenario and later runs re-create it by name; --budgets passes an empty pair list and dies unbound when it is missing. Also: "## The benchmark reuses one temporary report path".
+- Fix: a trap removing it on EXIT, drop the rm in per_key; refuse a missing or empty list with exit 2 and a usage line.
+- Category: code-quality
+- Added: 2026-11-22

@@ -1419,3 +1419,46 @@ none
 none
 - Category: pipeline
 - Added: 2026-11-22
+
+### A first-pass green CI still costs the merge start 13 to 14 calls (picker-speed retro note 2)
+- Location: .claude/workflows/deliver-change.js, the merge phase and the merger start; beside the backlog queue's `merge-wait-bound` (merge 78,615/13, drivers-lsp-lows retro 6).
+- Why: picker-speed merge 22,874 output tokens in 14 calls, 15.4 percent of 148,771 output tokens, with a first-pass green CI; the fixed merge cost repeats every run.
+- Fix: fold into `merge-wait-bound`; accepted when over the next 5 runs with first.ci=1 the merge phase takes at most 8 tool calls and at most 10 percent of the run's output tokens, the merged commit still accepted by the run state.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A scout runs when the plan already names every expected path with a line (picker-speed retro note 3)
+- Location: .claude/workflows/deliver-change.js, the scout phase; beside the backlog queue's `scout-prune` and `areas-in-plan`.
+- Why: picker-speed scout 14,768 output tokens in 11 calls, 9.9 percent of output tokens and 9.6 percent of calls, while the plan named every path with a line and the pack changed no decision.
+- Fix: fold into `scout-prune`; accepted when a run whose plan names every expected path with a line starts no scout and the check first-pass rate stays at or above 242/256.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The check phase overran the large output budget (review-in-openspec overrun note 8)
+- Location: .claude/workflows/deliver-change.js, the check phase; beside the backlog queue's `check-carry` (check 121,585 of 724,443 output, review-in-openspec retro 9).
+- Why: the check passed at 8045d5552c96 with 653,549 output tokens against the large output budget of 416,666.
+- Fix: fold into `check-carry` as its evidence; accepted as that item says (the check under 8 percent of output tokens over three first.check 1 deliveries).
+- Category: pipeline
+- Added: 2026-11-22
+
+### The merge phase output varies 14 times at a constant call count with a green first CI (ui-groups retro note 4, evidence for backlog Pool 15 merge-wait-bound)
+- Location: `.claude/workflows/deliver-change.js` (merge phase), `.claude/agents/merger.md`.
+- Why: ui-groups merge 95,842/13, 18.0 percent of 532,429 output tokens, ci_wait_calls 6, CI 13.1 min, 0 CI fixes; last 10 feature merges 6,972 to 57,187 at 12 to 14 calls; drivers-lsp-lows 78,615/13.
+- Fix: accepted when 5 consecutive runs with a first-pass green CI keep the merge phase under 20,000 output tokens.
+- Also: .claude/agents/merger.md
+- Category: pipeline
+- Added: 2026-11-22
+
+### A scout reads the half a delivery-time split moved out (sprint-close-lows retro note 2)
+- Location: `.claude/workflows/deliver-change.js` (scout question and locations from the queue item).
+- Why: sprint-close-lows scout 55,071/23, 13.7 percent of 402,224 output tokens, the highest of the last 10 backlog rows; 5 of its 9 locations and all 4 Gaps lay in merge-path-lows, already split off.
+- Fix: accepted when, after a delivery-time split, every scout location and Gap lies in the delivered part.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The check phase costs a sixth to a third of a run's output while confirming stages that pass (review-in-openspec retro note 9, check-share)
+- Location: the check phase of `.claude/workflows/deliver-change.js`; near the backlog queue's Pool 14 `check-carry`
+- Why: review-in-openspec spent 121,585 of 724,443 output tokens (16.8 percent) on check over 3 passes, all passing.
+- Fix: merge into `check-carry`; accepted when over the next three deliveries with first.check 1 the check phase stays under 8 percent of output tokens and CI finds no stage failure the check left out.
+- Category: pipeline
+- Added: 2026-11-22

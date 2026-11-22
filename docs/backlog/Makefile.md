@@ -7,6 +7,11 @@
 - Fix outline: have the `types` target write the file outside the `spin` source tree, or delete it after printing.
 - Category: pipeline
 - Added: 2026-10-28
+- Merged: ### make types leaves a signature file that breaks the next compile
+- Location: Makefile:414 (`types` writes `$(TYPES_RBS)`, build/carat.rbs)
+- Why: after `make types`, `make test-one` fails with "spinel_rbs_extract: parse failed in build/carat.rbs, expected a token pCOLON" and refuses to compile, since the `--rbs` scan of the project directory reads the emitted file, whose class names such as `Carat::::Domain::::Range` do not parse; a contributor who inspects the inferred types must delete the file by hand before any build.
+- Fix: write the types output outside the scanned tree (under tmp/.types or a hidden build directory the `--rbs` scan skips), or delete it at the end of the `types` recipe after printing it.
+none
 
 ## Spinel f34005bf miscompiles versioned entries and case constants
 
@@ -303,5 +308,46 @@ none
 - Why: toolchain-clean runs rm -rf tmp, which also deletes every delivery lane worktree tmp/.lane-<change> (kept on a stop, with its uncommitted work), the review and merge-gate worktrees, and the scout packs, leaving stale git worktree records, while its help line, the README, CLAUDE.md, and docs/architecture.md section 2 say it removes the Spinel checkout and the toolchain; it also misses an overridden SPINEL_SRC or PREFIX
 - Fix: rm -rf "$(SPINEL_SRC)" "$(PREFIX)" only (plus any cache it owns), and keep the help line and README row saying exactly that
 - Also: CLAUDE.md, docs/architecture.md
+- Category: pipeline
+- Added: 2026-11-22
+
+### The lh maximum of 100 is four times its figure of 25.0
+- Location: `Makefile:25` (`ALLOC_BUDGET`), `bench/run.sh --budget lh`.
+- Why: the picker maxima fail a doubled figure, but the cursor scenario's maximum would pass one doubled twice (25.0 to 50.0, even to 99), so a regression of the cursor scenario's allocations goes unseen up to 4 times.
+- Fix: lower `ALLOC_BUDGET` to about 40 (1.6 times the figure) in a change that also reads the recorded figures of `lh` over several runs.
+- Also: bench/run.sh
+- Category: pipeline
+- Added: 2026-11-22
+
+### grep is printed by bench-budget without a maximum
+- Location: `Makefile` (`bench-budget`, the last `bench/run.sh grep` line), `bench/run.sh`.
+- Why: grep allocates 774.4 objects a key in each recent measurement and has no budget, so a doubled figure passes, as the float, finder, and palette figures no longer do.
+- Fix: add `grep:1200` to `PICKER_BUDGETS` (about 1.6 times 774.4), run at 20 and 120 keys as the line does now, and drop the printing-only line or keep it for the time per key.
+- Also: bench/run.sh
+- Category: pipeline
+- Added: 2026-11-22
+
+### The finder budget adds about 25 seconds to bench-budget
+- Location: `Makefile` (`bench-budget`, `PICKER_BUDGETS`), `bench/keys.rb` (`FINDER_FILES`, 10,000).
+- Why: the finder scenario builds a 10,000-file fixture for each run, and `--budget` runs it twice at the development flags, which is the longest part of the stage.
+- Fix: run the finder budget at a smaller file count through an environment variable of `bench/keys.rb` and keep the full count for `make bench`, after checking that the allocations per key at that count match the full one.
+- Also: bench/keys.rb
+- Category: pipeline
+- Added: 2026-11-22
+
+### make toolchain-clean removes every kept lane worktree at Makefile:213 (sprint-28 sweep quality, note 1)
+
+- Location: Makefile:213; README.md:11, :21; docs/architecture.md:33
+- Why: `rm -rf tmp` removes each `tmp/.lane-CHANGE` kept on a stop with its uncommitted work, the review worktrees, and leaves dangling git worktree records; it ignores the SPINEL_SRC and PREFIX overrides, while the README and architecture say it removes the two toolchain directories only.
+- Fix: remove only SPINEL_SRC and PREFIX; correct the help line and README.md:21.
+- Also: README.md, docs/architecture.md
+- Category: pipeline
+- Added: 2026-11-22
+
+### Makefile help and names lag the targets at Makefile:445 (sprint-28 sweep quality, notes 48, 49, 50)
+
+- Location: Makefile:29, :332, :445, :520
+- Why: tools-test help names a subset of what tools_test.sh covers; the Variables line omits ALLOC_BUDGET, PICKER_BUDGETS, SCENARIOS, BASE_METRICS, TIME_TOLERANCE; test-one spells ONE_DIR seven times; PICKER_BUDGETS holds lh-float, not a picker.
+- Fix: list them; one ONE_BIN variable; rename to SCENARIO_BUDGETS with the help, ci.yml comment, and tools case.
 - Category: pipeline
 - Added: 2026-11-22

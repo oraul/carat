@@ -74,3 +74,12 @@
 - Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
 - Fix: call state.options.tab_width (or pass it) at each site
 - Also: carat/domain/options.rb
+
+### The tab width fallback is written inline in nine places at carat/use_cases/dispatcher.rb:114 (sprint-28 sweep quality, notes 2, 23)
+
+- Location: carat/use_cases/dispatcher.rb:114, repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, display_width.rb:57, carat/domain/operators.rb:172, :320, :341
+- Why: `tabstop > 0 ? tabstop : 8` restates Options#tab_width, the one rule.
+- Fix: call state.options.tab_width, passing the width where only the tabstop is passed.
+- Also: carat/domain/operators.rb
+- Category: editor
+- Added: 2026-11-22

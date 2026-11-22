@@ -50,3 +50,11 @@
 - Fix: one private Operators.step_width(shiftwidth, tabstop) and the tab fallback taken from callers passing Options#tab_width
 - Category: editor
 - Added: 2026-11-22
+
+### The shift width is written twice at carat/domain/operators.rb:172 (sprint-28 sweep quality, note 26)
+
+- Location: carat/domain/operators.rb:172, :320, :337
+- Why: the shiftwidth fallback is in shift_block and shift; indent_width recomputes DisplayWidth.column.
+- Fix: one private shift_width helper and DisplayWidth.column(indent, indent.length, tabstop).
+- Category: editor
+- Added: 2026-11-22

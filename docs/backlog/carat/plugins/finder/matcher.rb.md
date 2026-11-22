@@ -17,3 +17,10 @@
 - Also: carat/plugins/finder/plugin.rb, carat/use_cases/plugins/plugin_host.rb
 - Category: plugins
 - Added: 2026-11-10
+
+### word_at counts every non-ASCII character as a word character
+- Location: carat/plugins/finder/matcher.rb `word_byte?` (bytes of 0x80 or more), used by `word_at`.
+- Why: a typographic quote, a non-breaking space, or CJK punctuation next to a word joins it, so Space f w can put the punctuation on the prompt; the grep picker's whole-word match shares the rule, so changing one alone would make them disagree.
+- Fix: classify code points by Unicode letter and number classes through a table in Matcher for both word_at and the whole-word match, with rows for each class.
+- Category: plugins
+- Added: 2026-11-22

@@ -7,6 +7,10 @@
 - Fix outline: add one row naming the missing targets, or one row per target, checked against `make help`.
 - Category: design
 - Added: 2026-11-09
+- Merged: ### the commands table omits make pack, clean, spinel-rev, and at README.md:21 (sprint-26 sweep quality, note 48)
+- Location: README.md:21
+- Why: the commands table omits make pack, clean, spinel-rev, and help, while the rule of map area 1 gives every command a target, a Commands line, and a README line
+- Fix: add the four rows
 
 ## The README says the merger runs the metric line before its work
 
@@ -100,10 +104,3 @@
 - Category: design
 - Added: 2026-11-21
 
-### the commands table omits make pack, clean, spinel-rev, and at README.md:21 (sprint-26 sweep quality, note 48)
-
-- Location: README.md:21
-- Why: the commands table omits make pack, clean, spinel-rev, and help, while the rule of map area 1 gives every command a target, a Commands line, and a README line
-- Fix: add the four rows
-- Category: design
-- Added: 2026-11-22

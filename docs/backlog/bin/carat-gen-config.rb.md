@@ -16,24 +16,16 @@
 - Also: carat/domain/default_config.rb, CLAUDE.md, carat/plugins/registry.rb, carat/domain/registry_source.rb, docs/architecture.md
 - Category: editor
 - Added: 2026-11-09
-
-### The generated config header says spin run carat-gen-config
-
+- Merged: ### The generated config header says spin run carat-gen-config
 - Location: bin/carat-gen-config.rb:118, carat/domain/default_config.rb:2, docs/architecture.md:222 (sweep, quality).
 - Why: spin run skips the Spinel-warnings check make gen-config adds, against the CLAUDE.md Commands rule.
 - Fix outline: say make gen-config in all three.
 - Also: carat/domain/default_config.rb, docs/architecture.md, CLAUDE.md
-- Category: editor
-- Added: 2026-11-17
-
-### carat-gen-config writes a spin run header (sprint-16 sweep quality)
-
+- Merged: ### carat-gen-config writes a spin run header (sprint-16 sweep quality)
 - Location: bin/carat-gen-config.rb:32, the header of carat/domain/default_config.rb.
 - Why: it says to run spin run carat-gen-config where CLAUDE.md allows only make gen-config.
 - Fix outline: write make gen-config in the header and regenerate.
 - Also: carat/domain/default_config.rb, CLAUDE.md
-- Category: editor
-- Added: 2026-11-18
 
 ### The generated header of default_config.rb (sprint-20 sweep quality, carat-gen-config.rb:32)
 

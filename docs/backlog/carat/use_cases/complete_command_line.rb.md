@@ -43,3 +43,11 @@
 - Fix: col = Domain::DisplayWidth.text_width(state.cmdline[0, name_start].to_s, 0) - Domain::FloatWindow::PAD
 - Category: editor
 - Added: 2026-11-22
+
+### collect_names and collect_themes are one loop at carat/use_cases/complete_command_line.rb:166 (sprint-28 sweep quality, note 27)
+
+- Location: carat/use_cases/complete_command_line.rb:166, :182
+- Why: the same prefix-filter loop twice.
+- Fix: one private collect_prefixed(names, typed).
+- Category: editor
+- Added: 2026-11-22

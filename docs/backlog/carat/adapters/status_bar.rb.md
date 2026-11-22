@@ -57,3 +57,27 @@
 - Also: carat/use_cases/buffers/list_buffers.rb, carat/domain/messages.rb
 - Category: editor
 - Added: 2026-11-18
+
+### Status bar has no folder segment and shows the server state as text
+- Location: `carat/adapters/status_bar.rb` (`collect`, `paint_entry`, the `LSP` kind), `docs/design.md` section 8 (Status bar)
+- Why: the design lists folder among the quiet segments and says the server state is one dot; the bar has no folder segment and the `lsp` slot is its name and state text, so those two parts of the design are not drawn.
+- Fix: add a folder segment (a `StatusSlots` field a plugin or the project root fills) in `StatusLineDim`, and draw the server as one dot in its state group with the name in `StatusLineDim`; keep the `lsp` width table and `docs/compatibility.md` in step.
+- Also: docs/design.md, docs/compatibility.md
+- Category: editor
+- Added: 2026-11-22
+
+### The progress bar and the percent keep StatusLine
+- Location: `carat/adapters/status_bar.rb` (`paint_bar`, the PERCENT and PROGRESS kinds)
+- Why: the undone cells of the progress bar and the percent are drawn in the bold `StatusLine` beside quiet neighbours, while the design's hierarchy names only the file and the position as leading; the brief named the design's groups, so these were left as they were.
+- Fix: draw the undone cells and the percent in `StatusLineDim` once the design says which; update the progress and percent scenarios and snapshots.
+- Category: editor
+- Added: 2026-11-22
+
+### Comments break their wrap width at carat/adapters/status_bar.rb:17 (sprint-28 review quality note 5, sweep notes 39, 58)
+
+- Location: carat/adapters/status_bar.rb:8, :17, :25; .github/workflows/ci.yml:26, :161; .claude/workflows/deliver-change.js:124, :130; tools/gates.sh:517
+- Why: overlong and one-word comment lines left by ui-groups and earlier edits.
+- Fix: rewrap.
+- Also: .github/workflows/ci.yml, .claude/workflows/deliver-change.js, tools/gates.sh
+- Category: editor
+- Added: 2026-11-22

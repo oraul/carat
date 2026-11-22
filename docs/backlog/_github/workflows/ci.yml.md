@@ -57,3 +57,12 @@
 - Fix: set persist-credentials: false on the checkout step
 - Category: security
 - Added: 2026-11-22
+
+### The CI checkout keeps the job token in .git/config at .github/workflows/ci.yml:36 (sprint-28 sweep security Low (4), note 19)
+
+- Location: .github/workflows/ci.yml:36
+- Why: the default persist-credentials stores the token (contents, pull-requests, checks read) where the pull request's Makefile and code run.
+- Fix: persist-credentials false; the scope step already passes GH_TOKEN through env.
+- Also: Makefile
+- Category: security
+- Added: 2026-11-22

@@ -41,3 +41,12 @@
 - Also: tools/ci_scope.sh, Makefile, tools/metrics.sh, spin.toml
 - Category: security
 - Added: 2026-11-16
+
+### The compile-cache key is written three times at .github/workflows/main.yml:52 (sprint-28 sweep quality, note 53)
+
+- Location: .github/workflows/main.yml:52, :91; .github/workflows/ci.yml:101
+- Why: the probe means something only while it equals the restore key.
+- Fix: compute the key once per job and reuse it.
+- Also: .github/workflows/ci.yml
+- Category: pipeline
+- Added: 2026-11-22

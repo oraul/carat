@@ -129,3 +129,11 @@
 - Fix: return float_in(index, id).window.buffer.owner == name ? index : -1
 - Category: plugins
 - Added: 2026-11-22
+
+### own_float_tab repeats float_in's lookup at carat/use_cases/plugins/window_requests.rb:378 (sprint-28 sweep quality, note 37)
+
+- Location: carat/use_cases/plugins/window_requests.rb:378, :396
+- Why: two copies of one lookup.
+- Fix: return float_in(index, id).window.buffer.owner == name ? index : -1.
+- Category: plugins
+- Added: 2026-11-22

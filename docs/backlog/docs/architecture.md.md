@@ -240,3 +240,11 @@ Location: `docs/architecture.md` sections 4, 5.3, and 8.2; the code has `Domain:
 - Also: carat/plugin_api.rb, docs/plugins.md
 - Category: design
 - Added: 2026-11-20
+
+### docs/architecture.md stood over its docs-lint budget on main
+- Location: docs/architecture.md, the configuration section's trust bullet and the line-check bullet; tools/docs_lint.sh BUDGETS.
+- Why: the merge of the project-file trust fix left the file 8 bytes over its 88064-byte budget, so make docs-lint, a stage of the check, failed for every later change; this change trimmed 9 bytes of wording to get under it.
+- Fix: keep the file under budget by trimming wording at the change that grows it, and have the merge gate run docs-lint on the pull request's head so a budget overrun fails before the merge.
+- Also: tools/docs_lint.sh
+- Category: design
+- Added: 2026-11-22

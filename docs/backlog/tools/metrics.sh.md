@@ -68,3 +68,19 @@
 - Location: `tools/metrics.sh:110`
 - Why: compare walks only the names of CURRENT, so an allocs or rounds name present in BASE and missing from CURRENT passes silently, against the usage (fail when not measured) and unlike run_state.sh bench_compare, which reports it as none
 - Fix: in END, fail for each strict base name not seen
+
+### The benchmark cannot see growth in the float, finder, or palette allocations (picker-speed retro note 4)
+- Location: tools/metrics.sh (the allocs column), bench/run.sh `PICKER_BUDGETS`.
+- Why: tools/metrics.sh records no lh-float, finder, or palette allocations, so make metrics-compare cannot fail on their growth; PICKER_BUDGETS allows about 60 percent growth under its fixed maxima.
+- Fix: record lh-float, finder, and palette in the allocs column; accepted when the next metrics row holds them and a growth of one object a key in any of them fails make metrics-compare.
+- Also: bench/run.sh
+- Category: pipeline
+- Added: 2026-11-22
+
+### metrics compare passes a base name current lacks at tools/metrics.sh:104 (sprint-28 sweep quality, notes 11, 43)
+
+- Location: tools/metrics.sh:104, :19
+- Why: compare walks only CURRENT, so a scenario dropped from DEFAULT_SCENARIOS or an unparsed bench line passes, against the header's "a value not measured fails".
+- Fix: in END fail each strict base name not seen, or reword the header if a subset must pass.
+- Category: pipeline
+- Added: 2026-11-22

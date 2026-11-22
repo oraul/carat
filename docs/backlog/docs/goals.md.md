@@ -99,3 +99,18 @@
 - Also: tools/run_state.sh
 - Category: pipeline
 - Added: 2026-11-21
+
+### The contributor overran the medium budget at agent/high (review-in-openspec overrun note 12)
+- Location: docs/goals.md Calibration, the contributor-tier-high end; .claude/workflows/deliver-change.js CALIBRATION.
+- Why: estimated medium, budget 1,200,000 total tokens, actual 1,372,173 total tokens in 76.0 minutes, 260,867 output tokens.
+- Fix: count it in the contributor-tier-high comparison; accepted when the next calibration decision cites this row with its figures.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-22
+
+### sprint-27-records ran 44.3 minutes against the small budget of 25 (sprint-close-lows overrun note 4)
+- Location: docs/goals.md budgets, the records change; beside the backlog queue's `budget-recalibrate` (sprint-26-records budget 0 against 2,612,300).
+- Why: estimated small, budget 500,000 total tokens and 25 minutes, actual 0 total tokens in 44.3 minutes, 32,707 output tokens, 8,122,940 total tokens of sprint-planning's reviews set apart.
+- Fix: fold into `budget-recalibrate`; accepted when a records change's budget counts its reviews' tokens and minutes or names them apart, and the next records row is judged against it.
+- Category: pipeline
+- Added: 2026-11-22
