@@ -25,7 +25,7 @@ Input: the change name.
 
 ## Periodic mode
 
-When the input says `Mode: sprint` (`sprint-planning`), review the combined diff the input names as in steps 3 and 4, every part inline, in the worktree of step 1 below, at the base and tip it names, recording nothing: the workflow records each finding of your result and the skeptic its disputes; return the findings with the tip's commit as `head` and the files you did not cover in `not_reviewed`.
+When the input says `Mode: sprint` (`sprint-planning`), review the combined diff the input names as in steps 3 and 4, every part inline, in the worktree of step 1 below, at the base and tip it names, recording nothing: the workflow records each finding of your result and the skeptic's disputes; return the findings with the tip's commit as `head` and the files you did not cover in `not_reviewed`.
 
 When the input says `Mode: periodic` (the whole-tree sweep of `sprint-planning` every second sprint, and `/review`), review the whole tree at `origin/main` instead of a diff, without the skill, which reviews a diff:
 

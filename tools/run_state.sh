@@ -147,7 +147,11 @@
 #                               stage outside TEST_STAGES when only tests
 #                               changed since COMMIT; a stage of
 #                               COMPILE_STAGES is skipped on the code key of
-#                               its last pass with its outputs unchanged.
+#                               its last pass with its outputs unchanged;
+#                               a stage of RERUN_STAGES (diagnose, which CI
+#                               leaves out) is skipped only when COMMIT is
+#                               the recorded phase.check, and never on a
+#                               code key.
 #                               Whoever started it, the contributor (CHANGE
 #                               alone, its own head) or the checker, a check
 #                               writes its stage records from the runner,
@@ -159,14 +163,18 @@
 #                               machinery), and records phase.check from the
 #                               checker's verdict alone. The runner is the
 #                               contributor's working tree's copy, so an
-#                               uncommitted edit of it or of the Makefile,
-#                               restored before the commit, could write
-#                               records at HEAD that machinery no does not
-#                               see: a backed head trusts the contributor's
-#                               session; CI reruns docs-lint, the builds,
-#                               test-run, bench-budget, metrics, and
-#                               tools-test, main's merge gates rerun gates,
-#                               and diagnose rests on it as before. The
+#                               uncommitted edit of it, restored before
+#                               the commit, could write records at HEAD
+#                               that machinery no does not see: a backed
+#                               head trusts the contributor's session only
+#                               where a later run checks it again; CI
+#                               reruns docs-lint, the builds, test-run,
+#                               bench-budget, metrics, and tools-test,
+#                               main's merge gates rerun gates, and the
+#                               checker's own check reruns diagnose
+#                               (RERUN_STAGES). The runner refuses a dirty
+#                               tracked tree at its own start too, so one
+#                               started over an edit writes no record. The
 #                               stages run in a runner (check-run, no agent's)
 #                               detached from the caller, rejoined by a check
 #                               at the same HEAD and stopped by one at another;
@@ -238,7 +246,12 @@
 #                               leading commit, is already noted is not
 #                               recorded again; a late-finding is refused
 #                               until merged names a commit on main and is
-#                               stored as "late-finding MERGED TEXT"
+#                               stored as "late-finding MERGED TEXT"; a
+#                               held-finding is refused without a pushed
+#                               record or with a merged one, and an
+#                               unpushed-finding once pushed is recorded
+#                               (the workflow's close records, which the
+#                               guard keeps to the close profile)
 #   usage CHANGE TOKENS MINUTES add one start's total tokens (input plus
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
@@ -521,11 +534,20 @@ outside_records() {
 # The compile stages, skipped when the code they read is the code of their
 # last pass and their outputs are the ones it left: the code key hashes
 # every tracked path but NOT_COMPILED, which no compile stage reads, except
-# BUILD_TOOLS, the scripts dev-build, test-build, and diagnose run: the
-# analysis budget and the Spinel warning check, whose pattern decides a
-# pass. COMPILED keeps each stage's last pass, "STAGE KEY SUM", across
-# changes, in the run state's directory, which only this script writes.
-COMPILE_STAGES="dev-build test-build diagnose"
+# BUILD_TOOLS, the scripts dev-build and test-build run: the analysis
+# budget and the Spinel warning check, whose pattern decides a pass.
+# COMPILED keeps each stage's last pass, "STAGE KEY SUM", across changes,
+# in the run state's directory, which only this script writes.
+COMPILE_STAGES="dev-build test-build"
+# The stages CI leaves out of a pull request's checks and no later gate
+# reruns (main's merge gates rerun the gates): diagnose. A pass of theirs
+# is skipped at the head only when the backed commit is the recorded
+# phase.check, which the workflow writes from the checker's verdict, never
+# on a contributor's claimed head, whose records its working tree's
+# runner wrote, and never on a compiled line, which any runner writes; so
+# the checker runs them again wherever a contributor's runner could have
+# written their pass.
+RERUN_STAGES="diagnose"
 NOT_COMPILED='^([.]claude/|[.]github/|docs/|openspec/|tools/[^/]+[.]sh$|[^/]+[.]md$)'
 BUILD_TOOLS='^tools/(analysis_budget|spinel_warnings)[.]sh$'
 # The path scope: the stages a change's paths need, from the paths changed
@@ -643,7 +665,8 @@ commit_at() {
 # the recorded phase.check, the last check the workflow passed, or HEAD,
 # where the stage records the check skips are the runner's at that very
 # commit (the working tree's runner, so at HEAD they are only as trusted
-# as the session that ran it: the header's check entry). Any other commit
+# as the session that ran it, and RERUN_STAGES skip only on phase.check:
+# the header's check entry). Any other commit
 # backs nothing: its records are refused, a note says so on stderr, and
 # the check runs every stage, since the workflow queues its phase.check
 # record and writes it only after its rounds, so a fix round's check may
@@ -1054,17 +1077,23 @@ check_stages() {
   backed=$1
   key=$(code_key)
   paths=$(scope_paths)
+  # The recorded phase.check, twelve digits, which alone backs a pass of
+  # RERUN_STAGES at the head.
+  phase_check=$(read_key phase.check)
+  [ -z "$phase_check" ] || phase_check=$(git rev-parse --verify -q --short=12 "$phase_check^{commit}" 2>/dev/null) || phase_check=""
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
     from=$(echo "$record" | sed -n 's/.* carried-from-\([0-9a-f]*\)$/\1/p')
     case "$record" in
       "0 "*)
-        if [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
+        if one_of "$s" "$RERUN_STAGES" && { [ -z "$phase_check" ] || [ "$backed" != "$phase_check" ]; }; then
+          [ -z "$backed" ] || [ "$at" != "$head" ] ||
+            echo "stage $s: passed at $head, run again: CI leaves it out and only the recorded phase.check backs its pass"
+        elif [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
           echo "stage $s: passed at $head, skipped"
           continue
-        fi
-        if [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
+        elif [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
             ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
           stage_record "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
           echo "stage $s: passed at $backed, carried to $head (only tests changed since)"
@@ -1139,10 +1168,15 @@ runner_alive() {
     ps -p "$1" -o args= 2>/dev/null | grep -q 'run_state[.]sh check-run'
 }
 
-# The verdict line ending the runner's output, empty while it has none.
+# The verdict line ending the runner's output, empty while it has none:
+# only the header's verdict forms, never another line the runner starts
+# with "check: " (the escape scan's heading, a refusal, a backing note),
+# so a waiter polling between such a line and the verdict keeps waiting.
 check_verdict() {
   last=$(tail -1 "$(check_log)" 2>/dev/null)
-  case "$last" in "check: "*) echo "$last" ;; esac
+  case "$last" in
+    "check: every stage passed at "*|"check: stage "*" at "*"; read "*) echo "$last" ;;
+  esac
 }
 
 # check-run BACKED: the runner, started detached by check_wait. It writes
@@ -1162,6 +1196,16 @@ check_run() {
   trap 'check_signalled INT' INT
   trap 'check_signalled TERM' TERM
   trap 'clone_drop; own=$(cut -d" " -f1 "$pid_file" 2>/dev/null); [ "$own" != "$$" ] || rm -f "$pid_file"' EXIT
+  # The waiter's refusal again, at the runner's own start: a runner
+  # started over an edited tree (after the waiter's check, or by hand)
+  # writes no record, so its pass backs no head; an edit after this line
+  # is voided by the escape scan.
+  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  if [ -n "$dirty" ]; then
+    echo "check: refused: tracked files differ from HEAD at the runner's start, so no stage record stands: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
+    echo "check: stage none failed at $head; read $(check_log)"
+    exit 1
+  fi
   clone_make
   escape_mark
   check_stages "$1"
@@ -1994,6 +2038,17 @@ add_note() {
       die "note: a late finding is recorded only after the run merged; $change records no merged commit on main"
     set -- "$1" "$stamp $2"
   fi
+  # The held and unpushed findings are the workflow's close records
+  # (recordLate), each written in its phase of the run: a held finding
+  # after the push and before the merge, an unpushed one before the push.
+  case "$1" in
+    held-finding)
+      [ -n "$(read_key pushed)" ] && [ -z "$(read_key merged)" ] ||
+        die "note: a held finding is recorded only after the push and before the merge" ;;
+    unpushed-finding)
+      [ -z "$(read_key pushed)" ] ||
+        die "note: an unpushed finding is recorded only before the push; $change records a push" ;;
+  esac
   n=$(($(grep -c '^  "note[.]' "$(state_file)") + 1))
   write_key "note.$n" "$1 $2"
 }

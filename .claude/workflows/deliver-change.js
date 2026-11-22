@@ -857,7 +857,10 @@ function handOver() {
 // ones, as late findings. A close before the push, no package step having
 // handed anything, keeps them as unpushed-finding notes, which seed of a
 // resume still unpushed puts back into the list its package step hands
-// over, so they never reach held and are written once.
+// over, so they never reach held and are written once. Only the close
+// profile writes these kinds (tools/agent_guard.sh), and the note command
+// refuses a held finding outside the push-to-merge span and an unpushed
+// one after the push, so no other start plants one that seed reads back.
 let held = []
 function recordLate() {
   const fresh = handOver().map(noteText).filter((t) => t && !held.includes(t))
@@ -969,7 +972,9 @@ async function laneHead() {
 // records at a backed head come from the contributor's working tree's
 // runner, so they trust its session: an uncommitted, restored edit of
 // tools/ or the Makefile escapes machinery no; CI and main's merge gates
-// rerun every stage but diagnose (tools/run_state.sh, the check entry).
+// rerun every stage but diagnose, which the checker's check runs again,
+// since a stage of RERUN_STAGES skips only on the recorded phase.check
+// (tools/run_state.sh, the check entry).
 let claimedPass = null
 function claimFrom(r, lane) {
   const v = checkVerdict(r && r.check)

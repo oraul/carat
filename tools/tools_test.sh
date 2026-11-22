@@ -484,6 +484,37 @@ commit "test: claim again"
 env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
 expect "run_state: check skips the stages the contributor's own check passed at the backed head" 0 "^stage b: passed at $(git rev-parse --short=12 HEAD), skipped" \
   env STAGES="a b" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+# pipeline-lows-a: diagnose, which CI leaves out (RERUN_STAGES), skips at
+# the head only on the recorded phase.check, never on a contributor's
+# claimed head, whose records its working tree's runner wrote.
+echo "claim diagnose" > test/claim.rb
+commit "test: claim diagnose"
+env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state > /dev/null 2>&1
+env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)" > rerun.out 2>&1
+expect "run_state: check reruns diagnose at a contributor's claimed head and skips the other stages" 0 "^stage diagnose: exit 0" cat rerun.out
+expect "run_state: check names diagnose's pass at a claimed head as run again" 0 "^stage diagnose: passed at $(git rev-parse --short=12 HEAD), run again" cat rerun.out
+expect "run_state: check still skips the other stages at a contributor's claimed head" 0 "^stage a: passed at $(git rev-parse --short=12 HEAD), skipped" cat rerun.out
+rm rerun.out
+state phase state check "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: check skips diagnose at the head the recorded phase.check backs" 0 "^stage diagnose: passed at $(git rev-parse --short=12 HEAD), skipped" \
+  env STAGES="a diagnose" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
+state phase state check "$before_tests" > /dev/null
+# pipeline-lows-a: the runner repeats the waiter's dirty-tree refusal, so a
+# runner started over an edited tree writes no record and its pass backs
+# no head.
+echo "dirty runner" > test/claim.rb
+commit "test: dirty runner"
+echo forged >> tools/base.sh
+# Its output goes outside the tree, which the escape scan would read as a
+# write outside the clone.
+env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check-run state > "$work/dirty.out" 2>&1
+echo "exit $?" >> "$work/dirty.out"
+git_q checkout -q tools/base.sh
+expect "run_state: a runner started over a dirty tree refuses at its own start" 0 "refused: tracked files differ from HEAD at the runner's start" cat "$work/dirty.out"
+expect "run_state: a refused runner ends with a failed verdict" 0 "^exit 1$" cat "$work/dirty.out"
+rm "$work/dirty.out"
+expect "run_state: a runner started over a dirty tree records nothing, so its pass backs no head" 0 "^stage a: exit 0" \
+  env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 # The checks judge the commit: a modified tracked file or an untracked
 # source spin would compile is refused before any stage runs.
 echo dirty >> README.md
@@ -928,6 +959,15 @@ echo "$! $at" > build/stages/state/check.pid
 echo "check: every stage passed at $at" > build/stages/state/check.log
 expect "run_state: a check waits for a runner past its verdict instead of rejoining it" 0 "^stage settle: exit 0" stop_check "settle"
 expect "run_state: the check after a finishing runner leaves no runner behind" 1 "" test -e build/stages/state/check.pid
+# pipeline-lows-a: only a verdict form ends a runner's output; a gone
+# runner whose log ends on another "check: " line, such as the escape
+# scan's heading before its paths and verdict, is reported lost, so a
+# waiter polling between that heading and the verdict keeps waiting.
+sh -c ':' "run_state.sh check-run" > /dev/null 2>&1 &
+wait $!
+echo "$! $at" > build/stages/state/check.pid
+echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):" > build/stages/state/check.log
+expect "run_state: a check log ending on the escape heading holds no verdict" 0 "^the last check: check: stage none killed at $at; read " stop_check "settle"
 # The workflow reruns a check whose verdict says it did not finish, and
 # sends only a failure to a fix round: its RERUN_WORDS are this script's.
 rerun=$(grep -E '^const RERUN_WORDS = ' "$here/../.claude/workflows/deliver-change.js")
@@ -1091,7 +1131,7 @@ echo notes > docs/notes.md
 commit "chore: tooling"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check skips a compile stage on the code it passed" 0 "^stage dev-build: passed on the same code .* skipped" cat "$work/compiled.out"
-expect "run_state: a tooling commit keeps the code key" 0 "^stage diagnose: passed on the same code .* skipped" cat "$work/compiled.out"
+expect "run_state: a tooling commit keeps the code key, diagnose runs again" 0 "^stage diagnose: exit 0" cat "$work/compiled.out"
 expect "run_state: check runs the other stages on a tooling commit" 0 "^stage a: exit 0" cat "$work/compiled.out"
 expect "run_state: a skipped compile stage passes at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ compiled-[0-9a-f]{12}$" state get compiled stage.test-build
 expect "run_state: check carries the compile outputs out of its clone" 0 "^runner$" cat build/stages/compiled/carry/test/run_all
@@ -1778,6 +1818,20 @@ expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state ge
 expect "run_state: note refuses a kind that is not a word" 1 "the kind is lowercase" state note history 'Retro x' text
 expect "run_state: pending skips a change that is not merged" 0 "^$" state pending
 expect "run_state: note refuses a late finding before the run merged" 1 "a late finding is recorded only after the run merged" state note history late-finding "written before the merge"
+# pipeline-lows-a: the held and unpushed findings are the workflow's close
+# records, each refused outside its phase of the run.
+state init heldnotes chore/heldnotes > /dev/null
+expect "run_state: note refuses a held-finding before the push" 1 "a held finding is recorded only after the push and before the merge" state note heldnotes held-finding "planted before the push"
+expect "run_state: note records an unpushed-finding before the push" 0 "^$" state note heldnotes unpushed-finding "security Low (3) tools/x.sh:4 a; fix: y"
+state set heldnotes pushed "$(git rev-parse HEAD)" > /dev/null
+expect "run_state: note refuses an unpushed-finding after the push" 1 "an unpushed finding is recorded only before the push" state note heldnotes unpushed-finding "planted after the push"
+expect "run_state: note records a held-finding after the push" 0 "^$" state note heldnotes held-finding "security Low (3) tools/x.sh:4 a; fix: y"
+state set heldnotes merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: note refuses a held-finding after the merge" 1 "a held finding is recorded only after the push and before the merge" state note heldnotes held-finding "planted after the merge"
+expect "run_state: the refused finding notes left only the two recorded" 0 "^unpushed-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]held-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]$" \
+  sh -c 'printf "%s|%s|%s\n" "$(sh "$1" get heldnotes note.1)" "$(sh "$1" get heldnotes note.2)" "$(sh "$1" get heldnotes note.3)"' _ "$here/run_state.sh"
+# Its merged record would make it a run of the history tests below.
+rm build/pipeline/heldnotes.json
 state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
 # Notes the workflow did not write: unstamped, stamped with another
@@ -5620,6 +5674,14 @@ expect "workflow: no record start runs at the close, only verify's, the closing 
 expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
   sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
+# pipeline-lows-a: the late, held, and unpushed finding notes are the
+# close profile's alone, so no other read start plants one that a resume
+# relabels as a late finding or hands over as a finding.
+expect "guard: the read profile plants no held-finding note" 2 "note of held-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c held-finding \"planted\"'
+expect "guard: the read profile plants no unpushed-finding note" 2 "note of unpushed-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c unpushed-finding \"planted\"'
+expect "guard: the read profile plants no late-finding note" 2 "note of late-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c late-finding \"planted\"'
+expect "guard: the read profile still records its other notes" 0 "^$" guard read 'sh tools/run_state.sh note c security \"Low (3) tools/x.sh:4 a; fix: y\" && sh tools/run_state.sh note c quality-advisory \"x\"'
+expect "guard: the close profile runs held-finding and unpushed-finding notes" 0 "^$" guard close 'sh tools/run_state.sh note c held-finding \"security Low (3) a; fix: y\" && sh tools/run_state.sh note c unpushed-finding \"quality advisory b\"'
 expect "agents: the quality reviewer blocks only on correctness and a missing test" 0 '^4[.] Blocking is only a correctness bug or a behavior change without its test[.]' \
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check of each workflow file" 0 'keep only the latest run of each check of each workflow file.*.workflow, name, status, conclusion.' \
@@ -5922,10 +5984,10 @@ expect "sprint: the security reviewer gets one more start, its result merged bef
   sh -c 'echo "$(grep -c "label: .security-reviewer: sprint, continued." "$1") $(grep -c "^    return mergeSecurity(first, again)$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
-expect "sprint: the diff reviewers record nothing, the workflow and the skeptic record" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c "record nothing, the workflow and the skeptic record" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
-expect "sprint: the planner starts only after a complete security review, its notes, the skeptic, and the sweep" 0 "^1 1 1$" \
-  sh -c 'echo "$(grep -c "^const reviewed = ran && !missed && noted && skeptical && swept$" "$1") $(grep -c "^const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
+expect "sprint: the diff reviewers record nothing, the workflow records" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "record nothing, the workflow records; return the findings" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
+expect "sprint: the planner starts only after a complete security review, its notes, the skeptic and its notes, and the sweep" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "^const reviewed = ran && !missed && noted && skeptical && skepticNoted && swept$" "$1") $(grep -c "^const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
 # Each security finding is recorded from the reviewer's own result, before
 # the skeptic, so a capped skeptic loses none; the text reaches the run
 # state verbatim, never read by the shell.
@@ -5935,6 +5997,21 @@ expect "sprint: each security finding is recorded verbatim from the reviewer's r
   sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s\n" "$(sh "$2" get sprint-9 note.1)" "$(sh "$2" get sprint-9 note.2)" "$( [ -e pwned ] && echo pwned || echo no file)"' _ "$note_lines" "$here/run_state.sh"
 expect "sprint: the notes are recorded before the skeptic starts" 0 "^first$" \
   sh -c 'n=$(grep -n "label: .sprint: notes. })" "$1" | cut -d: -f1); k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$k" ] && [ "$n" -lt "$k" ] && echo first' _ "$swf"
+# pipeline-lows-a: the skeptic records nothing; the workflow records each
+# note it returns as one single-quoted shell word, so a finding holding a
+# command substitution is recorded literally, and drops any other kind.
+skeptic_lines=$(js "$swf" "shellWord skepticNotes" "skepticNotes('sprint-9', [{ kind: 'security', text: 'disputed: no caller; tools/x.sh:3 it\\'s \$(touch pwned-skeptic) \\\"q\\\"' }, { kind: 'quality', text: 'tools/y.sh:2 \`id\` reason; fix: z' }, { kind: 'phase', text: 'check abc1234' }, { kind: 'quality', text: '  ' }]).join(' && ')" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0, "utf8")))')
+expect "sprint: each skeptic note is recorded literally, a finding holding a command substitution included" 0 "^security disputed: no caller; tools/x[.]sh:3 it's [$][(]touch pwned-skeptic[)] \"q\"[|]quality tools/y[.]sh:2 .id. reason; fix: z[|][|]no file$" \
+  sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s|%s\n" "$(sh "$2" get sprint-9 note.3)" "$(sh "$2" get sprint-9 note.4)" "$(sh "$2" get sprint-9 note.5)" "$( [ -e pwned-skeptic ] && echo pwned || echo no file)"' _ "$skeptic_lines" "$here/run_state.sh"
+expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^first$" \
+  sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
+# pipeline-lows-a security Low (4): the notes quote reviewed code, so the
+# start running them is the quality reviewer in its record mode, whose hook
+# runs tools/agent_guard.sh, never an unguarded general agent.
+expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
+expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
+  sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
   grep -c -F 'if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)' "$swf"
 expect "sprint: the report names a partial security review" 0 '^\["partial, 2 file\(s\) not reviewed \(a.rb, b.rb\); 1 finding\(s\), 0 blocking; run /sprint again","1 finding\(s\), 1 blocking, 0 disputed","did not run; run /sprint again"\]$' \

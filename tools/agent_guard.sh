@@ -63,7 +63,8 @@
 #                the project's tmp/.toolchain and build/spinel-cache,
 #                BASE_METRICS, SCENARIOS; sh tools/run_state.sh show status
 #                pending get trusted check scope settled moved bench metrics
-#                metric note
+#                metric note (a late-finding, held-finding, or
+#                unpushed-finding note only in the close profile)
 #                budget spent review-due backlog-dups backlog-oldest;
 #                [BASE=REV] sh
 #                tools/gates.sh GATE...; sh tools/metrics.sh measure OUT
@@ -104,7 +105,8 @@
 #                retro, or report, at the squash commit the run state
 #                resolves; merge also with the reported COMMIT), and
 #                ci-stages CHANGE COMMIT (a full
-#                sha): the retrospective's closing start
+#                sha), and the late, held, and unpushed finding notes
+#                (recordLate): the retrospective's closing start
 #                runs the run's last records, never review and never the
 #                phase of check, quality, security, or bench
 # The merger alone may call the GitHub merge tool (merge_tool, below). Any
@@ -618,7 +620,7 @@ make_form() {
 run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
-    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:note|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
+    read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     contributor:check)
@@ -635,6 +637,14 @@ run_state_form() {
         merger:merged) matches "$4" '^[0-9a-f]{7,40}$' || refuse "a merged record other than a commit" ;;
         contributor:pr) matches "$4" '^[0-9]+$' || refuse "a pull request record other than a number" ;;
         *) refuse "tools/run_state.sh set of $3" ;;
+      esac ;;
+    read:note)
+      # The late, held, and unpushed finding notes are the workflow's close
+      # records (recordLate), which seed reads back as findings: no other
+      # read start writes them (pipeline-lows-a).
+      case "${3:-}" in
+        late-finding|held-finding|unpushed-finding)
+          [ "$closing" = 1 ] || refuse "tools/run_state.sh note of ${3}, which only the workflow's close profile records" ;;
       esac ;;
     read:moved)
       [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
