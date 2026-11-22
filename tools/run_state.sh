@@ -246,7 +246,12 @@
 #                               leading commit, is already noted is not
 #                               recorded again; a late-finding is refused
 #                               until merged names a commit on main and is
-#                               stored as "late-finding MERGED TEXT"
+#                               stored as "late-finding MERGED TEXT"; a
+#                               held-finding is refused without a pushed
+#                               record or with a merged one, and an
+#                               unpushed-finding once pushed is recorded
+#                               (the workflow's close records, which the
+#                               guard keeps to the close profile)
 #   usage CHANGE TOKENS MINUTES add one start's total tokens (input plus
 #                               output) and wall minutes, as the Workflow
 #                               tool reported them, to metric.total_tokens
@@ -2028,6 +2033,17 @@ add_note() {
       die "note: a late finding is recorded only after the run merged; $change records no merged commit on main"
     set -- "$1" "$stamp $2"
   fi
+  # The held and unpushed findings are the workflow's close records
+  # (recordLate), each written in its phase of the run: a held finding
+  # after the push and before the merge, an unpushed one before the push.
+  case "$1" in
+    held-finding)
+      [ -n "$(read_key pushed)" ] && [ -z "$(read_key merged)" ] ||
+        die "note: a held finding is recorded only after the push and before the merge" ;;
+    unpushed-finding)
+      [ -z "$(read_key pushed)" ] ||
+        die "note: an unpushed finding is recorded only before the push; $change records a push" ;;
+  esac
   n=$(($(grep -c '^  "note[.]' "$(state_file)") + 1))
   write_key "note.$n" "$1 $2"
 }

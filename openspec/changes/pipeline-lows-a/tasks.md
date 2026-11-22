@@ -12,9 +12,9 @@
 
 ## 3. Held and unpushed finding notes only from the workflow
 
-- [ ] 3.1 `tools/agent_guard.sh` `run_state_form`: refuse `note` of `late-finding`, `held-finding`, `unpushed-finding` but in the close profile. Test: "guard: the read profile plants no held-finding note", "guard: the read profile plants no unpushed-finding note", "guard: the close profile runs held-finding and unpushed-finding notes".
-- [ ] 3.2 `tools/run_state.sh` `add_note`: a `held-finding` only after the push and before the merge, an `unpushed-finding` only before the push. Test: "run_state: note refuses a held-finding before the push", "run_state: note refuses an unpushed-finding after the push".
-- [ ] 3.3 `.claude/workflows/deliver-change.js`: the comments of `claimFrom` and `recordLate` name the rerun of `diagnose` and the notes' writers.
+- [x] 3.1 `tools/agent_guard.sh` `run_state_form`: refuse `note` of `late-finding`, `held-finding`, `unpushed-finding` but in the close profile. Test: "guard: the read profile plants no held-finding note", "guard: the read profile plants no unpushed-finding note", "guard: the read profile plants no late-finding note", "guard: the read profile still records its other notes", "guard: the close profile runs held-finding and unpushed-finding notes".
+- [x] 3.2 `tools/run_state.sh` `add_note`: a `held-finding` only after the push and before the merge, an `unpushed-finding` only before the push. Test: "run_state: note refuses a held-finding before the push", "run_state: note refuses an unpushed-finding after the push", "run_state: note refuses a held-finding after the merge", "run_state: note records an unpushed-finding before the push", "run_state: note records a held-finding after the push".
+- [x] 3.3 `.claude/workflows/deliver-change.js`: the comments of `claimFrom` and `recordLate` name the rerun of `diagnose` and the notes' writers; `tools/run_state.sh` header of `note`.
 
 ## 4. Docs and checks
 

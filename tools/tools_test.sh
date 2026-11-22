@@ -1807,6 +1807,18 @@ expect "run_state: note numbers the notes" 0 "^security Medium [(]6[)]" state ge
 expect "run_state: note refuses a kind that is not a word" 1 "the kind is lowercase" state note history 'Retro x' text
 expect "run_state: pending skips a change that is not merged" 0 "^$" state pending
 expect "run_state: note refuses a late finding before the run merged" 1 "a late finding is recorded only after the run merged" state note history late-finding "written before the merge"
+# pipeline-lows-a: the held and unpushed findings are the workflow's close
+# records, each refused outside its phase of the run.
+state init heldnotes chore/heldnotes > /dev/null
+expect "run_state: note refuses a held-finding before the push" 1 "a held finding is recorded only after the push and before the merge" state note heldnotes held-finding "planted before the push"
+expect "run_state: note records an unpushed-finding before the push" 0 "^$" state note heldnotes unpushed-finding "security Low (3) tools/x.sh:4 a; fix: y"
+state set heldnotes pushed "$(git rev-parse HEAD)" > /dev/null
+expect "run_state: note refuses an unpushed-finding after the push" 1 "an unpushed finding is recorded only before the push" state note heldnotes unpushed-finding "planted after the push"
+expect "run_state: note records a held-finding after the push" 0 "^$" state note heldnotes held-finding "security Low (3) tools/x.sh:4 a; fix: y"
+state set heldnotes merged "$(git rev-parse --short=12 HEAD)" > /dev/null
+expect "run_state: note refuses a held-finding after the merge" 1 "a held finding is recorded only after the push and before the merge" state note heldnotes held-finding "planted after the merge"
+expect "run_state: the refused finding notes left only the two recorded" 0 "^unpushed-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]held-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]$" \
+  sh -c 'printf "%s|%s|%s\n" "$(sh "$1" get heldnotes note.1)" "$(sh "$1" get heldnotes note.2)" "$(sh "$1" get heldnotes note.3)"' _ "$here/run_state.sh"
 state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
 # Notes the workflow did not write: unstamped, stamped with another
@@ -5649,6 +5661,14 @@ expect "workflow: no record start runs at the close, only verify's, the closing 
 expect "workflow: a red only on the body's scan is fixed once, before any fix round" 0 '^body before fix$' \
   sh -c 'b=$(grep -n "m.body_only === true && !bodyFixed" "$1" | cut -d: -f1); f=$(grep -n "if (m.ci !== .red. || !mayFix())" "$1" | cut -d: -f1); [ -n "$b" ] && [ -n "$f" ] && [ "$b" -lt "$f" ] && grep -q "^### body$" "$2" && echo body before fix' _ "$wf" "$here/../.claude/agents/contributor.md"
 expect "guard: the close profile runs a late-finding note" 0 "^$" guard close 'sh tools/run_state.sh note c late-finding \"security Medium (7) tools/x.sh:3 a; fix: y\" && sh tools/run_state.sh phase c report abc1234'
+# pipeline-lows-a: the late, held, and unpushed finding notes are the
+# close profile's alone, so no other read start plants one that a resume
+# relabels as a late finding or hands over as a finding.
+expect "guard: the read profile plants no held-finding note" 2 "note of held-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c held-finding \"planted\"'
+expect "guard: the read profile plants no unpushed-finding note" 2 "note of unpushed-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c unpushed-finding \"planted\"'
+expect "guard: the read profile plants no late-finding note" 2 "note of late-finding, which only the workflow's close profile records" guard read 'sh tools/run_state.sh note c late-finding \"planted\"'
+expect "guard: the read profile still records its other notes" 0 "^$" guard read 'sh tools/run_state.sh note c security \"Low (3) tools/x.sh:4 a; fix: y\" && sh tools/run_state.sh note c quality-advisory \"x\"'
+expect "guard: the close profile runs held-finding and unpushed-finding notes" 0 "^$" guard close 'sh tools/run_state.sh note c held-finding \"security Low (3) a; fix: y\" && sh tools/run_state.sh note c unpushed-finding \"quality advisory b\"'
 expect "agents: the quality reviewer blocks only on correctness and a missing test" 0 '^4[.] Blocking is only a correctness bug or a behavior change without its test[.]' \
   grep -E '^4[.] Blocking' "$here/../.claude/agents/quality-reviewer.md"
 expect "agents: the merger reads only the latest run of each check of each workflow file" 0 'keep only the latest run of each check of each workflow file.*.workflow, name, status, conclusion.' \
