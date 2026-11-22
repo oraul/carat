@@ -10,8 +10,8 @@ module Carat
     # files tests marked as special, a FIFO or a device, the links tests
     # marked dangling, and the bytes tests padded files with, so a file of
     # 64 MiB costs no 64 MiB string. A relative path is resolved against
-    # the working directory, "/project" unless a test moves it (the home directory is
-    # "/home/user" unless a test moves it), so the editor's
+    # the working directory, "/project" unless a test moves it (the home
+    # directory is "/home/user" unless a test moves it), so the editor's
     # relative paths and a plugin's absolute ones name the same entries.
     # Putting or writing a file creates its directories. Paths listed in
     # unwritable raise on write, so tests can exercise E212.

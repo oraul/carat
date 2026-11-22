@@ -14,8 +14,9 @@ module Carat
     # Replacement.size, a recased piece's difference settled after), so a
     # replacement the budget cannot pay for is never built and a command
     # produces at most SearchBudget::SEARCH / OUTPUT_COST characters
-    # however the string and the matches multiply. An empty match at the end of the previous one
-    # does not count, as in Vim, which also ends the loop.
+    # however the string and the matches multiply. An empty match at the
+    # end of the previous one does not count, as in Vim, which also ends
+    # the loop.
     module Substitution
       OUTPUT_COST = 16
 

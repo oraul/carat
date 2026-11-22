@@ -124,6 +124,18 @@ module UseCasesPluginFilesTest
     t.assert_equal(["a.txt", "b.txt", "lib"], files.list("/w"), "list answers the sorted entry names")
     t.assert_equal([true, true, false], [files.exist?("lib"), files.directory?("/w/lib"), files.directory?("a.txt")], "putting a file makes its directories")
     t.assert_raises(ArgumentError, "listing a missing directory raises") { files.list("/nope") }
+    # A dangling link and a padded file, as the driver reports them.
+    odd = Carat::Doubles::MemoryFiles.new
+    odd.move_to("/o")
+    odd.dangling("gone")
+    odd.put("big.txt", "ab")
+    odd.pad("big.txt", 8)
+    t.assert_equal([["big.txt", "gone"], false, true, false], [odd.list("/o"), odd.exist?("gone"), odd.stat("gone").symlink, odd.stat("gone").regular], "a dangling link is listed and stats as a link that is not regular, yet does not exist")
+    t.assert_raises(ArgumentError, "creating at a dangling link raises") { odd.create("gone") }
+    t.assert_equal([10, "ab"], [odd.stat("big.txt").size, odd.read("big.txt", 10)], "a padded file stats and reads to the limit as its padded size")
+    t.assert_raises(IOError, "a padded file over the limit is too large to read") { odd.read("big.txt", 9) }
+    odd.write("big.txt", "abc")
+    t.assert_equal(3, odd.stat("big.txt").size, "a write drops the padding")
     t.assert_raises(ArgumentError, "deleting a non-empty directory raises") { files.delete("lib") }
     t.assert_raises(ArgumentError, "making an existing directory raises") { files.mkdir("lib") }
     files.rename("lib", "src")
