@@ -15,6 +15,7 @@
 - [x] 3.1 Mark the highlighted row `▎ ` and style the list float after every refill with the selected row, `PmenuMarkSel`, and `PmenuLabelSel` (`carat/plugins/finder/plugin.rb`); prove it in `test/editor_finder.rb` (Scenario: The selected row under truecolor, at 16 colors, under NO_COLOR, under option.icons ascii, The style follows the highlight, No match shows no highlighted row) (and Scenario: A grep row is styled as a file row)
 - [x] 3.2 Update the rows' expectations of the finder tests and the grep preview's mark (`test/editor_finder.rb`, `test/editor_finder_grep.rb`, `test/editor_finder_grep_preview.rb`, snapshots through `make snapshots`, the diff read)
 - [x] 3.3 Hold `PICKER_BUDGETS` (`make bench-budget`)
+- [x] 3.4 Hold the grep scenario's allocations per key at or under main's (`make metrics-compare` failed at 786.1 against 774.4: the restyle, the decoded `▎` rows, and the box keys): build each float's box key once per refresh and a plain grep row with its mark in one string (`carat/plugins/finder/plugin.rb`, `carat/plugins/finder/grep.rb`); proved by the grep scenario's figure (`make bench SCENARIOS=grep`), the rows unchanged in `test/editor_finder_grep.rb` (Scenario: Lines are shown safely)
 
 ## 4. Docs
 

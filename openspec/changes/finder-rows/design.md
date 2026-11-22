@@ -28,5 +28,5 @@ The finder (`carat/plugins/finder/plugin.rb`) fills its list float with `list_li
 ## Risks / Trade-offs
 
 - Renumbering the syntax, file-icon, and markup ids by two: plugins get ids from `syntax_group` at run time and tests use the constants, as the `StatusLineDim` change did.
-- One more host request per key (`style_float`) and one small spans array: a handful of allocations against the 600 budget, measured by `make bench-budget`.
+- One more host request per key (`style_float`), its spans and row style, and the two `▎` rows (the list's and the preview's) decoded as non-ASCII: about 13 more objects a grep key, which `make metrics-compare` refuses against main. The finder pays for them on its own path: each float's box key is built once per refresh, not twice, and a grep row whose path and text are plain is built with its mark in one string instead of three, about a string per list row, so the grep scenario falls from 774.4 to 685.3 objects a key.
 - The preview's matched line has the `▎` without a fill or color; recorded in the findings file for a later item.

@@ -441,18 +441,20 @@ module Carat
           width = 1 if width < 1
           title = grep? ? "#{GREP_TITLE} #{@index.counts}" : "#{list_title} #{@matches.length}/#{@paths.length}"
           list = float_at(margin, height, width, title)
+          list_box = box_key(list)
           rows = list_lines(height)
-          @list_float = show_float(host, @list_float, @list_box, list, rows)
+          @list_float = show_float(host, @list_float, @list_box == list_box, list, rows)
           style_list(host, rows, height)
-          @list_box = box_key(list)
+          @list_box = list_box
           unless preview && !@matches.empty?
             close_preview(host)
             return
           end
           preview_title = grep? ? @index.shown_path(@matches[@selected]) : selected_path
           shown = float_at(margin + width + frame, height, room - width - 2 * frame, preview_title)
-          @preview_float = show_float(host, @preview_float, @preview_box, shown, preview_lines(host, height))
-          @preview_box = box_key(shown)
+          preview_box = box_key(shown)
+          @preview_float = show_float(host, @preview_float, @preview_box == preview_box, shown, preview_lines(host, height))
+          @preview_box = preview_box
         end
 
         # The list float's title word for the source.
@@ -464,13 +466,14 @@ module Carat
         end
 
         # Refills the float with the id with the lines and the options'
-        # title when its box is the one it was shown at; otherwise, or
-        # when the refill fails, closes it and opens a float. Returns the
-        # id of the float showing the lines, 0 when the open failed.
-        #: (Carat::PluginApi::Host, Integer, String, PluginApi::FloatOptions, Array[String]) -> Integer
-        def show_float(host, id, box, options, lines)
+        # title when its box is the one it was shown at (same, the box key
+        # built once by the caller); otherwise, or when the refill fails,
+        # closes it and opens a float. Returns the id of the float showing
+        # the lines, 0 when the open failed.
+        #: (Carat::PluginApi::Host, Integer, bool, PluginApi::FloatOptions, Array[String]) -> Integer
+        def show_float(host, id, same, options, lines)
           if id != 0
-            return id if box == box_key(options) && host.set_float_lines(id, lines, options.title.to_s).ok
+            return id if same && host.set_float_lines(id, lines, options.title.to_s).ok
             host.close_float(id)
           end
           opened = host.open_float(options, lines)
@@ -515,7 +518,7 @@ module Carat
           r = top
           while r < top + height && r < matches.length
             mark = r == @selected ? MARK : SPACE
-            lines << mark + (grep? ? @index.row_text(matches[r]) : @paths[matches[r]])
+            lines << (grep? ? @index.row_text(matches[r], mark) : mark + @paths[matches[r]])
             r += 1
           end
           lines
