@@ -12,4 +12,4 @@
 
 ## 3. Review findings
 
-- [x] 3.1 Security Low: the sprint-26 Groom line of `docs/queue-backlog.md` cites the fixing commit of the four security Low entries groom removed (9e4aca0, #289). Fixed in the line; making groom itself require a fixing commit for a security entry needs new code in `tools/run_state.sh`, outside this change's files, so it stays recorded in `docs/findings/sprint-26-records.md`.
+- [x] 3.1 Security Low: the sprint-26 Groom line of `docs/queue-backlog.md` cites the fixing commit (9e4aca0, #289) of the four security Low entries groom removed, as "sec 9e4aca0" within the lane budget. Fixed in the line; making groom itself require a fixing commit for a security entry needs new code in `tools/run_state.sh`, outside this change's files, so it stays recorded in `docs/findings/sprint-26-records.md`.

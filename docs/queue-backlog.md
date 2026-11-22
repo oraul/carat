@@ -35,7 +35,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every fix is
 - Sprint 27 (T1, T3): 3 features, 3 backlog, backlog-pick batches 1 to 3 (areas 1, 17, 15); merge-gate-lows the one pipeline change, a defect; 64 `unmapped:` in tools-docs-tidy.
 - Split (T1): batch 1, 7 problems: 4 Lows in item 1, 6 efficiency headings to Pool 13, 14, 16; batch 3's 2 API requests and a layer move to Pool 5 (pipeline-lows-a, 10 entries: 1,986,485, rework 2).
 - Size (T1): large each; config-guards-b 1,602,006 in 106 min, review-in-openspec 1,844,959 in 98 (output 653,549 of 416,666).
-- Groom (T1): 11 lines: fixed b9527a4 1, listed 10 (four security Low notes closed by 9e4aca0, #289: the held-finding and unpushed-finding notes and the skeptic's quoted note); dups 0; oldest 50 at HEAD, 6 name an absent path, 0 gone; Fork heading kept (pipeline-lows-a left `open_pr.sh`); triage done (6 commits).
+- Groom (T1): 11 lines: fixed b9527a4 1, listed 10 (sec 9e4aca0); dups 0; oldest 50 at HEAD, 6 name an absent path, 0 gone; Fork heading kept (pipeline-lows-a left `open_pr.sh`); triage done (6 commits).
 - Blocking quality (T1): review 0 of 9; sweep blocking=2 unmarked of 49, partial 17/18; 66 notes in groomed.md, 24 placed.
 - Calibrate (T1): backlog 8 runs 1.12M to 1.99M, 75 to 132 min, ci first 8 of 10; feature 10 1.10M to 2.19M, 68 to 143 min; no change but budget-recalibrate.
 - Retro placed (T1): colorscheme-command 2 to 4, config-guards-b 4 to 6, 42 (Pool 7, 10, 14, 16); review-in-openspec 9 to 12 kept.
