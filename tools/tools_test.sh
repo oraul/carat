@@ -1100,6 +1100,15 @@ expect "run_state: note keeps a blocking finding at each commit" 0 "^2$" sh -c "
 state note state quality-advisory "add a reason; fix: an outline" > /dev/null
 expect "run_state: note keeps one advisory starting with a hex word" 0 "already recorded" state note state quality-advisory "add a reason; fix: an outline"
 expect "run_state: note matches a hex word after a commit" 0 "already recorded" state note state quality-advisory "0123456789ab add a reason; fix: an outline"
+# sprint-close-lows: a /sprint rerun records each security finding of the
+# reviewer's result again; an identical text is one note, while a disputed
+# note quoting the finding and another finding are still recorded.
+state note state security "High (9) tools/x.sh:3 a \"quoted\" \\ title; fix: an outline" > /dev/null
+expect "run_state: a rerun's security note is recorded once" 0 "already recorded" state note state security "High (9) tools/x.sh:3 a \"quoted\" \\ title; fix: an outline"
+state note state security "disputed: no caller; High (9) tools/x.sh:3 a \"quoted\" \\ title; fix: an outline" > /dev/null
+state note state security "High (9) tools/x.sh:4 another title; fix: an outline" > /dev/null
+expect "run_state: a disputed security note beside its finding is still recorded" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "\"security High (9) tools/x.sh:3 a" build/pipeline/state.json) $(grep -c "\"security disputed: no caller; High (9) tools/x.sh:3" build/pipeline/state.json) $(grep -c "\"security High (9) tools/x.sh:4 another" build/pipeline/state.json)"'
 
 # The compile stages skip the code they last passed while their outputs
 # are the ones that pass left; a change to the code they read, to their
@@ -6019,7 +6028,7 @@ expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
 # A sprint security review left at its cap gets one more start over the
 # files it left, merged into one result, so a large diff still closes.
 sec_js() {
-  js "$swf" "isCommit securityDone mergeSecurity" "$1"
+  js "$swf" "isCommit securityDone pathKey stillLeft mergeSecurity" "$1"
 }
 expect "sprint: the security continuation's findings merge and only its files stay left" 0 '^\[\["f1","f2"\],\["b"\],"abc1234"\]$' \
   sec_js "(m => [m.findings.map((f) => f.title), m.not_reviewed, m.head])(mergeSecurity({ ran: true, head: 'abc1234', findings: [{ title: 'f1' }], not_reviewed: ['a', 'b'] }, { ran: true, head: 'abc1234', findings: [{ title: 'f2' }], not_reviewed: ['b', 'z'] }))"
@@ -6029,8 +6038,38 @@ expect "sprint: a continuation without a result keeps the first start's files le
   sec_js "mergeSecurity({ ran: true, head: 'abc1234', findings: [], not_reviewed: ['a', 'b'] }, null).not_reviewed"
 expect "sprint: a retry stands for a first start without a result, and none for two" 0 '^\["def5678",null\]$' \
   sec_js "[mergeSecurity(null, { ran: true, head: 'def5678', findings: [], not_reviewed: [] }).head, mergeSecurity({ ran: false, head: '', findings: [], not_reviewed: [] }, null)]"
-expect "sprint: the security reviewer gets one more start, its result merged before recording" 0 "^1 1 1$" \
-  sh -c 'echo "$(grep -c "label: .security-reviewer: sprint, continued." "$1") $(grep -c "^    return mergeSecurity(first, again)$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
+expect "sprint: the security reviewer gets one more start, its result merged before recording" 0 "^1 1 1 1$" \
+  sh -c 'echo "$(grep -c "label: .[$][{]kind[}]-reviewer: sprint, continued. })" "$1") $(grep -c "^  return merge(first, again)$" "$1") $(grep -c "^  () => reviewContinued(.security., SECURITY, securityDone, mergeSecurity),$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
+# sprint-close-lows, security Low (5): a file the continuation names left
+# in another spelling (./, quotes, a line suffix, a worktree prefix) stays
+# left in the first start's spelling, so a partial review is never recorded
+# complete; a file the first start reviewed stays dropped.
+expect "sprint: a continuation's file left in another spelling stays left" 0 '^\["carat/a.rb","tools/b.sh","c.rb","d/"\]$' \
+  sec_js "mergeSecurity({ ran: true, head: 'abc1234', findings: [], not_reviewed: ['carat/a.rb', 'tools/b.sh', 'c.rb', 'd/', 'e.rb'] }, { ran: true, head: 'abc1234', findings: [], not_reviewed: ['./carat/a.rb', ' \`tools//b.sh:12:3\` ', '/home/u/carat/tmp/.review-security-sprint/c.rb', './d', 'z.rb', ''] }).not_reviewed"
+# sprint-close-lows: the sprint quality review at its cap gets the same
+# continuation, merged into one result.
+qual_js() {
+  js "$swf" "isCommit qualityDone pathKey stillLeft mergeQuality" "$1"
+}
+expect "sprint: the quality continuation's findings merge and only its files stay left" 0 '^\[\["b1","b2"\],\["a1"\],\["b"\],"abc1234",\["a"\],"def5678",null\]$' \
+  qual_js "(m => [m.blocking, m.advisory, m.not_reviewed, m.head, mergeQuality({ head: 'abc1234', blocking: [], advisory: [], not_reviewed: ['a'] }, null).not_reviewed, mergeQuality(null, { head: 'def5678', blocking: [], advisory: [], not_reviewed: [] }).head, mergeQuality({ head: '' }, null)])(mergeQuality({ head: 'abc1234', blocking: ['b1'], advisory: ['a1'], not_reviewed: ['a', 'b'] }, { head: 'abc1234', blocking: ['b2'], advisory: [], not_reviewed: ['./b', 'z'] }))"
+expect "sprint: both sprint reviewers get one more start, their results merged" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "^  () => reviewContinued(.quality., QUALITY, qualityDone, mergeQuality),$" "$1") $(grep -c "^  reviewStarts.push([[].[$][{]kind[}] continued., again[]])$" "$1") $(grep -c "^const starts = [[][.][.][.]reviewStarts, " "$1")"' _ "$swf"
+# sprint-close-lows: a security finding both reviewers missed is asked of
+# the skeptic in its own field, recorded as a security note, and blocks as
+# the reviewer's would.
+expect "sprint: a security finding both reviewers missed is recorded and counts as blocking" 0 "^\[2,1,\"sh tools/run_state.sh note sprint-9 security 'missed by both: High [(]9[)] a.rb:2 it'.\\\\''s; fix: f'\"\]$" \
+  js "$swf" "missedSecurity blockingOf shellWord findingLine securityNotes" "(m => [m.length, blockingOf(m).length, securityNotes('sprint-9', m, 'missed by both: ')[0]])(missedSecurity({ security_missed: [{ severity: 'High', confidence: 9, file: 'a.rb', line: 2, title: 'it\\'s', fix: 'f' }, { severity: 'Bad', confidence: 9, file: 'b', title: 'x', fix: 'y' }, { severity: 'Low', confidence: 5, file: 'c', title: 'u', fix: 'g' }] }))"
+expect "sprint: the missed findings are recorded with the skeptic's notes and block the record" 0 "^1 1 1 1$" \
+  sh -c 'echo "$(grep -c "^const kept = skeptical [?] skepticNotes(sprint.sprint, skeptic.notes).concat(securityNotes(sprint.sprint, missedBoth, .missed by both: .)) : [[][]]$" "$1") $(grep -c "^const sprintBlocking = blocking.concat(blockingOf(missedBoth))$" "$1") $(grep -c "result(sprintBlocking.length, missed)" "$1") $(grep -c "^const missedBoth = skeptical [?] missedSecurity(skeptic) : [[][]]$" "$1")"' _ "$swf"
+expect "sprint: the skeptic is asked for the security findings both missed" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "and each security finding both reviewers missed in security_missed):" "$1") $(grep -c "required: [[].head., .kept_blocking., .kept_advisory., .dropped., .security_recorded., .disputed., .missed., .security_missed., .notes., .tool_calls.[]]," "$1")"' _ "$swf"
+# sprint-close-lows: the records change applies the next queue, so a
+# blocking sprint security finding or the plan's security first holds it.
+expect "sprint: a blocking security finding or the plan's security first holds the records change" 0 '^\["1 blocking sprint security finding\(s\)","the plan.s security first: fix-x","2 blocking sprint security finding\(s\)",""\]$' \
+  js "$swf" "recordsHeld" "[recordsHeld(1, []), recordsHeld(0, ['fix-x']), recordsHeld(2, ['fix-x']), recordsHeld(0, [])]"
+expect "sprint: the records change starts only when nothing holds it" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "^const held = plan [?] recordsHeld(sprintBlocking.length, plan.security_first) : ..$" "$1") $(grep -c "^if (plan && recorded && recorded.ok && !held) {$" "$1") $(grep -c "held by [$][{]held[}]; deliver the security fix first, then resume it with /deliver" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
 expect "sprint: the diff reviewers record nothing, the workflow records" 0 "^1 1$" \
@@ -6061,6 +6100,11 @@ expect "sprint: the skeptic's notes run under the guarded quality reviewer's rec
   sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
+# sprint-close-lows: the quality reviewer leaves a security point to the
+# security reviewer, unexamined, and the skeptic returns a security finding
+# both missed in its own field, which the workflow records.
+expect "agents: the quality reviewer leaves security points unexamined and returns missed ones in security_missed" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "^The contributor.*Review only quality: a possible security point is one advisory line, unexamined; the security reviewer reviews security[.]" "$1") $(grep -c "^- .Mode: skeptic.:.*Return what both missed the same way, a security finding in .security_missed.[.]" "$1")"' _ "$agents/quality-reviewer.md"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
   grep -c -F 'if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)' "$swf"
 expect "sprint: the report names a partial security review" 0 '^\["partial, 2 file\(s\) not reviewed \(a.rb, b.rb\); 1 finding\(s\), 0 blocking; run /sprint again","1 finding\(s\), 1 blocking, 0 disputed","did not run; run /sprint again"\]$' \
@@ -6099,8 +6143,8 @@ expect "delivery: a Low passes and is kept for the findings file, and a pass at 
   review_js "globalThis.result = { ran: true, head: 'abc1234', findings: [{ severity: 'Low', confidence: 9, file: 'tools/x.sh', line: 3, in_change: true, title: 't', fix: 'f' }], not_reviewed: [] }; const m = await reviews(); await reviews(); return [m, kept.length, records, starts.length]"
 expect "delivery: a security review that did not run stops the run, never skipped" 0 '^\[null,true\]$' \
   review_js "globalThis.result = { ran: false, head: 'abc1234', findings: [] }; const m = await reviews(); return [m, stopped.includes('it cannot be skipped')]"
-expect "sprint: sprint-planning still starts its quality review of the combined diff and the skeptic" 0 '^1 1$' \
-  sh -c 'echo "$(grep -c -F "agentType: '"'"'quality-reviewer'"'"', schema: QUALITY, label: '"'"'quality-reviewer: sprint'"'"'" "$1") $(grep -c -F "label: '"'"'quality-reviewer: skeptic'"'"'" "$1")"' _ "$swf"
+expect "sprint: sprint-planning still starts its quality review of the combined diff and the skeptic" 0 '^1 1 1$' \
+  sh -c 'echo "$(grep -c -F "reviewContinued('"'"'quality'"'"', QUALITY, " "$1") $(grep -c -F "agentType: \`\${kind}-reviewer\`, schema, label: \`\${kind}-reviewer: sprint\` })" "$1") $(grep -c -F "label: '"'"'quality-reviewer: skeptic'"'"'" "$1")"' _ "$swf"
 expect "workflow: the delivery never starts the periodic review" 1 "" grep -q -E "periodic-review[.]js|phase[(]'Review'[)]" "$wf"
 # No delivery reads or greps the backlog: the contributor only appends.
 backlog_reads() {
