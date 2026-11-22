@@ -180,6 +180,12 @@ function securityLine(r, blocking, disputed) {
   const left = r.not_reviewed.slice(0, 5).join(', ') + (r.not_reviewed.length > 5 ? ', ...' : '')
   return `partial, ${r.not_reviewed.length} file(s) not reviewed (${left}); ${counts}; run /sprint again`
 }
+// The report's whole Security line: securityLine, the findings both
+// reviewers missed, and, when the review ran but its findings were not
+// recorded, that suffix. tools/tools_test.sh runs this helper.
+function securityReport(r, blocking, disputed, missedBoth, noted) {
+  return `Security: ${securityLine(r, blocking, disputed)}${missedBoth ? `; ${missedBoth} missed by both reviewers` : ''}${securityDone(r) && !noted ? '; its findings were not recorded' : ''}`
+}
 // The report's sweep line from periodic-review.js's result: its counts,
 // the security and quality areas a partial sweep left, and whether its
 // results were recorded, without which the planner does not start.
@@ -273,11 +279,14 @@ const missed = ran ? security.not_reviewed.length : 0
 phase('Notes')
 // Each security finding reaches the run state from the reviewer's own
 // result, before the skeptic, so a skeptic stopped at its cap leaves none
-// unrecorded; without them recorded the planner does not start.
+// unrecorded; without them recorded the planner does not start. The
+// texts quote reviewed code, so the runner is the quality reviewer in its
+// record mode, whose hook runs tools/agent_guard.sh's read profile, as
+// for the skeptic's notes below.
 const notes = ran ? securityNotes(sprint.sprint, security.findings) : []
 const notesRun = !notes.length ? null : await agent(
-  `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { schema: RAN, effort: 'low', label: 'sprint: notes' })
+  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
+  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: notes' })
 const noted = !notes.length || Boolean(notesRun && notesRun.ok)
 
 phase('Skeptic')
@@ -361,7 +370,7 @@ if (plan && recorded && recorded.ok && !held) {
 const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
   skeptical && !skepticNoted ? `The skeptic's notes were not recorded: ${keptRun ? keptRun.output : 'no result'}` : '',
-  `Security: ${securityLine(security, sprintBlocking.length, skeptical ? skeptic.disputed : null)}${missedBoth.length ? `; ${missedBoth.length} missed by both reviewers` : ''}${ran && !noted ? '; its findings were not recorded' : ''}`,
+  securityReport(security, sprintBlocking.length, skeptical ? skeptic.disputed : null, missedBoth.length, noted),
   `Quality: ${skeptical ? `${skeptic.kept_blocking} blocking and ${skeptic.kept_advisory} advisory kept, ${skeptic.dropped} dropped, ${skeptic.missed} missed by both` : 'the skeptic returned no result; nothing recorded'}`,
   `Sweep: ${sweepLine(sprint.sweep, sweep)}`,
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,

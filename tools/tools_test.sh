@@ -3367,6 +3367,21 @@ for p in read merger contributor; do
   expect "guard: $p reads an escaped quote as a quote" 2 "git push" guard $p 'echo 'x'; git push origin x'
   expect "guard: $p refuses a write outside the project" 2 "a write outside the project" guard $p 'echo x > /tmp/x'
   expect "guard: $p refuses a write under .git" 2 "a write under .git" guard $p 'echo x > .git/hooks/pre-commit'
+  # The local settings Claude Code reads, which can turn the hooks off:
+  # no profile writes one, even in a directory it may write (merge-path-lows).
+  expect "guard: $p refuses a write of the local settings" 2 "a write of [.]claude/settings[.]local[.]json, a local settings file" guard $p 'echo x > .claude/settings.local.json' .
+  expect "guard: $p refuses a write of the local settings through a dot segment" 2 "a local settings file" guard $p 'echo x > ./.claude/./settings.local.json' .
+  expect "guard: $p refuses a write of the local servers in a worktree" 2 "a write of tmp/[.]lane-c/[.]mcp[.]json, a local settings file" guard $p 'echo x > tmp/.lane-c/.mcp.json' .
+  expect "guard: $p refuses a write of the local instructions" 2 "a write of CLAUDE[.]local[.]md, a local settings file" guard $p 'echo x >> CLAUDE.local.md' .
+  expect "guard: $p allows a write elsewhere in its directory" 0 "^$" guard $p 'echo x > tmp/x.md' .
+  # date reads the clock; -s, --set or a prefix of it, a date operand,
+  # and an option cluster could set it (merge-path-lows).
+  expect "guard: $p refuses date -s" 2 "date -s, which can set the clock" guard $p 'date -s 2020-01-01'
+  expect "guard: $p refuses a prefix of date --set" 2 "date --se, which can set the clock" guard $p 'date --se 2020-01-01'
+  expect "guard: $p refuses a date operand" 2 "date 010100002020, which can set the clock" guard $p 'date 010100002020'
+  expect "guard: $p refuses a cluster of date options" 2 "date -us, which can set the clock" guard $p 'date -us x'
+  expect "guard: $p refuses date -d without its value" 2 "date -d or -r without its value" guard $p 'date -d'
+  expect "guard: $p reads the clock with date" 0 "^$" guard $p 'date && date +%s && date -u +%Y-%m-%dT%H:%M:%SZ && date -d @1 +%s && date --iso-8601=seconds && date -r tools/x.sh -u'
   expect "guard: $p refuses a tool it does not judge" 2 "which this guard does not judge" guard_edit $p Read /w/README.md
 done
 expect "guard: an unknown profile refuses" 2 "no such profile" guard writer 'ls'
@@ -3449,11 +3464,12 @@ expect "guard: read refuses git fsck" 2 "git fsck is not a command of this profi
 expect "guard: merger reads main's tree into a worktree's index" 0 "^$" guard merger 'git -C tmp/.merge-gates read-tree origin/main'
 expect "guard: merger refuses another read-tree" 2 "git read-tree other than of origin/main" guard merger 'git -C tmp/.merge-gates read-tree -u origin/main'
 expect "guard: merger refuses a read-tree of the project's index" 2 "git read-tree outside a worktree" guard merger 'git read-tree origin/main'
+expect "guard: merger refuses a read-tree of another worktree" 2 "git read-tree in other than the merge gates' copy tmp/[.]merge-gates: tmp/[.]lane-c" guard merger 'git -C tmp/.lane-c read-tree origin/main'
 expect "guard: read refuses git read-tree" 2 "git read-tree is not a command of this profile" guard read 'git -C tmp/.merge-gates read-tree origin/main'
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\''\\n'\'' | grep -q -x -F refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates read-tree origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates diff --quiet && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\''\\n'\'' | grep -q -x -F refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates read-tree origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates diff --quiet && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates ls-files --others | wc -c | grep -q -x -E '\'' *0'\'' && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -3656,6 +3672,16 @@ expect "guard: read refuses a redirection through a link out of its directory" 2
 expect "guard: read allows a file in its real directory" 0 "^$" guard_edit read Write "$proj/build/plan/queue.md" build/plan
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
 expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
+# A link to the local settings, a .claude linked elsewhere, and a move
+# onto the .claude directory (merge-path-lows).
+mkdir -p "$proj/tmp/conf"
+ln -s tmp/conf "$proj/.claude"
+ln -s ../.claude/settings.local.json "$proj/tmp/settings"
+expect "guard: contributor refuses a write through a link to the local settings" 2 "a write of .*tmp/settings, a local settings file" guard_edit contributor Write "$proj/tmp/settings"
+expect "guard: contributor refuses a copy onto the local settings through a linked .claude" 2 "a write of tmp/conf/settings[.]local[.]json, a local settings file" guard contributor 'cp x tmp/conf/settings.local.json'
+expect "guard: contributor refuses a move into the .claude directory" 2 "a write of [.]claude/, a local settings file" guard contributor 'mv tmp/x .claude/'
+expect "guard: contributor writes beside the linked .claude's target" 0 "^$" guard contributor 'cp x tmp/conf/other.json'
+rm -f "$proj/.claude" "$proj/tmp/settings"
 # A measurement through a link into .git, in a worktree and in the project.
 git_q init -q "$proj"
 git_q -C "$proj" commit -q --allow-empty -m "chore: base" -m "$TRAILER"
@@ -3996,6 +4022,23 @@ git_q config core.hooksPath "$work"
 expect "guard: a risky configuration key refuses every call" 2 "every call while the repository configuration sets core.hookspath" \
   env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
 git_q config --unset core.hooksPath
+# An untracked local settings file at the top of the project, a dangling
+# link included, refuses every call; a tracked one is the reviews'
+# (merge-path-lows).
+local_call() {
+  env PROJECT="$PWD" sh -c 'printf "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"}}" | CLAUDE_PROJECT_DIR=$PROJECT sh "$1/agent_guard.sh" read' _ "$here"
+}
+: > CLAUDE.local.md
+expect "guard: every call is refused while an untracked local settings file stands" 2 "every call while the untracked CLAUDE[.]local[.]md stands at the top of the project" local_call
+git_q add CLAUDE.local.md
+expect "guard: a tracked local settings file refuses no call" 0 "^$" local_call
+git_q rm -q --cached CLAUDE.local.md
+rm -f CLAUDE.local.md
+mkdir -p .claude
+ln -s nowhere .claude/settings.local.json
+expect "guard: every call is refused while the local settings are an untracked link" 2 "every call while the untracked [.]claude/settings[.]local[.]json stands" local_call
+rm -f .claude/settings.local.json
+rmdir .claude
 expect "guard: the guard's risky keys are the gates'" 0 "^same$" \
   sh -c '[ "$(grep "^RISKY_CONFIG=" "$1/agent_guard.sh")" = "$(grep "^RISKY_CONFIG=" "$1/rules.sh")" ] && echo same' _ "$here"
 expect "guard: the squash trailer is the gates' trailer" 0 "^same$" \
@@ -4285,6 +4328,14 @@ expect "spec_validate: archives a change without specs with --skip-specs" 0 "^ar
 expect "spec_validate: leaves the real tree as it was" 0 "^short$" sh -c "[ -d specv/openspec/changes/long ] && [ ! -d specv/openspec/changes/archive ] && cat specv/openspec/specs/a/spec.md"
 rm -rf specv/openspec/changes/long
 expect "spec_validate: passes when every change as archived is valid" 0 "good as archived passes strict validation" specv
+# A link a branch commits under openspec/, which cp -R keeps, would let the
+# preview's archive write outside it: refused before any run (merge-path-lows).
+mkdir -p "$work/outside"
+ln -s "$work/outside" specv/openspec/specs/b
+: > specv.log
+expect "spec_validate: refuses a symbolic link under openspec" 1 "holds the symbolic link[(]s[)] openspec/specs/b, through which" specv
+expect "spec_validate: runs nothing over a symbolic link" 0 "^0 0$" sh -c 'echo "$(wc -c < specv.log | tr -d " ") $(ls -A "$1" | wc -l | tr -d " ")"' _ "$work/outside"
+rm -f specv/openspec/specs/b
 # With no OPENSPEC_CMD the script runs npx of OpenSpec at one exact version,
 # never a tag the registry moves: a stub npx first on the PATH logs its
 # words and hands the rest to the stub openspec.
@@ -5311,7 +5362,23 @@ expect "workflow: the green line runs the merge gates in the delivery's worktree
 expect "workflow: the green line hashes every object after the add and before the merge gates" 0 '^true$' \
   lane_js "mergeLines().green.includes('worktree add -q --detach tmp/.merge-gates origin/main && ' + PINNED_GIT + ' fsck --no-dangling --no-progress origin/main && ')"
 expect "workflow: the green line checks the copy's content after the fsck and before the merge gates" 0 '^true$' \
-  lane_js "mergeLines().green.includes(' fsck --no-dangling --no-progress origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates read-tree origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates diff --quiet && CHANGE=a ')"
+  lane_js "mergeLines().green.includes(' fsck --no-dangling --no-progress origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates read-tree origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates diff --quiet && ')"
+# diff --quiet ignores an untracked file, which the merge gates could read:
+# the line then lists the copy's untracked and ignored files and stops on
+# any (merge-path-lows); run here on a copy with one planted.
+expect "workflow: the green line checks the copy for untracked files before the merge gates" 0 '^true$' \
+  lane_js "mergeLines().green.includes(' -C tmp/.merge-gates diff --quiet && ' + PINNED_GIT + \" -C tmp/.merge-gates ls-files --others | wc -c | grep -q -x -E ' *0' && CHANGE=a \")"
+untracked_step() {
+  step=$(lane_js "mergeLines().green" | sed 's/^"//; s/"$//; s/\\"/"/g' | sed -n 's/.* diff --quiet && \(.* ls-files --others | wc -c | grep -q -x -E .\{5\}\) && CHANGE=.*/\1/p')
+  [ -n "$step" ] || { echo "no step"; return 2; }
+  rm -rf "$work/untracked" && mkdir -p "$work/untracked/tmp/.merge-gates" && cd "$work/untracked/tmp/.merge-gates" &&
+    git_q init -q . && echo a > a && git_q add a && git_q commit -q -m a && cd "$work/untracked" || return 2
+  sh -c "$step" && echo clean
+  echo b > tmp/.merge-gates/build.log
+  sh -c "$step" || echo stopped
+}
+untracked_run() { untracked_step | tr "\n" " "; }
+expect "workflow: the green line's untracked check passes a clean copy and stops on a planted file" 0 '^clean stopped $' untracked_run
 # A loose object branch code planted under the id of the blob of a later
 # main's tools/gates.sh, which a small fetch keeps (objplant-lane): the
 # green line from its fetch on, as the workflow builds it, stops at the
@@ -5998,6 +6065,20 @@ expect "sprint: the sweep line names unrecorded results" 0 '^"security 0 finding
 expect "sprint: the sweep line reads a complete sweep, one not run, and an odd sprint" 0 '^\["security 0 finding[(]s[)], 0 blocking; quality 1 blocking","did not run; run /sprint again","not this sprint"\]$' \
   js "$swf" "sweepLine" "[sweepLine(true, { ran: true, recorded: true, security: [], security_blocking: 0, security_not_reviewed: [], quality_blocking: ['q'], quality_not_reviewed: [] }), sweepLine(true, { ran: false }), sweepLine(false, null)]"
 expect "sprint: the report's sweep line is sweepLine's" 0 "^1$" grep -c -F '`Sweep: ${sweepLine(sprint.sweep, sweep)}`,' "$swf"
+# The report's Security line says when a review that ran left its findings
+# unrecorded, and never for one that did not run (merge-path-lows).
+expect "sprint: the report's security line names unrecorded findings" 0 '^\["Security: 1 finding[(]s[)], 0 blocking, 0 disputed; its findings were not recorded","Security: 1 finding[(]s[)], 0 blocking, 0 disputed; 2 missed by both reviewers","Security: did not run; run /sprint again"\]$' \
+  js "$swf" "isCommit securityDone securityLine securityReport" "[securityReport({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: [] }, 0, 0, 0, false), securityReport({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: [] }, 0, 0, 2, true), securityReport(null, 0, null, 0, false)]"
+expect "sprint: the report's security line is securityReport's" 0 "^1$" grep -c -F '  securityReport(security, sprintBlocking.length, skeptical ? skeptic.disputed : null, missedBoth.length, noted),' "$swf"
+# The security notes quote reviewed code: the quality reviewer runs them in
+# its record mode, under the guard's read profile, never a general agent
+# with Bash (merge-path-lows); the guard stores a note's text, a run-state
+# path or a parent step in it included.
+expect "sprint: the security notes run under the guarded quality reviewer in record mode" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: notes'"'"' })" "$1") $(grep -B1 -F "label: '"'"'sprint: notes'"'"'" "$1" | grep -c "^  .Mode: record[.] Run this one command")"' _ "$swf"
+expect "guard: read records a note whose text names the run state's directory and a parent step" 0 "^$" \
+  guard read "$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-3', [{ severity: 'Low', confidence: 4, file: 'tools/x.sh', line: 2, title: 'reads build/pipeline/c.json and ../x', fix: 'f' }]).join(' && ')" | sed 's/^"//; s/"$//')"
+expect "guard: read still refuses a run-state path outside a note's text" 2 "a word naming the run state's directory" guard read 'sh tools/run_state.sh note build/pipeline/c security x'
 expect "sprint: a due line naming a shell word is not due" 0 '^null$' \
   sprint_js "parseDue('due: sprint-1 has 1 changes merged (\$(x)); combined diff abc1234..origin/main; sweep: no')"
 # A sprint security review left at its cap gets one more start over the
@@ -6070,8 +6151,9 @@ expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^
   sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
 # pipeline-lows-a security Low (4): the notes quote reviewed code, so the
 # start running them is the quality reviewer in its record mode, whose hook
-# runs tools/agent_guard.sh, never an unguarded general agent.
-expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 1 1$" \
+# runs tools/agent_guard.sh, never an unguarded general agent. Two
+# record starts give the line: the skeptic's notes and the security notes.
+expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 2 1$" \
   sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"

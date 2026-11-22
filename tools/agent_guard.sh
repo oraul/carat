@@ -32,14 +32,16 @@
 # must then match a form of its profile; every word is refused with a
 # parent step (..) as a path segment or naming the run state's directory
 # build/pipeline, but the pull request body file build/pipeline/NAME.body.md
-# as the body gate's argument, never a link.
+# as the body gate's argument, never a link, and the text of a note
+# (sh tools/run_state.sh note CHANGE KIND TEXT), which is only stored.
 #
 # Forms of every profile: ls cat head tail wc grep diff cmp sort (the
 # short options of SORT_FLAGS, -k, and -t) uniq (one file at most) cut tr
-# nl comm basename dirname realpath readlink stat du date pwd echo printf
-# true; find without -exec -execdir -ok -okdir -delete -fprint -fprint0
-# -fprintf -fls; sed -n with a line-number print script; cd to the project
-# or a worktree tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
+# nl comm basename dirname realpath readlink stat du pwd echo printf true;
+# date with its read options, -d, -r, and a +FORMAT operand only; find
+# without -exec -execdir -ok -okdir -delete -fprint -fprint0 -fprintf -fls;
+# sed -n with a line-number print script; cd to the project or a worktree
+# tmp/.NAME; git, after GIT_CONFIG_GLOBAL=/dev/null and
 # GIT_CONFIG_NOSYSTEM=1 at most, with the global options -C (the project
 # or a worktree tmp/.NAME), -c core.hooksPath=/dev/null,
 # --no-replace-objects (which only stops git following refs/replace), and
@@ -84,7 +86,7 @@
 #                hash-object --stdin, with no other option; git fsck
 #                --no-dangling --no-progress origin/main, which writes
 #                nothing, the green line's hash of every object before
-#                the merge gates; git -C tmp/.NAME read-tree origin/main,
+#                the merge gates; git -C tmp/.merge-gates read-tree origin/main,
 #                with no other option, which writes that worktree's index
 #                alone, the green line's reset of the copy's index before
 #                its diff --quiet hashes every file against main's tree
@@ -120,12 +122,15 @@
 # A write target (a redirection's target, a path argument of mkdir rm cp
 # mv touch chmod, a file tool's path) has no parent step, and its real
 # path, links followed, lies in the project, outside .git/, build/ itself,
-# and the run state's directory; for read and merger it lies under the
-# real path of DIR, a redirection also under build/stages/, and an agent
-# without DIR edits no file. The contributor's file tools may write the
-# body file itself, never through a link. A link target whose parent step
-# follows a missing directory is refused, since the write resolves it
-# lexically.
+# and the run state's directory, and names no local settings file of
+# Claude Code (LOCAL_SETTINGS) nor its .claude directory, for every
+# profile, written or real; for read and merger it lies under the real
+# path of DIR, a redirection also under build/stages/, and an agent
+# without DIR edits no file. Every call is refused while one of
+# LOCAL_FILES stands untracked at the top of the project. The
+# contributor's file tools may write the body file itself, never through
+# a link. A link target whose parent step follows a missing directory is
+# refused, since the write resolves it lexically.
 #
 # The guard stops an agent that text in the tree led astray; the
 # contributor edits the scripts and the Makefile it runs, so for it the
@@ -139,6 +144,15 @@ MAKE_VARS='T S FILE TESTS SCENARIOS BASE_METRICS ALLOC_BUDGET ANALYSIS_ROUNDS DI
 BRANCH='^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$'
 CHANGE_NAME='^[a-z0-9][a-z0-9-]*$'
 BODY='^build/pipeline/[a-z0-9][a-z0-9-]*[.]body[.]md$'
+# The local files Claude Code reads beside the tracked ones: its settings
+# (permissions and hooks), its servers, and its instructions, none of them
+# reviewed. A write of one can turn the hooks off, so the next agent runs
+# unguarded: no profile writes one, anywhere in the project, nor the
+# .claude directory itself (a mv onto it or into it). LOCAL_FILES are the
+# three at the top of the project, where the guard refuses every call
+# while one stands untracked.
+LOCAL_SETTINGS='(^|/)(\.claude(/+\.)*/*|\.claude/+(\./+)*settings\.local\.json|\.mcp\.json|CLAUDE\.local\.md)$'
+LOCAL_FILES='.claude/settings.local.json .mcp.json CLAUDE.local.md'
 CLOSE_PHASES='plan implement package ci merge retro report'
 # The refspec of the green line's one fetch of main, and the fetch refspec
 # a clone sets, the one under which origin/main is origin's main.
@@ -343,6 +357,15 @@ under() {
   return 1
 }
 
+# local_settings PATH WORD: PATH, WORD's written or real path relative to
+# the project, is not a local settings file nor the .claude directory.
+local_settings() {
+  ! matches "$1" "$LOCAL_SETTINGS" || settings_write "$2"
+}
+settings_write() {
+  refuse "a write of $1, a local settings file of Claude Code or its .claude directory, which can turn the hooks off for the next agent"
+}
+
 # write_target PATH KIND: KIND is redirect, command, or file. Only a
 # redirection may name /dev/null: as the operand of rm, mv, or cp it
 # would replace the device node.
@@ -350,6 +373,7 @@ write_target() {
   if [ "$2" = redirect ] && [ "$1" = /dev/null ]; then return 0; fi
   parent_step "$1"
   relative "$1"
+  local_settings "$rel" "$1"
   case "$1" in /*) at=$1 ;; *) at="$project/$1" ;; esac
   if matches "$rel" "$BODY" && [ -L "$at" ]; then
     refuse "a pull request body file that is a link: $1"
@@ -361,6 +385,15 @@ write_target() {
     *) refuse "a write outside the project: $1" ;;
   esac
   rel=${real#"$project_real"/}
+  local_settings "$rel" "$1"
+  # The real path of each of LOCAL_FILES, for a link on the way to it (a
+  # linked .claude) that neither the written nor the real name shows.
+  held=$real
+  for f in $LOCAL_FILES; do
+    real_path "$f"
+    [ "$real" != "$held" ] || settings_write "$1"
+  done
+  real=$held
   case "/$rel/" in */.git/*) refuse "a write under .git, whose hooks and configuration run commands: $1" ;; esac
   case "$rel" in
     build) refuse "a write of the directory that holds the run state's: $1" ;;
@@ -581,9 +614,12 @@ git_form() {
       [ "$*" = "--no-dangling --no-progress origin/main" ] || refuse "git fsck other than --no-dangling --no-progress origin/main" ;;
     read-tree)
       # The green line reads main's tree into the copy's index with no
-      # stat data, so its diff --quiet hashes every file of the copy.
+      # stat data, so its diff --quiet hashes every file of the copy; no
+      # other worktree's index is the merger's to write.
       only_profiles merger "git read-tree"
       [ -n "$wt" ] && worktree "$wt" || refuse "git read-tree outside a worktree tmp/.NAME"
+      relative "$wt"
+      [ "$rel" = "${MERGE_GATES%%/tools/*}" ] || refuse "git read-tree in other than the merge gates' copy ${MERGE_GATES%%/tools/*}: $wt"
       [ "$*" = origin/main ] || refuse "git read-tree other than of origin/main" ;;
     add|commit|mv|rm|restore)
       only_profiles contributor "git $verb" ;;
@@ -654,7 +690,12 @@ run_state_form() {
       case "${3:-}" in
         late-finding|held-finding|unpushed-finding)
           [ "$closing" = 1 ] || refuse "tools/run_state.sh note of ${3}, which only the workflow's close profile records" ;;
-      esac ;;
+      esac
+      # The note's text is data run_state.sh only stores, never a path:
+      # a finding naming the run state's directory or a parent step is
+      # recorded, not refused (merge-path-lows); its word is the sixth of
+      # sh tools/run_state.sh note CHANGE KIND TEXT.
+      [ $# -ne 4 ] || data_at=6 ;;
     read:moved)
       [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && matches "$3" '^[0-9a-f]{7,40}$' ||
         refuse "tools/run_state.sh moved other than CHANGE COMMIT" ;;
@@ -865,6 +906,24 @@ uniq_form() {
   [ $n -le 1 ] || refuse "uniq with a second operand, which uniq writes as its output file"
 }
 
+# date_form: date with its read options, -d and -r with their values, and
+# a +FORMAT operand only, since -s, --set (or any prefix of it, which GNU
+# date takes), and a date operand set the clock the run state's at.*
+# times read.
+date_form() {
+  shift
+  value=""
+  for a in "$@"; do
+    if [ -n "$value" ]; then value=""; continue; fi
+    case "$a" in
+      -u|--utc|--universal|-R|--rfc-email|-I|-Idate|-Ihours|-Iminutes|-Iseconds|-Ins|--iso-8601|--iso-8601=date|--iso-8601=hours|--iso-8601=minutes|--iso-8601=seconds|--iso-8601=ns|--rfc-3339=date|--rfc-3339=seconds|--rfc-3339=ns|--date=*|--reference=*|+*) ;;
+      -d|-r) value=1 ;;
+      *) refuse "date $a, which can set the clock; date takes only its read options, -d, -r, and a +FORMAT operand" ;;
+    esac
+  done
+  [ -z "$value" ] || refuse "date -d or -r without its value"
+}
+
 # judge WORD...: one simple command, its assignments first.
 judge() {
   [ $# -gt 0 ] || return 0
@@ -889,6 +948,7 @@ judge() {
   done
   [ $# -gt 0 ] || refuse "an assignment without a command"
   body_at=0
+  data_at=0
   case "$1" in */*) refuse "a command named by a path: $1" ;; esac
   case "$1:$envs" in
     sh:*|*:) ;;
@@ -896,7 +956,8 @@ judge() {
     *) refuse "an assignment before $1" ;;
   esac
   case "$1" in
-    ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|date|pwd|echo|true) ;;
+    ls|cat|head|tail|wc|grep|diff|cmp|cut|tr|nl|comm|basename|dirname|realpath|readlink|stat|du|pwd|echo|true) ;;
+    date) date_form "$@" ;;
     printf)
       case "${2:-}" in -*) refuse "printf with the option ${2}, since -v assigns a variable whose subscript runs a command" ;; esac ;;
     sort) sort_form "$@" ;;
@@ -938,7 +999,7 @@ judge() {
   i=0
   for w in "$@"; do
     i=$((i + 1))
-    [ $i -eq $body_at ] || word_rules "$w"
+    [ $i -eq $body_at ] || [ $i -eq $data_at ] || word_rules "$w"
   done
 }
 
@@ -981,6 +1042,16 @@ fetch_spec=$(git -C "$project_dir" config --local --get-all remote.origin.fetch 
 hooks=${git_common:+$git_common/hooks}
 planted=$([ -z "$hooks" ] || ! [ -d "$hooks" ] || ls -A "$hooks" | grep -v -E "[.]sample\$" | tr "\n" " "; true)
 [ -z "$planted" ] || refuse "every call while the hooks directory holds ${planted% }, which git runs; remove it"
+# A local settings file at the top of the project (LOCAL_FILES), which no
+# profile writes, may still come from a copy into the project or from
+# outside: while one stands untracked, out of every reviewed diff, every
+# call is refused. A tracked one is the reviews'.
+for f in $LOCAL_FILES; do
+  if { [ -e "$project_dir/$f" ] || [ -L "$project_dir/$f" ]; } &&
+    ! git -C "$project_dir" ls-files --error-unmatch -- "$f" > /dev/null 2>&1; then
+    refuse "every call while the untracked $f stands at the top of the project, which Claude Code reads as its settings, servers, or instructions and which can turn the hooks off; remove it"
+  fi
+done
 
 # The merge tool, for the merger only: a squash whose expected head
 # (expectedHeadSha, the parameter GitHub refuses any other head by,
