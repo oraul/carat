@@ -223,14 +223,14 @@ module AdaptersAssemblyTest
     # leaves out falls back to Vim's defaults in the domain.
     fixed = Carat::Doubles::FixedConfig.new(value: Carat::Doubles::FixedConfig.defaults)
     served = fixed.load
-    t.assert_equal(["config/default.caratrc", "<Space>", "500", []], [served.line_at(0).source, Carat::Domain::Keymap.leader_from(served), served.last("option.timeoutlen").words[0], served.report], "the fixed config serves the shipped defaults")
-    t.assert_equal([500, "<Space>"], [a.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(a.config.load)], "the assembly reads timeoutlen and the leader from the port")
+    t.assert_equal(["config/default.caratrc", "<Space>", "500", []], [served.line_at(0).source, served.leader, served.last("option.timeoutlen").words[0], served.report], "the fixed config serves the shipped defaults")
+    t.assert_equal([500, "<Space>"], [a.state.options.timeoutlen, a.config.load.leader], "the assembly reads timeoutlen and the leader from the port")
     gateway = Carat::Adapters::RcConfigGateway.new(files: files)
     t.assert_equal([true, 500], [gateway.files.equal?(files), Carat::Domain::Options.from_config(gateway.load).timeoutlen], "the gateway reads the shipped defaults through the file port it was given")
     through = Carat::Adapters::EditorAssembly.new(terminal: h.terminal, clock: h.clock, files: files, config: gateway, processes: h.processes, messages: h.messages, completions: h.completions, plugin_list: [])
     t.assert_equal([true, true], [through.config.equal?(gateway), through.files.equal?(gateway.files)], "the assembly and the gateway hold the one file port")
     bare = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Domain::Config.new, rows: 10, cols: 40, plugins: [])
-    t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(Carat::Domain::Config.new), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without lines falls back to Vim's defaults")
+    t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Config.new.leader, bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without lines falls back to Vim's defaults")
     odd = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with_user("keymap.normal zq foo.bar\n"), rows: 10, cols: 40, plugins: [])
     t.assert_equal(["~/.config/carat/caratrc:1: unknown action foo.bar"], odd.assembly.config_errors, "a configuration problem names its file and line")
 

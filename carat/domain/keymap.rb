@@ -56,12 +56,6 @@ module Carat
       # hostile binding of a million keys would overflow the stack.
       MAX_KEYS = 64
 
-      # The leader of a configuration, as Config#leader reads it.
-      #: (Config) -> String
-      def self.leader_from(config)
-        config.leader
-      end
-
       # The keymap of a pick list's buffer: the configuration's
       # keymap.pick lines bound in normal mode, in order, so a later line
       # wins and "none" removes a binding, with <leader> from the
@@ -70,7 +64,7 @@ module Carat
       #: (Config) -> Keymap
       def self.pick_from(config)
         keymap = Keymap.new
-        leader = leader_from(config)
+        leader = config.leader
         i = 0
         n = config.count
         while i < n
@@ -123,7 +117,7 @@ module Carat
       # "file:line: message" and skipped; the other lines still go in.
       #: (Config, Hash[String, bool]) -> void
       def add_checked(config, known)
-        leader = Keymap.leader_from(config)
+        leader = config.leader
         i = 0
         n = config.count
         while i < n

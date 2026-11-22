@@ -373,7 +373,7 @@ module Carat
       #: (String) -> Domain::RcLine?
       def root_line(key)
         size = key.bytesize + ROOT_SUFFIX.bytesize
-        i = @config.settings.length - 1
+        i = @config.count - 1
         while i >= 0
           line = @config.line_at(i)
           i -= 1
