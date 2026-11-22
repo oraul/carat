@@ -31,7 +31,8 @@ module Carat
     # the file port (relative to the working directory, as typed after
     # "/", under the home after "~/"), a directory ending in "/", a dot
     # file only for a typed name starting with a dot; a shipped palette
-    # name after :colorscheme, in the order of Themes::NAMES. The selection
+    # name after a command of THEME_COMMANDS, :colorscheme, in the order
+    # of Themes::NAMES. The selection
     # replaces the word, the text after the cursor kept, and a bordered
     # popup above the command line lists the labels at the word's column
     # in Pmenu, the selection in PmenuSel, the typed characters in
@@ -42,9 +43,10 @@ module Carat
       MAX_ENTRIES = 1_000
       MAX_ROWS = 10
       PATH_COMMANDS = ["edit", "write", "split", "vsplit", "tabedit"].freeze
+      THEME_COMMANDS = ["colorscheme"].freeze
       EMPTY = "No matches  Esc close"
       Z = 950
-      private_constant :MAX_ENTRIES, :MAX_ROWS, :PATH_COMMANDS, :EMPTY, :Z
+      private_constant :MAX_ENTRIES, :MAX_ROWS, :PATH_COMMANDS, :THEME_COMMANDS, :EMPTY, :Z
 
       attr_reader :menu #: Domain::CmdlineMenu
       attr_reader :commands #: ExTable
@@ -135,7 +137,7 @@ module Carat
         handler = @commands.find(head[0, letters].to_s)
         return if handler.nil?
         full = handler.name.full
-        themes = full == "colorscheme"
+        themes = THEME_COMMANDS.include?(full)
         return unless themes || PATH_COMMANDS.include?(full)
         typed = head[blanks, head.length - blanks].to_s
         menu.start = blanks
