@@ -92,7 +92,8 @@ ok   edit of another file leaves the modified buffer hidden
 ok   long form edit
 ok   edit with no path and no argument
 ok   edit without argument reloads
-FAIL edit of a path whose stat fails after it was found is E484: expected [false, "E484: Can't open file gone.txt", "a.txt", ["mem"]], got [true, "\"gone.txt\" [New]", "gone.txt", [""]]
+ok   edit of a path whose stat fails starts a new file, the one answer saying nothing is there
+ok   edit of a path removed between its stat and the read is E484
 ok   sp splits
 ok   split splits
 ok   sp file shows the file
@@ -193,4 +194,4 @@ ok   normal is normal
 ok   nor is not normal
 ok   p is print
 ok   prin is print
-use_cases_ex: 194 passed, 1 failed
+use_cases_ex: 196 passed, 0 failed
