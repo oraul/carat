@@ -17,3 +17,8 @@
 ## 4. Checks
 
 - [ ] 4.1 `make lint`, `make diagnose-one` on the new files, `make docs-lint`, `make gates`, `make spec-validate`.
+
+## Quality review
+
+- [x] 5.1 `test/adapters_float_painter.rb` `groups` built a setup and then replaced it for the plain case: one setup from the case name. Fixed.
+- [x] 5.2 `FramePresenter#forget_rows`, `#compare_boxes`, and `#covers?` walk the key by `FloatPainter::STRIDE`, so the key's layout is known in two classes. Recorded in `docs/findings/float-painter.md`: they read the frames' stored keys and write the presenter's painted rows and the frame's dirty rows, so moving them is a design step of its own, outside this move.

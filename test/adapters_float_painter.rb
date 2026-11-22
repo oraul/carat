@@ -92,8 +92,9 @@ module AdaptersFloatPainterTest
   # The groups of a case's border corner, title, and text cells, at the
   # cells given as row and column pairs.
   def self.groups(name, cells)
-    s = name.to_s == "notice" ? setup(false, true, false, "unicode") : setup(true, false, false, "unicode")
-    s = setup(false, true, true, "unicode") if name.to_s == "plain"
+    kind = name.to_s
+    float = kind == "float"
+    s = setup(float, !float, kind == "plain", "unicode")
     painted(s)
     out = []
     i = 0
