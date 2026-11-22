@@ -23,7 +23,7 @@ module ConfigSyncTest
     options = Carat::Domain::Options.from_config(config)
     t.assert_equal([], config.report, "every option line names an option with a value of its kind")
     t.assert_true(Carat::Domain::Icons.set?(options.icons), "the icons option names a set")
-    t.assert_equal("<Space>", Carat::Domain::Keymap.leader_from(config), "the defaults set the leader")
+    t.assert_equal("<Space>", config.leader, "the defaults set the leader")
     bound = {}
     MODES.each { |mode| bound[mode] = 0 }
     i = 0

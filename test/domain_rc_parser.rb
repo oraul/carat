@@ -133,7 +133,7 @@ module DomainRcParserTest
       config_of(text.to_s, false)
     end
     t.assert_equal([["1 keymap|normal [\"j\", \"file.save\"]", "2 keymap|cmdline [\"<Space>\", \"cmdline.execute\"]", "3 keymap|normal [\"k\", \"mode.cmdline\"]"], []], config_of("keymap.normal j file.save\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k mode.cmdline\n", true), "a trusted file binds a write and the command line")
-    t.assert_equal([["1 keymap|normal [\"k\", \"mode.cmdline\"]", "2 keymap|normal [\"ZZ\", \"none\"]"], []], config_of("keymap.normal k mode.cmdline\nkeymap.normal ZZ none\n", false), "an untrusted file opens the command line and unbinds a quit")
+    t.assert_equal([["1 keymap|normal [\"<F4>\", \"mode.cmdline\"]", "2 keymap|normal [\"ZZ\", \"none\"]"], []], config_of("keymap.normal <F4> mode.cmdline\nkeymap.normal ZZ none\n", false), "an untrusted file opens the command line and unbinds a quit")
     t.assert_equal([["1 option|tabstop [\"3\"]"], []], config_of("option.tabstop 3\n", false), "an untrusted file sets anything else")
 
     # Several files: load order, the last line, notes, and the order of

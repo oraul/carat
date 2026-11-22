@@ -13,13 +13,14 @@ module EditorCompletionTest
     editor_with(text, candidates, "")
   end
 
-  # The same editor with more configuration lines, and "b.txt" reading
+  # The same editor with more configuration lines, read as the user file,
+  # which may bind any action in insert mode, and "b.txt" reading
   # "fi" to switch to.
   def self.editor_with(text, candidates, lines)
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", text.to_s)
     files.put("b.txt", "fi\n")
-    config = Carat::Doubles::FixedConfig.with("option.icons ascii\n" + lines.to_s)
+    config = Carat::Doubles::FixedConfig.with_user("option.icons ascii\n" + lines.to_s)
     h = Carat::Doubles::EditorHarness.new(files: files, config: config, rows: 12, cols: 40, plugins: [])
     candidates.each { |c| h.completions.add(Carat::Json.element(c, 0).to_s, Carat::Json.element(c, 1).to_s, Carat::Json.element(c, 2).to_s, "") }
     h.open("a.txt")

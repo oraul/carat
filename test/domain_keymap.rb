@@ -46,7 +46,7 @@ module DomainKeymapTest
     keymap = D::Keymap.new
     keymap.add_checked(config, bound_actions(config))
     t.assert_equal([], config.report, "default configuration has no keymap problems")
-    t.assert_equal("<Space>", D::Keymap.leader_from(config), "the default leader is Space")
+    t.assert_equal("<Space>", config.leader, "the default leader is Space")
 
     # Lookups against the default configuration: rows are
     # [label, [mode, notation], [kind, value]].
@@ -217,8 +217,8 @@ module DomainKeymapTest
     leaders = D::Config.new
     leaders.read(".caratrc", "keymap.leader ,\nkeymap.leader a b\nkeymap.leader <Nope>\nkeymap.leader \"\"\n", true)
     D::Keymap.new.add_checked(leaders, known)
-    t.assert_equal([",", ".caratrc:2: keymap.leader takes one key", ".caratrc:3: unknown key <Nope>", ".caratrc:4: keymap.leader takes one key"], [D::Keymap.leader_from(leaders)] + leaders.report, "the leader is the last good leader line")
-    t.assert_equal("\\", D::Keymap.leader_from(D::Config.new), "the leader is a backslash when no line sets it")
+    t.assert_equal([",", ".caratrc:2: keymap.leader takes one key", ".caratrc:3: unknown key <Nope>", ".caratrc:4: keymap.leader takes one key"], [leaders.leader] + leaders.report, "the leader is the last good leader line")
+    t.assert_equal("\\", D::Config.new.leader, "the leader is a backslash when no line sets it")
     t.assert_equal([",", "none", "group", "leader", "\\"], [leaders.leader, D::Config::NONE, D::Config::GROUP, D::Config::LEADER, D::Config::DEFAULT_LEADER], "the config reads the leader and names the keymap words once")
 
     t.assert_equal([true, false, false], [D::Keymap.action_name?("plugin.a.b"), D::Keymap.action_name?(":w<CR>"), D::Keymap.action_name?("plain")], "an action name has namespace segments, a key sequence does not")

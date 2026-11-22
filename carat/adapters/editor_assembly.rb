@@ -348,7 +348,7 @@ module Carat
         @messages = messages
         @completions = completions
         value = config.load
-        leader = Domain::Keymap.leader_from(value)
+        leader = value.leader
         first = Domain::Buffer.from_text("", nil)
         @tabs = Domain::TabList.new(window: Domain::Window.new(buffer: first))
         @buffers = Domain::BufferList.new(tabs: @tabs)

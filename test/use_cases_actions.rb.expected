@@ -37,6 +37,7 @@ ok   an unknown name completes at once
 ok   every registered action handler returns an Outcome
 ok   the table holds every core action
 ok   every entry of the project allowlist names a registered action
+ok   every action a project file may bind in a text-entry mode is registered and allowed
 ok   the project allowlist leaves out the writes and the quits
 ok   the command line has actions a project file may not bind
 ok   a plugin action and an unnamed window action are refused
@@ -58,4 +59,4 @@ ok   the plugin namespace handler returns the host's refusal as an Outcome
 ok   the action table and docs/actions.md list the same actions
 ok   a drift is reported in both directions
 ok   the Plugins section is not read as core actions and the Implemented one is
-use_cases_actions: 60 passed, 0 failed
+use_cases_actions: 61 passed, 0 failed
