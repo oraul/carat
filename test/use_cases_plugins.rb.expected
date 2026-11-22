@@ -8,9 +8,9 @@ ok   a refused plugin is not activated
 ok   a newer minor version is refused, as in A plugin written against 2.10 still loads
 ok   an older major version is refused
 ok   the host's own version is accepted
-ok   A plugin written against 2.10 still loads on the 2.14 host
-ok   A plugin written against 2.11 still loads on the 2.14 host
-ok   A plugin written against 2.12 still loads on the 2.14 host: its bordered float in option.winborder, its unbordered one with no edge
+ok   A plugin written against 2.10 still loads on the 2.15 host
+ok   A plugin written against 2.11 still loads on the 2.15 host
+ok   A plugin written against 2.12 still loads on the 2.15 host: its bordered float in option.winborder, its unbordered one with no edge
 ok   A plugin requests a border style: a 2.13 plugin's float takes double and a border
 ok   a broken manifest rule disables the plugin
 ok   a disabled entry registers without activating

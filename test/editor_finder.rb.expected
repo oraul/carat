@@ -79,6 +79,15 @@ ok   The buffer picker's rows in both themes: the edge in FloatBorder and the ti
 ok   The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under carat-light
 ok   The buffer picker's rows in both themes: the same rows, the title on the top edge
 ok   The recent files picker's rows in ASCII: + and - on the edges, | at the sides
+ok   The selected row under truecolor: ▎ in PmenuMarkSel, the label in PmenuLabelSel, the padding in PmenuSel, the next row in Pmenu
+ok   no > on any row, the bar sapphire and bold and the label bold, in the selection fill's colors
+ok   the bar is the theme's sapphire on the selection color
+ok   The selected row at 16 colors: the bar and the label reverse and bold, as the fill is reverse
+ok   The selected row under NO_COLOR: ▎, the bar and the bold label in their groups, the edge in ASCII
+ok   The selected row under option.icons ascii: ▎ in PmenuMarkSel and the label in PmenuLabelSel
+ok   The style follows the highlight: Ctrl-N moves the bar, the fill, and the bold label to the second row
+ok   A grep row is styled as a file row: ▎ in PmenuMarkSel and the row in PmenuLabelSel
+ok   No match shows no highlighted row: the float reads No match in NormalFloat
 ok   Ctrl-G switches the file finder to the grep picker: the prompt keeps b and the float is the grep picker's
 ok   and the grep rows list the line of lib/beta.rb that holds b
 ok   Ctrl-G switches the grep picker to the file finder: the prompt keeps b and the files matching it are listed
@@ -98,4 +107,4 @@ ok   Space f w in an empty buffer opens the grep picker on the empty prompt
 ok   Space f w on an empty line opens the grep picker on the empty prompt
 ok   Space f w on the last character of the last line takes the word
 ok   Ctrl-G after Space f w switches to the file finder on the word
-editor_finder: 100 passed, 0 failed
+editor_finder: 109 passed, 0 failed

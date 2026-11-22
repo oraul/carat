@@ -30,7 +30,7 @@ module EditorFinderGrepPreviewTest
     out = []
     i = first
     while i <= last
-      out << (i == at ? "> needle #{i}" : "  line #{i}")
+      out << (i == at ? "▎ needle #{i}" : "  line #{i}")
       i += 1
     end
     "t.txt|" + out.join("\n")
@@ -143,7 +143,7 @@ module EditorFinderGrepPreviewTest
     cut = +""
     i = 982
     while i <= 999
-      cut << (i == 995 ? "> " + "z" * 20 : "  a")
+      cut << (i == 995 ? "▎ " + "z" * 20 : "  a")
       cut << "\n" if i < 999
       i += 1
     end
@@ -152,12 +152,12 @@ module EditorFinderGrepPreviewTest
     # Rows are [label, keys, the preview float].
     t.table([
       # Scenario: The preview follows the highlight and the query
-      ["the preview shows the first row's file", "<Space>fgneedle", "a.txt|  a top\n> needle one\n  a bottom"],
-      ["the preview follows a move", "<Space>fgneedle<C-n>", "b.txt|  b top\n> needle two\n  b bottom"],
-      ["a move past the last row keeps the last preview", "<Space>fgneedle<C-n><C-n>", "b.txt|  b top\n> needle two\n  b bottom"],
-      ["the preview returns with a move back", "<Space>fgneedle<C-n><C-p>", "a.txt|  a top\n> needle one\n  a bottom"],
-      ["the preview follows a query that changes the first row", "<Space>fgneedle two", "b.txt|  b top\n> needle two\n  b bottom"],
-      ["the preview follows a backspace", "<Space>fgneedle two<BS><BS><BS><BS>", "a.txt|  a top\n> needle one\n  a bottom"],
+      ["the preview shows the first row's file", "<Space>fgneedle", "a.txt|  a top\n▎ needle one\n  a bottom"],
+      ["the preview follows a move", "<Space>fgneedle<C-n>", "b.txt|  b top\n▎ needle two\n  b bottom"],
+      ["a move past the last row keeps the last preview", "<Space>fgneedle<C-n><C-n>", "b.txt|  b top\n▎ needle two\n  b bottom"],
+      ["the preview returns with a move back", "<Space>fgneedle<C-n><C-p>", "a.txt|  a top\n▎ needle one\n  a bottom"],
+      ["the preview follows a query that changes the first row", "<Space>fgneedle two", "b.txt|  b top\n▎ needle two\n  b bottom"],
+      ["the preview follows a backspace", "<Space>fgneedle two<BS><BS><BS><BS>", "a.txt|  a top\n▎ needle one\n  a bottom"],
       # Scenario: An empty result shows no preview
       ["a query with no match closes the preview", "<Space>fgneedle zzz", ""],
       ["an empty query shows no preview", "<Space>fg", ""],
@@ -174,16 +174,16 @@ module EditorFinderGrepPreviewTest
     h.type("<Space>fgneedle")
     files.put("b.txt", "other top\nneedle other\nother bottom\n")
     h.type("<C-n>")
-    t.assert_equal("b.txt|  b top\n> needle two\n  b bottom", second_float(floats(h)), "a file changed after the open still previews its stored lines")
+    t.assert_equal("b.txt|  b top\n▎ needle two\n  b bottom", second_float(floats(h)), "a file changed after the open still previews its stored lines")
 
     # Rows are [label, keys, the preview float].
     t.table([
       # Scenario: The preview shows its text safely
       # Scenario: The preview ends at the file's last line
-      ["empty lines the store skipped show as empty lines, those at the file's end too", "<Space>fggapword", "gap.txt|  a\n\n> gapword\n\n  b\n\n"],
-      ["control bytes, invalid UTF-8, and a bidirectional override show safely", "<Space>fgctrlword", "ctrl.txt|  x  [31mred  y\n> ctrlword ??\n  z z"],
-      ["a line over 400 bytes shows cut", "<Space>fglongword", "long.txt|> longword " + "q" * 391],
-      ["a path with a control byte shows it as a space in the title", "<Space>fgnamedword", "tab here.txt|> namedword"]
+      ["empty lines the store skipped show as empty lines, those at the file's end too", "<Space>fggapword", "gap.txt|  a\n\n▎ gapword\n\n  b\n\n"],
+      ["control bytes, invalid UTF-8, and a bidirectional override show safely", "<Space>fgctrlword", "ctrl.txt|  x  [31mred  y\n▎ ctrlword ??\n  z z"],
+      ["a line over 400 bytes shows cut", "<Space>fglongword", "long.txt|▎ longword " + "q" * 391],
+      ["a path with a control byte shows it as a space in the title", "<Space>fgnamedword", "tab here.txt|▎ namedword"]
     ]) do |keys|
       preview_text(hostile_files, keys, 120)
     end

@@ -1,6 +1,6 @@
 ok   every id has a name
 ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups
-ok   67 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   69 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   the status bar's count groups follow its lsp groups
@@ -24,6 +24,7 @@ ok   token? covers the syntax, file-icon, and markup ids only
 ok   float_style? admits the token groups, PmenuSel, and PmenuMatch only
 ok   float_style_id resolves PmenuSel, PmenuMatch, and the token groups only
 ok   token? still refuses PmenuSel and PmenuMatch, so a tokenizer cannot paint them
+ok   a float span may carry PmenuMarkSel and PmenuLabelSel, which a tokenizer still cannot paint
 ok   name_of
 ok   find, and carat-dark for an unknown name
 ok   known?
@@ -109,6 +110,13 @@ ok   The bar reads at 16 colors: one_light
 ok   The bar reads at 16 colors: dark_plus
 ok   The bar reads at 16 colors: light_plus
 ok   the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1
+ok   The mark and label groups in every palette: carat-dark
+ok   The mark and label groups in every palette: carat-light
+ok   The mark and label groups in every palette: one_dark
+ok   The mark and label groups in every palette: one_light
+ok   The mark and label groups in every palette: dark_plus
+ok   The mark and label groups in every palette: light_plus
+ok   the bar is the carat themes' sapphire
 ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-dark on the terminal's background
 ok   StatusLineDim shares the bar's background: carat-dark on the terminal's background
 ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-dark on the theme's background
@@ -372,4 +380,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 374 passed, 0 failed
+domain_theme: 382 passed, 0 failed

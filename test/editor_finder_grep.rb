@@ -217,25 +217,25 @@ module EditorFinderGrepTest
       # Scenario: Space f g opens the grep picker
       ["Space f g opens the picker: an empty query lists nothing", "<Space>fg", ["Grep 0 of 0 files, 0 of 10 lines|Type to search the files' lines"]],
       # Scenario: Typing lists the matching lines best first
-      ["a match and its rank order: whole-word hits, the shorter path first among equals, then listing order", "<Space>fghello", ["Grep 3 of 3 files, 3 of 10 lines|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
-      ["case is ignored", "<Space>fgHELLO", ["Grep 3 of 3 files, 3 of 10 lines|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      ["a match and its rank order: whole-word hits, the shorter path first among equals, then listing order", "<Space>fghello", ["Grep 3 of 3 files, 3 of 10 lines|▎ lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      ["case is ignored", "<Space>fgHELLO", ["Grep 3 of 3 files, 3 of 10 lines|▎ lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
       # Scenario: Scattered letters do not match
       ["scattered letters do not match", "<Space>fgwrt", ["Grep 0 of 0 files, 0 of 10 lines|No match"]],
-      ["a substring matches", "<Space>fgwrite", ["Grep 1 of 1 files, 1 of 10 lines|> docs/guide.md:2: Todo: write"]],
+      ["a substring matches", "<Space>fgwrite", ["Grep 1 of 1 files, 1 of 10 lines|▎ docs/guide.md:2: Todo: write"]],
       # Scenario: A query of only spaces lists nothing
       ["a query of spaces lists nothing", "<Space>fg   ", ["Grep 0 of 0 files, 0 of 10 lines|Type to search the files' lines"]],
       # Scenario: No line matches
       ["no match", "<Space>fgzzz", ["Grep 0 of 0 files, 0 of 10 lines|No match"]],
       ["a backspace widens the match again", "<Space>fgzzz<BS><BS><BS>", ["Grep 0 of 0 files, 0 of 10 lines|Type to search the files' lines"]],
       # Scenario: Lines are shown safely
-      ["CRLF lines show without the carriage return", "<Space>fga = 1", ["Grep 2 of 2 files, 2 of 10 lines|> lib/beta.rb:1: a = 1\n  lib/utf.rb:1: café x = 1"]],
-      ["a multi-byte line is shown whole", "<Space>fgcaf", ["Grep 1 of 1 files, 1 of 10 lines|> lib/utf.rb:1: café x = 1"]],
-      ["the last line of a file with no final newline is searched", "<Space>fgend", ["Grep 1 of 1 files, 1 of 10 lines|> lib/alpha.rb:3: end"]],
-      ["control bytes show as spaces", "<Space>fgred", ["Grep 1 of 1 files, 1 of 10 lines|> lib/ctrl.txt:1: hello  [31mred "]],
-      ["invalid UTF-8 shows as question marks", "<Space>fgbad", ["Grep 1 of 1 files, 1 of 10 lines|> lib/ctrl.txt:2: bad ??"]],
+      ["CRLF lines show without the carriage return", "<Space>fga = 1", ["Grep 2 of 2 files, 2 of 10 lines|▎ lib/beta.rb:1: a = 1\n  lib/utf.rb:1: café x = 1"]],
+      ["a multi-byte line is shown whole", "<Space>fgcaf", ["Grep 1 of 1 files, 1 of 10 lines|▎ lib/utf.rb:1: café x = 1"]],
+      ["the last line of a file with no final newline is searched", "<Space>fgend", ["Grep 1 of 1 files, 1 of 10 lines|▎ lib/alpha.rb:3: end"]],
+      ["control bytes show as spaces", "<Space>fgred", ["Grep 1 of 1 files, 1 of 10 lines|▎ lib/ctrl.txt:1: hello  [31mred "]],
+      ["invalid UTF-8 shows as question marks", "<Space>fgbad", ["Grep 1 of 1 files, 1 of 10 lines|▎ lib/ctrl.txt:2: bad ??"]],
       # Scenario: Files that cannot be searched are left out
-      ["a binary file, a file over the read limit, an empty file, and an ignored directory add no line", "<Space>fghello", ["Grep 3 of 3 files, 3 of 10 lines|> lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
-      ["Ctrl-N moves the highlight", "<Space>fghello<C-n>", ["Grep 3 of 3 files, 3 of 10 lines|  lib/beta.rb:2: hello world\n> lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]]
+      ["a binary file, a file over the read limit, an empty file, and an ignored directory add no line", "<Space>fghello", ["Grep 3 of 3 files, 3 of 10 lines|▎ lib/beta.rb:2: hello world\n  lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]],
+      ["Ctrl-N moves the highlight", "<Space>fghello<C-n>", ["Grep 3 of 3 files, 3 of 10 lines|  lib/beta.rb:2: hello world\n▎ lib/alpha.rb:2:   puts 'hello'\n  lib/ctrl.txt:1: hello  [31mred "]]
     ]) do |keys|
       shown(keys)
     end
@@ -247,7 +247,7 @@ module EditorFinderGrepTest
     t.assert_equal("Grep 1 of 1 files, 250 of 250 lines", layer.at(0).spec.title.to_s, "the row cap: the title counts the 250 matching lines of one file")
     h.type("<C-n>" * 205)
     lines = layer.at(0).window.buffer.lines
-    t.assert_equal("> many.txt:200: needle 200", lines[lines.length - 1].to_s, "the row cap: 200 rows kept, listing order among equals")
+    t.assert_equal("▎ many.txt:200: needle 200", lines[lines.length - 1].to_s, "the row cap: 200 rows kept, listing order among equals")
     h.type("<BS>")
     t.assert_equal("Grep 1 of 1 files, 250 of 250 lines", layer.at(0).spec.title.to_s, "the cap holds after a key")
 
@@ -261,32 +261,32 @@ module EditorFinderGrepTest
     t.assert_equal("Grep 2 of 2 files, 251 of 251 lines", layer.at(0).spec.title.to_s, "the title counts 2 of 2 files and 251 of 251 lines")
     h.type("<C-n>" * 205)
     lines = layer.at(0).window.buffer.lines
-    t.assert_equal("> many.txt:199: needle 199", lines[lines.length - 1].to_s, "the 200th row is the crowded file's 199th line, the one-hit file kept")
+    t.assert_equal("▎ many.txt:199: needle 199", lines[lines.length - 1].to_s, "the 200th row is the crowded file's 199th line, the one-hit file kept")
 
     # Scenario: Lines of equal rank keep their order in each file
-    t.assert_equal(["Grep 2 of 2 files, 6 of 7 lines|> a.txt:1: k 1\n  b.txt:1: k 4\n  a.txt:2: k 2\n  b.txt:2: k 5\n  a.txt:3: k 3\n  b.txt:3: k 6"], shown_in(even, "<Space>fgk"), "each file's first line, then each second line, then each third, in line order within a file")
+    t.assert_equal(["Grep 2 of 2 files, 6 of 7 lines|▎ a.txt:1: k 1\n  b.txt:1: k 4\n  a.txt:2: k 2\n  b.txt:2: k 5\n  a.txt:3: k 3\n  b.txt:3: k 6"], shown_in(even, "<Space>fgk"), "each file's first line, then each second line, then each third, in line order within a file")
 
     # Scenario: Invisible format and separator characters show as spaces
     # Rows are [label, keys, floats].
     t.table([
-      ["U+202A shows as a space", "<Space>fgp202a", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:1: p202a q"]],
-      ["U+202B shows as a space", "<Space>fgp202b", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:2: p202b q"]],
-      ["U+202C shows as a space", "<Space>fgp202c", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:3: p202c q"]],
-      ["U+202D shows as a space", "<Space>fgp202d", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:4: p202d q"]],
-      ["U+202E shows as a space", "<Space>fgp202e", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:5: p202e q"]],
-      ["U+2066 shows as a space", "<Space>fgp2066", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:6: p2066 q"]],
-      ["U+2067 shows as a space", "<Space>fgp2067", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:7: p2067 q"]],
-      ["U+2068 shows as a space", "<Space>fgp2068", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:8: p2068 q"]],
-      ["U+2069 shows as a space", "<Space>fgp2069", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:9: p2069 q"]],
-      ["U+061C shows as a space", "<Space>fgp061c", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:10: p061c q"]],
-      ["U+200B shows as a space", "<Space>fgp200b", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:11: p200b q"]],
-      ["U+200C shows as a space", "<Space>fgp200c", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:12: p200c q"]],
-      ["U+200D shows as a space", "<Space>fgp200d", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:13: p200d q"]],
-      ["U+200E shows as a space", "<Space>fgp200e", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:14: p200e q"]],
-      ["U+200F shows as a space", "<Space>fgp200f", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:15: p200f q"]],
-      ["U+2028 shows as a space", "<Space>fgp2028", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:16: p2028 q"]],
-      ["U+2029 shows as a space", "<Space>fgp2029", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:17: p2029 q"]],
-      ["U+FEFF shows as a space", "<Space>fgpfeff", ["Grep 1 of 1 files, 1 of 19 lines|> bidi.txt:18: pfeff q"]]
+      ["U+202A shows as a space", "<Space>fgp202a", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:1: p202a q"]],
+      ["U+202B shows as a space", "<Space>fgp202b", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:2: p202b q"]],
+      ["U+202C shows as a space", "<Space>fgp202c", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:3: p202c q"]],
+      ["U+202D shows as a space", "<Space>fgp202d", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:4: p202d q"]],
+      ["U+202E shows as a space", "<Space>fgp202e", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:5: p202e q"]],
+      ["U+2066 shows as a space", "<Space>fgp2066", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:6: p2066 q"]],
+      ["U+2067 shows as a space", "<Space>fgp2067", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:7: p2067 q"]],
+      ["U+2068 shows as a space", "<Space>fgp2068", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:8: p2068 q"]],
+      ["U+2069 shows as a space", "<Space>fgp2069", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:9: p2069 q"]],
+      ["U+061C shows as a space", "<Space>fgp061c", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:10: p061c q"]],
+      ["U+200B shows as a space", "<Space>fgp200b", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:11: p200b q"]],
+      ["U+200C shows as a space", "<Space>fgp200c", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:12: p200c q"]],
+      ["U+200D shows as a space", "<Space>fgp200d", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:13: p200d q"]],
+      ["U+200E shows as a space", "<Space>fgp200e", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:14: p200e q"]],
+      ["U+200F shows as a space", "<Space>fgp200f", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:15: p200f q"]],
+      ["U+2028 shows as a space", "<Space>fgp2028", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:16: p2028 q"]],
+      ["U+2029 shows as a space", "<Space>fgp2029", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:17: p2029 q"]],
+      ["U+FEFF shows as a space", "<Space>fgpfeff", ["Grep 1 of 1 files, 1 of 19 lines|▎ bidi.txt:18: pfeff q"]]
     ]) do |keys|
       shown_in(bidi, keys)
     end
@@ -324,13 +324,13 @@ module EditorFinderGrepTest
     # one in each of the eight files.
     t.table([
       # Scenario: A whole-word hit ranks above a part-word hit
-      ["a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing", "<Space>fgexplorer", ["Grep 6 of 6 files, 6 of 9 lines|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
+      ["a whole-word hit ranks above a part-word hit with more hits, then more hits, then the shorter path, then listing order; scattered letters and a diverging prefix match nothing", "<Space>fgexplorer", ["Grep 6 of 6 files, 6 of 9 lines|▎ g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
       # Scenario: Case is ignored in the query
-      ["case is ignored in the query", "<Space>fgEXPLORER", ["Grep 6 of 6 files, 6 of 9 lines|> g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
+      ["case is ignored in the query", "<Space>fgEXPLORER", ["Grep 6 of 6 files, 6 of 9 lines|▎ g.txt:1: Explorer Explorer\n  a.txt:1: explorer open\n  bb.txt:1: e x p l o r e r and later Explorer here\n  eeeee.txt:1: my_explorer_x\n  h:1: xexplorer explorerx explorerz\n  ffffff.txt:1: unexplorered"]],
       # Scenario: Two terms match in any order
-      ["two terms match in either order", "<Space>fgopen explorer", ["Grep 1 of 1 files, 1 of 9 lines|> a.txt:1: explorer open"]],
-      ["the terms swapped match the same line", "<Space>fgexplorer open", ["Grep 1 of 1 files, 1 of 9 lines|> a.txt:1: explorer open"]],
-      ["extra spaces between and around the terms are ignored", "<Space>fg  open   explorer  ", ["Grep 1 of 1 files, 1 of 9 lines|> a.txt:1: explorer open"]],
+      ["two terms match in either order", "<Space>fgopen explorer", ["Grep 1 of 1 files, 1 of 9 lines|▎ a.txt:1: explorer open"]],
+      ["the terms swapped match the same line", "<Space>fgexplorer open", ["Grep 1 of 1 files, 1 of 9 lines|▎ a.txt:1: explorer open"]],
+      ["extra spaces between and around the terms are ignored", "<Space>fg  open   explorer  ", ["Grep 1 of 1 files, 1 of 9 lines|▎ a.txt:1: explorer open"]],
       ["a line holding one of two terms does not match", "<Space>fgexplorer zzz", ["Grep 0 of 0 files, 0 of 9 lines|No match"]],
       # Scenario: Scattered letters do not match
       ["scattered letters match nothing", "<Space>fgezxplzorzer", ["Grep 0 of 0 files, 0 of 9 lines|No match"]]
@@ -341,29 +341,29 @@ module EditorFinderGrepTest
     # Scenario: A whole-word hit ranks above a part-word hit (the hit count is clamped, so 300 hits stay below one whole word)
     h = editor_on(dense, "")
     h.type("<Space>fgx")
-    t.assert_equal("Grep 2 of 2 files, 2 of 3 lines|> long/path.txt:1: x\n  a:1: " + "x" * 300, floats(h)[0].to_s, "a line of 300 part-word hits ranks below a whole-word line on a longer path")
+    t.assert_equal("Grep 2 of 2 files, 2 of 3 lines|▎ long/path.txt:1: x\n  a:1: " + "x" * 300, floats(h)[0].to_s, "a line of 300 part-word hits ranks below a whole-word line on a longer path")
 
     # Scenario: The picker stores only bounded lines of each file (the shown-safely rows of invalid bytes and C1 controls too)
     h = editor_on(bounded, "")
     h.type("<Space>fgcaf")
-    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|> u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
+    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|▎ u8.txt:1: café ?", floats(h)[0].to_s, "a valid character beside an invalid byte stays whole")
     h = editor_on(bounded, "")
     h.type("<Space>fgaaaa")
-    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|> long.txt:1: " + "a" * 400, floats(h)[0].to_s, "a 500-byte line is cut at 400 bytes")
+    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|▎ long.txt:1: " + "a" * 400, floats(h)[0].to_s, "a 500-byte line is cut at 400 bytes")
     h = editor_on(bounded, "")
     h.type("<Space>fgx")
-    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|> wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
+    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|▎ wide.txt:1: x" + "é" * 199, floats(h)[0].to_s, "the cut falls back to a character boundary")
     h = editor_on(bounded, "")
     h.type("<Space>fgz")
-    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|> bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut at 400 bytes, not emptied")
+    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|▎ bad.txt:1: z" + "?" * 399, floats(h)[0].to_s, "a line of continuation bytes is cut at 400 bytes, not emptied")
     h = editor_on(bounded, "")
     h.type("<Space>fgc d")
-    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|> c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space, the two terms on either side of it")
+    t.assert_equal("Grep 1 of 1 files, 1 of 1206 lines|▎ c1.txt:1: c d", floats(h)[0].to_s, "a C1 control (the CSI U+009B) shows as a space, the two terms on either side of it")
     h = editor_on(bounded, "")
     h.type("<Space>fghit")
     t.assert_equal("Grep 1 of 1 files, 1000 of 1206 lines", h.state.tab.floats.at(0).spec.title.to_s, "all 1200 lines of a file are stored, past the 1000th")
     shown = floats(h)[0].to_s
-    t.assert_equal(true, shown.start_with?("Grep 1 of 1 files, 1000 of 1206 lines|> rows.txt:1: hit"), "the first shown row is the first line of the file")
+    t.assert_equal(true, shown.start_with?("Grep 1 of 1 files, 1000 of 1206 lines|▎ rows.txt:1: hit"), "the first shown row is the first line of the file")
     h.type("<C-n>" * 250)
     shown = floats(h)[0].to_s
     t.assert_equal(true, shown.end_with?("rows.txt:200: hit"), "the last shown row is the 200th line, the cap")
@@ -371,7 +371,7 @@ module EditorFinderGrepTest
     h.type("<Space>fgx")
     t.assert_equal("Grep 30 of 30+ files, 29999+ of 400000+ lines", h.state.tab.floats.at(0).spec.title.to_s, "the 400,000-line store cap is marked when it cuts a file")
     # Scenario: A match past the 1000th line is found
-    t.assert_equal(["Grep 1 of 1 files, 1 of 2001 lines|> t.txt:1500: needle 1500"], shown_in(long_file, "<Space>fgneedle"), "a match on line 1500 of a 2000-line file is listed")
+    t.assert_equal(["Grep 1 of 1 files, 1 of 2001 lines|▎ t.txt:1500: needle 1500"], shown_in(long_file, "<Space>fgneedle"), "a match on line 1500 of a 2000-line file is listed")
     t.assert_equal(["t.txt", 1499, 0, 1, 1, 0], opened_in(long_file, "<Space>fgneedle<CR>", ""), "its pick opens the file on line 1500")
     # Scenario: A tree the size of this repository is searched whole, 30,000 lines a key
     # Scenario: A key checks at most 30,000 lines
@@ -386,7 +386,7 @@ module EditorFinderGrepTest
     h.type("b")
     t.assert_equal("Grep 30 of 30+ files, 30000+ of 40002 lines", h.state.tab.floats.at(0).spec.title.to_s, "ab checks the 29,999 matches of a again and one line more, the budget they leave")
     h.type("c")
-    t.assert_equal("Grep 1 of 1 files, 1 of 40002 lines|> z.txt:1: abc", floats(h)[0].to_s, "abc checks the kept matches again and scans on to the last line")
+    t.assert_equal("Grep 1 of 1 files, 1 of 40002 lines|▎ z.txt:1: abc", floats(h)[0].to_s, "abc checks the kept matches again and scans on to the last line")
     # Scenario: A backspace starts the search again
     h.type("<BS>")
     t.assert_equal("Grep 30 of 30+ files, 29999+ of 40002 lines", h.state.tab.floats.at(0).spec.title.to_s, "a backspace starts again from the first line, within the budget")
