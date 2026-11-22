@@ -295,6 +295,15 @@ module AdaptersHoverTest
     t.assert_equal([first + 1, false], [J.reach(last_of(r, "$/cancelRequest"), "params.id"), r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
     t.assert_equal(true, n >= 99 && n <= 102, "the timeout counts from the sending")
 
+    # A hover request whose write failed is not in flight: the request
+    # the asks share answers no id for a send that crashed the server.
+    r = hovering
+    r.processes.break_input(1)
+    r.type("K")
+    r.wait
+    r.wait
+    t.assert_equal([0, false], [r.hovers_sent, r.assembly.services.waiting?], "a hover request whose write failed waits on nothing")
+
     # Scrolling: K enters the float.
     r = hovering
     long = +""

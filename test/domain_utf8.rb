@@ -74,6 +74,11 @@ module DomainUtf8Test
     D::Utf8.scalar?(value.to_i)
   end
 
+  #: (untyped) -> Integer
+  def self.utf16(value)
+    D::Utf8.utf16_length(value.to_s)
+  end
+
   def self.main
     t = Carat::Testing.new("domain_utf8")
 
@@ -210,6 +215,20 @@ module DomainUtf8Test
       ["a name that starts with a continuation byte", "/a/\x80b", ["a", "\x80b"]]
     ]) do |path|
       segments(path)
+    end
+
+    # UTF-16 code units, as language server positions count them: rows
+    # are [label, text, units].
+    t.table([
+      ["empty text", "", 0],
+      ["ASCII", "def x", 5],
+      ["two- and three-byte characters", "caf\u00E9 \u4E2D", 6],
+      ["a four-byte character counts two", "a\u{1F600}b", 4],
+      ["a stray continuation byte counts one", "a\x80b", 3],
+      ["a truncated four-byte sequence counts one per byte", "\xF0\x9F\x98a", 4],
+      ["a lead byte F5 counts one per byte", "\xF5\x80", 2]
+    ]) do |text|
+      utf16(text)
     end
 
     t.finish

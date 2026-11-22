@@ -3,6 +3,7 @@ ok   The first frame waits for no reply: enter read no key
 ok   The first frame waits for no reply: the first read sends the query
 ok   The first frame waits for no reply: the background is unknown
 ok   the query is sent once
+ok   NO_COLOR set and not empty turns color off, read once when the driver is made; empty or unset keeps it
 ok   before enter an answer's bytes are keys
 ok   before enter nothing is asked
 ok   A dark reply: only the typed keys arrive
@@ -53,4 +54,4 @@ ok   No reply: the background stays unknown
 ok   No reply yet: a late answer is taken out
 ok   No reply yet: a late answer is still read
 ok   the double reports no background
-drivers_ansi_terminal: 55 passed, 0 failed
+drivers_ansi_terminal: 56 passed, 0 failed

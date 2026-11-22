@@ -315,6 +315,16 @@ module AdaptersServerCompletionsTest
     110.times { r.wait }
     t.assert_equal([1, false], [count_of(r, "$/cancelRequest"), r.assembly.services.waiting?], "an unanswered request is cancelled after two seconds and waits no more")
 
+    # Scenario: A failed completion send leaves nothing in flight. The
+    # server takes no didChange, so the completion request is the first
+    # write after the input broke.
+    r = rig({ "completionProvider" => { "triggerCharacters" => ["."] }, "textDocumentSync" => { "change" => 0 } })
+    r.processes.break_input(1)
+    r.type("ifi")
+    20.times { r.wait }
+    server = r.assembly.services.server_for("ruby")
+    t.assert_equal([true, false], [!server.nil? && server.state == :crashed, r.assembly.services.waiting?], "a completion request whose write failed crashes the server and waits on nothing")
+
     # An error answers nothing.
     r = completing
     r.type("ifi")
