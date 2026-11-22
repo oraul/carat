@@ -225,6 +225,9 @@ module EditorPaletteTest
   def self.main
     t = Carat::Testing.new("editor_palette")
 
+    # Scenarios: Open with the leader, Open with F1, and Ex commands are
+    # listed (the rows "leader p opens the palette", "F1 opens the palette",
+    # and "an ex command is found").
     # Rows are [label, keys, [floats, mode, title, first row's name]].
     t.table([
       ["leader p opens the palette", "<Space>p", [1, "cmdline", "Commands", "motion.repeat_find"]],
@@ -266,8 +269,8 @@ module EditorPaletteTest
     h = session("<Space>p")
     t.assert_equal([1, h.assembly.actions.names[0]], [h.state.tab.floats.at(0).selected, selected_name(h)], "The query row selects the list's first row: the row after the query is highlighted")
     t.assert_equal(h.assembly.actions.names[0], name_at(h, 0), "the first row is the first action registered")
-    # With no room for a list row the palette has no float and the
-    # prompt stays on the command-line row.
+    # Scenario: A screen with no room for a list row. The palette has no
+    # float and the prompt stays on the command-line row.
     h = sized("", 6, 40)
     h.type("<Space>pab")
     t.assert_equal([0, "> ab", 5, 4], [h.state.tab.floats.count, h.message_row.rstrip, h.frame.cursor_row, h.frame.cursor_col], "With no room for a list row the prompt stays on the command line")

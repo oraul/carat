@@ -377,12 +377,14 @@ module UseCasesPluginFilesTest
     session = editor
     h, fs = session.harness, session.plugin
     id = fs.host.open_float(Carat::PluginApi::FloatOptions.at(2, 0, 2, 20), ["> ", "row"]).window
+    # Scenario: A refused attachment (no prompt open, the current window, an id no float has).
     refused = fs.host.float_prompt(id)
     t.assert_equal([false, "No prompt is open"], [refused.ok, refused.message], "float_prompt without a prompt fails")
     fs.host.live_prompt("live", "> ", "", ["keymap.cmdline <C-x> plugin.fs.close"])
     missing = fs.host.float_prompt(id + 100)
     current = fs.host.float_prompt(0)
     t.assert_equal([false, false, "No float #{id + 100}", "No float 0"], [missing.ok, current.ok, missing.message, current.message], "float_prompt refuses a float the plugin does not hold, and the current window")
+    # Scenario: The cursor stands in the float.
     attached = fs.host.float_prompt(id)
     h.type("ab")
     window = h.state.tab.floats.at(0).window
