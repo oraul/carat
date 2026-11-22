@@ -114,3 +114,11 @@
 - Fix: fold into `budget-recalibrate`; accepted when a records change's budget counts its reviews' tokens and minutes or names them apart, and the next records row is judged against it.
 - Category: pipeline
 - Added: 2026-11-22
+
+### docs/goals.md still describes the sprint quality review and the notes starts
+
+- Location: docs/goals.md:7, docs/goals.md:54
+- Why: after planner-loop the planner reviews the sprint's diff and the security reviewer's record mode records the notes, but goals.md, a planning record the planner writes only when asked, still names the quality reviewer's sprint start, the skeptic, and the notes and skeptic notes starts on the quality reviewer.
+- Fix: the user or the planner, when asked, rewrites the two lines to name the planner's review and the security reviewer's record mode.
+- Category: pipeline
+- Added: 2026-11-22

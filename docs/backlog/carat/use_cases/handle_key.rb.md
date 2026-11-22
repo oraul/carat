@@ -220,14 +220,6 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Category: editor
 - Added: 2026-11-22
 
-### the signature triggers are the bare code points 40 at carat/use_cases/handle_key.rb:407 (sprint-26 sweep quality, note 6)
-
-- Location: carat/use_cases/handle_key.rb:407
-- Why: the signature triggers are the bare code points 40 and 44, and options.rb:234, :495, :504 scan listchars for bare 44 and 58, where Key names CR and SPACE and RcParser names NEWLINE
-- Fix: name the bytes (OPEN_PAREN, COMMA, COLON) beside the existing constants
-- Category: editor
-- Added: 2026-11-22
-
 ### step and complete drop the queue dispatch returns at carat/use_cases/handle_key.rb:275 (sprint-28 sweep quality, note 3)
 
 - Location: carat/use_cases/handle_key.rb:275, :300, :306; docs/spinel-notes.md
@@ -244,3 +236,7 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Fix: private constants or Key constants.
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### the signature triggers are the bare code points 40 at carat/use_cases/handle_key.rb:407 (sprint-26 sweep quality, note 6)
+- Location: carat/use_cases/handle_key.rb:407
+- Why: the signature triggers are the bare code points 40 and 44, and options.rb:234, :495, :504 scan listchars for bare 44 and 58, where Key names CR and SPACE and RcParser names NEWLINE
+- Fix: name the bytes (OPEN_PAREN, COMMA, COLON) beside the existing constants

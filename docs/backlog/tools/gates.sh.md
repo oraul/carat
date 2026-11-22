@@ -379,3 +379,25 @@
 - Fix: refuse a non-hex value and pass `--end-of-options`; for the security reviewer to judge.
 - Category: pipeline
 - Added: 2026-11-22
+
+### The findings gate still trusts a plain entry's gone, duplicate, and merged plan lines
+- Location: tools/gates.sh:carrier_unproven
+- Why: a plain (non-security) entry removed from docs/findings/ passes when the local plan's groom.txt holds any gone, duplicate, or merged line for its heading, or a bare "- Merged:" line names it; groom's proofs of those kinds (paths gone at HEAD, a location named by another heading) need the entry in the backlog, which no longer stands after groom, so the gate cannot repeat them. A contributor-written plan line can still delete a plain entry. Security entries are covered: they leave only by a verified listed or fixed line or a merged line under a security entry holding the body.
+- Fix: have groom write the proof it checked (the paths held, the location named) beside each removal into a tracked record, such as the sprint's row file, and let the gate compare it, or file removed plain entries' headings in the pull request's archived change so the gate reads tracked text only.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The carrier allowance of the findings gate takes proof that groom itself would refuse
+- Location: tools/gates.sh carrier_unproven (the `- Merged:` and groom.txt branches)
+- Why: security Low (4). A carrier contributor can delete a security finding by adding a bare `- Merged: ### HEADING` line under any backlog entry, or by writing a `listed x ### HEADING` or `fixed x ### HEADING` line into build/plan/groom.txt, which the guard leaves writable; groom itself would refuse both. This change's task 4.6 already requires a security entry's `- Merged:` line to sit under a security entry with its body after it and hands `listed` and `fixed` lines to `groom-proof`; what remains is that the plan file is still a local file the contributor can write.
+- Fix: accept a groom.txt line only after the checks groom applies (for listed, a sprint change whose item lists the heading; for fixed, a commit in the sprint's range that touches the entry), or rely on the docs/backlog evidence at HEAD alone and stop reading the local plan file.
+- Category: security
+- Added: 2026-11-22
+
+### carrier_unproven accepts a removed entry whose bare heading stands anywhere under docs/backlog
+- Location: tools/gates.sh carrier_unproven (near line 647)
+- Why: security Low (4). A carrier contributor can add only the `### HEADING` line to a backlog file and delete the entry's body and severity from docs/findings, and the gate passes; the merged_security_kept check requires the body for the merged form only.
+- Fix: for a security entry filed under its heading, require the same body check as merged_security_kept: the entry's non-heading lines (its Why, Location, and severity) must stand under that heading in docs/backlog at HEAD, else the entry is unproven.
+none
+- Category: security
+- Added: 2026-11-22

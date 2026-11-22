@@ -244,3 +244,28 @@ none
 - Also: tools/run_state.sh, tools/ci_wait.sh
 - Category: security
 - Added: 2026-11-21
+
+### A dangling .claude link refuses every write with the dangling-path message
+- Location: `tools/agent_guard.sh`, `write_target`, the loop over `LOCAL_FILES` after `real_path`.
+- Why: each write resolves the real path of every local settings file; while `.claude` is a dangling link, `real_path` refuses every write as "a path through a dangling link: .claude/settings.local.json", which names neither the write nor the reason. The refusal is on the safe side, so only the message misleads (merge-path-lows quality review).
+- Fix: resolve the local settings paths once at the guard's start, skipping a dangling one, and compare each write's real path with that list.
+none
+- Category: pipeline
+- Added: 2026-11-22
+
+### The runner profile records any phase or review (sprint-29 review security Low (5))
+
+- Location: tools/agent_guard.sh:688
+- Why: the runner profile accepts tools/run_state.sh phase, review, metric, and ci-stages with any arguments, and the resume start, which reads run-state note text through `trusted`, shares it; note text quoting reviewed code could steer the cheap-tier runner into recording a forged `review CHANGE security pass ... COMMIT`. The merge gate's RECORDS comparison and the workflow's rule of skipping a phase only on a pass recorded by this start limit the damage.
+- Fix: check runner:review and runner:phase arguments against the forms the workflow queues (kinds, pass or blocked, a 7 to 40 hex commit, a summary of key=integer words), or split the profile so the resume start runs only show, get, trusted, plan-needed, lane-open, init, and make doctor or toolchain; accepted when a tools-test case of a forged review line from the resume start is refused.
+- Also: tools/run_state.sh
+- Category: security
+- Added: 2026-11-22
+
+### runner:note repeats read:note's refusal (sprint-29 review quality)
+
+- Location: tools/agent_guard.sh:689 to :697 (runner:note), :718 to :730 (read:note)
+- Why: the late, held, and unpushed finding refusal and the data_at=6 rule are copied, so a new close-only note kind added to one profile is missed by the other.
+- Fix: one `read:note|runner:note` branch; accepted when the existing guard cases pass for both profiles.
+- Category: pipeline
+- Added: 2026-11-22
