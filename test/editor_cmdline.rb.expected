@@ -50,6 +50,7 @@ ok   a FIFO
 ok   a device
 ok   a file over the limit
 ok   a linked regular file opens
+ok   a dangling link is refused
 ok   a file of exactly the limit opens
 ok   q with two windows closes one
 ok   q on the last window quits
@@ -83,4 +84,4 @@ ok   down past the newest gives back the typed text
 ok   up recalls only commands starting with the typed text
 ok   down returns to the typed text
 ok   down before any recall changes nothing
-editor_cmdline: 85 passed, 0 failed
+editor_cmdline: 86 passed, 0 failed

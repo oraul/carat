@@ -153,11 +153,11 @@ module EditorCmdlineTest
 
     # Paths that are not regular files of bounded size are refused and
     # the current buffer stays: rows are [label, command, [message,
-    # error, buffer path, lines]]. Scenarios "Edit a directory", "Edit a
-    # FIFO", "Edit a device", "Edit a huge file", "A linked regular file
-    # opens", and "A dangling link is refused" (command-line-mode). The
-    # files over and at the limit are padded to their size, so no run
-    # builds a 64 MiB string.
+    # error, buffer path, lines]]. The scenarios of command-line-mode:
+    # "Edit a directory", "Edit a FIFO", "Edit a device",
+    # "Edit a huge file", "A linked regular file opens",
+    # "A dangling link is refused". The files over and at the limit are
+    # padded to their size, so no run builds a 64 MiB string.
     hostile = files_with("ab\n")
     hostile.mkdir("lib")
     hostile.special("pipe")

@@ -9,15 +9,27 @@ module UseCasesExTest
   U = Carat::UseCases
 
   GONE = "gone.txt"
+  RACED = "raced.txt"
 
-  # A file system where GONE is found but its stat raises, as for a path
-  # removed between the check that it exists and the stat.
+  # A file system where GONE was put but its stat raises: OpenFile asks
+  # the port about a path once, through ProbePath, which reads a stat
+  # that raises as nothing there, so no earlier answer says it exists.
+  # RACED stats as a file but its read raises, as for a path removed
+  # between that one question and the read.
   class VanishingFiles < Carat::Doubles::MemoryFiles
     # Raises for GONE and stats the others.
     # @rbs path: String
     def stat(path)
       raise ArgumentError, "No such file or directory" if path == GONE
       super(path)
+    end
+
+    # Raises for RACED and reads the others.
+    # @rbs path: String
+    # @rbs limit: Integer
+    def read(path, limit)
+      raise ArgumentError, "No such file or directory" if path == RACED
+      super(path, limit)
     end
   end
 
@@ -328,10 +340,15 @@ module UseCasesExTest
     t.assert_equal(["disk"], s.buffer.lines, "edit without argument reloads")
     vanishing = VanishingFiles.new
     vanishing.put(GONE, "gone\n")
+    vanishing.put(RACED, "raced\n")
     s_w = world(vanishing, ["mem"], "a.txt")
     s = s_w.state
     r = s_w.ex.call(s, "e #{GONE}")
-    t.assert_equal([false, "E484: Can't open file #{GONE}", "a.txt", ["mem"]], [r.ok, r.message, s.buffer.path, s.buffer.lines], "edit of a path whose stat fails after it was found is E484")
+    t.assert_equal([true, "\"#{GONE}\" [New]", GONE, [""]], [r.ok, r.message, s.buffer.path, s.buffer.lines], "edit of a path whose stat fails starts a new file, the one answer saying nothing is there")
+    s_w = world(vanishing, ["mem"], "a.txt")
+    s = s_w.state
+    r = s_w.ex.call(s, "e #{RACED}")
+    t.assert_equal([false, "E484: Can't open file #{RACED}: No such file or directory", "a.txt", ["mem"]], [r.ok, r.message, s.buffer.path, s.buffer.lines], "edit of a path removed between its stat and the read is E484")
 
     t.table([
       ["sp splits", "sp", [true, "", 2, 1]],

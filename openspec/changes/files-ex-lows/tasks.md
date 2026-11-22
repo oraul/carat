@@ -6,7 +6,7 @@
 
 ## 2. One question about the path opened
 
-- [x] 2.1 `MemoryFiles#dangling` (`carat/doubles/memory_files.rb`) and `OpenFile#call` (`carat/use_cases/files/open_file.rb`) probing once (proved by `test/editor_cmdline.rb`, "a dangling link is refused", scenario "A dangling link is refused"; it fails with the fix reverted)
+- [x] 2.1 `MemoryFiles#dangling` (`carat/doubles/memory_files.rb`) and `OpenFile#call` (`carat/use_cases/files/open_file.rb`) probing once (proved by `test/editor_cmdline.rb`, "a dangling link is refused", scenario "A dangling link is refused"; it fails with the fix reverted; `test/use_cases_ex.rb`'s stale stat-race check now expects a new file, and "edit of a path removed between its stat and the read is E484" covers the read's race)
 
 ## 3. No 64 MiB string a test run
 

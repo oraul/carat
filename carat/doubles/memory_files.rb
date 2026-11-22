@@ -95,8 +95,9 @@ module Carat
       end
 
       # Marks path a symbolic link whose target is missing: stat reports it
-      # as the driver does, an existing empty link that is not regular,
-      # while exist? and read find nothing there and create refuses it.
+      # as the driver does, an existing empty link that is not regular, a
+      # listing names it, while exist? and read find nothing there and
+      # create refuses it.
       #: (String) -> void
       def dangling(path)
         k = key(path)
@@ -300,6 +301,7 @@ module Carat
       def children(dir)
         out = []
         @files.each_key { |path| out << PluginApi::Paths.basename(path) if path != dir && PluginApi::Paths.dirname(path) == dir }
+        @dangling.each_key { |path| out << PluginApi::Paths.basename(path) if PluginApi::Paths.dirname(path) == dir }
         @dirs.each_key { |path| out << PluginApi::Paths.basename(path) if path != dir && PluginApi::Paths.dirname(path) == dir }
         out
       end

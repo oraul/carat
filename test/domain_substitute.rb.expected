@@ -78,4 +78,11 @@ ok   a digit alone is no group
 ok   recase answers the text itself when nothing is recased
 ok   a string whose tildes could pass a mebibyte is too long
 ok   replacement text past the budget stops it and changes nothing
-domain_substitute: 80 passed, 0 failed
+ok   plain characters
+ok   the match and a group
+ok   a group that did not take part
+ok   the escapes and a carriage return
+ok   multi-byte characters
+ok   a match holding a multi-byte character
+ok   a replacement past the budget is never built
+domain_substitute: 87 passed, 0 failed
