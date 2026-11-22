@@ -7,8 +7,10 @@ module Carat
     # An in-memory file system: files as a hash from absolute path to text,
     # directories as a set of absolute paths, the paths tests marked as
     # symbolic links (with their targets, when a test gave one), and the
-    # files tests marked as special, a FIFO or a device. A relative path is resolved against the working
-    # directory, "/project" unless a test moves it (the home directory is
+    # files tests marked as special, a FIFO or a device, the links tests
+    # marked dangling, and the bytes tests padded files with, so a file of
+    # 64 MiB costs no 64 MiB string. A relative path is resolved against
+    # the working directory, "/project" unless a test moves it (the home directory is
     # "/home/user" unless a test moves it), so the editor's
     # relative paths and a plugin's absolute ones name the same entries.
     # Putting or writing a file creates its directories. Paths listed in
@@ -20,6 +22,8 @@ module Carat
       # @rbs @dirs: Hash[String, String]
       # @rbs @links: Hash[String, String]
       # @rbs @specials: Hash[String, String]
+      # @rbs @dangling: Hash[String, String]
+      # @rbs @padding: Hash[String, Integer]
       # @rbs @cwd: String
       # @rbs @home: String
 
@@ -29,6 +33,8 @@ module Carat
         @dirs = {}
         @links = {}
         @specials = {}
+        @dangling = {}
+        @padding = {}
         @unwritable = []
         @cwd = "/project"
         @home = "/home/user"
@@ -88,6 +94,24 @@ module Carat
         @specials[key(path)] = ""
       end
 
+      # Marks path a symbolic link whose target is missing: stat reports it
+      # as the driver does, an existing empty link that is not regular,
+      # while exist? and read find nothing there and create refuses it.
+      #: (String) -> void
+      def dangling(path)
+        k = key(path)
+        add_dirs(PluginApi::Paths.dirname(k))
+        @links[k] = ""
+        @dangling[k] = ""
+      end
+
+      # Makes the file at path bytes longer than its text, for stat's size
+      # and read's limit, without building them; a write drops it.
+      #: (String, Integer) -> void
+      def pad(path, bytes)
+        @padding[key(path)] = bytes
+      end
+
       #: (String) -> bool
       def directory?(path)
         @dirs.key?(key(path))
@@ -103,7 +127,7 @@ module Carat
         text = @files[k]
         raise ArgumentError, "no such file: #{path}" if text.nil?
         raise IOError, "Not a regular file" if @specials.key?(k)
-        raise IOError, "File too large" if text.bytesize > limit
+        raise IOError, "File too large" if text.bytesize + padding(k) > limit
         text
       end
 
@@ -123,6 +147,7 @@ module Carat
         raise ArgumentError, "Is a directory: #{path}" if @dirs.key?(k)
         add_dirs(PluginApi::Paths.dirname(k))
         @files[k] = text
+        @padding.delete(k)
       end
 
       # Puts an empty file at path, raising, as the driver's exclusive
@@ -173,9 +198,10 @@ module Carat
         k = key(path)
         link = @links.key?(k)
         return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: true, symlink: link, regular: false) if @dirs.key?(k)
+        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: false, symlink: true, regular: false) if @dangling.key?(k)
         text = @files[k]
         return Domain::PathInfo.missing if text.nil?
-        Domain::PathInfo.new(exists: true, size: text.bytesize, mtime: 0, directory: false, symlink: link, regular: !@specials.key?(k))
+        Domain::PathInfo.new(exists: true, size: text.bytesize + padding(k), mtime: 0, directory: false, symlink: link, regular: !@specials.key?(k))
       end
 
       # Returns the path with the links a test gave targets replaced by
@@ -250,6 +276,13 @@ module Carat
       #: (String) -> String
       def key(path)
         PluginApi::Paths.absolute(@cwd, path)
+      end
+
+      # The bytes a test padded the file at k with, 0 for none.
+      #: (String) -> Integer
+      def padding(k)
+        return 0 unless @padding.key?(k)
+        @padding[k].to_i
       end
 
       # Adds a directory and every directory above it.

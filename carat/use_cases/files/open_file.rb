@@ -10,20 +10,24 @@ module Carat
     # Shows a file in the current window: the buffer already listed for
     # that path, which is not read again, the file read from disk, or an
     # empty buffer for a path that does not exist yet, with Vim's message
-    # for each. The current buffer's own path is reloaded in place through
+    # for each. The port is asked about the path once, through ProbePath,
+    # so the answer that decides between a new buffer and a refusal is the
+    # one the refusal reads; a path it cannot stat is a new one. The
+    # current buffer's own path is reloaded in place through
     # Buffer#reload, one change that leaves it unmodified, so every window
     # showing it sees the file's text; the closed transaction keeps their
     # cursors inside it. A directory and anything else that is not a
-    # regular file (a FIFO, a device, a socket) are refused with Vim's
-    # messages and a file longer than PathInfo::BUFFER_LIMIT with E484,
-    # as PathInfo#refusal gives them, and the read itself is bounded and
-    # never waits, so no path can hang the editor or fill its memory. Any
-    # other failure to read or load the file is E484, and a file that
-    # is not valid UTF-8 opens with its bytes kept and Vim's "[ILLEGAL
-    # BYTE in line N]" in the message. Showing another buffer records the
-    # position left in the window's jump list (BufferList#enter). Under
-    # option.gt buffers a file shown in another window or tab page than
-    # the startup buffer's retires it (BufferList#retire_startup).
+    # regular file (a FIFO, a device, a socket, a link whose target is
+    # missing) are refused with Vim's messages and a file longer than
+    # PathInfo::BUFFER_LIMIT with E484, as PathInfo#refusal gives them,
+    # and the read itself is bounded and never waits, so no path can hang
+    # the editor or fill its memory. Any other failure to read or load the
+    # file is E484, and a file that is not valid UTF-8 opens with its
+    # bytes kept and Vim's "[ILLEGAL BYTE in line N]" in the message.
+    # Showing another buffer records the position left in the window's
+    # jump list (BufferList#enter). Under option.gt buffers a file shown
+    # in another window or tab page than the startup buffer's retires it
+    # (BufferList#retire_startup).
     class OpenFile
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
@@ -44,9 +48,10 @@ module Carat
           retire_startup(state)
           return Outcome.success("\"#{path}\" #{listed.line_count}L, #{listed.byte_count}B")
         end
-        exists = @files.exist?(path)
+        info = @probe_path.call(path)
+        exists = info.exists
         if exists
-          refused = @probe_path.call(path).refusal(path, Domain::PathInfo::BUFFER_LIMIT)
+          refused = info.refusal(path, Domain::PathInfo::BUFFER_LIMIT)
           return Outcome.failure(refused) unless refused.empty?
         end
         text = +""

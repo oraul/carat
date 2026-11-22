@@ -6,11 +6,11 @@
 
 ## 2. One question about the path opened
 
-- [ ] 2.1 `MemoryFiles#dangling` (`carat/doubles/memory_files.rb`) and `OpenFile#call` (`carat/use_cases/files/open_file.rb`) probing once (proved by `test/editor_cmdline.rb`, "a dangling link is refused", scenario "A dangling link is refused"; it fails with the fix reverted)
+- [x] 2.1 `MemoryFiles#dangling` (`carat/doubles/memory_files.rb`) and `OpenFile#call` (`carat/use_cases/files/open_file.rb`) probing once (proved by `test/editor_cmdline.rb`, "a dangling link is refused", scenario "A dangling link is refused"; it fails with the fix reverted)
 
 ## 3. No 64 MiB string a test run
 
-- [ ] 3.1 `MemoryFiles#pad` and `test/editor_cmdline.rb` padding `big.bin` and `edge.bin` (proved by "a file over the limit" and "a file of exactly the limit opens")
+- [x] 3.1 `MemoryFiles#pad` and `test/editor_cmdline.rb` padding `big.bin` and `edge.bin` (proved by "a file over the limit" and "a file of exactly the limit opens")
 
 ## 4. The openat gap
 
