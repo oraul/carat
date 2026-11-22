@@ -26,11 +26,11 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 
 ## Impact
 
-- `.claude/agents/runner.md` (new), `.claude/agents/merger.md`, `.claude/workflows/deliver-change.js`, `.claude/workflows/sprint-planning.js`, `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/tools_test.sh`, `docs/goals.md`.
+- `.claude/agents/runner.md` (new), `.claude/agents/merger.md`, `.claude/agents/quality-reviewer.md` (its record mode, which no start uses any more, goes), `.claude/workflows/deliver-change.js`, `.claude/workflows/sprint-planning.js`, `tools/agent_guard.sh`, `tools/run_state.sh`, `tools/tools_test.sh`, `docs/goals.md`.
 - README.md: changed, the mechanical agents of the pipeline section.
 - CLAUDE.md: changed, the Agents line of guarded agents that never edit.
 - docs/architecture.md: unchanged, it does not describe the delivery agents.
-- docs/codebase-map.md: unchanged, it maps no file under `.claude/`.
+- docs/codebase-map.md: changed, its flow line names the guarded runner for the sprint notes in place of the quality reviewer's record mode, which goes; it maps no file under `.claude/`, so the new agent file adds no row.
 - docs/compatibility.md, docs/actions.md: unchanged, no editor behavior changes.
 - `tools/rules.sh`: not edited.
 
