@@ -36,7 +36,7 @@ None.
 ## Impact
 
 - README.md: the `<leader>f` paragraph names `fb`, `fr`, and `fR`.
-- docs/architecture.md: section 9.1 lists the buffer list requests, and the item 12 line names the pickers.
+- docs/architecture.md: section 9.1 lists the two requests, and the item 12 line names `buffer-picker`; two "from the explorer change" notes the asterisk already says are dropped and the item 12 line is shortened, so the file stays within its docs-lint budget.
 - docs/codebase-map.md: the `plugin_api.rb` (2.14), `buffer_list.rb`, `buffer_requests.rb`, `plugin_link.rb`, and finder lines.
 - CLAUDE.md: unchanged, no process change.
 - Performance: the recent list is updated when a buffer enters a window, a bounded array of at most 100 paths; no key of `lh`, `j`, or `insert` changes a window's buffer.
