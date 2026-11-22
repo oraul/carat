@@ -41,3 +41,11 @@
 - Fix: end the awaiting at the first timeout or after a fixed bound of reads or seconds, with a driver test of a terminal that never answers
 - Category: editor
 - Added: 2026-11-22
+
+### read_key awaits an OSC 11 answer for the whole session at carat/drivers/ansi_terminal.rb:79 (sprint-28 sweep quality, note 32)
+
+- Location: carat/drivers/ansi_terminal.rb:79
+- Why: a terminal that never answers leaves every later read scanned, so a later `ESC ]11;` in typed or pasted input is swallowed as an answer.
+- Fix: stop awaiting at the first empty timeout or a deadline, with a missing-answer test.
+- Category: editor
+- Added: 2026-11-22

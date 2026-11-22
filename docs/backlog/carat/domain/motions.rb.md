@@ -83,3 +83,12 @@
 - Fix: return state.clamp_col(row, want < 0 ? state.max_col(row) : want)
 - Category: editor
 - Added: 2026-11-22
+
+### code_class returns bare 0, 1, 2 at carat/domain/motions.rb:156 (sprint-28 sweep quality, note 7)
+
+- Location: carat/domain/motions.rb:156; carat/use_cases/search/find_match.rb:136; carat/domain/command_line_text.rb:69
+- Why: callers compare `== 2` with no name.
+- Fix: named class constants or a Motions.keyword_code? predicate.
+- Also: carat/use_cases/search/find_match.rb, carat/domain/command_line_text.rb
+- Category: editor
+- Added: 2026-11-22

@@ -162,16 +162,11 @@
 - Category: editor
 - Added: 2026-11-20
 
-### needless wrapper: Keymap.leader_from now only returns config.leader after the at carat/domain/keymap.rb:61 (sprint-26 review quality, note 10)
 
-- Location: carat/domain/keymap.rb:61
-- Why: needless wrapper: Keymap.leader_from now only returns config.leader after the leader logic moved to Config
-- Fix: have the callers (keymap.rb:73 and 126, carat/adapters/editor_assembly.rb:351, test/adapters_assembly.rb, test/adapters_config_gateway.rb, test/config_sync.rb) call config.leader and drop the wrapper
-- Also: carat/adapters/editor_assembly.rb, test/adapters_assembly.rb, test/adapters_config_gateway.rb, test/config_sync.rb
+### holder_of repeats node_at's walk at carat/domain/keymap.rb:211 (sprint-28 sweep quality, note 5)
+
+- Location: carat/domain/keymap.rb:211, :238
+- Why: two copies of one trie walk.
+- Fix: node = node_at(mode, codes); return "" when its value is nil, else node.owner.
 - Category: editor
 - Added: 2026-11-22
-- Merged: ### Keymap.leader_from is now a one-line pass-through to Config#leader (since at carat/domain/keymap.rb:61 (sprint-26 sweep quality, note 2)
-- Location: carat/domain/keymap.rb:61
-- Why: Keymap.leader_from is now a one-line pass-through to Config#leader (since config-guards-b), kept only for keymap.rb:73 and :126, editor_assembly.rb:351, and four tests
-- Fix: call config.leader at those sites, remove leader_from, and update the keymap.rb line of the map
-

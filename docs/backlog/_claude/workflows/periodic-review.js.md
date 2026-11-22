@@ -64,3 +64,12 @@
 - Also: docs/codebase-map.md
 - Category: pipeline
 - Added: 2026-11-22
+
+### periodic-review inlines the commit regex and slices areas by count at .claude/workflows/periodic-review.js:67 (sprint-28 sweep quality, notes 56, 57)
+
+- Location: .claude/workflows/periodic-review.js:58, :67, :74; .claude/workflows/deliver-change.js:449, :641, :1080
+- Why: isCommit and COMMIT are restated inline; area 1 alone is about 18,000 lines, so its slice and continuation cap, as the sprint-28 sweep did (covered 17/18).
+- Fix: use the helpers; give area 1 its own start or weight slices by line count.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-22

@@ -227,3 +227,20 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Fix: name the bytes (OPEN_PAREN, COMMA, COLON) beside the existing constants
 - Category: editor
 - Added: 2026-11-22
+
+### step and complete drop the queue dispatch returns at carat/use_cases/handle_key.rb:275 (sprint-28 sweep quality, note 3)
+
+- Location: carat/use_cases/handle_key.rb:275, :300, :306; docs/spinel-notes.md
+- Why: dispatch says its caller must assign the returned queue because appends to an array created as [] can be lost on the pinned Spinel, and the cited pitfall is not in docs/spinel-notes.md; a remap replayed after a timeout relies on the in-place unshift.
+- Fix: a test of a key-sequence binding that replays another after a timeout, then thread the queue through step or correct the comment and add the pitfall.
+- Also: docs/spinel-notes.md
+- Category: editor
+- Added: 2026-11-22
+
+### Bare byte literals 40 and 44 at carat/use_cases/handle_key.rb:407 (sprint-28 sweep quality, note 4)
+
+- Location: carat/use_cases/handle_key.rb:407
+- Why: 40 and 44 stand for `(` and `,` with no name.
+- Fix: private constants or Key constants.
+- Category: editor
+- Added: 2026-11-22

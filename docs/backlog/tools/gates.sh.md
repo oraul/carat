@@ -363,3 +363,19 @@
 - Also: tools/rules.sh
 - Category: pipeline
 - Added: 2026-11-21
+
+### The gates header and comments disagree with the code at tools/gates.sh:64 (sprint-28 sweep quality, notes 46, 47)
+
+- Location: tools/gates.sh:47, :50, :64, :352, :607
+- Why: pre-push is said to run attribution (it does not); stages names CHECK_STAGES though FAST_STAGES is read first; pushes omits main-moved and text; gate_cases passes on one expect line however many scripts changed.
+- Fix: align the header and comment with the code, or add gate_attribution to pre-push and require a case per changed script.
+- Category: pipeline
+- Added: 2026-11-22
+
+### gate_records passes a run-state value to git rev-parse unchecked at tools/gates.sh:503 (sprint-28 sweep quality, note 59, security point unexamined)
+
+- Location: tools/gates.sh:503
+- Why: unlike the other gates it checks neither hex form nor end-of-options before rev-parse.
+- Fix: refuse a non-hex value and pass `--end-of-options`; for the security reviewer to judge.
+- Category: pipeline
+- Added: 2026-11-22

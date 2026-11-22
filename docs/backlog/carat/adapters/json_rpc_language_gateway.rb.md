@@ -441,3 +441,20 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Fix: remove one.
 - Category: ide
 - Added: 2026-11-22
+
+### utf16_offset repeats VisitTarget#column_of at carat/adapters/json_rpc_language_gateway.rb:1132 (sprint-28 sweep quality, note 35)
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1132; carat/use_cases/definitions/visit_target.rb:204
+- Why: two UTF-16 units to position walks beside Domain::Utf8.utf16_length.
+- Fix: one Domain::Utf8 converter used by both.
+- Also: carat/use_cases/definitions/visit_target.rb
+- Category: ide
+- Added: 2026-11-22
+
+### The gateway holds a URI codec and a line diff at carat/adapters/json_rpc_language_gateway.rb:817 (sprint-28 sweep quality, note 36)
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:817 (path_of, escaped, hex_value, uri_of, unreserved?; ranged_change, shared_head, shared_tail, continuation?)
+- Why: 1536 lines; pure logic tested only through the gateway.
+- Fix: move both to domain modules with their own tests.
+- Category: ide
+- Added: 2026-11-22

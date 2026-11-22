@@ -96,3 +96,19 @@
 - Fix: one SAFE_GIT prefix constant.
 - Category: plugins
 - Added: 2026-11-21
+
+### Git signs vanish on a detached HEAD at carat/plugins/git_signs/plugin.rb:141 (sprint-28 sweep quality, note 29)
+
+- Location: carat/plugins/git_signs/plugin.rb:43, :141
+- Why: BRANCH is `symbolic-ref -q HEAD`, empty on a detached HEAD, and refresh drops the signs then, so a rebase, bisect, or tag checkout shows none though HEAD resolves.
+- Fix: decide the signs on HEAD resolving and only the segment on the branch, with a detached-HEAD test.
+- Category: plugins
+- Added: 2026-11-22
+
+### A refused HEAD blob marks every line added at carat/plugins/git_signs/plugin.rb:180 (sprint-28 sweep quality, note 30)
+
+- Location: carat/plugins/git_signs/plugin.rb:180
+- Why: run answers "" for every failure, so a tracked file whose HEAD blob run_program refuses (not UTF-8) is diffed against empty text.
+- Fix: tell a refused or failed cat-file from a file missing at HEAD and show no signs for the former, with a test.
+- Category: plugins
+- Added: 2026-11-22

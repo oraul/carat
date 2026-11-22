@@ -90,3 +90,11 @@
 - Fix: one private helper for the shared start that both call
 - Category: editor
 - Added: 2026-11-22
+
+### accept_visual repeats accept's prelude at carat/domain/command_grammar.rb:171 (sprint-28 sweep quality, note 6)
+
+- Location: carat/domain/command_grammar.rb:171, :145 to :154
+- Why: the want reset, remember, and search branch are written twice.
+- Fix: one private prelude both call, returning :cancel, :prompt, or nil.
+- Category: editor
+- Added: 2026-11-22

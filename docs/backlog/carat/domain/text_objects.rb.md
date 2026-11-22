@@ -87,3 +87,12 @@
 - Also: test/editor_text_objects.rb
 - Category: editor
 - Added: 2026-11-21
+
+### Unclear abbreviations cls, prev_len, and e at carat/domain/text_objects.rb:89 (sprint-28 sweep quality, notes 8, 28, 38)
+
+- Location: carat/domain/text_objects.rb:89; carat/domain/runs.rb:18; carat/use_cases/erase_character.rb:43; carat/use_cases/plugins/plugin_registry.rb:311 (about 69 uses), plugin_syntax.rb:47
+- Why: CLAUDE.md names `cls` as its example of an unclear abbreviation.
+- Fix: char_class, previous_length, entry.
+- Also: carat/domain/runs.rb, carat/use_cases/erase_character.rb, carat/use_cases/plugins/plugin_registry.rb, CLAUDE.md
+- Category: editor
+- Added: 2026-11-22

@@ -192,3 +192,11 @@
 - Location: `tools/ci_scope.sh:80`
 - Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
 - Fix: one call whose jq prints both, split with read
+
+### ci_scope.sh repeats two API queries at tools/ci_scope.sh:80 (sprint-28 sweep quality, notes 12, 51)
+
+- Location: tools/ci_scope.sh:80, :81, :84, :117
+- Why: the same commits/SHA/pulls call runs twice and the spin check-runs query twice.
+- Fix: one call printing number and head, split with set --; a spin_passed SHA helper.
+- Category: pipeline
+- Added: 2026-11-22

@@ -108,3 +108,12 @@
 - Also: carat.rb
 - Category: editor
 - Added: 2026-11-20
+
+### capture starts a waiter thread per program at carat/drivers/process_runner.rb:121 (sprint-28 sweep quality, note 41)
+
+- Location: carat/drivers/process_runner.rb:121
+- Why: Process.detach starts a thread each git_signs refresh, while area 17 and CLAUDE.md Stack name the server reader and writer threads as the only ones.
+- Fix: reap with Process.wait once output ended or after the kill, or say so in the docs.
+- Also: CLAUDE.md
+- Category: editor
+- Added: 2026-11-22

@@ -23,3 +23,11 @@
 - Fix: a test that every KINDS name that is a member round-trips through assign and value_of, and rewrap the class comment, whose line 17 breaks mid-paragraph
 - Category: editor
 - Added: 2026-11-22
+
+### listchar_code scans to the comma by hand at carat/domain/options.rb:234 (sprint-28 sweep quality, note 9)
+
+- Location: carat/domain/options.rb:234, :492
+- Why: item_stop already finds byte 44.
+- Fix: stop = item_stop(text, at) and loop while at < stop.
+- Category: editor
+- Added: 2026-11-22

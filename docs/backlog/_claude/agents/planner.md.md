@@ -105,3 +105,11 @@
 - Fix: every part a split delivers or queues names a frame row or test that fails at the split commit (applied by hand in the status-winbar-tabs-b plan); accepted when the next two split deliveries each change a row their acceptance names.
 - Category: pipeline
 - Added: 2026-11-21
+
+### The size check runs only in the delivery planner, so an oversized queue item costs a delivery-time split (sprint-close-lows retro note 3)
+- Location: `.claude/agents/planner.md` (sprint mode step 2), `docs/goals.md` (size check).
+- Why: sprint-close-lows was queued with 10 headings in 3 areas and split at delivery; its plan 35,540/13, 8.8 percent of output tokens, the highest of the last 10 backlog rows (others 7,690 to 20,300).
+- Fix: accepted when the sprint queue holds no item over about four headings and no delivery of the next sprint records a Split decision, its plan under 20,300 output tokens.
+- Also: docs/goals.md
+- Category: pipeline
+- Added: 2026-11-22

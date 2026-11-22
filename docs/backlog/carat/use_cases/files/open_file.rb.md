@@ -1,14 +1,5 @@
 # Backlog: carat/use_cases/files/open_file.rb
 
-## OpenFile asks the port about a path twice
-
-- Where: `OpenFile#call` in `carat/use_cases/files/open_file.rb` line 45, `@files.exist?(path)` and then `ProbePath` through `refusal`. Advisory of the periodic quality review at 389c118.
-- Why it matters: `docs/architecture.md` section 5.2 says `ProbePath` is the one place a use case asks the port about a path, and the two answers can disagree on a dangling link.
-- Fix outline: take existence from the one `ProbePath` result, deciding the dangling-link case (a new buffer or "is not a file") with a row in `test/editor_cmdline.rb`. Queued as `file-access-tidy`.
-- Also: docs/architecture.md, test/editor_cmdline.rb
-- Category: editor
-- Added: 2026-11-03
-
 ## :e! on the current buffer moves the cursor to the top
 
 - Where: `carat/use_cases/files/open_file.rb` line 62, at b76b722. Periodic quality. Queue item `file-access-tidy`.

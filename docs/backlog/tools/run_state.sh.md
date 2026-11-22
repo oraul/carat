@@ -1540,3 +1540,25 @@ none
 - Also: docs/queue-backlog.md
 - Category: security
 - Added: 2026-11-22
+
+### The check-pass output-token note fires in runs that end under the total budget (ui-groups retro note 3)
+- Location: `tools/run_state.sh` `spent` (`spent_line`, `OUTPUT_SHARE`); `.claude/workflows/deliver-change.js` (the check-pass note).
+- Why: output through the check passed 200,000 in 7 of the last 10 feature rows (ui-groups 396,622) while only 3 of 10 totals went over 1.2M, so the note changes no decision.
+- Fix: accepted when over the next 5 feature runs every check-pass overrun note matches a final total over the medium budget, or only the final total-token budget line remains.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-22
+
+### A records check is voided by build/dev/carat.timing escaping the check clone (sprint-27-records note 1)
+- Location: `tools/run_state.sh:885` (`escaped_note`), the stage that writes `build/dev/carat.timing`; seen at 1df857f64fc4 in `tmp/.lane-sprint-27-records`.
+- Why: the check at 1df857f64fc4 recorded a security-escape note for `build/dev/carat.timing`, a path changed outside the check clone, so its passes were rewritten as not passing for a timing file no stage should write in the lane.
+- Fix: find the stage writing the timing file through the lane instead of the clone and keep it inside the clone; accepted when a records run's check records no security-escape note and a tools-test case shows the timing file stays in the clone.
+- Category: pipeline
+- Added: 2026-11-22
+
+### A check is voided as escaped for a file the dev-build stage is declared to write (sprint-27-records note 1, security-escape)
+- Location: `tools/run_state.sh:890` (the `security-escape` note) against `tools/run_state.sh:1659` (`dev-build` lists `build/dev/carat.timing`)
+- Why: sprint-27-records recorded `escaped check` at 1df857f64fc4 for the lane's own `build/dev/carat.timing`, a declared output of `dev-build`, so a passing check can be voided and rerun.
+- Fix: resolve the lane's `build/` link before comparing escaped paths with the stage's declared outputs; accepted when a tools-test check in a lane worktree writing `build/dev/carat.timing` records no `security-escape` note while one writing under `tmp/.toolchain` still does (pipeline, T1, critical b).
+- Category: security
+- Added: 2026-11-22

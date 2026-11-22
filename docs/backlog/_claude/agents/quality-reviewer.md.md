@@ -1,19 +1,5 @@
 # Backlog: .claude/agents/quality-reviewer.md
 
-### A security finding both reviewers missed may go unrecorded (`sprint-security` quality advisory)
-- Location: .claude/agents/quality-reviewer.md:41
-- Why: "Record what both missed the same way" now follows the disputed-only form, so a security finding both missed may be noted with a disputed: prefix or not at all.
-- Fix: say a missed finding is noted as note CHANGE security "FINDING" (quality as in Periodic mode step 4).
-- Category: security
-- Added: 2026-11-17
-
-### The quality reviewer investigates findings it hands to security (ci-trust-gaps retro)
-- Location: `.claude/agents/quality-reviewer.md`
-- Why: in ci-trust-gaps quality note 1 (a replace ref past fsck, marked security's to judge) was the Medium (8) security then blocked on, the run's 1 rework round; reviews 50,343 of 252,190 output tokens (20.0 percent) and 27.3 percent of calls; quality first pass 77/143, the lowest gate.
-- Fix: a finding the quality reviewer marks security's to judge is named, not investigated; accepted when reviews fall below 15 percent of output tokens on the next three pipeline rows with security never skipped.
-- Category: security
-- Added: 2026-11-17
-
 ### The quality reviewer raises blocking parity bugs one round at a time (vim-folds-a retro 24)
 
 - Location: .claude/agents/quality-reviewer.md and the quality phase of .claude/workflows/deliver-change.js.

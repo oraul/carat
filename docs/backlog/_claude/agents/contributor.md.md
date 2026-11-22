@@ -182,3 +182,11 @@
 - Also: tools/open_pr.sh
 - Category: pipeline
 - Added: 2026-11-21
+
+### The contributor rules card is kept word for word in two places (review-in-openspec retro note 11, card-twice)
+- Location: `.claude/agents/contributor.md` and `CONTRIBUTOR_CARD` at `.claude/workflows/deliver-change.js:879`
+- Why: the same card text lives in both files and contributor.md has no room left under its docs-lint budget, so a rule edited in one place drifts from the other.
+- Fix: keep the card's text in one tracked place; accepted when contributor.md keeps at least 500 bytes under its docs-lint budget and a tools-test case shows every implement start still receives each rule (pipeline, T1, critical b).
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-22

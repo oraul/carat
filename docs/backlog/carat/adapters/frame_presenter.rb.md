@@ -330,3 +330,11 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Fix: read the key after build_key, or say in a comment that it is the painter's live array.
 - Category: editor
 - Added: 2026-11-22
+
+### The visual indicator is dim but ModeMsg and MoreMsg are still unused
+- Location: `carat/adapters/frame_presenter.rb` (`paint_message`), `carat/domain/themes.rb` (`MESSAGE_MODE`, `MESSAGE_MORE` rows)
+- Why: the `-- VISUAL --` indicators now use `MsgDim`, so `ModeMsg` (bold) has no caller and `MoreMsg` still has none; the theme rows are dead until a change uses or drops them.
+- Fix: either draw the indicator in `ModeMsg` with a dim row, or remove the two groups with the renumbering, and add a `-- More --` pager only with a change that needs it.
+- Also: carat/domain/themes.rb
+- Category: editor
+- Added: 2026-11-22

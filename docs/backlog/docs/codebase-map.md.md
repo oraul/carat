@@ -478,3 +478,12 @@ Docs currency: the Tests line still describes test/editor_palette.rb as opening,
 - Fix: list the command names and point to the header.
 - Category: design
 - Added: 2026-11-21
+
+### The code map and the docs-lint header lag the code at docs/codebase-map.md:126 (sprint-28 sweep quality, notes 15, 25, 44, 45)
+
+- Location: docs/codebase-map.md:126 (EditorState lacks replace_cmdline, cmdline_position, cmdline_position=), :422 (Replacement lacks too_long?, MAX_BYTES, TOO_LONG), :339 (Selection lacks numbered_delete?), :50 (gates.sh lacks findings), :56; tools/docs_lint.sh:23
+- Why: the map names public methods and gates; the docs-lint header and map say a backlog sprint holds 0 to 2 items while check_queue passes 3.
+- Fix: add the names; say 0 to 3 in each lane.
+- Also: tools/docs_lint.sh
+- Category: design
+- Added: 2026-11-22

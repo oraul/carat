@@ -141,3 +141,11 @@
 - Fix: match [1-9][0-9]{0,2}
 - Category: pipeline
 - Added: 2026-11-22
+
+### open_pr.sh message skips the blank-line check at tools/open_pr.sh:186 (sprint-28 sweep quality, note 55)
+
+- Location: tools/open_pr.sh:186, :215
+- Why: message drops two lines without checking line 2 is blank, which read refuses.
+- Fix: refuse in message too, or share one helper.
+- Category: pipeline
+- Added: 2026-11-22

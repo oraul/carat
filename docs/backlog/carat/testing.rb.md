@@ -76,3 +76,11 @@
 - Also: test/lint.rb, CLAUDE.md, tools/run_tests.sh
 - Category: editor
 - Added: 2026-11-21
+
+### assert_true passes any truthy value at carat/testing.rb:30 (sprint-28 sweep quality, note 40)
+
+- Location: carat/testing.rb:30
+- Why: a predicate returning 0, "", or an object passes its test.
+- Fix: pass only on value == true and rerun the snapshots.
+- Category: editor
+- Added: 2026-11-22
