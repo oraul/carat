@@ -80,9 +80,10 @@
 #                merge BODY, never the branch's tools/gates.sh merge; sh
 #                tools/ci_wait.sh N; sh tools/open_pr.sh message CHANGE
 #                SHA, SHA 40 digits, after no cd into a worktree (main's
-#                copy, never the branch's); git push origin --delete BRANCH, git
-#                checkout -q main, git merge -q --ff-only origin/main, git
-#                branch -D BRANCH, BRANCH a Conventional Branch; git
+#                copy, never the branch's); git checkout -q main, git
+#                merge -q --ff-only origin/main, git branch -D BRANCH,
+#                BRANCH a Conventional Branch, and no git push (the
+#                repository deletes a merged branch itself); git
 #                hash-object --stdin, with no other option; git fsck
 #                --no-dangling --no-progress origin/main, which writes
 #                nothing, the green line's hash of every object before
@@ -104,6 +105,14 @@
 #                sh tools/open_pr.sh write CHANGE TITLE and wait CHANGE
 #                [SECONDS], which push nothing; never a pull request
 #                create tool or API
+#   runner       adds make doctor and make toolchain (no option but -s,
+#                no variable); sh tools/run_state.sh show get trusted
+#                plan-needed review-due, lane-open and init as CHANGE
+#                BRANCH (a Conventional Branch or main), and the
+#                workflow's records phase review metric ci-stages note
+#                and set CHANGE records skip: the resume and record
+#                starts and sprint planning's bookkeeping starts, which
+#                write no file and run no tools/gates.sh
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads, or CHANGE NAME merged (NAME merge,
@@ -166,7 +175,7 @@ refuse() {
 
 # close is the read profile with the closing phase records (run_state_form).
 closing=0
-case "$profile" in read|merger|contributor) ;; close) shown=close closing=1 profile=read ;; *) refuse "no such profile" ;; esac
+case "$profile" in read|merger|contributor|runner) ;; close) shown=close closing=1 profile=read ;; *) refuse "no such profile" ;; esac
 
 # The first JSON string field KEY of the input with its escapes undone; an
 # escaped newline becomes the character \001, which lex reads as the shell
@@ -585,10 +594,6 @@ git_form() {
       [ -n "$wt" ] && worktree "$wt" || refuse "git checkout outside a worktree tmp/.NAME"
       options_in "-q --quiet --detach -f --force origin/main" "$@" || refuse "git checkout other than of origin/main"
       case " $* " in *" origin/main "*) ;; *) refuse "git checkout other than of origin/main" ;; esac ;;
-    push)
-      only_profiles merger "git push"
-      [ $# -eq 3 ] && [ "$1" = origin ] && [ "$2" = --delete ] && matches "$3" "$BRANCH" ||
-        refuse "git push other than the deletion of a Conventional Branch" ;;
     merge)
       only_profiles "merger contributor" "git merge"
       if [ "$profile" = merger ]; then
@@ -642,9 +647,14 @@ make_var() {
 }
 
 make_form() {
-  only_profiles "read contributor" make
+  only_profiles "read contributor runner" make
   shift
   while [ $# -gt 0 ]; do
+    if [ "$profile" = runner ]; then
+      [ "$1" = -s ] || options_in "doctor toolchain" "$1" || refuse "make other than doctor or toolchain"
+      shift
+      continue
+    fi
     case "$1" in
       -s) ;;
       -k) only_profiles contributor "make -k" ;;
@@ -668,6 +678,16 @@ run_state_form() {
     read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
+    # The runner: the resume recipe and the records the workflow wrote
+    # (cheap-tier), the note text data as for read.
+    runner:show|runner:get|runner:trusted|runner:plan-needed|runner:review-due|runner:phase|runner:review|runner:metric|runner:ci-stages) ;;
+    runner:note) [ $# -ne 4 ] || data_at=6 ;;
+    runner:lane-open|runner:init)
+      [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && { [ "$3" = main ] || matches "$3" "$BRANCH"; } ||
+        refuse "tools/run_state.sh $verb other than CHANGE BRANCH" ;;
+    runner:set)
+      [ $# -eq 4 ] && matches "$2" "$CHANGE_NAME" && [ "$3" = records ] && [ "$4" = skip ] ||
+        refuse "tools/run_state.sh set other than CHANGE records skip" ;;
     contributor:check)
       # The contributor checks its own head (contributor-self-check): never
       # with a COMMIT, which would make the check skip or carry stage records.
@@ -781,6 +801,7 @@ script_form() {
   case "$script" in
     tools/run_state.sh) run_state_form "$@" ;;
     tools/gates.sh)
+      [ "$profile" != runner ] || refuse "tools/gates.sh is not a command of this profile"
       [ "$profile:${1:-}" != merger:merge ] || refuse "the branch's tools/gates.sh merge; the merger runs $MERGE_GATES, the copy of origin/main"
       gates_form "$@" ;;
     "$MERGE_GATES")
