@@ -164,7 +164,7 @@ module AdaptersConfigGatewayTest
     # Scenario: The user file binds a write, the project file unbinds one.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.normal Q quit.all\n")
-    files.put(PROJECT, "keymap.normal j file.save\nkeymap.insert x quit.write_all\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k cmdline.history_older\nkeymap.visual q window.quit\nkeymap.normal ZZ none\nkeymap.normal K cursor.down\nkeymap.normal ; mode.cmdline\n")
+    files.put(PROJECT, "keymap.normal j file.save\nkeymap.insert x quit.write_all\nkeymap.cmdline <Space> cmdline.execute\nkeymap.normal k cmdline.history_older\nkeymap.visual q window.quit\nkeymap.normal ZZ none\nkeymap.normal K cursor.down\nkeymap.normal <F5> mode.cmdline\n")
     config = load(files)
     bound = []
     i = 0
@@ -174,7 +174,7 @@ module AdaptersConfigGatewayTest
       i += 1
     end
     refused = "is not bound from a project file"
-    t.assert_equal([["~/.config/carat/caratrc normal Q quit.all", ".caratrc normal ZZ none", ".caratrc normal K cursor.down", ".caratrc normal ; mode.cmdline"], [".caratrc:1: file.save #{refused}", ".caratrc:2: quit.write_all #{refused}", ".caratrc:3: cmdline.execute #{refused}", ".caratrc:4: cmdline.history_older #{refused}", ".caratrc:5: window.quit #{refused}"]], [bound, config.report], "a project file cannot bind a write, a quit, or the command line")
+    t.assert_equal([["~/.config/carat/caratrc normal Q quit.all", ".caratrc normal ZZ none", ".caratrc normal K cursor.down", ".caratrc normal <F5> mode.cmdline"], [".caratrc:1: file.save #{refused}", ".caratrc:2: quit.write_all #{refused}", ".caratrc:3: cmdline.execute #{refused}", ".caratrc:4: cmdline.history_older #{refused}", ".caratrc:5: window.quit #{refused}"]], [bound, config.report], "a project file cannot bind a write, a quit, or the command line")
 
     # Scenario: A plugin's file action in the project file.
     # Scenario: The project file unbinds the command line.
@@ -223,16 +223,56 @@ module AdaptersConfigGatewayTest
     config = load(files)
     t.assert_equal([[".caratrc visual_line <F2> palette.open", ".caratrc normal <F2> mode.cmdline"], [".caratrc:1: mode.cmdline is not bound in insert mode from a project file", ".caratrc:2: palette.open is not bound in completion mode from a project file", ".caratrc:3: palette.open is not bound in operator_pending mode from a project file", ".caratrc:4: mode.cmdline is not bound in cmdline mode from a project file", ".caratrc:5: <F3> runs palette.open, #{held}"]], [project_bindings(config), config.report], "a project file binds the command line and the palette only in normal and visual modes")
 
+    # Scenario: The project file binds insert-mode Enter to normal mode.
+    # A key typed while entering text keeps its mode: insert-mode <CR> on
+    # mode.normal, or on any family but insert, cursor, scroll, completion,
+    # and the palette list, would make the letters typed next normal-mode
+    # keys, which a project file can bind to a prompt.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.insert <CR> mode.normal\nkeymap.insert <C-k> cursor.down\nkeymap.replace <CR> mode.normal\nkeymap.cmdline <C-k> mode.visual\nkeymap.completion <C-k> window.split\nkeymap.insert <F6> search.forward\nkeymap.cmdline s palette.next\nkeymap.completion <C-g> completion.next\nkeymap.insert <F7> insert.newline\nkeymap.insert <PageUp> scroll.page_down\nkeymap.insert <F8> cursor.line_start\n")
+    config = load(files)
+    left = "from a project file"
+    t.assert_equal([[".caratrc insert <C-k> cursor.down", ".caratrc completion <C-g> completion.next", ".caratrc insert <F7> insert.newline", ".caratrc insert <PageUp> scroll.page_down"], [".caratrc:1: mode.normal is not bound in insert mode #{left}", ".caratrc:3: mode.normal is not bound in replace mode #{left}", ".caratrc:4: mode.visual is not bound in cmdline mode #{left}", ".caratrc:5: window.split is not bound in completion mode #{left}", ".caratrc:6: search.forward is not bound in insert mode #{left}", ".caratrc:7: palette.next is not bound in cmdline mode #{left}", ".caratrc:11: cursor.line_start is not bound in insert mode #{left}"]], [project_bindings(config), config.report], "a project file cannot leave a text-entry mode")
+
+    # Scenario: The project file unbinds insert-mode Escape.
+    # The defaults' <Esc> of insert and cmdline mode runs mode.normal,
+    # which a project file may not bind there, so it is held.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.insert <Esc> none\nkeymap.cmdline <Esc> cursor.left\nkeymap.insert <Esc>x insert.tab\nkeymap.completion <Esc> completion.next\n")
+    config = load(files)
+    t.assert_equal([[], [".caratrc:1: <Esc> runs mode.normal, #{held}", ".caratrc:2: <Esc> runs mode.normal, #{held}", ".caratrc:3: <Esc>x overlaps keys that run mode.normal, #{held}", ".caratrc:4: <Esc> runs completion.close, #{held}"]], [project_bindings(config), config.report], "a project file cannot unbind the Esc of insert mode, cmdline mode, or the completion popup")
+
+    # The refused lines leave insert-mode <CR> splitting the line and
+    # <Esc> leaving insert mode, so the x typed after <CR> is text.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("keymap.insert <CR> mode.normal\nkeymap.insert <Esc> none\n"), rows: 10, cols: 60, plugins: [])
+    h.open("a.txt")
+    h.type("i<CR>x")
+    inserting = h.mode
+    h.type("<Esc>")
+    t.assert_equal([:insert, :normal, ["", "xone"]], [inserting, h.mode, h.lines], "a refused project line leaves insert-mode <CR> splitting the line and <Esc> leaving insert mode")
+
+    # Scenario: The project file binds a prompt to keys typed while editing text.
+    # Text typed in normal mode by mistake, a multi-byte letter included,
+    # or an arrow pressed to move must not open a prompt whose Enter runs
+    # the rest: only keys holding a function, control, or Alt key do.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.normal ; mode.cmdline\nkeymap.normal <Space>x palette.open\nkeymap.normal <C-k>p palette.open\nkeymap.visual g<CR> mode.cmdline\nkeymap.visual_block <Tab><BS> palette.open\nkeymap.normal <F4> mode.cmdline\nkeymap.normal é palette.open\nkeymap.normal <Up> mode.cmdline\nkeymap.normal <Esc><Del> palette.open\nkeymap.visual <M-p> palette.open\n")
+    config = load(files)
+    typed = "is typed while editing text, so a project file may not bind it to"
+    t.assert_equal([[".caratrc normal <C-k>p palette.open", ".caratrc normal <F4> mode.cmdline", ".caratrc visual <M-p> palette.open"], [".caratrc:1: ; #{typed} mode.cmdline", ".caratrc:2: <Space>x #{typed} palette.open", ".caratrc:4: g<CR> #{typed} mode.cmdline", ".caratrc:5: <Tab><BS> #{typed} palette.open", ".caratrc:7: é #{typed} palette.open", ".caratrc:8: <Up> #{typed} mode.cmdline", ".caratrc:9: <Esc><Del> #{typed} palette.open"]], [project_bindings(config), config.report], "a project file cannot bind a prompt to keys typed while editing text")
+
     # Scenario: A project leader leaves the leader bindings where they were.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.leader ,\n")
     files.put(PROJECT, "keymap.leader d\n")
     config = load(files)
-    t.assert_equal([",", [".caratrc:1: keymap.leader is not read from a project file"]], [D::Keymap.leader_from(config), config.report], "a project leader leaves <leader>fs and <leader>qw on the user's leader")
+    t.assert_equal([",", [".caratrc:1: keymap.leader is not read from a project file"]], [config.leader, config.report], "a project leader leaves <leader>fs and <leader>qw on the user's leader")
     files = Carat::Doubles::MemoryFiles.new
     files.put(PROJECT, "keymap.leader f\n")
     config = load(files)
-    t.assert_equal(["<Space>", [".caratrc:1: keymap.leader is not read from a project file"]], [D::Keymap.leader_from(config), config.report], "a project leader leaves the default leader")
+    t.assert_equal(["<Space>", [".caratrc:1: keymap.leader is not read from a project file"]], [config.leader, config.report], "a project leader leaves the default leader")
 
     # Hostile files: rows are [label, arrangement, [tabstop, problems]].
     t.table([
