@@ -12,3 +12,9 @@
 ## 3. Docs
 
 - [x] 3.1 Add the two rows to `docs/actions.md` and `docs/compatibility.md`, a paragraph to `docs/plugins.md`, and update `docs/codebase-map.md` (area 15) and README.md
+
+## Quality review
+
+- [x] 4.1 The proposal did not account for the wording trim of `docs/architecture.md` that brings it under its docs-lint budget (`proposal.md`, Impact), fixed
+- [x] 4.2 `Space f w` on a blank does not take the next word to its right as Neovim's `<cword>` does, recorded in `docs/findings/finder-switch.md`
+- [x] 4.3 `Matcher.word_at` counts every non-ASCII character as a word character, punctuation such as a typographic quote included, recorded in `docs/findings/finder-switch.md`

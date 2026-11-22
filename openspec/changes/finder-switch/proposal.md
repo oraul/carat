@@ -27,4 +27,4 @@ Assumptions: the word under the cursor is the keyword run around the cursor only
 - Code: `carat/plugins/finder/plugin.rb`, `carat/plugins/finder/matcher.rb`.
 - Tests: `test/editor_finder.rb`, `test/plugins_finder_matcher.rb` and their snapshots.
 - Docs: `docs/actions.md`, `docs/compatibility.md`, `docs/plugins.md`, `docs/codebase-map.md`, README.md.
-- docs/architecture.md: unchanged, it describes the plugin host and the API, which this change leaves alone.
+- docs/architecture.md: one wording trim of 9 bytes in the configuration section (no content lost), since main stood 8 bytes over its docs-lint budget and `make docs-lint` is a stage of the check; the budget is not raised. README.md and the code map stay as the change leaves them, since no behavior of that section moves.
