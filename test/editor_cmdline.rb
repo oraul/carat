@@ -129,6 +129,7 @@ module EditorCmdlineTest
     files.put("b.txt", "zz\n")
     h = editor(files)
     h.type(":e b.txt<CR>")
+    # Scenario "Open another file" (command-line-mode).
     t.assert_equal(["b.txt", ["zz"], [0, 0], "\"b.txt\" 1L, 3B"], [h.buffer.path, h.lines, h.cursor, h.message_row], "edit opens another file")
     t.assert_equal("  1 zz", h.row(1), "the screen shows the other file under the buffer tabs")
     files.put("l.txt", "ok\ncaf\xE9\n")
@@ -141,6 +142,7 @@ module EditorCmdlineTest
     t.assert_equal("k\ncaf\xE9\n", files.get("l.txt"), "an edit elsewhere keeps the illegal byte")
     h.type(":e b.txt<CR>")
     h.type(":e new.txt<CR>")
+    # Scenario "Open a new file" (command-line-mode).
     t.assert_equal(["new.txt", [""], "\"new.txt\" [New]"], [h.buffer.path, h.lines, h.message_row], "edit starts a new file")
     h.type(":set nohidden<CR>ix<Esc>:e b.txt<CR>")
     t.assert_equal(["✖ " + E37, "new.txt"], [h.message_row, h.buffer.path], "edit refused while modified")
@@ -191,6 +193,7 @@ module EditorCmdlineTest
     files.put("b.txt", "zz\n")
     h = editor(files)
     h.type(":sp b.txt<CR><C-w>j:e b.txt<CR>")
+    # Scenario "Edit a listed buffer" (command-line-mode).
     t.assert_equal([["zz"], ["b.txt", "b.txt"], ["a.txt", "b.txt"]], [h.lines, [Carat::Json.element(h.windows[0], 4), Carat::Json.element(h.windows[1], 4)], h.buffer_paths], "e shows the listed buffer in the window and keeps the one it left hidden")
     t.assert_true(h.state.tab.layout.window_at(h.state.tab.current).buffer.equal?(h.state.tab.layout.window_at(h.state.tab.previous).buffer), "both windows share one buffer")
     files.put("a.txt", "fresh\n")
@@ -203,6 +206,7 @@ module EditorCmdlineTest
     h.type("<C-w>s")
     files.put("a.txt", "new text\n")
     h.type(":e<CR>")
+    # Scenario "Reload is seen by every window" (command-line-mode).
     t.assert_equal([["new text"], "  1 new text", "  1 new text"], [h.lines, h.row(1), h.row(6)], "e reloads the file for every window showing it, under their winbars")
     files = files_with("ab\n")
     files.put("b.txt", "zz\n")

@@ -122,6 +122,7 @@ module EditorBuffersTest
       [":buffer N", ":e b.txt<CR>:buffer 1<CR>", ["a.txt", [0, 0], ""]],
       [":b of the current buffer stays", ":b 1<CR>", ["a.txt", [0, 0], ""]],
       [":b alone stays", ":e b.txt<CR>:b<CR>", ["b.txt", [0, 0], ""]],
+      # Scenario "A missing number" (buffer-list).
       [":b of no buffer", ":b 9<CR>", ["a.txt", [0, 0], "E86: Buffer 9 does not exist"]],
       [":b 0 names no buffer", ":b 0<CR>", ["a.txt", [0, 0], "E86: Buffer 0 does not exist"]],
       [":b with a name", ":b b.txt<CR>", ["a.txt", [0, 0], "Not implemented: :buffer b.txt"]],
@@ -146,6 +147,7 @@ module EditorBuffersTest
       h = session(keys)
       [path(h), h.cursor, h.message]
     end
+    # Scenario "Forced switch keeps the changes hidden" (buffer-list).
     h = session(":e b.txt<CR>:b 1<CR>x:bn!<CR>:ls<CR>")
     t.assert_equal("  1  h + \"a.txt\"                        line 1\n  2 %a   \"b.txt\"                        line 1", h.message, "the buffer left with the bang is hidden and modified")
     h.type(":b 1<CR>")
@@ -188,9 +190,9 @@ module EditorBuffersTest
     h = session("x:e b.txt<CR>:ls<CR>")
     t.assert_equal("  1  h + \"a.txt\"                        line 1\n  2 %a   \"b.txt\"                        line 1", h.message, "the buffer left under hidden is hidden and modified")
     h = session("x:e b.txt<CR>")
-    t.assert_equal("b.txt", path(h), "A modified hidden buffer is named by :qa under hidden: the window shows b.txt first")
+    t.assert_equal("b.txt", path(h), "A hidden modified buffer is named when quitting: the window shows b.txt first")
     h.type(":qa<CR>")
-    t.assert_equal([false, unsaved("a.txt"), "a.txt"], [h.quit?, h.message, path(h)], "A modified hidden buffer is named by :qa under hidden")
+    t.assert_equal([false, unsaved("a.txt"), "a.txt"], [h.quit?, h.message, path(h)], "A hidden modified buffer is named when quitting: :qa")
 
     # Deleting: rows are [label, keys, [listed paths, path, windows, tab pages, message]].
     # Under option.gt buffers no window closes. Scenarios:

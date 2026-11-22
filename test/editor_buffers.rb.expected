@@ -82,8 +82,8 @@ ok   Set hidden changes the next switch: off, then on again
 ok   Set hidden changes the next switch: the first :bn is refused
 ok   Set hidden changes the next switch: the second :bn shows b.txt
 ok   the buffer left under hidden is hidden and modified
-ok   A modified hidden buffer is named by :qa under hidden: the window shows b.txt first
-ok   A modified hidden buffer is named by :qa under hidden
+ok   A hidden modified buffer is named when quitting: the window shows b.txt first
+ok   A hidden modified buffer is named when quitting: :qa
 ok   :bd shows the next buffer
 ok   :bd of the last in the list shows the one before
 ok   :bdelete
