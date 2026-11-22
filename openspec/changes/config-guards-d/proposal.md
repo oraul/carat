@@ -6,8 +6,8 @@ An untrusted project `.caratrc` can still chain its allowed bindings into runnin
 
 ## What Changes
 
-- In the text-entry modes (`insert`, `replace`, `cmdline`, and the `completion` layer) a project file binds only actions that keep the mode: the `insert.`, `cursor.`, `scroll.`, and `completion.` families and `palette.next` and `palette.previous`. Any other action, `mode.normal` included, is reported as "<action> is not bound in <mode> mode from a project file" and ignored. Since a key the defaults or the user bind to an action the project could not bind is held, insert-mode and cmdline-mode `<Esc>` (`mode.normal`) are now held too: a project file may not unbind or rebind them.
-- A project file binds `mode.cmdline` or `palette.open` only to keys that are not typed as text: keys whose every key is a printable character, Tab, Enter, or Backspace are refused as "<keys> is typed as text, so a project file may not bind it to <action>"; `<F4>` or `<C-k>p` stay allowed in normal and visual modes.
+- In the text-entry modes (`insert`, `replace`, `cmdline`, and the `completion` layer) a project file binds only the actions, each named whole in `TEXT_BINDABLE`, that edit, move, scroll, or complete in insert mode and keep the mode: the insert and completion actions, the four arrows' cursor actions, and the page scrolls. Any other action, `mode.normal`, `search.forward`, and `palette.next` included (a letter on `palette.next` would move the palette's choice under the filter typed), is reported as "<action> is not bound in <mode> mode from a project file" and ignored. Since a key the defaults or the user bind to an action the project could not bind is held, insert-mode and cmdline-mode `<Esc>` (`mode.normal`) and cmdline-mode `<C-n>` and `<C-p>` (`palette.next`, `palette.previous`) are now held too, and so is the completion popup's `<Esc>` (`completion.close`), so a project file cannot trap the user in insert mode or the popup.
+- A project file binds `mode.cmdline` or `palette.open` only to keys that hold a function key, an Alt key, or a control key other than Tab, Enter, Backspace, and Escape: keys made only of keys pressed while editing text (printable characters, a multi-byte one included, Tab, Enter, Backspace, Escape, the arrows, Home, End, the Page keys, Delete) are refused as "<keys> is typed while editing text, so a project file may not bind it to <action>"; `<F4>`, `<C-k>p`, or `<M-p>` stay allowed in normal and visual modes.
 - `Keymap.leader_from` is removed; its callers read `Config#leader`.
 - `Config`'s settings are read only through `count` and `line_at` (the language gateway's direct `settings.length` read becomes `count`), and the pin's comment says why it stays `Array[untyped]`: Spinel pins arrays only of builtin element types, so the typed reader `line_at` is what types the lines.
 - Docs: README's project-file sentence, `docs/architecture.md` section 7's project-file line, `docs/codebase-map.md` (`config.rb`, `keymap.rb`).
@@ -20,7 +20,7 @@ None.
 
 ### Modified Capabilities
 
-- `config-files`: ADDED requirements "A project file cannot leave a text-entry mode" and "A project file cannot open a prompt from keys typed as text".
+- `config-files`: ADDED requirements "A project file cannot leave a text-entry mode" and "A project file cannot open a prompt from keys typed while editing text".
 
 ## Out of scope
 
@@ -28,12 +28,12 @@ None.
 - A default or user binding of a prompt to a printable key (`<leader>p palette.open`) stays theirs: the rules are for the project file only, and such a key is not held.
 - No `tools/rules.sh` edit; no file of the feature lane.
 - Assumption: the text-entry modes are the modes the grammar does not read (`Mode.grammar?` false): insert, replace, cmdline, and the completion layer; `keymap.pick` binds in a pick list's normal mode and is not one.
-- Assumption: "a printable key" is a binding every key of which can be produced by typing text (printable characters, Tab, Enter, Backspace), since only such a sequence can fire while the user types text; a sequence holding a control, Alt, or special key cannot.
+- Assumption: "a printable key" is read as a binding every key of which is pressed while editing text (printable characters, Tab, Enter, Backspace, Escape, the arrows and the other editing keys), since only such a sequence fires while the user types text or moves by habit; a sequence holding a function, control, or Alt key cannot.
 - Assumption: the "Config pins its settings as untyped" heading is answered by the documented pattern of `docs/spinel-notes.md` (a pinned `Array[untyped]` read through a typed reader), not by a new list class, since `Config` already has the typed reader.
 
 ## Impact
 
-- README.md: the project-file sentence of the configuration section names the text-entry rule and the typed-text rule.
+- README.md: the project-file sentence of the configuration section names the text-entry rule and the rule on keys typed while editing text.
 - docs/architecture.md: section 7's project-file line says the same.
 - docs/codebase-map.md: the `config.rb` and `keymap.rb` lines.
 - docs/compatibility.md and docs/actions.md: unchanged, no Neovim command or bound action changes.

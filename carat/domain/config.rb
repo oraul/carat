@@ -72,12 +72,26 @@ module Carat
       # over insert mode.
       TEXT_MODES = ["insert", "replace", "cmdline", "completion"]
 
-      # The actions a project file may bind in TEXT_MODES, entries read as
-      # PROJECT_BINDABLE's: the ones that keep the mode. Any other, a mode
-      # action such as mode.normal or a search that opens its prompt, would
-      # leave it, so a key typed while entering text, such as <CR>, would
-      # turn the letters typed after it into normal-mode keys.
-      TEXT_BINDABLE = ["completion.", "cursor.", "insert.", "palette.next", "palette.previous", "scroll."]
+      # The actions a project file may bind in TEXT_MODES, each named whole
+      # so an action added later is refused there until it is listed: the
+      # ones that edit, move, scroll, or complete in insert mode and keep
+      # the mode. Any other, a mode action such as mode.normal or a search
+      # that opens its prompt, would leave it, so a key typed while
+      # entering text, such as <CR>, would turn the letters typed after it
+      # into normal-mode keys; palette.next on a letter would move the
+      # palette's choice under the filter typed.
+      TEXT_BINDABLE = [
+        "completion.close", "completion.insert", "completion.keyword_next",
+        "completion.keyword_previous", "completion.next", "completion.previous",
+        "completion.replace", "cursor.down", "cursor.left", "cursor.right",
+        "cursor.up", "insert.backspace", "insert.delete", "insert.newline",
+        "insert.tab", "scroll.page_down", "scroll.page_up"
+      ]
+
+      # The action that closes the completion popup and stays in insert
+      # mode: a project file may bind it, but may not take it from the key
+      # the defaults or the user gave it, as that key leaves the popup.
+      CLOSE_COMPLETION = "completion.close"
 
       # The keymap value that removes a binding.
       NONE = "none"
@@ -226,7 +240,13 @@ module Carat
       # Whether a project file may bind the action (PROJECT_BINDABLE).
       #: (String) -> bool
       def self.project_bindable?(action)
-        Config.listed?(PROJECT_BINDABLE, action)
+        i = 0
+        while i < PROJECT_BINDABLE.length
+          entry = PROJECT_BINDABLE[i]
+          return true if entry.end_with?(".") ? action.start_with?(entry) : action == entry
+          i += 1
+        end
+        false
       end
 
       # Whether a project file may bind the action in the mode: an action
@@ -235,21 +255,8 @@ module Carat
       #: (String, String) -> bool
       def self.project_bindable_in?(mode, action)
         return false unless Config.project_bindable?(action)
-        return Config.listed?(TEXT_BINDABLE, action) if TEXT_MODES.include?(mode)
+        return TEXT_BINDABLE.include?(action) if TEXT_MODES.include?(mode)
         !PROMPT_ACTIONS.include?(action) || PROMPT_MODES.include?(mode)
-      end
-
-      # Whether the list names the action: an entry ending in a dot names a
-      # family, any other entry one action.
-      #: (Array[String], String) -> bool
-      def self.listed?(entries, action)
-        i = 0
-        while i < entries.length
-          entry = entries[i]
-          return true if entry.end_with?(".") ? action.start_with?(entry) : action == entry
-          i += 1
-        end
-        false
       end
 
       # Every problem in file and line order, two of one line in the order
@@ -349,8 +356,9 @@ module Carat
       # could write any file the user can. So is an action outside
       # PROJECT_BINDABLE, in any mode, one outside TEXT_BINDABLE in
       # TEXT_MODES, and one of PROMPT_ACTIONS outside PROMPT_MODES or on
-      # keys typed as text; a binding, none included, of keys held (held_keys),
-      # which would take the command line, a write, or a quit from the
+      # keys typed while editing text (typed_while_editing?); a binding,
+      # none included, of keys held (held_keys), which would take the
+      # command line, a write, a quit, or the popup's close from the
       # user; a binding but none of keys that start with held keys or begin
       # them, which would make the held keys a prefix or wait on them; and
       # a leader, which would move the defaults' and the user's <leader>
@@ -366,7 +374,7 @@ module Carat
           return "key sequences are not read from a project file" unless RcParser.key?(value, 0, value.bytesize)
           return "#{value} is not bound from a project file" unless Config.project_bindable?(value)
           return "#{value} is not bound in #{line.name} mode from a project file" unless Config.project_bindable_in?(line.name, value)
-          return "#{keys} is typed as text, so a project file may not bind it to #{value}" if PROMPT_ACTIONS.include?(value) && typed_as_text?(keys, leader)
+          return "#{keys} is typed while editing text, so a project file may not bind it to #{value}" if PROMPT_ACTIONS.include?(value) && typed_while_editing?(keys, leader)
         end
         key = held_key(line.name, keys, leader)
         action = held[key]
@@ -377,12 +385,15 @@ module Carat
         "#{keys} overlaps keys that run #{held[overlap]}, which a project file may not unbind or rebind"
       end
 
-      # Whether every key of the keys, under the leader, is one typing text
-      # sends: a printable character, Tab, Enter, or Backspace. Only such
-      # keys fire while text is typed in normal mode by mistake; keys that
-      # do not parse bind nothing, and the keymap notes them.
+      # Whether every key of the keys, under the leader, is one pressed
+      # while editing text: any key but a function key, an Alt key, or a
+      # control key other than Tab, Enter, Backspace, and Escape, so a
+      # printable character, an arrow, Home, End, a Page key, or Delete.
+      # Only such keys fire while text is typed in normal mode by mistake
+      # or an arrow is pressed to move; keys that do not parse bind
+      # nothing, and the keymap notes them.
       #: (String, String) -> bool
-      def typed_as_text?(keys, leader)
+      def typed_while_editing?(keys, leader)
         parsed = KeyNotation.parse(keys, leader)
         return false unless parsed.ok?
         codes = parsed.codes
@@ -390,7 +401,8 @@ module Carat
         i = 0
         while i < codes.length
           code = codes[i].to_i
-          return false unless Key.printable?(code) || code == Key::TAB || code == Key::CR || code == Key::NL || code == Key::BS || code == Key::CTRL_H
+          return false if (code >= Key::F1 && code <= Key::F12) || Key.alt?(code)
+          return false if code < Key::SPACE && code != Key::TAB && code != Key::NL && code != Key::CR && code != Key::CTRL_H && code != Key::ESC
           i += 1
         end
         true
@@ -413,8 +425,9 @@ module Carat
 
       # The keys of the bindings in effect that a project file may not
       # take, each as held_key, to the action or key sequence they run:
-      # a value it could not bind itself, and the key that opens the
-      # command line. Read once before an untrusted file's lines.
+      # a value it could not bind itself, the key that opens the command
+      # line, and the key that closes the completion popup. Read once
+      # before an untrusted file's lines.
       #: () -> Hash[String, String]
       def held_keys
         bound = Config.no_keys
@@ -426,7 +439,7 @@ module Carat
           if line.scope == "keymap" && line.name != LEADER && line.name != GROUP && words.length == 2
             key = held_key(line.name, words[0].to_s, at)
             value = words[1].to_s
-            if value == NONE || (value != OPEN_COMMAND_LINE && Config.project_bindable_in?(line.name, value))
+            if value == NONE || (value != OPEN_COMMAND_LINE && value != CLOSE_COMPLETION && Config.project_bindable_in?(line.name, value))
               bound.delete(key)
             else
               bound[key] = value

@@ -205,6 +205,15 @@ module UseCasesActionsTest
       i += 1
     end
     t.assert_equal([], stale, "every entry of the project allowlist names a registered action")
+    # So does every entry of the text-entry modes' list, named whole.
+    unregistered = []
+    i = 0
+    while i < D::Config::TEXT_BINDABLE.length
+      entry = D::Config::TEXT_BINDABLE[i]
+      unregistered << entry unless names.include?(entry) && D::Config.project_bindable?(entry)
+      i += 1
+    end
+    t.assert_equal([], unregistered, "every action a project file may bind in a text-entry mode is registered and allowed")
     t.assert_equal(["file.save", "quit.all", "quit.write_all", "window.quit"], refused.sort, "the project allowlist leaves out the writes and the quits")
     t.assert_true(command_line > 0, "the command line has actions a project file may not bind")
     t.assert_equal([false, false, true], [D::Config.project_bindable?("plugin.explorer.delete"), D::Config.project_bindable?("window.quit_all"), D::Config.project_bindable?("window.split")], "a plugin action and an unnamed window action are refused")
