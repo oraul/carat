@@ -1,0 +1,12 @@
+ok   a bordered float with its title, its padding, and its text
+ok   a notification at the top right with its severity as the title
+ok   a plain notification in ASCII
+ok   a float under option.icons ascii in ASCII
+ok   a float and a notification together
+ok   the key: the float's box, then the notification's
+ok   with full off only a row painted again is painted
+ok   a float's corner in FloatBorder, its title in FloatTitle, its text in NormalFloat
+ok   a notification's corner in FloatBorder, its title in DiagnosticWarn, its text in NormalFloat
+ok   a plain notification all in Normal
+ok   boxes? with no float and no notification, with a notification, with a float
+adapters_float_painter: 11 passed, 0 failed

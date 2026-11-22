@@ -11,7 +11,7 @@
 - `FramePresenter` keeps the frame bookkeeping of the boxes (`forget_rows`, `compare_boxes`, `under_float?`, `covers?`, `clear_repainted`, the repainted rows) and reads the key from the float painter; it takes `float_painter:` in place of `notices:`, and its `plain=` passes the flag on to the float painter as it does to the status bar.
 - `EditorAssembly` builds the float painter with the shared line cache and notifications.
 - Tests: `test/adapters_float_painter.rb` paints a float and a notification through the float painter alone (the key, the rows, the plain box); `test/adapters_assembly.rb` checks the float painter holds the one cache and the one notifications. Every frame snapshot stays as it is.
-- Docs: `docs/codebase-map.md` area 13 names the two files and moves the float and notice methods to the float painter's entry; `docs/architecture.md` section 8.2 names `FloatPainter`.
+- Docs: `docs/codebase-map.md` area 13 names the two files and moves the float and notice methods to the float painter's entry; `docs/architecture.md` section 8.2 names `FloatPainter`, two of its phrases shortened (a full-width window, the frames swapped) so the file stays within its docs-lint budget.
 
 ## Out of scope
 

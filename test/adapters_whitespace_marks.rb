@@ -12,7 +12,7 @@ module AdaptersWhitespaceMarksTest
   LISTED = Carat::Domain::BufferList.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: [""], path: nil, line_ending: "\n"))))
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE, buffers: LISTED)
   LAST = Carat::Domain::LastSearch.new
-  P = Carat::Adapters::FramePresenter.new(input: Carat::Domain::InputState.new, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: Carat::Domain::SearchPrompt.new, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: Carat::Domain::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new))
+  P = Carat::Adapters::FramePresenter.new(input: Carat::Domain::InputState.new, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: Carat::Domain::SearchPrompt.new, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: Carat::Domain::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: CACHE, notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new)))
 
   ROWS = 10
   COLS = 16

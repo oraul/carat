@@ -8,6 +8,7 @@
 require_relative "../adapters_assembly"
 require_relative "../adapters_config_gateway"
 require_relative "../adapters_dirty_rows"
+require_relative "../adapters_float_painter"
 require_relative "../adapters_frame_presenter"
 require_relative "../adapters_hover"
 require_relative "../adapters_definitions"
@@ -135,6 +136,7 @@ case ARGV[0]
 when "adapters_assembly" then AdaptersAssemblyTest.main
 when "adapters_config_gateway" then AdaptersConfigGatewayTest.main
 when "adapters_dirty_rows" then AdaptersDirtyRowsTest.main
+when "adapters_float_painter" then AdaptersFloatPainterTest.main
 when "adapters_frame_presenter" then AdaptersFramePresenterTest.main
 when "adapters_hover" then AdaptersHoverTest.main
 when "adapters_definitions" then AdaptersDefinitionsTest.main
