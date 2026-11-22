@@ -141,7 +141,7 @@ Carat writes 24-bit colors when the terminal sets `COLORTERM` to `truecolor` or 
 
 ## File tree
 
-Each tab page has a left and a right sidebar and a bottom panel. A plugin's view opens in one of them, under a header row naming the views opened there; a sidebar keeps its width and the panel its height when windows are equalized, and `<leader>ls`, `<leader>lr`, and `<leader>lp` hide and show them.
+Each tab page has a left and a right sidebar and a bottom panel. A plugin's view opens in one of them, under a header row naming the views opened there; a sidebar is drawn on a darker background than the editor and no separator glyph stands where it meets the editor (the glyph stays under NO_COLOR and at 16 colors, where the backgrounds do not show the edge), while two editor windows side by side keep their `│` line; a sidebar keeps its width and the panel its height when windows are equalized, and `<leader>ls`, `<leader>lr`, and `<leader>lp` hide and show them.
 
 With two or more file windows each shows a winbar on its first row: its file's path and, when the language server offers document symbols, the class and method the cursor is in, as `a.rb › Foo › bar` (`a.rb > Foo > bar` under `option.icons ascii`), the path and the outer names dimmed and the innermost name, or the path when there is none, on the accent the selected buffer tab shares in the current window. `option.breadcrumbs always` shows it on a single window too and `never` turns it off. The selected buffer tab reads by its accent background and bold, with no gem. Every tab ends in a thin `│` (`|`).
 

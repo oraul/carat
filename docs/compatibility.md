@@ -433,7 +433,7 @@ Notifications never animate, so `option.reducedmotion` changes only the progress
 
 ## Windows
 
-Every window shows one buffer from the buffer list with its own cursor and scroll position; a window above another ends in a separator row and windows side by side are separated by one column, both in `WinSeparator`, and one status bar serves them all (Status bar and buffer tabs below). A count before `<C-w>` is taken where Neovim takes one.
+Every window shows one buffer from the buffer list with its own cursor and scroll position; a window above another ends in a separator row and windows side by side are separated by one column, both in `WinSeparator`, except where a sidebar meets the editor, which has no glyph (the sidebar is on a darker background; NO_COLOR and 16 colors keep the glyph), and one status bar serves them all (Status bar and buffer tabs below). A count before `<C-w>` is taken where Neovim takes one.
 
 | Keys | Action name | Behavior | Test |
 | --- | --- | --- | --- |

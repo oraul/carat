@@ -153,7 +153,12 @@ module Carat
       # group drawn over NormalFloat's background, unless it has a
       # background of its own.
       FLOAT_LAYER = COUNT * 2
-      LIMIT = COUNT * 3
+
+      # A cell inside a sidebar window carries its group's id plus this
+      # layer: the group drawn over the sidebar's darker background,
+      # unless it has a background of its own.
+      SIDEBAR_LAYER = COUNT * 3
+      LIMIT = COUNT * 4
 
       NAMES = [
         "Normal", "LineNr", "StatusLine", "ErrorMsg", "NonText", "StatusLineNC", "TabLine", "TabLineSel", "TabLineFill", "Visual", "SignColumn", "Search", "IncSearch",
@@ -241,9 +246,11 @@ module Carat
         NAMES[id]
       end
 
-      # The group of a cell's id, without the cursor-line or float layer.
+      # The group of a cell's id, without the cursor-line, float, or
+      # sidebar layer.
       #: (Integer) -> Integer
       def self.base(id)
+        return id - SIDEBAR_LAYER if id >= SIDEBAR_LAYER
         return id - FLOAT_LAYER if id >= FLOAT_LAYER
         id >= CURSOR_LINE_LAYER ? id - CURSOR_LINE_LAYER : id
       end

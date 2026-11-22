@@ -145,7 +145,7 @@ ok   the rest of the line keeps the normal group
 ok   the tree buffer takes the explorer's filetype
 ok   :syntax off draws the icons plain
 ok   :syntax on colors them again
-ok   the tree has no line numbers and a separator at its right
+ok   the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer
 ok   the left slot's header names the explorer over the tree
 ok   the tree lists both names
 ok   s opens a name with a space in a split

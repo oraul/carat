@@ -163,6 +163,12 @@ ok   a segment of priority 5 is dropped before the encoding
 ok   the bar follows the current window to the scratch title
 ok   the side window has no line numbers while the file window keeps them
 ok   its one-cell sign column still shows
+ok   A sidebar beside the editor draws no separator glyph: a blank cell of the sidebar's layer, the editor's own gutter after it
+ok   the sidebar's text and tilde rows are in its layer, the editor's tilde rows are not
+ok   two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell
+ok   NO_COLOR keeps the glyph at the sidebar's edge
+ok   16 colors keep the glyph at the sidebar's edge
+ok   256 colors draw the blank cell again, the stale glyph gone
 ok   the prompt row and the cursor after it
 ok   a plugin's prompt is dim and its text is Normal
 ok   The bar counts wide characters and the prompt: after a wide character
@@ -250,4 +256,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 252 passed, 0 failed
+adapters_frame_presenter: 258 passed, 0 failed

@@ -124,7 +124,7 @@ module Carat
         Highlight::CURSOR_LINE_NUMBER, FG, NONE, BOLD, BOLD,
         Highlight::COLOR_COLUMN, NONE, CURSOR_LINE, 0, REVERSE,
         Highlight::END_OF_BUFFER, FAINT, NONE, 0, 0,
-        Highlight::WINDOW_SEPARATOR, FAINT, NONE, 0, 0,
+        Highlight::WINDOW_SEPARATOR, BORDER, NONE, 0, 0,
         Highlight::DIRECTORY, BLUE, NONE, 0, 0,
         Highlight::TITLE, BLUE, NONE, BOLD, BOLD,
         Highlight::MESSAGE_WARNING, YELLOW, NONE, 0, 0,
@@ -593,7 +593,9 @@ module Carat
       # at 16 colors CursorLine's attributes. Each group's
       # float id takes its foreground, NormalFloat's when it has none, its
       # attributes, and, unless it has a background of its own,
-      # NormalFloat's background at every depth.
+      # NormalFloat's background at every depth. Each group's sidebar id
+      # takes its foreground and attributes and, unless it has a
+      # background of its own, PanelNC's background, but at 16 colors.
       #: (String, Array[Integer], bool) -> Theme
       def self.from_palette(name, palette, painted)
         rgbs = Array.new(ROLES, -1)
@@ -683,6 +685,28 @@ module Carat
           bgs16[inside] = own ? bgs16[id] : bgs16[float]
           attrs[inside] = attrs[id]
           attrs16[inside] = attrs16[id]
+          i += 5
+        end
+        # A cell in a sidebar window takes its group's foreground (the
+        # palette's text color where it has the terminal's) and
+        # attributes and, unless the group has a background of its own,
+        # PanelNC's background. At 16 colors the layer changes nothing:
+        # the basic set has no darker background that keeps every text
+        # color readable, so the sidebar's edge is the separator glyph.
+        i = 0
+        while i + 4 < GROUPS.length
+          id = GROUPS[i]
+          side = id + Highlight::SIDEBAR_LAYER
+          own = GROUPS[i + 2] >= 0 && GROUPS[i + 2] != BG
+          bgs[side] = own ? bgs[id] : rgbs[PANEL_NC]
+          bgs256[side] = own ? bgs256[id] : indexes256[PANEL_NC]
+          bgs16[side] = bgs16[id]
+          terminal_fg = fgs[id] < 0 && bgs[side] >= 0
+          fgs[side] = terminal_fg ? text : fgs[id]
+          fgs256[side] = terminal_fg ? text256 : fgs256[id]
+          fgs16[side] = fgs16[id]
+          attrs[side] = attrs[id]
+          attrs16[side] = attrs16[id]
           i += 5
         end
         Theme.new(name: name, fgs: fgs, bgs: bgs, fgs256: fgs256, bgs256: bgs256, fgs16: fgs16, bgs16: bgs16, attrs: attrs, attrs16: attrs16)
