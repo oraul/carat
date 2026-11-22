@@ -122,6 +122,13 @@ module EditorSubstituteTest
       run(input[0], input[1], input[2])
     end
 
+    # Scenario "A costly command stops" (substitute): 4096 copies of an
+    # 8192-character match are 32 MiB of replacement text, more than the
+    # budget pays for, so the command changes nothing and reports E363.
+    long = "x" * 8192
+    costly = run("#{long}\n", [0, 0], ":s/.*/#{"&" * 4096}/<CR>")
+    t.assert_equal([[0, 0], "E363: search stopped, pattern too costly here", long], costly, "replacement text past the budget reports E363 and changes nothing")
+
     t.finish
   end
 end

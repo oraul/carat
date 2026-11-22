@@ -26,3 +26,4 @@
 - [x] Q.2 `MemoryFiles#dangling` (listing, create refused) and `MemoryFiles#pad` (the write dropping it, the read limit) had no direct test; `test/use_cases_plugin_files.rb` checks each (fixed; "a dangling link is listed and stats as a link that is not regular, yet does not exist", "a write drops the padding")
 - [x] Q.3 `Replacement.size` restates `Replacement.expand`'s item walk; kept, guarded by the comparison table (recorded in `docs/findings/files-ex-lows.md` with its reason)
 - [x] Q.4 The never-built check fails its reverted fix only by exhausting memory (recorded in `docs/findings/files-ex-lows.md` with its reason)
+- [x] Q.5 The modified substitute requirement's scenario "A costly command stops" was named by no test, and no editor check showed the E363 of replacement text past the budget; `test/editor_substitute.rb` types such a command (fixed; "replacement text past the budget reports E363 and changes nothing")
