@@ -8,9 +8,13 @@
 
 ## 2. Checks
 
-- [ ] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
+- [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
 
 ## 3. Queue fixes
 
 - [x] 3.1 `make docs-lint` failed on the backlog sprint's 5 items over the cap of 3; by the user's answer of 2026-11-22, `plugin-host-lows` and `config-trust-tidy` move unchanged to Pool item 1, marked for Sprint 30 beside `planner-loop`, the Pool renumbered, and the exception line and the Sprint 29 decision reworded so `scout-drop` and `cheap-tier` are the two pipeline changes within the sprint's 3, `scout-drop` first and alone. Checked by `make docs-lint`.
 - [x] 3.2 As the sprint-27 records change did, add the word "estimated" before each Pool size of both queues and drop the backticks on the nonexistent .claude/settings.local.json path. Checked by `make docs-lint`.
+
+## Quality review
+
+- [x] 4.1 Pool item 1 of `docs/queue-backlog.md` names `planner-loop`, which no queue holds; the user's wording is kept and the records change adds no queue item, so it is recorded in `docs/findings/sprint-28-records.md`.
