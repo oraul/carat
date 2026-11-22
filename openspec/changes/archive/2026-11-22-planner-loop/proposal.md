@@ -12,7 +12,7 @@ A sprint close starts a quality reviewer over the combined diff (two starts with
 - `.claude/workflows/deliver-change.js` `packagePlan`: history, then groom, then plan-apply (or the item's removal), with no records-change branch.
 - `tools/gates.sh` findings gate and `tools/docs_lint.sh` `own_lane`: the removal allowance and the all-lanes check follow a branch appending a sprint row instead of a `sprint-N-records` name, the gate still requiring each removed entry to be filed in the backlog or removed by the plan.
 - `tools/agent_guard.sh`: the runner may `set CHANGE hold security-first`; its records-merged step and the notes comment go.
-- Agents and commands: `planner.md` sprint mode gains the review, `quality-reviewer.md` loses its sprint, skeptic, and record modes, `security-reviewer.md` gains a record mode, `contributor.md` package step runs groom, `runner.md`, `retrospective.md`, and `.claude/commands/sprint.md` lose the records change.
+- Agents and commands: `planner.md` sprint mode gains the review, `quality-reviewer.md` loses its sprint, skeptic, and record modes, `security-reviewer.md` gains a record mode, `contributor.md` package step runs groom, `runner.md` and `.claude/commands/sprint.md` lose the records change.
 - `tools/tools_test.sh`: cases for a sprint close starting no quality reviewer, skeptic, or records run; a package start running groom when a sprint plan waits; groom's hold, carrier, and marker; history across lanes; merge-main's queue resolution; review-due with no records change.
 
 ## Capabilities
@@ -27,7 +27,7 @@ None: the change alters the delivery pipeline, which no spec under `openspec/spe
 
 ## Impact
 
-- `.claude/workflows/sprint-planning.js`, `.claude/workflows/deliver-change.js`, `.claude/agents/planner.md`, `.claude/agents/quality-reviewer.md`, `.claude/agents/security-reviewer.md`, `.claude/agents/contributor.md`, `.claude/agents/runner.md`, `.claude/agents/retrospective.md`, `.claude/commands/sprint.md`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/gates.sh`, `tools/docs_lint.sh`, `tools/tools_test.sh`.
+- `.claude/workflows/sprint-planning.js`, `.claude/workflows/deliver-change.js`, `.claude/agents/planner.md`, `.claude/agents/quality-reviewer.md`, `.claude/agents/security-reviewer.md`, `.claude/agents/contributor.md`, `.claude/agents/runner.md`, `.claude/commands/sprint.md`, `tools/run_state.sh`, `tools/agent_guard.sh`, `tools/gates.sh`, `tools/docs_lint.sh`, `tools/tools_test.sh`.
 - README.md: changed, the pipeline steps naming the skeptic and the sprint close.
 - CLAUDE.md: changed, the Sprints line (the planner's review, the next delivery applying the plan) and the Lanes line (no records change beside others, merge-main keeping each lane's queue); the Phases, planner and retrospective, and Backlog lines stay, since none names the skeptic, the quality reviewer's sprint start, or the records change, and the retrospective still runs review-due.
 - docs/architecture.md: unchanged, it does not describe the sprint close.

@@ -13,7 +13,7 @@ Moves the sprint's cross-change quality review into the planner and drops the se
 - Add groom CHANGE to any delivery's package step, the first while a sprint plan waits carrying it, with a hold, a single carrier, and a marker kept until main holds the sprint's row, and make history append every lane's rows for that carrier
 - Change merge-main to resolve a conflict only in the lane queues with the branch's own lane queue and main's other one, so two lanes keep both edits
 - Change the findings gate and docs-lint to follow a branch appending a sprint row, the gate still requiring each removed entry to be filed in the backlog or removed by a plan line groom would accept
-- Add effort high to the contributor's agent file beside its model line, and update the planner, quality reviewer, runner, retrospective, and sprint command texts
+- Add effort high to the contributor's agent file beside its model line, and update the planner, quality reviewer, security reviewer, runner, and sprint command texts
 - Document the new sprint close in CLAUDE.md, README.md, and docs/codebase-map.md
 - Add tools-test cases for a sprint close starting no quality reviewer, skeptic, or records run, a package start running groom when a sprint plan waits, groom's hold and carrier, history across lanes, merge-main's queue resolution, and the contributor's tier and effort
 
