@@ -31,14 +31,14 @@ export const meta = {
 // that ran the workflow sees, /deliver adds with tools/run_state.sh usage, and
 // each start's tier-weighted tokens with tools/run_state.sh tokens. The
 // run state's phase.* and review.* lines and the figures are the script's
-// own: it builds each command from a schema-checked result. One agent that
-// reads nothing else runs the queued lines with the metric line (flush) at
-// the end of verify() only when a check or review record is among them,
-// since the pre-push and merge gates read those and no guarded agent may
-// write them; the closing start runs every other line at the end, where
-// the package, CI, and merge phases wait (a resume reads pushed, pr, and
-// merged instead), under the guard's close profile, which allows only the
-// phases no merge gate reads. The check's run start and the merger run the
+// own: it builds each command from a schema-checked result. One agent, the
+// runner, which reads nothing else, runs the queued lines with the metric
+// line (flush) at the end of verify() only when a check or review record is
+// among them, since the pre-push and merge gates read those and no other
+// agent may write them; the closing start runs every other line at the
+// end, where the package, CI, and merge phases wait (a resume reads pushed,
+// pr, and merged instead), under the guard's close profile, which allows
+// only the phases no merge gate reads. The check's run start and the merger run the
 // metric line first, so a fix round is counted before its check.
 // tools/agent_guard.sh keeps the other agents off the phase and review
 // commands, and the merger's records gate compares the file with what the
@@ -149,7 +149,7 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'agent/low', planner: 'session/session', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'agent/low', merger: 'agent/low', close: 'session/session' }
 // A profile's form, the one pattern restoreCalibration and the metric line
 // accept and tools-test reads (an effort added here only).
 const PROFILE = /^(agent|session)\/(low|medium|high|session)$/
@@ -658,17 +658,18 @@ function reviewed(kind, passed, commit, counts) {
   const summary = Object.keys(counts).map((k) => `${k}=${Number.isInteger(counts[k]) ? counts[k] : 0}`).join(' ')
   queue(`sh tools/run_state.sh review ${state.change} ${kind} ${result} "${summary}" ${commit}`, commit)
 }
-// recordStart is the one start of the record profile, running one command
+// recordStart is the one start of the record profile, the runner agent (its
+// guard profile allows the records and nothing to write), running one command
 // from the repository root and returning its RECORDED result (flush, laneHead).
 async function recordStart(command, label) {
   return measured('record', () => agent(
     `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${command}\n\nReturn ok true when it exited 0, and its output.${capLine('record')}`,
-    calibrate('record', { schema: withCalls(RECORDED), label })), callCap('record'))
+    calibrate('record', { agentType: 'runner', schema: withCalls(RECORDED), label })), callCap('record'))
 }
 // Runs the queued records with the metric line through one agent, only
 // when a check or review record is queued, which the pre-push and merge
-// gates read and only an unguarded start may write; every other line and
-// the figures wait for the closing start. The agent's own cost reaches the
+// gates read and only the runner may write; every other line and the
+// figures wait for the closing start. The agent's own cost reaches the
 // next line.
 // force writes the metric line though only closable lines wait (the closing
 // loop's figures, held after a start that committed nothing).
@@ -1609,7 +1610,7 @@ const resume = await agent(
 3. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Run \`sh tools/run_state.sh lane-open <change> <branch>\` in the main checkout, which stays on main: it makes the change's worktree tmp/.lane-<change> on the branch (local, else origin's, else new from origin/main), keeps it on a resume, and links the shared toolchain, compile cache, and run states; stop with its message when it fails.
 4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`cd tmp/.lane-<change> && sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git -C tmp/.lane-<change> rev-parse --short=12 HEAD\` as head.
 5. Run \`cd tmp/.lane-<change> && sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
-  calibrate('resume', { schema: RESUME, label: 'resume' }))
+  calibrate('resume', { agentType: 'runner', schema: RESUME, label: 'resume' }))
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
 } else {
