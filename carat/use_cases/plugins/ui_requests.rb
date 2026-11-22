@@ -15,7 +15,7 @@ module Carat
   module UseCases
     # The requests of the plugin API about the editor around the text: a
     # message, the plugin's status segment and its priority, a prompt, a
-    # live prompt with its keymap, closing the plugin's prompt, an icon, a highlight
+    # live prompt with its keymap, its float, closing the plugin's prompt, an icon, a highlight
     # group's id, the plugin's options, the working directory, and running an ex command
     # line, which is refused with E169 when plugin calls are already
     # nested MAX_DEPTH deep. The command runner is given at construction,
@@ -89,6 +89,16 @@ module Carat
         end
         @plugin_ui.go_live(initial.dup, keymap)
         opened
+      end
+
+      # Attaches the plugin's open prompt to its float with the id: the
+      # presenter then draws the typed text there, not on the command line.
+      #: (String, Integer) -> PluginApi::Response
+      def float_prompt(name, id)
+        ui = @plugin_ui
+        return PluginApi::Response.failure("No prompt is open") unless ui.prompting? && ui.prompt_owner == name
+        ui.prompt_float = id
+        PluginApi::Response.success("", 0)
       end
 
       # Closes the plugin's own prompt, with no answer, to normal mode.

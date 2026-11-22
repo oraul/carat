@@ -10,7 +10,9 @@ module Carat
       # out, links that leave the project skipped), opens a live prompt on
       # the command line, and after every change of the typed text filters
       # the list again through Matcher, best match first, in a bordered
-      # float titled with the counts, the highlighted row drawn as a
+      # float titled with the counts, its first row the query, the prompt
+      # and the typed text, where the cursor stands (the command line stays
+      # blank; the same form as the command palette's), the highlighted row drawn as a
       # selected list row (a sapphire bar, the selection fill, a bold
       # label); a screen of PREVIEW_COLUMNS or more also previews the
       # highlighted file in a second float. Enter opens the file in the
@@ -37,6 +39,7 @@ module Carat
         NAME = "finder"
         PROMPT_ID = "find"
         PROMPT = "> "
+        QUERY_ROWS = 1
         TITLE = "Files"
         EMPTY = "No match"
         MARK = "▎ "
@@ -206,7 +209,10 @@ module Carat
           path = selected_path
           line = selected_line
           column = selected_column
-          return if !input.cancelled && path.empty? && host.live_prompt(PROMPT_ID, PROMPT, input.text, KEYS).ok
+          if !input.cancelled && path.empty? && host.live_prompt(PROMPT_ID, PROMPT, input.text, KEYS).ok
+            attach_prompt(host)
+            return
+          end
           close(host)
           return if input.cancelled || path.empty?
           open_path(host, path, :edit, line, column)
@@ -430,7 +436,8 @@ module Carat
         def refresh(host)
           cols = @cols
           height = @rows - 6
-          height = 1 if height < 1
+          height = QUERY_ROWS + 1 if height < QUERY_ROWS + 1
+          body = height - QUERY_ROWS
           preview = cols >= PREVIEW_COLUMNS
           box = host.float_frame(true)
           margin = box.margin
@@ -442,9 +449,11 @@ module Carat
           title = grep? ? "#{GREP_TITLE} #{@index.counts}" : "#{list_title} #{@matches.length}/#{@paths.length}"
           list = float_at(margin, height, width, title)
           list_box = box_key(list)
-          rows = list_lines(height)
+          rows = list_lines(body)
+          rows.insert(0, PROMPT + @query)
           @list_float = show_float(host, @list_float, @list_box == list_box, list, rows)
-          style_list(host, rows, height)
+          attach_prompt(host)
+          style_list(host, rows, body)
           @list_box = list_box
           unless preview && !@matches.empty?
             close_preview(host)
@@ -455,6 +464,13 @@ module Carat
           preview_box = box_key(shown)
           @preview_float = show_float(host, @preview_float, @preview_box == preview_box, shown, preview_lines(host, height))
           @preview_box = preview_box
+        end
+
+        # Shows the typed text on the list float's first row, where the
+        # cursor stands, in place of the command line.
+        #: (Carat::PluginApi::Host) -> void
+        def attach_prompt(host)
+          host.float_prompt(@list_float) if @list_float != 0
         end
 
         # The list float's title word for the source.
@@ -540,7 +556,7 @@ module Carat
         #: (Carat::PluginApi::Host, Array[String], Integer) -> void
         def style_list(host, rows, height)
           return if @list_float == 0 || @matches.empty?
-          row = @selected - list_top(height)
+          row = @selected - list_top(height) + QUERY_ROWS
           length = rows[row].length - MARK.length
           spans = length > 0 ? [row, 0, 1, @mark_group, row, MARK.length, length, @label_group] : [row, 0, 1, @mark_group]
           host.style_float(@list_float, row, spans)
