@@ -5996,6 +5996,11 @@ expect "sprint: each skeptic note is recorded literally, a finding holding a com
   sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s|%s\n" "$(sh "$2" get sprint-9 note.3)" "$(sh "$2" get sprint-9 note.4)" "$(sh "$2" get sprint-9 note.5)" "$( [ -e pwned-skeptic ] && echo pwned || echo no file)"' _ "$skeptic_lines" "$here/run_state.sh"
 expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^first$" \
   sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
+# pipeline-lows-a security Low (4): the notes quote reviewed code, so the
+# start running them is the quality reviewer in its record mode, whose hook
+# runs tools/agent_guard.sh, never an unguarded general agent.
+expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \

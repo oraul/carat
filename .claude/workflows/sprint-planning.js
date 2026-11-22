@@ -239,11 +239,14 @@ const skeptic = await agent(
   { agentType: 'quality-reviewer', schema: SKEPTIC, label: 'quality-reviewer: skeptic' })
 const skeptical = Boolean(skeptic && isCommit(skeptic.head))
 // The skeptic's notes reach the run state before the planner, which reads
-// them there; each text one single-quoted shell word (skepticNotes).
+// them there; each text one single-quoted shell word (skepticNotes). The
+// texts quote reviewed code, so the runner is the quality reviewer in its
+// record mode, whose hook runs tools/agent_guard.sh's read profile: text
+// that leads it astray runs no command but that profile's.
 const kept = skeptical ? skepticNotes(sprint.sprint, skeptic.notes) : []
 const keptRun = !kept.length ? null : await agent(
-  `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${kept.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { schema: RAN, effort: 'low', label: 'sprint: skeptic notes' })
+  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${kept.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
+  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: skeptic notes' })
 const skepticNoted = !kept.length || Boolean(keptRun && keptRun.ok)
 // The planner starts only after a complete security review (not partial)
 // with its findings recorded, the skeptic with its notes recorded, and in an even sprint the

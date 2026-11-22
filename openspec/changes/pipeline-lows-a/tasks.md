@@ -26,3 +26,7 @@
 - [x] 5.2 `design.md` Risks: a close's `held-finding` line refused when the run state holds a `merged` record the workflow's memory lacks was not stated; added. Fixed.
 - [x] 5.3 `proposal.md` Impact left out `.claude/agents/security-reviewer.md`, which the change edits; added. Fixed.
 - [x] 5.4 The quality reviewer's Periodic mode step 4 still records its own notes as a double-quoted argument, the same exposure the skeptic had; outside this change's scope (the skeptic's notes), recorded in `docs/findings/pipeline-lows-a.md`.
+
+## Security review
+
+- [x] 6.1 security Low (4) `.claude/workflows/sprint-planning.js`: the skeptic's notes ran in an unguarded general agent, though their texts quote reviewed code; the start is now the quality reviewer in a new `Mode: record` of `.claude/agents/quality-reviewer.md`, whose hook runs `tools/agent_guard.sh`'s read profile. Test: "sprint: the skeptic's notes run under the guarded quality reviewer's record mode". The security findings' runner (`securityNotes`), the same exposure before this change, recorded in `docs/findings/pipeline-lows-a.md`.
