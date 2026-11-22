@@ -79,4 +79,23 @@ ok   The buffer picker's rows in both themes: the edge in FloatBorder and the ti
 ok   The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under carat-light
 ok   The buffer picker's rows in both themes: the same rows, the title on the top edge
 ok   The recent files picker's rows in ASCII: + and - on the edges, | at the sides
-editor_finder: 81 passed, 0 failed
+ok   Ctrl-G switches the file finder to the grep picker: the prompt keeps b and the float is the grep picker's
+ok   and the grep rows list the line of lib/beta.rb that holds b
+ok   Ctrl-G switches the grep picker to the file finder: the prompt keeps b and the files matching it are listed
+ok   Ctrl-G switches back and forth keeping the query: two switches return to the file finder on bet
+ok   and one float is open, the switch leaving no float behind
+ok   Ctrl-G with the empty prompt opens the grep picker on the empty prompt
+ok   Ctrl-G from the buffer picker opens the grep picker on its text
+ok   A switched picker is picked from as any other: Enter opens lib/beta.rb
+ok   Space f R resumes the grep picker the switch ended on, with its text
+ok   Space f w on a word opens the grep picker with the word on the prompt
+ok   and the grep rows list the line of the word
+ok   Space f w on the first character of a word takes the whole word
+ok   Space f w on a multi-byte character takes the word by code point columns
+ok   Space f w takes the underscore as part of the word
+ok   Space f w on a blank opens the grep picker on the empty prompt
+ok   Space f w in an empty buffer opens the grep picker on the empty prompt
+ok   Space f w on an empty line opens the grep picker on the empty prompt
+ok   Space f w on the last character of the last line takes the word
+ok   Ctrl-G after Space f w switches to the file finder on the word
+editor_finder: 100 passed, 0 failed

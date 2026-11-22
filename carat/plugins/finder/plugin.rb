@@ -28,6 +28,10 @@ module Carat
       # listed file buffers and its recent files, most recent first. The
       # resume (plugin.finder.resume) opens the last picker closed again
       # with its typed text, its list read again, and its highlight.
+      # plugin.finder.word opens the grep picker on the word under the
+      # cursor; the prompt's switch key (plugin.finder.switch) closes the
+      # picker and opens the file picker, or the grep picker from any other,
+      # on the same typed text.
       class Plugin < Carat::PluginApi::Plugin
         NAME = "finder"
         PROMPT_ID = "find"
@@ -44,6 +48,8 @@ module Carat
         BUFFERS = "plugin.finder.buffers"
         RECENT = "plugin.finder.recent"
         RESUME = "plugin.finder.resume"
+        WORD = "plugin.finder.word"
+        SWITCH = "plugin.finder.switch"
         BUFFERS_TITLE = "Buffers"
         RECENT_TITLE = "Recent"
         NOTHING_TO_RESUME = "No search to resume"
@@ -56,7 +62,8 @@ module Carat
           "keymap.cmdline <C-x> plugin.finder.open_split",
           "keymap.cmdline <C-s> plugin.finder.open_split",
           "keymap.cmdline <C-v> plugin.finder.open_vsplit",
-          "keymap.cmdline <C-t> plugin.finder.open_tab"
+          "keymap.cmdline <C-t> plugin.finder.open_tab",
+          "keymap.cmdline <C-g> plugin.finder.switch"
         ]
 
         # @rbs @host: Carat::PluginApi::Host?
@@ -113,14 +120,16 @@ module Carat
               "plugin.finder.buffers" => "Find an open buffer by a substring or initials match of its path",
               "plugin.finder.recent" => "Find a recently opened file, most recent first, by a substring or initials match of its path",
               "plugin.finder.resume" => "Open the last finder search again with its text and highlight",
+              "plugin.finder.word" => "Find a line in the files of the project by the word under the cursor, an empty search when the cursor is on no word",
               "plugin.finder.next" => "Highlight the next file in the finder",
               "plugin.finder.previous" => "Highlight the previous file in the finder",
               "plugin.finder.open_split" => "Open the highlighted file in a horizontal split",
               "plugin.finder.open_vsplit" => "Open the highlighted file in a vertical split",
-              "plugin.finder.open_tab" => "Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages"
+              "plugin.finder.open_tab" => "Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages",
+              "plugin.finder.switch" => "Switch the finder between the file picker and the grep picker, keeping the typed text"
             },
             commands: {},
-            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <leader>fg plugin.finder.grep", "keymap.normal <C-p> plugin.finder.open", "keymap.normal <leader>fb plugin.finder.buffers", "keymap.normal <leader>fr plugin.finder.recent", "keymap.normal <leader>fR plugin.finder.resume"],
+            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <leader>fg plugin.finder.grep", "keymap.normal <C-p> plugin.finder.open", "keymap.normal <leader>fb plugin.finder.buffers", "keymap.normal <leader>fr plugin.finder.recent", "keymap.normal <leader>fR plugin.finder.resume", "keymap.normal <leader>fw plugin.finder.word"],
             events: ["resize"],
             options: ["plugin.finder.ignore .git build tmp"],
             option_types: { "ignore" => "list" },
@@ -157,8 +166,10 @@ module Carat
           return open(host, :buffers, "", 0) if name == BUFFERS
           return open(host, :recent, "", 0) if name == RECENT
           return resume(host) if name == RESUME
+          return open(host, :grep, word_under_cursor(host), 0) if name == WORD
           return unless @open
           case name
+          when SWITCH then switch(host)
           when "plugin.finder.next" then move(host, 1)
           when "plugin.finder.previous" then move(host, -1)
           when "plugin.finder.open_split" then pick(host, :split)
@@ -222,6 +233,27 @@ module Carat
           @selected = selected > last ? last : selected
           @selected = 0 if @selected < 0
           refresh(host)
+        end
+
+        # The word under the cursor of the current buffer, "" when the
+        # cursor is on no word or the buffer cannot be read.
+        #: (Carat::PluginApi::Host) -> String
+        def word_under_cursor(host)
+          view = host.read_buffer(0)
+          return "" if !view.ok || view.row < 0 || view.row >= view.lines.length
+          Matcher.word_at(view.lines[view.row], view.col)
+        end
+
+        # Closes the picker and opens the other one, the file picker from
+        # the grep picker and the grep picker from any other, on the text
+        # typed so far.
+        #: (Carat::PluginApi::Host) -> void
+        def switch(host)
+          query = @query
+          target = grep? ? :files : :grep
+          host.close_prompt
+          close(host)
+          open(host, target, query, 0)
         end
 
         # Opens the last picker closed again with its text and highlight.

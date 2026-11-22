@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 28
 
-1. `finder-switch` (T2 user request, estimated medium, pushed back 2): moving between files and grep loses the query; grepping the word under the cursor needs typing. Where: `carat/plugins/finder/plugin.rb:52` (keymap lines), `live_prompt` `carat/plugin_api.rb:899`. Fix outline: `<C-g>` switches keeping the query; `<leader>fw` greps the word under the cursor; no API change. Accepted when tests switch both ways keeping the query and `<leader>fw` on a word and a blank opens grep with it or empty, with `docs/actions.md` rows. Backlog: none.
+Drained: ui-groups, picker-speed, finder-switch delivered, the 3 features of the sprint; /sprint draws the next.
 
 ## Pool
 
@@ -24,8 +24,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; the 3 pending runs (review-in-openspec, sprint-close-lows, ui-groups) hold no `review.periodic`; sprint-27 review High 0, Medium 0.
-- Delivery (T2): picker-speed, Sprint 28 item 2 after ui-groups (#300), council (4) of 2026-11-21, pushed back 2, removed; Sprint 28 keeps finder-switch; not critical (bench/run.sh, Makefile bench-budget: no rule a to e path).
-- Size (T2): medium; medium feature rows ui-groups 980,589 in 82.1 min, hidden-option 1,099,813 in 68.0; last two feature rows (float-painter 1,016,833, ui-groups 980,589) under budget, no size up.
-- Split (T2): none; 2 testable parts (default list, per-scenario budgets) in 1 map area (18).
-- Findings (T1): ui-groups retro 3, 4 and sprint-close-lows retro 2, 3 are pipeline items of the backlog lane, which this delivery may not edit: to backlog.md.
+- Security first (T0): none; the 3 pending runs (picker-speed, review-in-openspec, sprint-close-lows) hold no `review.periodic`; sprint-27 review High 0, Medium 0.
+- Delivery (T2): finder-switch, Sprint 28 item after picker-speed (#301), user request, pushed back 2, removed; Sprint 28 drained, 3 features; not critical: the finder plugin, its bindings, `docs/actions.md`, tests, no API change, so no `carat/plugin_api.rb` edit (rule d).
+- Size (T2): medium; medium feature rows ui-groups 980,589 in 82.1 min, hidden-option 1,099,813 in 68.0, picker-speed 896,376 in 72.0; the last two under the 1.2M budget, no size up.
+- Split (T2): none; 2 testable parts (`<C-g>` switch, `<leader>fw`) in 1 map area (finder plugin).
+- Findings (T1): picker-speed retro 2, 3, 4, review-in-openspec overruns 8 (check 653,549 output against 416,666), 12 (contributor 1,372,173 against 1.2M), sprint-close-lows overrun 4 (sprint-27-records 44.3 min against 25) are backlog-lane pipeline items this delivery may not edit: to backlog.md.

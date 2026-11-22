@@ -552,7 +552,7 @@ The built-in `explorer` plugin is Carat's own, not part of Neovim; its keys foll
 
 ## File finder
 
-The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow the conventions of Neovim's fuzzy finders, such as telescope and fzf-lua. Every row is covered by `test/editor_finder.rb`, and the ranking by `test/plugins_finder_matcher.rb`.
+The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow the conventions of Neovim's fuzzy finders, such as telescope and fzf-lua. Every row is covered by `test/editor_finder.rb` (the word under the cursor also by `test/plugins_finder_matcher.rb`), and the ranking by `test/plugins_finder_matcher.rb`.
 
 | Keys | Where | Action name | Behavior |
 | --- | --- | --- | --- |
@@ -560,10 +560,12 @@ The built-in `finder` plugin is Carat's own, not part of Neovim; its keys follow
 | `<leader>fb` | normal mode | `plugin.finder.buffers` | The same picker over the listed file buffers in `:ls` order, scratch and unnamed buffers left out, titled `Buffers N/M` |
 | `<leader>fr` | normal mode | `plugin.finder.recent` | The same picker over the recent files, most recent first, titled `Recent N/M`: every file shown in a window since the editor started, kept after `:bd`, at most 100, for this run only (no shada `oldfiles`) |
 | `<leader>fR` | normal mode | `plugin.finder.resume` | Open the last picker closed again with its typed text, its list read again, and its highlight (on the last row when fewer match); `No search to resume` before any |
+| `<leader>fw` | normal mode | `plugin.finder.word` | Open the grep picker with the word under the cursor typed on its prompt (letters, digits, underscores, and multi-byte characters around the cursor), the empty prompt when the cursor is on a blank, past the end of a line, or in an empty buffer |
 | typed text | finder | none | Filter by a match of the path ignoring case, best first: the text (or each space-separated term, in any order) as a substring of the path, or as initials (a few runs each after the first at a word start), never scattered letters; a substring ranks above initials, the file name above a directory, a shorter path breaks a tie; `No match` when nothing matches |
 | `<C-n>`, `<Down>`, `<C-p>`, `<Up>` | finder | `plugin.finder.next`, `previous` | Move the highlight, stopping at the ends |
 | `<CR>` | finder | none | Open the highlighted file in the editing window and close the finder; with no match the finder stays open on the typed text, so it can be corrected |
 | `<C-x>`, `<C-s>`, `<C-v>`, `<C-t>` | finder | `plugin.finder.open_split`, `open_vsplit`, `open_tab` | Open the highlighted file in a horizontal split, a vertical split, or a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |
+| `<C-g>` | finder | `plugin.finder.switch` | Close the picker and open the file picker from the grep picker, or the grep picker from the file, buffer, or recent picker, on the text typed so far, the highlight on the first row |
 | `<Esc>`, `<BS>` on the empty prompt | finder | none | Close the finder and open nothing |
 | none | finder, 100 columns or more | none | Preview the first rows of the highlighted file in a second float titled with its path |
 

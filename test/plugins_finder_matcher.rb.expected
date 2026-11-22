@@ -76,8 +76,23 @@ ok   a dot after ends a word
 ok   an uppercase letter after a lowercase one ends a word
 ok   an uppercase letter after an uppercase one does not
 ok   a multi-byte character after does not end a word
+ok   the first character of a word
+ok   the middle of a word
+ok   the last character of a word at the end of the line
+ok   the character just before a space
+ok   a space is on no word
+ok   a column past the line is on no word
+ok   an empty line has no word
+ok   trailing blanks are on no word
+ok   a carriage return ends a word and is on none
+ok   a word before a carriage return stops at it
+ok   an underscore is part of the word
+ok   punctuation ends the word
+ok   a multi-byte word is read by code point columns
+ok   a column after multi-byte characters counts them once
+ok   a byte that is not UTF-8 gives no word
 ok   every substring match scores above every initials match
 ok   an empty query scores 0
 ok   a key keeps its index
 ok   the file name starts after the last slash
-plugins_finder_matcher: 82 passed, 0 failed
+plugins_finder_matcher: 97 passed, 0 failed
