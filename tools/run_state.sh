@@ -244,7 +244,8 @@
 #   note CHANGE KIND TEXT       record note.N, the next number, as "KIND TEXT";
 #                               a quality-advisory whose TEXT, without its
 #                               leading commit, is already noted is not
-#                               recorded again; a late-finding is refused
+#                               recorded again, nor a security note whose
+#                               whole TEXT is; a late-finding is refused
 #                               until merged names a commit on main and is
 #                               stored as "late-finding MERGED TEXT"; a
 #                               held-finding is refused without a pushed
@@ -2026,6 +2027,18 @@ add_note() {
         sub(/^quality-advisory /, "") { if (bare($0) == bare(ENVIRON["T"])) found = 1 }
         END { exit !found }'; then
       echo "note: the advisory is already recorded; not recorded again"
+      return 0
+    fi
+  fi
+  # A security finding a /sprint rerun records again is one note: the
+  # whole text compared, since it carries no leading commit, so a disputed
+  # note beside its finding is still recorded (sprint-close-lows).
+  if [ "$1" = security ]; then
+    if keys_under note. | T="$(escape "$2")" awk '
+        { sub(/^[0-9]+=/, "") }
+        sub(/^security /, "") { if ($0 == ENVIRON["T"]) found = 1 }
+        END { exit !found }'; then
+      echo "note: the security finding is already recorded; not recorded again"
       return 0
     fi
   fi
