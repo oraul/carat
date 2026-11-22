@@ -16,6 +16,7 @@ ok   a new K cancels the request in flight by its id and sends another
 ok   the cancelled request's answer is dropped
 ok   an unanswered request is cancelled after two seconds and waits no more
 ok   the timeout counts from the sending
+ok   a hover request whose write failed waits on nothing
 ok   a long document shows its first rows
 ok   K while the float shows enters it
 ok   G in the float shows the last row and keeps the float
@@ -35,4 +36,4 @@ ok   no escape reaches the screen
 ok   a marked string with a language is fenced code and at most 16 parts are read
 ok   the joined text stops at 16,384 bytes
 ok   An 80-column hover row shows its last word: wrapped at 74 columns, drawn whole inside the border
-adapters_hover: 37 passed, 0 failed
+adapters_hover: 38 passed, 0 failed
