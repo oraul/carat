@@ -314,7 +314,7 @@ module EditorFloatsTest
       ["Visual is refused", hl::VISUAL, "No float group #{hl::VISUAL}"],
       ["PmenuMatchSel is refused", hl::POPUP_MENU_MATCH_SELECTED, "No float group #{hl::POPUP_MENU_MATCH_SELECTED}"],
       ["Normal is refused", hl::NORMAL, "No float group 0"],
-      ["MsgDim, the last UI group, is refused", hl::MESSAGE_DIM, "No float group #{hl::MESSAGE_DIM}"],
+      ["Folded, the last UI group, is refused", hl::FOLDED, "No float group #{hl::FOLDED}"],
       ["a negative id is refused", -1, "No float group -1"],
       ["an id past the last group is refused", hl::COUNT, "No float group #{hl::COUNT}"]
     ]) do |row|

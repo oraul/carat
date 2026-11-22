@@ -49,6 +49,16 @@ ok   an error row: a red icon, a bold red code, the text in the foreground: cara
 ok   an information message is dim: carat-light
 ok   the colon is dim and the typed text is in the foreground: carat-light
 ok   the pending keys are dim: carat-light
+ok   a closed fold is one row of its fold text, the next line under it
+ok   the fold row's text is in Folded from the label to the fill, its number in LineNr, the next line in Normal
+ok   an open fold's rows keep Normal
+ok   the fold row is dim at 24 bits and at 16 colors, on the terminal's background: carat-dark
+ok   the fold row differs from the Normal text beside it at 24 bits and at 16 colors: carat-dark
+ok   the fold row is dim at 24 bits and at 16 colors, on the terminal's background: carat-light
+ok   the fold row differs from the Normal text beside it at 24 bits and at 16 colors: carat-light
+ok   option.icons ascii keeps the fold row in Folded
+ok   NO_COLOR keeps the fold row in Folded
+ok   the fold row on the cursor line is Folded on the cursor-line layer
 ok   command line with colon
 ok   the colon is dim and the typed text is Normal
 ok   cursor after the command line text
@@ -237,4 +247,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 239 passed, 0 failed
+adapters_frame_presenter: 249 passed, 0 failed

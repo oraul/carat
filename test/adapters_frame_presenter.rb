@@ -279,12 +279,73 @@ module AdaptersFramePresenterTest
   # The 24-bit color a palette gives the role.
   #: (Array[Integer], Integer) -> Integer
   def self.palette_rgb(palette, role)
+    palette_entry(palette, role, 1)
+  end
+
+  # The value at offset (1 the 24-bit color, 3 the 16-color index) of a
+  # role's row in a palette, -1 for a role it lacks.
+  #: (Array[Integer], Integer, Integer) -> Integer
+  def self.palette_entry(palette, role, offset)
     i = 0
     while i + 3 < palette.length
-      return palette[i + 1] if palette[i] == role
+      return palette[i + offset] if palette[i] == role
       i += 4
     end
     -1
+  end
+
+  # A window over "one", "two", "three" whose first two lines are one
+  # closed fold, the cursor on "three".
+  def self.folded_state
+    s = state_for(["one", "two", "three"], "a.txt")
+    s.window.folds.create(0, 1)
+    s.window.folds.close_at(0)
+    s.cursor.move_to(2, 0)
+    s
+  end
+
+  # The closed fold's row: its text in Folded in both carat themes, at
+  # 16 colors, under option.icons ascii, under NO_COLOR, and on the
+  # cursor line; the rows outside it and an open fold's in Normal.
+  def self.fold_checks(t)
+    folded = D::Highlight::FOLDED
+    # Scenario: A closed fold's row is in Folded.
+    s = folded_state
+    f = draw(s, 6, 30)
+    t.assert_equal(["  1 +--  2 lines: one·········", "  3 three"], [f.row_text(0), f.row_text(1)], "a closed fold is one row of its fold text, the next line under it")
+    t.assert_equal([Array.new(26, folded), D::Highlight::LINE_NUMBER, D::Highlight::NORMAL, D::Highlight::NORMAL], [row_groups(f, 0, 4, 26), f.cell(0, 2).hl, f.cell(1, 4).hl, f.cell(1, 8).hl], "the fold row's text is in Folded from the label to the fill, its number in LineNr, the next line in Normal")
+    s.window.folds.open_at(0)
+    f = draw(s, 6, 30)
+    t.assert_equal(["  1 one", D::Highlight::NORMAL, D::Highlight::NORMAL], [f.row_text(0), f.cell(0, 4).hl, f.cell(1, 4).hl], "an open fold's rows keep Normal")
+    # Scenario: The fold row in both carat themes.
+    ["carat-dark", "carat-light"].each do |name|
+      theme = D::Themes.find(name, "terminal")
+      palette = D::Themes::PALETTES[D::Themes::NAMES.index(name).to_i]
+      s = folded_state
+      f = draw(s, 6, 30)
+      hl = f.cell(0, 4).hl
+      text = f.cell(1, 4).hl
+      dim = palette_rgb(palette, D::Themes::DIM)
+      basic = palette_entry(palette, D::Themes::DIM, 3)
+      t.assert_equal([dim, basic, -1], [theme.fg(hl), theme.fg16(hl), theme.bg(hl)], "the fold row is dim at 24 bits and at 16 colors, on the terminal's background: #{name}")
+      t.assert_equal([true, true], [theme.fg(text) != theme.fg(hl), theme.fg16(text) != theme.fg16(hl)], "the fold row differs from the Normal text beside it at 24 bits and at 16 colors: #{name}")
+    end
+    # Scenario: The fold row under ascii and NO_COLOR.
+    s = folded_state
+    s.options.icons = "ascii"
+    f = draw(s, 6, 30)
+    t.assert_equal([folded, folded], [f.cell(0, 4).hl, f.cell(0, 29).hl], "option.icons ascii keeps the fold row in Folded")
+    s.options.icons = "unicode"
+    P.plain = true
+    f = draw(s, 6, 30)
+    t.assert_equal([folded, folded], [f.cell(0, 4).hl, f.cell(0, 29).hl], "NO_COLOR keeps the fold row in Folded")
+    P.plain = false
+    # Scenario: The fold row on the cursor line.
+    s = folded_state
+    s.options.cursorline = true
+    s.cursor.move_to(0, 0)
+    f = draw(s, 6, 30)
+    t.assert_equal([folded + D::Highlight::CURSOR_LINE_LAYER, folded + D::Highlight::CURSOR_LINE_LAYER, D::Highlight::NORMAL], [f.cell(0, 4).hl, f.cell(0, 29).hl, f.cell(1, 4).hl], "the fold row on the cursor line is Folded on the cursor-line layer")
   end
 
   def self.main
@@ -447,6 +508,7 @@ module AdaptersFramePresenterTest
       s.clear_message
     end
     s.clear_message
+    fold_checks(t)
     s.mode = D::Mode::CMDLINE
     s.cmdline = "wq"
     f = draw(s, 6, 30)
