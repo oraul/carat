@@ -6,7 +6,9 @@
 # invalid (a modified requirement over OpenSpec's length limit, which the
 # change's own validation does not check) fails before the reviews, not at
 # the package step. The real openspec/ is never written; a failed preview
-# is kept for reading.
+# is kept for reading. A symbolic link under openspec/, which cp -R keeps
+# and the preview's archive would write through to a file outside the
+# copy, fails the run before any validation.
 #
 # Usage: sh tools/spec_validate.sh (from the top of the work tree)
 # Environment: OPENSPEC_CMD, the command to run (npx of OpenSpec at the
@@ -19,6 +21,11 @@ openspec=${OPENSPEC_CMD:-npx -y @fission-ai/openspec@2.1.1}
 preview=$(pwd)/build/spec-preview
 failed=0
 
+links=$(find openspec -type l | sort | tr '\n' ' ')
+if [ -n "$links" ]; then
+  echo "spec-validate: openspec/ holds the symbolic link(s) ${links% }, through which the preview's archive would write outside build/spec-preview; remove them"
+  exit 1
+fi
 $openspec validate --all --strict --no-interactive || failed=1
 for dir in openspec/changes/*/; do
   name=$(basename "$dir")

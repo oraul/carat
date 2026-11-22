@@ -708,7 +708,10 @@ async function flush(force = false) {
 // passes it too. So after the fsck, read-tree puts main's tree into the
 // copy's index with no stat data and diff --quiet hashes every tracked
 // file of the copy against it, failing on a text that is not main's (or
-// on its own failure), right before the gates run; a same-user process
+// on its own failure); diff --quiet ignores a file the index does not
+// track, so ls-files --others, which without --exclude-standard lists
+// ignored files too, must list nothing, an untracked file the gates could
+// read stopping the line, right before the gates run; a same-user process
 // writing the copy between that diff and the gates' own reads is left to
 // CI, the reviews, and branch protection.
 // fsck ignores replace refs, so a refs/replace entry pointing main's
@@ -762,7 +765,7 @@ function mergeLines(pushed) {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${pushed}"`
   return {
-    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\\n' | grep -q -x -F refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && ${PINNED_GIT} -C ${MERGE_GATES} read-tree origin/main && ${PINNED_GIT} -C ${MERGE_GATES} diff --quiet && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\\n' | grep -q -x -F refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && ${PINNED_GIT} -C ${MERGE_GATES} read-tree origin/main && ${PINNED_GIT} -C ${MERGE_GATES} diff --quiet && ${PINNED_GIT} -C ${MERGE_GATES} ls-files --others | wc -c | grep -q -x -E ' *0' && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }
