@@ -181,18 +181,6 @@
 - Category: security
 - Added: 2026-11-22
 
-### duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice at tools/ci_scope.sh:80 (sprint-26 sweep quality, note 46)
-
-- Location: tools/ci_scope.sh:80
-- Why: duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice, once for the head sha and once for the number
-- Fix: one call with --jq on .[0] printing both values, split into head and number
-- Category: pipeline
-- Added: 2026-11-22
-- Merged: ### tools/ci_scope.sh:80: duplication: two gh api calls to the same commits/SHA/pulls (sprint-22 sweep quality)
-- Location: `tools/ci_scope.sh:80`
-- Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
-- Fix: one call whose jq prints both, split with read
-
 ### ci_scope.sh repeats two API queries at tools/ci_scope.sh:80 (sprint-28 sweep quality, notes 12, 51)
 
 - Location: tools/ci_scope.sh:80, :81, :84, :117
@@ -200,3 +188,11 @@
 - Fix: one call printing number and head, split with set --; a spin_passed SHA helper.
 - Category: pipeline
 - Added: 2026-11-22
+- Merged: ### duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice at tools/ci_scope.sh:80 (sprint-26 sweep quality, note 46)
+- Location: tools/ci_scope.sh:80
+- Why: duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice, once for the head sha and once for the number
+- Fix: one call with --jq on .[0] printing both values, split into head and number
+- Merged: ### tools/ci_scope.sh:80: duplication: two gh api calls to the same commits/SHA/pulls (sprint-22 sweep quality)
+- Location: `tools/ci_scope.sh:80`
+- Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
+- Fix: one call whose jq prints both, split with read

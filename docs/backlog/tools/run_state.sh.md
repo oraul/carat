@@ -1562,3 +1562,35 @@ none
 - Fix: resolve the lane's `build/` link before comparing escaped paths with the stage's declared outputs; accepted when a tools-test check in a lane worktree writing `build/dev/carat.timing` records no `security-escape` note while one writing under `tmp/.toolchain` still does (pipeline, T1, critical b).
 - Category: security
 - Added: 2026-11-22
+
+### A carrying delivery that never merges strands the sprint plan
+
+- Location: tools/run_state.sh groom (sprint.carrier)
+- Why: groom writes build/plan/sprint.carrier for the first package step; when that delivery stops and is abandoned, every later groom stands down until someone removes the file by hand, so the next queue and the sprint row never land.
+- Fix: let groom treat a carrier whose run state is gone, records a stop, or was replaced as no carrier, or add a run_state command that releases it, with a tools-test case.
+- Category: pipeline
+- Added: 2026-11-22
+
+### groom-proof checks a carrier's plan line against evidence the carrier controls
+- Location: tools/run_state.sh groom_proof (near line 3743)
+- Why: security Low (5). For a `fixed` line the range check runs against the carrier branch's own HEAD, so a carrier commit never merged in the sprint counts as the fix if it touches a file the entry names, and findings_entry_text reads the branch's newest version of the entry, which the carrier can first edit. For a `listed` line, sprint_names and merged_of read the lane history files in the worktree, which the carrier can append rows to. A carrier can still delete a security finding with a groom.txt line that groom, running on main, could not accept.
+- Fix: judge against the fork point only: for fixed, require `git merge-base --is-ancestor WORD FORK` in place of HEAD; read the lane histories (metrics_files) at FORK the way sprints_file already is; give the gate the entry text at the fork point, or the newest version naming the same location, not the branch's edited one.
+- Category: security
+- Added: 2026-11-22
+
+### groom's fixed proof takes a commit of the carrying branch (sprint-29 review security Low (4))
+
+- Location: tools/run_state.sh:3743 (groom_proof), :3594 (groom's own check); tools/gates.sh:602 (carrier_unproven)
+- Why: the `fixed` proof accepts any ancestor of HEAD not an ancestor of sprint_base, so a misled contributor could commit a trivial edit of the file a security finding names and write `fixed <that commit> <heading>` into build/plan/groom.txt, which it may write; carrier_unproven then lets an unfixed security finding leave. Nothing gates a removal of a docs/backlog security entry at all. Near-same as planner-loop's "groom-proof checks a carrier's plan line against evidence the carrier controls".
+- Fix: count only commits merged before the carrier (`git merge-base --is-ancestor WORD FORK`) in groom_proof, bound groom's range to the sprint's tip on main, and consider a gate letting a docs/backlog entry matching SECURITY_MARK leave only with a proof checked by main's run_state.sh; accepted when a tools-test case of a branch commit named as fixed is refused.
+- Also: tools/gates.sh
+- Category: security
+- Added: 2026-11-22
+
+### groom and groom_proof copy the fixed proof (sprint-29 review quality)
+
+- Location: tools/run_state.sh:3594 to :3600 (groom), :3739 to :3745 (groom_proof)
+- Why: the listed and fixed checks are written twice, groom's with messages and groom_proof's silent, so the security fix above must land in both and the two can drift; the sprint-29 Low (4) names both lines for that reason.
+- Fix: one function returning the proof's failure reason, which groom prints and groom_proof only tests; accepted when tools-test runs both callers over one forged line.
+- Category: security
+- Added: 2026-11-22

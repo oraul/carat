@@ -121,15 +121,6 @@
 - Category: editor
 - Added: 2026-11-21
 
-### duplication: the private clamp(state, row, col) here and in at carat/use_cases/operate.rb:262 (sprint-26 sweep quality, note 22)
-
-- Location: carat/use_cases/operate.rb:262
-- Why: duplication: the private clamp(state, row, col) here and in carat/use_cases/repeat_last.rb:117 are EditorState#clamp_col verbatim
-- Fix: call state.clamp_col(row, col) and delete both copies
-- Also: carat/use_cases/repeat_last.rb
-- Category: editor
-- Added: 2026-11-22
-
 ### consistency: the linewise yank assigns cursor.row and cursor.col directly at carat/use_cases/operate.rb:212 (sprint-26 sweep quality, note 29)
 
 - Location: carat/use_cases/operate.rb:212
@@ -146,3 +137,8 @@
 - Also: carat/use_cases/repeat_last.rb
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### duplication: the private clamp(state, row, col) here and in at carat/use_cases/operate.rb:262 (sprint-26 sweep quality, note 22)
+- Location: carat/use_cases/operate.rb:262
+- Why: duplication: the private clamp(state, row, col) here and in carat/use_cases/repeat_last.rb:117 are EditorState#clamp_col verbatim
+- Fix: call state.clamp_col(row, col) and delete both copies
+- Also: carat/use_cases/repeat_last.rb

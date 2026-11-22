@@ -338,3 +338,21 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Also: carat/domain/themes.rb
 - Category: editor
 - Added: 2026-11-22
+
+### The bottom panel is not on the darker surface
+- Location: `carat/adapters/frame_presenter.rb`, `paint_window` (the sidebar layer is chosen by `window.fixed_width`, which the bottom panel's window does not set)
+- Why: `docs/design.md` section 1 lists the panels (row 0, sidebars, the bottom panel) as one surface level behind the status bar; the panel still draws on `Normal` with a separator row above it, so only the sidebars follow the Edges-by-background rule.
+- Fix: give the panel window the sidebar layer (a `Window#fixed_height` test beside `fixed_width`), draw no row of `─` where the panel meets the editor unless `plain` or `basic_colors`, and extend the two screen-rendering scenarios.
+none
+- Also: docs/design.md
+- Category: editor
+- Added: 2026-11-22
+
+### Two comments overflow the wrap width at carat/adapters/frame_presenter.rb:45 (sprint-29 review quality)
+
+- Location: carat/adapters/frame_presenter.rb:45 (91 columns), carat/adapters/float_painter.rb:263 (82 columns)
+- Why: window-surfaces' comment edits left lines past the files' 72 to 75 column wrap, as the entry "Four comments of bars break their file's wrap width" records for other files.
+- Fix: rewrap both paragraphs.
+- Also: carat/adapters/float_painter.rb
+- Category: editor
+- Added: 2026-11-22
