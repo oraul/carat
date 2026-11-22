@@ -579,7 +579,13 @@ findings_entry_text() {
 }
 
 # The kinds of the lines of the plan's groom.txt that remove heading $1,
-# one per line (the plan is local, so none in CI).
+# one per line (the plan is local, so none in CI); $2 is the text of the
+# entry. A listed or fixed line counts only when groom's proof of it holds
+# (run_state.sh groom-proof, against the sprint in progress at the fork
+# point): a change of the sprint whose queue item lists the heading, a
+# commit of the sprint's range changing a file the entry names. The plan
+# is a file the carrying contributor can write, so a line groom would
+# refuse proves nothing.
 groom_removals() {
   [ -f "${PLAN_DIR:-build/plan}/groom.txt" ] || return 0
   while IFS= read -r removal_line || [ -n "$removal_line" ]; do
@@ -591,26 +597,63 @@ groom_removals() {
       merged) removal_head=${removal_rest#* <= } ;;
       *) continue ;;
     esac
-    [ "$removal_head" != "$1" ] || echo "${removal_line%% *}"
+    [ "$removal_head" = "$1" ] || continue
+    case "${removal_line%% *}" in
+      listed|fixed) printf '%s\n' "$2" | sh "$here/run_state.sh" groom-proof "$fork" "$removal_line" 2>/dev/null || continue ;;
+    esac
+    echo "${removal_line%% *}"
   done < "${PLAN_DIR:-build/plan}/groom.txt"
+}
+
+# True when docs/backlog at HEAD holds, under a security entry, the line
+# "- Merged: HEADING" ($1) of an entry groom merged into it, and the body
+# of the merged entry ($2, its text) stands after that line: a security
+# entry merges only into another security entry (groom's rule), judged by
+# the kept entry's own lines, before its first "- Merged:" line, since the
+# merged body brings a severity of its own, and no merged line without its
+# body keeps the finding.
+merged_security_kept() {
+  merged_body=$(printf '%s\n' "$2" | awk '/^#+ / || /^- (Category|Added): / || !NF { next } { print }')
+  git grep -I -l -F -e "- Merged: $1" HEAD -- docs/backlog 2>/dev/null | while IFS= read -r merged_file; do
+    git show "$merged_file" 2>/dev/null | H="- Merged: $1" M="$SECURITY_MARK" B="$merged_body" awk '
+      function check(   i, n, own, want, ok) {
+        if (!hit) return
+        own = tolower(own_text) " "
+        if (own !~ ENVIRON["M"]) return
+        n = split(ENVIRON["B"], want, "\n"); ok = 1
+        for (i = 1; i <= n; i++) if (want[i] != "" && !(want[i] in after)) ok = 0
+        if (ok) found = 1
+      }
+      /^#+ / { check(); hit = 0; merged = 0; own_text = ""; split("", after) }
+      /^- Merged: / { merged = 1 }
+      !merged { own_text = own_text " " $0 }
+      $0 == ENVIRON["H"] { hit = 1; split("", after) }
+      merged { after[$0] = 1 }
+      END { check(); if (found) print "ok" }'
+  done | grep -q -x ok
 }
 
 # Prints each line "FILE:### HEADING" of $1 that groom did not file or
 # remove: its heading stands under docs/backlog/ at HEAD, or is named
-# there by a "- Merged:" line; else a groom.txt line removes it, and a
-# security entry (groom's SECURITY_MARK) only by listed or fixed.
+# there by a "- Merged:" line (a security entry only under another
+# security entry, its body kept: merged_security_kept); else a groom.txt
+# line removes it with groom's proof (groom_removals), and a security
+# entry (groom's SECURITY_MARK) only by listed or fixed.
 carrier_unproven() {
   printf '%s\n' "$1" | while IFS= read -r unproven_line; do
     [ -n "$unproven_line" ] || continue
     unproven_path=${unproven_line%%:*}
     unproven_head=${unproven_line#*:}
     git grep -I -h --no-color -F -e "$unproven_head" HEAD -- docs/backlog 2>/dev/null | grep -q -x -F -e "$unproven_head" && continue
-    git grep -I -h --no-color -F -e "- Merged: $unproven_head" HEAD -- docs/backlog 2>/dev/null | grep -q -x -F -e "- Merged: $unproven_head" && continue
     unproven_text=$(findings_entry_text "$unproven_path" "$unproven_head")
+    merged_line=""
+    git grep -I -h --no-color -F -e "- Merged: $unproven_head" HEAD -- docs/backlog 2>/dev/null | grep -q -x -F -e "- Merged: $unproven_head" && merged_line=1
     if printf '%s %s\n' "$unproven_head" "$unproven_text" | tr '\n' ' ' | grep -q -i -E "$SECURITY_MARK"; then
-      groom_removals "$unproven_head" | grep -q -x -E 'listed|fixed' && continue
+      if [ -n "$merged_line" ] && merged_security_kept "$unproven_head" "$unproven_text"; then continue; fi
+      groom_removals "$unproven_head" "$unproven_text" | grep -q -x -E 'listed|fixed' && continue
     else
-      [ -z "$(groom_removals "$unproven_head")" ] || continue
+      [ -z "$merged_line" ] || continue
+      [ -z "$(groom_removals "$unproven_head" "$unproven_text")" ] || continue
     fi
     printf '%s\n' "$unproven_line"
   done

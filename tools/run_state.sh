@@ -396,6 +396,11 @@
 #                               sprint.applied), against the sprints file
 #                               at COMMIT; refuse a marker naming another
 #                               sprint than the one in progress there
+#   groom-proof COMMIT LINE     exit 0 when the groom line LINE ("listed CHANGE
+#                               HEADING" or "fixed COMMIT HEADING") holds
+#                               groom's proof against the sprint in progress
+#                               at COMMIT, the removed entry's text on stdin
+#                               (the findings gate's check of a plan line)
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not item 1 of a lane queue,
 #                               docs/queue-feature.md or docs/queue-backlog.md
@@ -3406,9 +3411,15 @@ item_lists() {
 # neither, such as a group of findings. A merge commit lists no file, so it
 # proves nothing. Groom's proof that the commit fixed it.
 touches_entry() {
+  entry_naming "$2" | touches_named "$1"
+}
+
+# True when COMMIT ($1) changes a file the naming text on stdin names, as
+# touches_entry says; the gates read the text of an entry groom removed.
+touches_named() {
   files=$(git diff-tree --no-commit-id --name-only -r --root --end-of-options "$1" 2>/dev/null)
   [ -n "$files" ] || return 1
-  entry_naming "$2" | F="$files" awk '
+  F="$files" awk '
     { text = text "\n" $0 }
     END {
       n = split(ENVIRON["F"], f, "\n")
@@ -3432,7 +3443,12 @@ touches_entry() {
 # lines touches_entry and entry_paths read: the heading and its
 # "- Location:" or "- Where:" lines, or the whole entry when neither.
 entry_naming() {
-  backlog_entry "$1" | awk '
+  backlog_entry "$1" | naming_of
+}
+
+# The same for an entry printed whole on stdin, heading first.
+naming_of() {
+  awk '
     /^#+ / || /^- (Location|Where):/ { named = named "\n" $0; marked += !/^#+ / }
     { all = all "\n" $0 }
     END { s = marked ? named : all; if (s != "") print substr(s, 2) }'
@@ -3570,7 +3586,7 @@ groom() {
       fi
       case "$kind" in
         listed)
-          valid '[a-z0-9][a-z0-9-]*' "$word" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$word" ||
+          sprint_change "$word" ||
             die "groom: $word is not a change of sprint-$sprint_n: $line"
           item_lists "$word" "$(merged_of "$word")" "$heading" ||
             die "groom: the queue item of $word does not list the heading: $line" ;;
@@ -3691,6 +3707,48 @@ sprint_applied() {
   applied_in="${BASE:-origin/main}'s $sprints_file"
   git show "${BASE:-origin/main}:$sprints_file" 2>/dev/null |
     awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }'
+}
+
+# True when NAME is a change of the sprint in progress (sprint_names).
+sprint_change() {
+  valid '[a-z0-9][a-z0-9-]*' "$1" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$1"
+}
+
+# True when the groom line $2 ("listed CHANGE HEADING" or "fixed COMMIT
+# HEADING") holds the proof groom applies to it, against the sprint in
+# progress at COMMIT ($1) as sprint_row_at reads it, the text of the entry
+# it removes on stdin, heading first, since the entry no longer stands: a
+# listed change is one of the sprint's and its queue item lists the
+# heading; a fixed commit is in the sprint's range, after its base, and
+# changes a file the entry names. Silent: the gates (tools/gates.sh) ask it
+# of a line of the local plan, which no step but the planner writes.
+groom_proof() {
+  kind=${2%% *}
+  rest=${2#* }
+  case "$kind" in listed|fixed) ;; *) return 1 ;; esac
+  word=${rest%% *}
+  heading=${rest#* }
+  [ "$word" != "$rest" ] || return 1
+  text=$(cat)
+  at=$(commit_at "$1") || return 1
+  rows=$(mktemp) || return 1
+  git show "$at:$sprints_file" > "$rows" 2>/dev/null || { rm -f "$rows"; return 1; }
+  (
+    sprints_file=$rows
+    sprint_state > /dev/null 2>&1 || exit 1
+    case "$kind" in
+      listed) sprint_change "$word" && item_lists "$word" "$(merged_of "$word")" "$heading" ;;
+      fixed)
+        valid '[0-9a-f]{7,40}' "$word" && valid '[0-9a-f]{7,40}' "$sprint_base" &&
+          git merge-base --is-ancestor "$word" HEAD 2>/dev/null &&
+          git rev-parse -q --verify --end-of-options "$sprint_base^{commit}" > /dev/null &&
+          ! git merge-base --is-ancestor "$word" "$sprint_base" 2>/dev/null &&
+          printf '%s\n' "$text" | naming_of | touches_named "$word" ;;
+    esac
+  ) > /dev/null 2>&1
+  proof=$?
+  rm -f "$rows"
+  return $proof
 }
 
 # The row groom appends for the sprint the marker names (PLAN_DIR/sprint,
@@ -4201,6 +4259,7 @@ case "$command" in
   backlog-oldest) [ $# -ge 1 ] || usage; backlog_oldest "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
   sprint-row) [ $# -eq 1 ] || usage; sprint_row_at "$1"; exit $? ;;
+  groom-proof) [ $# -eq 2 ] || usage; groom_proof "$1" "$2"; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1

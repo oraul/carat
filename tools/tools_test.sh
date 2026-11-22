@@ -5042,12 +5042,22 @@ expect "gates: passed passes a clean tree" 0 "ok   passed" gates passed
 # step commits it, keeps the stages and passed gates passing: settled_at's
 # helpers leave the gate's own names (want) alone (merge-record-check).
 fresh groomed
+# Real commits give groom's listed and fixed lines their proof: the sprint's
+# base, a queue item of a1 listing a heading, and a1's fix touching code.sh.
+echo base > tools/sprint_base.sh
+commit "chore: the sprint base"
+sprint_base_c=$(git rev-parse --short=12 HEAD)
+printf '# Queue\n\n## Sprint 1\n\n1. `a1` (T5, estimated small): one. Backlog: "### Old security entry".\n' > docs/queue-backlog.md
+commit "docs: queue a1"
+echo fix > tools/code.sh
+commit "fix: a1"
+a1_c=$(git rev-parse --short=12 HEAD)
 printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
-{ printf '%s\n' "$HISTORY_HEADER"; mrow seed bbb222 small 1 1 -; mrow a1 c1 small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
+{ printf '%s\n' "$HISTORY_HEADER"; mrow seed "$sprint_base_c" small 1 1 -; mrow a1 "$a1_c" small 1 1 -; mrow a2 c2 small 1 1 -; mrow a3 c3 small 1 1 -; mrow a4 c4 small 1 1 -; mrow a5 c5 small 1 1 -; } > docs/metrics-backlog.tsv
 mkdir -p build/plan
 echo sprint-1 > build/plan/sprint
 echo code > tools/code.sh
-mkdir -p docs/findings && printf '### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: a\n- Why: security Low (4) b\n' > docs/findings/other.md
+mkdir -p docs/findings && printf '### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: tools/code.sh\n- Why: security Low (4) b\n' > docs/findings/other.md
 commit "feat: code and the sprint log"
 groomed_base=$(git rev-parse HEAD)
 state init groomed chore/groomed > /dev/null
@@ -5058,6 +5068,7 @@ state review groomed security pass "high=0" > /dev/null
 state review groomed bench pass "blocking=0" > /dev/null
 state sprint-row "$(git rev-parse --short=12 HEAD)" >> docs/sprints.tsv
 commit "docs: record the sprint row"
+sprint_row_c=$(git rev-parse --short=12 HEAD)
 state set groomed pushed "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "gates: stages passes after groom's sprint row" 0 "ok   stages: every stage passed at the recorded check" gates stages
 expect "gates: passed passes after groom's sprint row" 0 "ok   passed: check, security, and bench passed at the pushed head" gates passed
@@ -5081,15 +5092,35 @@ expect "gates: findings names the carrier's unproven entries" 1 "other[.]md:### 
 # A plan line removes a plain entry (gone), never a security entry (gone).
 printf 'gone ### Old groomed entry -- the code moved\ngone ### Old security entry -- the code moved\n' > build/plan/groom.txt
 expect "gates: findings refuses a security entry the plan removes as gone" 1 "other[.]md:### Old security entry$" gates findings
+# A listed or fixed line counts only with groom's proof (groom-proof): the
+# contributor can write the plan, so a line groom would refuse removes nothing.
 printf 'gone ### Old groomed entry -- the code moved\nlisted other ### Old security entry\n' > build/plan/groom.txt
+expect "gates: findings refuses a security entry the plan lists for a change outside the sprint" 1 "other[.]md:### Old security entry$" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nlisted a2 ### Old security entry\n' > build/plan/groom.txt
+expect "gates: findings refuses a security entry the plan lists for a change whose item does not list it" 1 "other[.]md:### Old security entry$" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nfixed %s ### Old security entry\n' "$sprint_base_c" > build/plan/groom.txt
+expect "gates: findings refuses a security entry the plan fixes by a commit outside the sprint's range" 1 "other[.]md:### Old security entry$" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nfixed %s ### Old security entry\n' "$sprint_row_c" > build/plan/groom.txt
+expect "gates: findings refuses a security entry the plan fixes by a commit touching no file it names" 1 "other[.]md:### Old security entry$" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nfixed %s ### Old security entry\n' "$a1_c" > build/plan/groom.txt
+expect "gates: findings lets the plan remove a security entry as fixed by a commit of the sprint touching it" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/ or removed by its plan" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nlisted a1 ### Old security entry\n' > build/plan/groom.txt
 expect "gates: findings lets the plan remove a plain entry as gone and a security entry as listed" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/ or removed by its plan" gates findings
 rm build/plan/groom.txt
 mkdir -p docs/backlog
 printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: a\n- Why: security Low (4) b\n' > docs/backlog/a.md
 commit "docs: groom files the findings under the backlog"
 expect "gates: findings lets the branch appending groom's sprint row remove entries it filed in docs/backlog" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/" gates findings
-printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n- Merged: ### Old security entry\n- Why: security Low (4) b\n' > docs/backlog/a.md
-commit "docs: groom merges the security entry into another"
+# A security entry merges only into another security entry, its body kept
+# after the "- Merged:" line (groom's rule); a plain entry into any entry.
+printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n- Merged: ### Old security entry\n- Location: tools/code.sh\n- Why: security Low (4) b\n' > docs/backlog/a.md
+commit "docs: a security entry merged under a plain entry"
+expect "gates: findings refuses a security entry merged under an entry that is not a security entry" 1 "other[.]md:### Old security entry$" gates findings
+printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n\n### Kept security entry\n- Location: tools/code.sh\n- Why: security High (8) k\n- Merged: ### Old security entry\n' > docs/backlog/a.md
+commit "docs: a security entry merged without its body"
+expect "gates: findings refuses a security entry merged without its body" 1 "other[.]md:### Old security entry$" gates findings
+printf '# Backlog: a\n\n### Kept entry\n- Location: a\n- Merged: ### Old groomed entry\n- Location: a\n\n### Kept security entry\n- Location: tools/code.sh\n- Why: security High (8) k\n- Merged: ### Old security entry\n- Location: tools/code.sh\n- Why: security Low (4) b\n' > docs/backlog/a.md
+commit "docs: groom merges the entries into others"
 expect "gates: findings lets a carrier's entry merge into another entry of the backlog" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/" gates findings
 printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n' > docs/backlog/a.md
 commit "docs: the security entry is gone from the backlog"

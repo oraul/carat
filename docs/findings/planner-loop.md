@@ -15,3 +15,8 @@
 - Location: docs/goals.md:7, docs/goals.md:54
 - Why: after planner-loop the planner reviews the sprint's diff and the security reviewer's record mode records the notes, but goals.md, a planning record the planner writes only when asked, still names the quality reviewer's sprint start, the skeptic, and the notes and skeptic notes starts on the quality reviewer.
 - Fix: the user or the planner, when asked, rewrites the two lines to name the planner's review and the security reviewer's record mode.
+
+### The findings gate still trusts a plain entry's gone, duplicate, and merged plan lines
+- Location: tools/gates.sh:carrier_unproven
+- Why: a plain (non-security) entry removed from docs/findings/ passes when the local plan's groom.txt holds any gone, duplicate, or merged line for its heading, or a bare "- Merged:" line names it; groom's proofs of those kinds (paths gone at HEAD, a location named by another heading) need the entry in the backlog, which no longer stands after groom, so the gate cannot repeat them. A contributor-written plan line can still delete a plain entry. Security entries are covered: they leave only by a verified listed or fixed line or a merged line under a security entry holding the body.
+- Fix: have groom write the proof it checked (the paths held, the location named) beside each removal into a tracked record, such as the sprint's row file, and let the gate compare it, or file removed plain entries' headings in the pull request's archived change so the gate reads tracked text only.
