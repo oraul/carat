@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 27
 
-1. `folded-row` (T2 user request, Facet wave 2, estimated large, pushed back 2, critical e carat/adapters/frame_presenter.rb): Where: the closed-fold row of `carat/adapters/frame_presenter.rb` (`:813`, `:799` at 7156f43). Why: it paints Normal, not `docs/design.md`'s fold row look. Fix outline: paint it in its own theme group. Accepted when frame rows in both themes, ascii, 16 colors, and NO_COLOR show it. Backlog: none.
-2. `float-painter` (T2 user request, council (4), estimated medium): Where: `carat/adapters/frame_presenter.rb:649` (`paint_floats`), `:669`, `:712`, in a class of 1469 lines and 60 methods. Why: council (4) puts it before window-surfaces; sprint-26 sweep note 35. Fix outline: floats and notifications painted by a collaborator, as StatusBar, Winbar, TabBar were, the window path explicit. Accepted when every frame snapshot is unchanged, `lh-float` time and allocations held, the map updated. Backlog: "### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)".
+1. `float-painter` (T2 user request, council (4), estimated medium): Where: `carat/adapters/frame_presenter.rb:649` (`paint_floats`), `:669`, `:712`, in a class of 1469 lines and 60 methods. Why: council (4) puts it before window-surfaces; sprint-26 sweep note 35. Fix outline: floats and notifications painted by a collaborator, as StatusBar, Winbar, TabBar were, the window path explicit. Accepted when every frame snapshot is unchanged, `lh-float` time and allocations held, the map updated. Backlog: "### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)".
 
 ## Pool
 
@@ -26,8 +25,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-26 review High 0, Medium 0; periodic security at 3370625 high=0 medium=0 low=3; no periodic review in the 2 pending runs.
-- Delivered (T2): buffer-picker, council of 2026-11-21 (2), (3); 0 of 3 keys bound at `plugin.rb:101`; Sprint 27 keeps folded-row, float-painter, the pool unchanged.
-- No split (T2): 3 keys in 1 map area (finder plugin), one picker path; the last 5 large feature rows 1,156,082 to 1,499,363 total (46 to 60 percent of 2.5M), rework 0 to 1; on a stop, `<leader>fR` goes to the pool as `finder-resume`.
-- Size (T2): large, critical e carat/plugins/finder/plugin.rb; the last two feature rows under budget (hidden-option 1,099,813 medium, colorscheme-command 1,156,082 large), no size up.
-- Notes (T1): sprint-26-records 3 near backlog Pool 13 records-bench-skip, 1, 2, 5 near Pool 14 head-drop, 4 (6 pool items lacked a size) to backlog.md; review-in-openspec 8 to 12 placed by sprint-26.
+- Security first (T0): none; sprint-26 review High 0, Medium 0; periodic security at 3370625 high=0 medium=0 low=3; no periodic review in the 3 pending runs (buffer-picker, merge-gate-lows, review-in-openspec).
+- Delivered (T2): folded-row, Facet wave 2, Sprint 27 item 1, removed; the closed-fold row is painted at `frame_presenter.rb:881` to `:883` at 489459a (comment `:813`), `docs/design.md:75`, `:76` (`▸` faint, `⋯ 12 lines` dim); float-painter moves up, the pool unchanged, none pushed back.
+- No split (T2): one fix in 2 files of 2 areas (`carat/domain/themes.rb`, 4 palettes at `:226`, `:278`, `:330`, `:382`; the frame presenter) plus snapshots, not 3 independently testable parts.
+- Size (T2): large, critical e carat/adapters/frame_presenter.rb; theme rows ran over medium (listchars-folds 1,499,684, border-vocabulary 1,499,363 total); the last two feature runs under budget (colorscheme-command 1,156,082 large, buffer-picker 1,069,800 large), no size up.
+- Merge gate rules (T1): the outline edits no `tools/rules.sh` pattern.
+- Notes (T1): buffer-picker retro 2 to 4, merge-gate-lows retro 2 to 4 go to backlog.md (this lane leaves `docs/queue-backlog.md` alone); the overruns (note 5 of both) are sprint-26-records', placed in backlog Pool 13.
