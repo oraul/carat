@@ -62,6 +62,19 @@ module DriversAnsiTerminalTest
     t.assert_equal("", term.background, "The first frame waits for no reply: the background is unknown")
     t.assert_equal(["nil", ""], [read(term), screen_text(screen[0])], "the query is sent once")
 
+    # NO_COLOR is read once, when the driver is made: set and not empty
+    # turns color off, empty or unset keeps it; the environment is put
+    # back as it was.
+    saved = ENV["NO_COLOR"]
+    ENV["NO_COLOR"] = "1"
+    plain = made(keys[0], screen[1])
+    ENV["NO_COLOR"] = ""
+    empty = made(keys[0], screen[1]).no_color?
+    ENV.delete("NO_COLOR")
+    unset = made(keys[0], screen[1]).no_color?
+    ENV["NO_COLOR"] = saved.to_s unless saved.nil?
+    t.assert_equal([true, false, false], [plain.no_color?, empty, unset], "NO_COLOR set and not empty turns color off, read once when the driver is made; empty or unset keeps it")
+
     # Before enter nothing is asked, so nothing is taken out.
     keys = IO.pipe
     screen = IO.pipe

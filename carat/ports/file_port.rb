@@ -30,6 +30,14 @@ module Carat
         raise NotImplementedError, "FilePort#write"
       end
 
+      # Creates an empty regular file at path, raising when anything is
+      # there, a symbolic link included, which it never follows: a link
+      # planted after a caller's checks is refused, not written through.
+      #: (String) -> void
+      def create(path)
+        raise NotImplementedError, "FilePort#create"
+      end
+
       # Returns whether a file or directory exists at path.
       # @rbs path: String
       def exist?(path)

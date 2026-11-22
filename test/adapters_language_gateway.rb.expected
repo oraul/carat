@@ -82,6 +82,7 @@ ok   a diagnostic of severity 1 is an error
 ok   at most 1,000 diagnostics of at most 500 bytes
 ok   an empty publish clears the signs and the counts
 ok   a publish for a file no buffer shows draws nothing
+ok   a publish for a file no buffer opened is dropped: only the opened file's entry is kept
 ok   a restart clears the drawn diagnostics
 ok   malformed bodies are dropped, another handle is ignored, and the name loses its controls
 ok   one idle tick reads at most 64 messages
@@ -95,4 +96,4 @@ ok   an idle tick with no server reads no configuration line: a line read after 
 ok   a missing command leaves the slot empty
 ok   a missing command leaves the slot empty and later idle ticks start nothing: it is tried once
 ok   a text file starts nothing
-adapters_language_gateway: 97 passed, 0 failed
+adapters_language_gateway: 98 passed, 0 failed

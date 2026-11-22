@@ -69,4 +69,11 @@ ok   an absolute path
 ok   a relative path keeps a leading ..
 ok   a name that is not UTF-8
 ok   a name that starts with a continuation byte
-domain_utf8: 71 passed, 0 failed
+ok   empty text
+ok   ASCII
+ok   two- and three-byte characters
+ok   a four-byte character counts two
+ok   a stray continuation byte counts one
+ok   a truncated four-byte sequence counts one per byte
+ok   a lead byte F5 counts one per byte
+domain_utf8: 78 passed, 0 failed

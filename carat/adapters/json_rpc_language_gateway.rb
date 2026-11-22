@@ -16,6 +16,7 @@ require_relative "../domain/fuzzy_match"
 require_relative "../domain/trusted_roots"
 require_relative "../domain/root_word"
 require_relative "../domain/path_policy"
+require_relative "../domain/utf8"
 require_relative "../plugin_api"
 
 module Carat
@@ -40,7 +41,8 @@ module Carat
     # didOpen), and didClose when the buffer is gone. Its output is untrusted: a body
     # that is not a JSON object is dropped, at most DRAIN_LIMIT messages are
     # read per tick, and the name and every diagnostic message are stripped
-    # of control characters and capped (Domain::ControlText). A publish is
+    # of control characters and capped (Domain::ControlText). A publish for
+    # a document the server was told is open (any other is dropped) is
     # handed at the next idle tick to the buffers of its file, which draw
     # it as signs and the cursor line's message, and the current buffer's
     # counts go to the bar's diagnostics slot. A server whose initialize
@@ -169,7 +171,7 @@ module Carat
       # @rbs state: Domain::EditorState
       def poll(state)
         changed = drain
-        apply(state.options.icons)
+        draw_published(state.options.icons)
         changed = @slots.count_diagnostics(state.buffer.diagnostics) || changed
         language = state.buffer.filetype
         current = server_for(language)
@@ -207,10 +209,7 @@ module Carat
       # @rbs state: Domain::EditorState
       def start(state)
         language = state.buffer.filetype
-        unless command?(language)
-          show(nil)
-          return "No language server for this buffer"
-        end
+        return no_server unless command?(language)
         server = server_for(language)
         if !server.nil? && server.handle == 0
           forget(language)
@@ -221,8 +220,7 @@ module Carat
           @refused.delete(language)
           server = launch(language)
         end
-        show(server)
-        server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
+        started(language, server)
       end
 
       # Answers whether a wanted completion, a picked candidate's
@@ -250,13 +248,8 @@ module Carat
         @servers.clear
         @refused.clear
         language = state.buffer.filetype
-        unless command?(language)
-          show(nil)
-          return "No language server for this buffer"
-        end
-        server = launch(language)
-        show(server)
-        server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
+        return no_server unless command?(language)
+        started(language, launch(language))
       end
 
       #: () -> void
@@ -282,19 +275,6 @@ module Carat
         listed(uri_of(path))
       end
 
-      # The diagnostics a server published for a URI, an empty list for
-      # none.
-      #: (String) -> Domain::DiagnosticList
-      def listed(uri)
-        i = 0
-        while i < @servers.length
-          list = server_at(i).diagnostics[uri]
-          return list unless list.nil?
-          i += 1
-        end
-        Domain::DiagnosticList.new
-      end
-
       # The server of a language, or nil.
       #: (String) -> Domain::LanguageServer?
       def server_for(language)
@@ -307,6 +287,34 @@ module Carat
       end
 
       private
+
+      # Empties the slot of a buffer no server serves and answers why.
+      #: () -> String
+      def no_server
+        show(nil)
+        "No language server for this buffer"
+      end
+
+      # Shows the server start or restart launched and answers the message
+      # to show, "" when it runs.
+      #: (String, Domain::LanguageServer?) -> String
+      def started(language, server)
+        show(server)
+        server.nil? ? "Cannot start #{words_of(language).join(" ")}" : ""
+      end
+
+      # The diagnostics a server published for a URI, an empty list for
+      # none.
+      #: (String) -> Domain::DiagnosticList
+      def listed(uri)
+        i = 0
+        while i < @servers.length
+          list = server_at(i).diagnostics[uri]
+          return list unless list.nil?
+          i += 1
+        end
+        Domain::DiagnosticList.new
+      end
 
       # Drops a language's server entry, which runs no more.
       #: (String) -> void
@@ -1058,7 +1066,7 @@ module Carat
       #: (String, Domain::Buffer, Domain::Cursor) -> Hash[String, untyped]
       def position_params(path, buffer, cursor)
         line = buffer.line(cursor.row)[0, cursor.col].to_s
-        { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => utf16_length(line) } }
+        { "textDocument" => { "uri" => uri_of(path) }, "position" => { "line" => cursor.row, "character" => Domain::Utf8.utf16_length(line) } }
       end
 
       # Keeps the signature answer for the request in flight, unless a
@@ -1164,20 +1172,6 @@ module Carat
         Domain::CompletionItem.from_source(label.to_s, kind, detail.is_a?(String) ? detail.to_s : "", text.is_a?(String) ? text.to_s : "")
       end
 
-      # The UTF-16 code units of a text: one per character, two for one
-      # outside the basic plane (a four-byte UTF-8 sequence).
-      #: (String) -> Integer
-      def utf16_length(text)
-        count = 0
-        i = 0
-        while i < text.bytesize
-          b = text.getbyte(i).to_i
-          count += 1 if (b & 0xC0) != 0x80
-          count += 1 if b >= 0xF0
-          i += 1
-        end
-        count
-      end
 
       # Answers a server's request, so a server waiting on it goes on.
       #: (Domain::LanguageServer, String, untyped) -> void
@@ -1237,10 +1231,14 @@ module Carat
         server.state = server.tasks > 0 ? :indexing : :ready
       end
 
-      # Keeps a file's diagnostics as values, replacing its earlier ones.
+      # Keeps a file's diagnostics as values, replacing its earlier ones,
+      # only for a document the server was told is open (its versions,
+      # which a didClose forgets), so a server cannot make the editor keep
+      # diagnostics for any number of URIs.
       #: (Domain::LanguageServer, untyped, untyped) -> void
       def published(server, uri, list)
         return unless uri.is_a?(String) && list.is_a?(Array)
+        return unless server.versions.key?(uri.to_s)
         values = Domain::DiagnosticList.new
         list.each do |item|
           break if values.count >= DIAGNOSTIC_LIMIT
@@ -1252,11 +1250,12 @@ module Carat
       end
 
       # Hands each file published since the last tick to the buffers whose
-      # path makes its URI, the signs in the icon set's glyphs.
+      # path makes its URI, the signs in the glyphs of the icon set icons;
+      # an empty list clears them (Buffer#set_diagnostics).
       #: (String) -> void
-      def apply(set)
+      def draw_published(icons)
         return if @published.empty?
-        glyphs = [Domain::Icons.glyph("error", set), Domain::Icons.glyph("warning", set), Domain::Icons.glyph("info", set), Domain::Icons.glyph("hint", set)]
+        glyphs = [Domain::Icons.glyph("error", icons), Domain::Icons.glyph("warning", icons), Domain::Icons.glyph("info", icons), Domain::Icons.glyph("hint", icons)]
         i = 0
         while i < @buffers.count
           buffer = @buffers.buffer_at(i)
@@ -1265,12 +1264,7 @@ module Carat
           next if path.empty?
           uri = uri_of(path)
           next unless @published.include?(uri)
-          list = listed(uri)
-          if list.empty?
-            buffer.clear_diagnostics
-          else
-            buffer.set_diagnostics(list, glyphs)
-          end
+          buffer.set_diagnostics(listed(uri), glyphs)
         end
         @published.clear
         nil
@@ -1449,7 +1443,7 @@ module Carat
         tail = [tail, first.bytesize - head].min if sent_end - top == 1
         tail = [tail, lines[top].to_s.bytesize - head].min if lines_end - top == 1
         tail -= 1 while tail > 0 && continuation?(last, last.bytesize - tail)
-        content_change(top, utf16_length(first.byteslice(0, head).to_s), sent_end - 1, utf16_length(last.byteslice(0, last.bytesize - tail).to_s), text.byteslice(head, text.bytesize - head - tail).to_s)
+        content_change(top, Domain::Utf8.utf16_length(first.byteslice(0, head).to_s), sent_end - 1, Domain::Utf8.utf16_length(last.byteslice(0, last.bytesize - tail).to_s), text.byteslice(head, text.bytesize - head - tail).to_s)
       end
 
       # The bytes two lines share at their start, backed off to a
@@ -1512,13 +1506,16 @@ module Carat
         (b >= 97 && b <= 122) || (b >= 65 && b <= 90) || (b >= 48 && b <= 57) || b == 45 || b == 46 || b == 95 || b == 126 || b == 47
       end
 
+      # Sends a request and answers its id, 0 when the server takes no
+      # input or the write crashed it: a request never sent is not in
+      # flight, so no ask waits on it.
       #: (Domain::LanguageServer, String, untyped) -> Integer
       def request(server, name, params)
         id = server.take_id
         value = { "jsonrpc" => "2.0", "id" => id, "method" => name }
         value["params"] = params unless params.nil?
         deliver(server, value)
-        id
+        server.handle == 0 ? 0 : id
       end
 
       #: (Domain::LanguageServer, String, untyped) -> void

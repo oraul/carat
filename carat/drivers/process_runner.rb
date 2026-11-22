@@ -1,4 +1,7 @@
 require_relative "../ports/process_port"
+require_relative "../ports/message_queue_port"
+require_relative "../domain/rpc_framer"
+require_relative "../domain/service_message"
 
 module Carat
   module Drivers

@@ -445,6 +445,10 @@ module AdaptersLanguageGatewayTest
     t.assert_equal([false, false, true], [h.buffer.signs?, slots.diagnostics?, h.buffer.diagnostic_at(0).nil?], "an empty publish clears the signs and the counts")
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri + "x", "diagnostics" => two })
     t.assert_equal([false, false], [h.buffer.signs?, slots.diagnostics?], "a publish for a file no buffer shows draws nothing")
+    # Scenario: A publish for an unopened file is dropped.
+    3.times { |n| notify(h, "textDocument/publishDiagnostics", { "uri" => "#{uri}#{n}", "diagnostics" => two }) }
+    kept = h.assembly.services.server_for("ruby")
+    t.assert_equal([[uri.to_s], 0], [kept.nil? ? [] : kept.diagnostics.keys, h.assembly.services.diagnostics("#{path}0").count], "a publish for a file no buffer opened is dropped: only the opened file's entry is kept")
     notify(h, "textDocument/publishDiagnostics", { "uri" => uri, "diagnostics" => two })
     h.type(":LspRestart<CR>")
     h.wait

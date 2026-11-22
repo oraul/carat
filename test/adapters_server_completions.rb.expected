@@ -35,6 +35,7 @@ ok   a word deleted within the debounce sends no request
 ok   the word typed next at the same column asks the server
 ok   its answer fills the popup
 ok   an unanswered request is cancelled after two seconds and waits no more
+ok   a completion request whose write failed crashes the server and waits on nothing
 ok   an error answer opens no popup
 ok   escape sequences are dropped, each string is cut, an unknown kind is text, and an item without a label is skipped
 ok   the text edit's new text is the text inserted
@@ -57,4 +58,4 @@ ok   the new word's answer cancels the resolve in flight by its id
 ok   the cancelled resolve's late answer changes no float
 ok   documentation in the answer shows with no request
 ok   a server without resolveProvider is asked nothing and no float shows
-adapters_server_completions: 59 passed, 0 failed
+adapters_server_completions: 60 passed, 0 failed

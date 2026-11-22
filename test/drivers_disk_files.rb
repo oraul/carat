@@ -71,6 +71,30 @@ module DriversDiskFilesTest
     "raised #{e.message}"
   end
 
+  # DiskFiles that plants a symbolic link at a path the first time a
+  # path is resolved, which MakePath asks after its probes and before its
+  # create, as a link swapped in between them would be.
+  class PlantingDisk < Carat::Drivers::DiskFiles
+    # @rbs @at: String
+    # @rbs @target: String
+    # @rbs @planted: bool
+
+    #: (at: String, target: String) -> void
+    def initialize(at:, target:)
+      @at = at
+      @target = target
+      @planted = false
+    end
+
+    # Plants the link once, then resolves the path.
+    # @rbs path: String
+    def real_path(path)
+      File.symlink(@target, @at) unless @planted
+      @planted = true
+      super(path)
+    end
+  end
+
   # The flags of a stat: exists, directory, symlink, regular.
   def self.flags(files, path)
     info = files.stat(path)
@@ -103,6 +127,20 @@ module DriversDiskFilesTest
       no_link = "raised"
     end
     t.assert_equal(["hello\n", "raised", "hello\n"], [files.read_no_link("#{base}/reg.txt", LIMIT), no_link, files.read("#{base}/link.txt", LIMIT)], "a link is refused by the open")
+    # Scenario: A FIFO is refused at once while threads run. The thread
+    # writes to the FIFO after 0.3 seconds, which a read waiting for a
+    # writer would wait for.
+    writer = Thread.new do
+      sleep 0.3
+      io = IO.for_fd(IO.sysopen("#{base}/fifo", File::RDWR | File::NONBLOCK))
+      io.write("x")
+      io.close
+    end
+    started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+    refused = read_of(files, "#{base}/fifo")
+    waited = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+    writer.join
+    t.assert_equal(["raised Not a regular file", true], [refused, waited < 0.25], "a FIFO is refused at once while another thread runs")
     latin1 = files.read("#{base}/latin1.txt", LIMIT)
     t.assert_equal(["UTF-8", false, 5], [latin1.encoding.to_s, latin1.valid_encoding?, latin1.bytesize], "a bounded read gives UTF-8 bytes as they are")
 
@@ -149,6 +187,13 @@ module DriversDiskFilesTest
       outcome = make.call("#{base}/#{input[0]}", "#{base}/#{input[1]}", input[3].to_s == "dir")
       [outcome.ok, outcome.message, File.exist?("#{base}/#{input[2]}")]
     end
+
+    # Scenario: A link planted at the target after the checks.
+    planting = PlantingDisk.new(at: "#{base}/tree/planted.rb", target: "#{base}/outside/keep.rb")
+    plant = Carat::UseCases::MakePath.new(files: planting, probe_path: Carat::UseCases::ProbePath.new(files: planting), resolve_inside: Carat::UseCases::ResolveInside.new(files: planting))
+    planted = plant.call("#{base}/tree", "#{base}/tree/planted.rb", false)
+    t.assert_equal([false, "keep\n", true], [planted.ok, File.read("#{base}/outside/keep.rb"), File.symlink?("#{base}/tree/planted.rb")], "a link planted at the target after the checks is refused and its target keeps its text")
+    File.delete("#{base}/tree/planted.rb")
 
     # Renames and deletes through links: rows are [label, [root, path,
     # new name or "" to delete, the entry to look for], [ok, message,
