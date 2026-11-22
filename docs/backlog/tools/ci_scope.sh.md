@@ -157,14 +157,6 @@
 - Category: pipeline
 - Added: 2026-11-18
 
-### tools/ci_scope.sh:80: duplication: two gh api calls to the same commits/SHA/pulls (sprint-22 sweep quality)
-
-- Location: `tools/ci_scope.sh:80`
-- Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
-- Fix: one call whose jq prints both, split with read
-- Category: pipeline
-- Added: 2026-11-20
-
 ### ci_scope splits changed paths on whitespace and globs (sprint-24 sweep quality)
 
 - Location: `tools/ci_scope.sh:99`, `:123`
@@ -196,3 +188,7 @@
 - Fix: one call with --jq on .[0] printing both values, split into head and number
 - Category: pipeline
 - Added: 2026-11-22
+- Merged: ### tools/ci_scope.sh:80: duplication: two gh api calls to the same commits/SHA/pulls (sprint-22 sweep quality)
+- Location: `tools/ci_scope.sh:80`
+- Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
+- Fix: one call whose jq prints both, split with read

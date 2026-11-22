@@ -1,18 +1,5 @@
 # Backlog: carat/drivers/ansi_terminal.rb
 
-## No test reads NO_COLOR through AnsiTerminal
-
-- Where: the `NO_COLOR` read in `carat/drivers/ansi_terminal.rb` (line 24 at `start-screen`); the start screen tests set only the `FakeTerminal` writer. Quality review of `start-screen`.
-- Why it matters: a regression in the driver's read would show the colored glyphs to a user who set `NO_COLOR` with every test still passing.
-- Fix outline: a `test/smoke_editor.rb` session spawned with `NO_COLOR=1` asserting the output holds no U+25E2 and still shows the hints.
-- Merged: ### No test reads NO_COLOR through AnsiTerminal
-- Location: carat/drivers/ansi_terminal.rb:24 (`@no_color` read once from the environment), :30 (`no_color?`); only bin/carat.rb:27 constructs it
-- Why: every NO_COLOR test goes through FakeTerminal's writer, so a regression in the driver's own read of the variable (set, empty, unset) passes every test; split from lsp-tidy by the plan and queued as `lsp-tidy-c`
-- Fix: a driver test constructing AnsiTerminal over pipes with NO_COLOR set, set empty, and unset, checking `no_color?` for each
-- Also: test/smoke_editor.rb, bin/carat.rb
-- Category: editor
-- Added: 2026-11-05
-
 ## The main loop spins at end of input
 
 - Where: `read_key` in `carat/drivers/ansi_terminal.rb` line 54 and `InputController#pump` in `carat/adapters/input_controller.rb` line 86, at 3895e21. Periodic quality. Queue item 39 (backlog items).

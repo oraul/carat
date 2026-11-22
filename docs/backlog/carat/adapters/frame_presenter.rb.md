@@ -314,3 +314,19 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Fix: extract float and notification painting into collaborators as StatusBar, Winbar, and TabBar were, keeping the hot window path explicit
 - Category: editor
 - Added: 2026-11-22
+
+### The float key's layout is read in two classes at carat/adapters/frame_presenter.rb
+- Location: `carat/adapters/frame_presenter.rb` `forget_rows`, `compare_boxes`, `covers?` (walking by `FloatPainter::STRIDE`), and `carat/adapters/float_painter.rb` `build_float_key`, `add_notice_boxes`.
+- Why: the presenter reads the box rows and columns at offsets 0 to 3 of each `STRIDE` group the float painter writes, so a change of the key's layout must be made in both files.
+- Fix: give `FloatPainter` the box queries over a key (`covers?`, and a row range per box the presenter iterates for `forget_rows` and `compare_boxes`), so only it knows the offsets.
+- Also: carat/adapters/float_painter.rb
+- Category: editor
+- Added: 2026-11-22
+
+### float_key is read before build_key fills it at carat/adapters/frame_presenter.rb:246 (sprint-27 review quality, note 6)
+
+- Location: carat/adapters/frame_presenter.rb:246
+- Why: float_key = @float_painter.key is taken before @float_painter.build_key refills it; it works only because FloatPainter#key is one array cleared and refilled in place, and it reads like a stale copy.
+- Fix: read the key after build_key, or say in a comment that it is the painter's live array.
+- Category: editor
+- Added: 2026-11-22

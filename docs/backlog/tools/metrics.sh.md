@@ -49,14 +49,6 @@
 - Category: pipeline
 - Added: 2026-11-18
 
-### tools/metrics.sh:110: compare walks only the names of CURRENT, so an (sprint-22 sweep quality)
-
-- Location: `tools/metrics.sh:110`
-- Why: compare walks only the names of CURRENT, so an allocs or rounds name present in BASE and missing from CURRENT passes silently, against the usage (fail when not measured) and unlike run_state.sh bench_compare, which reports it as none
-- Fix: in END, fail for each strict base name not seen
-- Category: pipeline
-- Added: 2026-11-20
-
 ### metrics compare passes a strict base name the current run lacks (sprint-24 sweep quality)
 
 - Location: `tools/metrics.sh:104`
@@ -72,3 +64,7 @@
 - Fix: in the END block, FAIL each allocs or rounds name of BASE absent from CURRENT
 - Category: pipeline
 - Added: 2026-11-22
+- Merged: ### tools/metrics.sh:110: compare walks only the names of CURRENT, so an (sprint-22 sweep quality)
+- Location: `tools/metrics.sh:110`
+- Why: compare walks only the names of CURRENT, so an allocs or rounds name present in BASE and missing from CURRENT passes silently, against the usage (fail when not measured) and unlike run_state.sh bench_compare, which reports it as none
+- Fix: in END, fail for each strict base name not seen

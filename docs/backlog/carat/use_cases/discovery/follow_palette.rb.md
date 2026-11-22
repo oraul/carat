@@ -39,14 +39,6 @@ Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= 
 - Category: editor
 - Added: 2026-11-17
 
-### carat/use_cases/discovery/follow_palette.rb:274: duplication: char_count re-implements the UTF-8 character count of a (sprint-22 sweep quality)
-
-- Location: `carat/use_cases/discovery/follow_palette.rb:274`
-- Why: duplication: char_count re-implements the UTF-8 character count of a byte prefix that Domain::Utf8 should own (also open-coded in json_rpc_language_gateway.rb:1175 and visit_target.rb:210)
-- Fix: a Utf8 module function used by all three
-- Category: editor
-- Added: 2026-11-20
-
 ### The palette's PmenuExtra token may give an end column as its length
 - Location: carat/use_cases/discovery/follow_palette.rb `styles`, the `tokens << char_count(line, Domain::DisplayWidth.bytes_within(line, room + NAME_WIDTH))` line
 - Why: a `SyntaxLine` token is (start column, length, group), but this pushes the column where the name's column ends, so the run reaches past the name into the key column, which would then draw in PmenuExtra; no test reads a key cell's group.
@@ -71,3 +63,7 @@ Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= 
 - Also: carat/domain/utf8.rb
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### carat/use_cases/discovery/follow_palette.rb:274: duplication: char_count re-implements the UTF-8 character count of a (sprint-22 sweep quality)
+- Location: `carat/use_cases/discovery/follow_palette.rb:274`
+- Why: duplication: char_count re-implements the UTF-8 character count of a byte prefix that Domain::Utf8 should own (also open-coded in json_rpc_language_gateway.rb:1175 and visit_target.rb:210)
+- Fix: a Utf8 module function used by all three

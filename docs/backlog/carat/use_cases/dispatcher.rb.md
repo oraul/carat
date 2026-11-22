@@ -44,28 +44,6 @@
 - Category: editor
 - Added: 2026-11-18
 
-### Duplicates Options#tab_width (sprint-20 sweep quality, dispatcher.rb:114)
-
-- Location: `carat/use_cases/dispatcher.rb:114`
-- Why: duplicates Options#tab_width (tabstop > 0 ? tabstop : 8), as do arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, repeat_last.rb:105, and adapters/frame_presenter.rb:236, and Options.width_problem already keeps tabstop at 1 or more, so the fallback is dead
-- Fix: call state.options.tab_width at each site
-- Merged: ### Tabstop > 0 ? tabstop (sprint-20 sweep quality, dispatcher.rb:114)
-- Location: `carat/use_cases/dispatcher.rb:114`
-- Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
-- Fix: call state.options.tab_width (or pass it) at each site
-- Also: carat/domain/options.rb
-- Category: editor
-- Added: 2026-11-19
-
-### carat/use_cases/dispatcher.rb:114: duplication: re-derives the tab width as tabstop > 0 (sprint-22 sweep quality)
-
-- Location: `carat/use_cases/dispatcher.rb:114`
-- Why: duplication: re-derives the tab width as tabstop > 0 ? tabstop : 8, which Options#tab_width already answers; the same expression repeats in repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/320/341, display_width.rb:57, frame_presenter.rb:236
-- Fix: call state.options.tab_width (and a shift_width reader for the operators) at every site
-- Also reported: sprint-22 sweep note 26 (leave_insert.rb:71, repeat_last.rb:105, operators.rb:340)
-- Category: editor
-- Added: 2026-11-20
-
 ### Six use cases restate Options#tab_width (sprint-24 sweep quality)
 
 - Location: `carat/use_cases/dispatcher.rb:114`, `repeat_last.rb:105`, `arrange_view.rb:50`, `insert_tab.rb:25`, `leave_insert.rb:71`, `carat/adapters/frame_presenter.rb:241`
@@ -82,3 +60,17 @@
 - Fix: call state.options.tab_width wherever an Options is at hand, and one helper for the integer form
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### carat/use_cases/dispatcher.rb:114: duplication: re-derives the tab width as tabstop > 0 (sprint-22 sweep quality)
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: duplication: re-derives the tab width as tabstop > 0 ? tabstop : 8, which Options#tab_width already answers; the same expression repeats in repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/320/341, display_width.rb:57, frame_presenter.rb:236
+- Fix: call state.options.tab_width (and a shift_width reader for the operators) at every site
+- Also reported: sprint-22 sweep note 26 (leave_insert.rb:71, repeat_last.rb:105, operators.rb:340)
+- Merged: ### Duplicates Options#tab_width (sprint-20 sweep quality, dispatcher.rb:114)
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: duplicates Options#tab_width (tabstop > 0 ? tabstop : 8), as do arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, repeat_last.rb:105, and adapters/frame_presenter.rb:236, and Options.width_problem already keeps tabstop at 1 or more, so the fallback is dead
+- Fix: call state.options.tab_width at each site
+- Merged: ### Tabstop > 0 ? tabstop (sprint-20 sweep quality, dispatcher.rb:114)
+- Location: `carat/use_cases/dispatcher.rb:114`
+- Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
+- Fix: call state.options.tab_width (or pass it) at each site
+- Also: carat/domain/options.rb

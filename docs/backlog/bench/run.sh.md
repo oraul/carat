@@ -53,15 +53,6 @@
 - Category: code-quality
 - Added: 2026-11-20
 
-### bench/run.sh:69: the default scenario list (documented as every scenario when (sprint-22 sweep quality)
-
-- Location: `bench/run.sh:69`
-- Why: the default scenario list (documented as every scenario when none is named, and the one make bench runs without SCENARIOS) leaves out lh-float, lh-winbar, n, palette, and grep, which bench/keys.rb defines
-- Fix: have bench/keys.rb print its SCENARIOS names (for example with a --list argument) and loop over that output, so the list cannot fall out of date
-- Also: bench/keys.rb
-- Category: code-quality
-- Added: 2026-11-20
-
 ### make bench leaves five scenarios unrun (sprint-24 sweep quality)
 
 - Location: `bench/run.sh:69`, `bench/keys.rb`
@@ -86,3 +77,8 @@
 - Fix: have bench/keys print its SCENARIOS names and use them as the default, or add the six names
 - Category: code-quality
 - Added: 2026-11-22
+- Merged: ### bench/run.sh:69: the default scenario list (documented as every scenario when (sprint-22 sweep quality)
+- Location: `bench/run.sh:69`
+- Why: the default scenario list (documented as every scenario when none is named, and the one make bench runs without SCENARIOS) leaves out lh-float, lh-winbar, n, palette, and grep, which bench/keys.rb defines
+- Fix: have bench/keys.rb print its SCENARIOS names (for example with a --list argument) and loop over that output, so the list cannot fall out of date
+- Also: bench/keys.rb

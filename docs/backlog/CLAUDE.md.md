@@ -128,15 +128,6 @@
 - Category: pipeline
 - Added: 2026-11-20
 
-### Testing.new(name) takes a positional argument while CLAUDE.md Coding conventions at carat/testing.rb:13 (sprint-26 sweep quality, note 32)
-
-- Location: carat/testing.rb:13
-- Why: Testing.new(name) takes a positional argument while CLAUDE.md Coding conventions list Carat::Testing among the behavior classes whose constructors take required keywords; test/lint.rb:1354 checks only layer files, so the exemption (also for carat/plugins/) is undocumented drift
-- Fix: state the exemption for carat/testing.rb and plugin classes in CLAUDE.md, or switch to name: across the 125 call sites
-- Also: carat/testing.rb, test/lint.rb
-- Category: pipeline
-- Added: 2026-11-22
-
 ### gate_docs checks CLAUDE.md twice: at :292 for a target at tools/gates.sh:292 (sprint-26 sweep quality, note 47)
 
 - Location: tools/gates.sh:292
@@ -154,3 +145,8 @@
 - Also: carat/testing.rb, test/lint.rb
 - Category: pipeline
 - Added: 2026-11-22
+- Merged: ### Testing.new(name) takes a positional argument while CLAUDE.md Coding conventions at carat/testing.rb:13 (sprint-26 sweep quality, note 32)
+- Location: carat/testing.rb:13
+- Why: Testing.new(name) takes a positional argument while CLAUDE.md Coding conventions list Carat::Testing among the behavior classes whose constructors take required keywords; test/lint.rb:1354 checks only layer files, so the exemption (also for carat/plugins/) is undocumented drift
+- Fix: state the exemption for carat/testing.rb and plugin classes in CLAUDE.md, or switch to name: across the 125 call sites
+- Also: carat/testing.rb, test/lint.rb

@@ -1501,3 +1501,42 @@ none
 - Fix: one dirty_tracked helper and one function that writes the failed verdict, beside check_verdict
 - Category: pipeline
 - Added: 2026-11-22
+
+### The planner's sprint queues reach a records change failing the docs-lint queue check (sprint-26-records retro note 4)
+- Location: tools/run_state.sh:4237 (plan-apply copies the planner's lane queue unchecked); tools/docs_lint.sh:68 (the queue check)
+- Why: 6 Pool items (13 to 18) of docs/queue-backlog.md lacked an estimated size, failing make docs-lint in sprint-26-records and costing a hand edit of a queue in its implement start.
+- Fix: refuse or flag a planner queue that fails the docs-lint queue check before groom and plan-apply copy it; accepted when the next sprint-N-records passes make docs-lint with no hand edit of docs/queue-*.md.
+- Also: tools/docs_lint.sh, docs/queue-backlog.md
+- Category: pipeline
+- Added: 2026-11-22
+
+### Head-form notes record a head git confirms (folded-row retro note 4, notes 1 and 5)
+- Location: tools/run_state.sh and .claude/workflows/deliver-change.js, the head check of a contributor start; backlog queue Pool 14 `head-drop`: merge into it.
+- Why: 39 taken-from-git notes across the run states, 0 refused; folded-row 2 more (implement be275416f50a, package 6ec0fe0457d8), neither refused; 43 head-form notes in 16 runs; none changed a decision.
+- Fix: no record line when git corrects a reported head to the same commit; accepted when the next 5 runs record no head-form note and tools-test still shows a head that differs from git refused.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-22
+
+### The budget line clips a records run's own tokens at zero (merge-gate-lows retro note 2)
+- Location: tools/run_state.sh `budget`; near backlog queue Pool 13 `budget-recalibrate` and "### The in-run budget line prices total tokens at 6 per output token", merge into it.
+- Why: budget sprint-26-records printed 0 total with 34,373,476 set apart, against the row's 2,612,300 total.
+- Fix: accepted when budget sprint-26-records prints a nonzero total no larger than 2,612,300 and set-apart plus own tokens match the records.
+- Category: pipeline
+- Added: 2026-11-22
+
+### The budget line clips a records run's own tokens at zero (merge-gate-lows retro note 2)
+- Location: tools/run_state.sh `budget`; near backlog queue Pool 13 `budget-recalibrate` and "### The in-run budget line prices total tokens at 6 per output token", merge into it.
+- Why: budget sprint-26-records printed 0 total with 34,373,476 set apart, against the row's 2,612,300 total.
+- Fix: accepted when budget sprint-26-records prints a nonzero total no larger than 2,612,300 and set-apart plus own tokens match the records.
+- Category: pipeline
+- Added: 2026-11-22
+
+## tools/run_state.sh groom: security entries removed without a named fixing commit
+
+- Location: `tools/run_state.sh` (groom), `docs/queue-backlog.md` Groom line.
+- Why it matters: groom removed four security Low entries (held-finding and unpushed-finding notes, the skeptic's quoted note) citing only counts, so a later reader cannot trace that they were closed by evidence; the fix exists in 9e4aca0 (#289).
+- Fix outline: make groom refuse to remove a security-category entry unless a fixing commit is named, and record each removed security entry with that commit in the Groom proof line or groomed.md. This round only cites 9e4aca0 in the sprint-26 Groom line, briefly, the queue file being at its budget.
+- Also: docs/queue-backlog.md
+- Category: security
+- Added: 2026-11-22
