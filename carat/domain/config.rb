@@ -133,7 +133,7 @@ module Carat
       def refuse(source, reason)
         file = files
         self.files = file + 1
-        note_at(file * RcLine::FILE_SPAN, "#{source}: #{reason}")
+        note_at(RcLine.order_at(file, 0), "#{source}: #{reason}")
       end
 
       # The number of setting lines kept.
@@ -258,7 +258,7 @@ module Carat
       def add(source, file, number, parsed, trusted, held, leader)
         return if parsed.blank?
         unless parsed.ok?
-          note_at(file * RcLine::FILE_SPAN + number, "#{source}:#{number}: #{parsed.error}")
+          note_at(RcLine.order_at(file, number), RcLine.problem_at(source, number, parsed.error))
           return
         end
         line = RcLine.from_parse(source, file, number, parsed)

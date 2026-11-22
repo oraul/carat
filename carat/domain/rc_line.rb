@@ -1,3 +1,5 @@
+require_relative "rc_parse"
+
 module Carat
   module Domain
     # One setting of a configuration file: the label of the file it came
@@ -32,12 +34,25 @@ module Carat
       # The problem as it is reported: "file:line: message".
       #: (String) -> String
       def problem(message)
-        "#{source}:#{number}: #{message}"
+        RcLine.problem_at(source, number, message)
       end
 
       # Where the line sorts among every file's lines.
       #: () -> Integer
       def order
+        RcLine.order_at(file, number)
+      end
+
+      # The problem of a file's line, as problem words it, for a line that
+      # did not read and so has no RcLine.
+      #: (String, Integer, String) -> String
+      def self.problem_at(source, number, message)
+        "#{source}:#{number}: #{message}"
+      end
+
+      # Where a file's line sorts, as order gives it.
+      #: (Integer, Integer) -> Integer
+      def self.order_at(file, number)
         file * FILE_SPAN + number
       end
     end

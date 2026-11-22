@@ -13,3 +13,9 @@
 ## 3. Docs
 
 - [x] 3.1 Update README.md, `docs/architecture.md` section 7, and `docs/codebase-map.md` for the allowlist and the held keys
+
+## Quality review
+
+- [x] 4.1 The parse-error note of `Config#add` and the note of `refuse` built the line's problem text and order by hand beside `RcLine#problem` and `#order`: `RcLine.problem_at` and `RcLine.order_at` hold both, in `carat/domain/rc_line.rb`; the parse-error and refusal tests of `test/domain_rc_parser.rb` and `test/adapters_config_gateway.rb` prove the text unchanged
+- [x] 4.2 `carat/domain/rc_line.rb` named `RcParse` without requiring it, so `make diagnose-one` of the file warned: it requires `rc_parse`
+- [x] 4.3 A plugin manifest's bindings are not read by `Config`, so a key only a manifest binds is not held: recorded in `docs/findings/config-guards-b.md`, since no shipped manifest binds a write, a quit, or the command line and holding them needs the plugin registry at read time
