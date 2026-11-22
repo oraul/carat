@@ -3957,6 +3957,10 @@ expect "guard: the merge tool refuses a merge without a message" 2 "a merge with
 expect "guard: the merge tool refuses a shortened squash message" 2 'other than the body of openspec/changes/archive/2026-01-01-mtool/pr.md, a blank line, and the trailer: line 5 of the message is "Co-Authored-By: Claude [^"]*" where it should be "---"' merge_call merger "$sha" squash "${pre}${line3}${nl}${nl}$TRAILER"
 expect "guard: the merge tool refuses a changed line of the squash message" 2 'line 3 of the message is "A body line" where it should be "A body line ..' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
 expect "guard: the merge tool refuses a squash message without the trailer" 2 'the message ends at line 9, before line 11, "Co-Authored-By: Claude' merge_call merger "$sha" squash "$body_json"
+# The last line is exactly the trailer: #307's squash commit ended with
+# the trailer and a stray double quote (cheap-tier).
+expect "guard: the merge tool refuses a stray quote after the trailer" 2 'line 11 of the message is "Co-Authored-By: Claude [^"]*>"" where it should be' merge_call merger "$sha" squash "$exact"'\"'
+expect "guard: the merge tool refuses a stray quote on a line after the trailer" 2 'the message goes on past the trailer at line 12' merge_call merger "$sha" squash "$exact$nl"'\"'
 expect "guard: the merge tool refuses a squash message going on past the trailer" 2 'the message goes on past the trailer at line 12 with "extra"' merge_call merger "$sha" squash "$exact${nl}extra"
 # A message past the environment's size limit is compared too, from a
 # file: the comparison prints "same" only on equality, so an awk that
