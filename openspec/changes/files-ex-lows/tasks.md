@@ -14,7 +14,7 @@
 
 ## 4. The openat gap
 
-- [ ] 4.1 Append the three file-operation headings, merged, to `docs/findings/files-ex-lows.md` with the openat fix outline
+- [x] 4.1 Append the three file-operation headings, merged, to `docs/findings/files-ex-lows.md` with the openat fix outline
 
 ## 5. Docs
 
