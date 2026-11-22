@@ -18,7 +18,7 @@
 
 ## 5. Docs
 
-- [x] 5.1 `docs/compatibility.md` (`:e` row and the two Differences paragraphs), `docs/codebase-map.md` (`replacement.rb`, `substitution.rb`, `open_file.rb`, `memory_files.rb`), README's `:e` sentence; `docs/architecture.md` section 7's project-file line trimmed back under its docs-lint budget, which main exceeded by 8 bytes
+- [x] 5.1 `docs/compatibility.md` (`:e` row and the two Differences paragraphs), `docs/codebase-map.md` (`replacement.rb`, `substitution.rb`, `open_file.rb`, `memory_files.rb`), README's `:e` sentence
 
 ## Quality review
 
