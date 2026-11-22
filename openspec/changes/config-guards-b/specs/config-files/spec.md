@@ -46,3 +46,17 @@ A keymap line in the project file, `none` included, whose keys the defaults or t
 #### Scenario: A key the user freed
 - **WHEN** the user file holds "keymap.normal <C-s> none" and the project file "keymap.normal <C-s> cursor.down"
 - **THEN** both lines are kept and nothing is reported
+
+### Requirement: A project file binds a prompt only in normal and visual modes
+A keymap line in the project file binding `mode.cmdline` or `palette.open`, whose prompt runs what is typed next, SHALL be kept only in the normal, visual, visual_line, and visual_block modes; in any other mode it SHALL be reported as "<action> is not bound in <mode> mode from a project file" and ignored.
+
+#### Scenario: The project file binds a prompt outside normal and visual
+- **WHEN** the project file's first line is "keymap.insert <CR> mode.cmdline" and its second "keymap.visual_line <F2> palette.open"
+- **THEN** ".caratrc:1: mode.cmdline is not bound in insert mode from a project file" is reported and the second line is kept
+
+### Requirement: A project file cannot bind keys around a held key
+A keymap line in the project file, `none` excepted, whose keys start with keys held from the project file, or are a proper prefix of them, SHALL be reported as "<keys> overlaps keys that run <action>, which a project file may not unbind or rebind" and ignored, since it would make the held keys a prefix or wait on them.
+
+#### Scenario: The project file binds keys around a held key
+- **WHEN** the project file's first line is "keymap.normal :w cursor.down", its second "keymap.normal <Space>q cursor.down", and its third "keymap.normal <C-w>qa none"
+- **THEN** ".caratrc:1: :w overlaps keys that run mode.cmdline, which a project file may not unbind or rebind" and ".caratrc:2: <Space>q overlaps keys that run quit.all, which a project file may not unbind or rebind" are reported, and the third line is kept

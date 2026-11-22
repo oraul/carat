@@ -204,6 +204,25 @@ module AdaptersConfigGatewayTest
     config = load(files)
     t.assert_equal([[".caratrc normal <C-s> cursor.down", ".caratrc normal <Space>qq none"], [".caratrc:3: : runs mode.cmdline, #{held}"]], [project_bindings(config), config.report], "a key the user freed is the project's to bind")
 
+    # Scenario: The project file binds keys around a held key.
+    # A binding that starts with held keys, or begins them, would make a
+    # quickly typed :w run the project's action or wait on <leader>qq;
+    # none on either leaves the held key, and <leader>wx holds none.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.normal :w cursor.down\nkeymap.normal <Space>q cursor.down\nkeymap.normal <leader>fsx cursor.up\nkeymap.visual :x cursor.down\nkeymap.normal <C-w>qa none\nkeymap.normal <leader>wx cursor.down\n")
+    config = load(files)
+    overlaps = "overlaps keys that run"
+    t.assert_equal([[".caratrc normal <C-w>qa none", ".caratrc normal <leader>wx cursor.down"], [".caratrc:1: :w #{overlaps} mode.cmdline, #{held}", ".caratrc:2: <Space>q #{overlaps} quit.all, #{held}", ".caratrc:3: <leader>fsx #{overlaps} file.save, #{held}", ".caratrc:4: :x #{overlaps} mode.cmdline, #{held}"]], [project_bindings(config), config.report], "a project file cannot bind keys that start with or begin a held key")
+
+    # Scenario: The project file binds a prompt outside normal and visual.
+    # Bound to insert-mode <CR>, mode.cmdline or palette.open would turn
+    # the next line typed into a command; the user's such binding is held.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.insert <F3> palette.open\n")
+    files.put(PROJECT, "keymap.insert <CR> mode.cmdline\nkeymap.completion <CR> palette.open\nkeymap.operator_pending <F2> palette.open\nkeymap.cmdline <F2> mode.cmdline\nkeymap.insert <F3> none\nkeymap.visual_line <F2> palette.open\nkeymap.normal <F2> mode.cmdline\n")
+    config = load(files)
+    t.assert_equal([[".caratrc visual_line <F2> palette.open", ".caratrc normal <F2> mode.cmdline"], [".caratrc:1: mode.cmdline is not bound in insert mode from a project file", ".caratrc:2: palette.open is not bound in completion mode from a project file", ".caratrc:3: palette.open is not bound in operator_pending mode from a project file", ".caratrc:4: mode.cmdline is not bound in cmdline mode from a project file", ".caratrc:5: <F3> runs palette.open, #{held}"]], [project_bindings(config), config.report], "a project file binds the command line and the palette only in normal and visual modes")
+
     # Scenario: A project leader leaves the leader bindings where they were.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.leader ,\n")

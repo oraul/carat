@@ -58,6 +58,15 @@ module Carat
       # but may not take it from the key the defaults or the user gave it.
       OPEN_COMMAND_LINE = "mode.cmdline"
 
+      # The actions that open a prompt whose Enter runs what was typed, an
+      # ex command or any action: a project file binds them only in
+      # PROMPT_MODES, so a key typed while inserting text, such as <CR>,
+      # does not turn the next line typed into a command.
+      PROMPT_ACTIONS = ["mode.cmdline", "palette.open"]
+
+      # The modes in which a project file may bind PROMPT_ACTIONS.
+      PROMPT_MODES = ["normal", "visual", "visual_line", "visual_block"]
+
       # The keymap value that removes a binding.
       NONE = "none"
 
@@ -210,6 +219,14 @@ module Carat
         false
       end
 
+      # Whether a project file may bind the action in the mode: an action
+      # of PROJECT_BINDABLE, and one of PROMPT_ACTIONS only in PROMPT_MODES.
+      #: (String, String) -> bool
+      def self.project_bindable_in?(mode, action)
+        return false unless Config.project_bindable?(action)
+        !PROMPT_ACTIONS.include?(action) || PROMPT_MODES.include?(mode)
+      end
+
       # Every problem in file and line order, two of one line in the order
       # noted. Each reader notes in load order, so the orders are a few
       # ascending runs: a stable merge of the runs, pair by pair, sorts
@@ -305,10 +322,13 @@ module Carat
       # nothing, is kept. A key sequence to replay is refused, because a
       # replay types anything, :w with any path included, so a project file
       # could write any file the user can. So is an action outside
-      # PROJECT_BINDABLE, in any mode; a binding, none included, of keys
-      # held (held_keys), which would take the command line, a write, or a
-      # quit from the user; and a leader, which would move the defaults'
-      # and the user's <leader> write and quit bindings onto keys such as d.
+      # PROJECT_BINDABLE, in any mode, and one of PROMPT_ACTIONS outside
+      # PROMPT_MODES; a binding, none included, of keys held (held_keys),
+      # which would take the command line, a write, or a quit from the
+      # user; a binding but none of keys that start with held keys or begin
+      # them, which would make the held keys a prefix or wait on them; and
+      # a leader, which would move the defaults' and the user's <leader>
+      # write and quit bindings onto keys such as d.
       #: (RcLine, Hash[String, String], String) -> String
       def binding_problem(line, held, leader)
         return "keymap.leader is not read from a project file" if line.name == LEADER
@@ -319,10 +339,30 @@ module Carat
         unless value == NONE
           return "key sequences are not read from a project file" unless RcParser.key?(value, 0, value.bytesize)
           return "#{value} is not bound from a project file" unless Config.project_bindable?(value)
+          return "#{value} is not bound in #{line.name} mode from a project file" unless Config.project_bindable_in?(line.name, value)
         end
-        action = held[held_key(line.name, keys, leader)]
-        return "" if action.nil?
-        "#{keys} runs #{action}, which a project file may not unbind or rebind"
+        key = held_key(line.name, keys, leader)
+        action = held[key]
+        return "#{keys} runs #{action}, which a project file may not unbind or rebind" unless action.nil?
+        return "" if value == NONE
+        overlap = held_overlap(held, key)
+        return "" if overlap.empty?
+        "#{keys} overlaps keys that run #{held[overlap]}, which a project file may not unbind or rebind"
+      end
+
+      # The held key (held_keys) that the key starts with or begins, codes
+      # compared whole, or "": unbinding either leaves the other, but
+      # binding one would turn a held key into a prefix or wait on it.
+      #: (Hash[String, String], String) -> String
+      def held_overlap(held, key)
+        names = held.keys
+        i = 0
+        while i < names.length
+          name = names[i].to_s
+          return name if key.start_with?("#{name} ") || name.start_with?("#{key} ")
+          i += 1
+        end
+        ""
       end
 
       # The keys of the bindings in effect that a project file may not
@@ -340,7 +380,7 @@ module Carat
           if line.scope == "keymap" && line.name != LEADER && line.name != GROUP && words.length == 2
             key = held_key(line.name, words[0].to_s, at)
             value = words[1].to_s
-            if value == NONE || (value != OPEN_COMMAND_LINE && Config.project_bindable?(value))
+            if value == NONE || (value != OPEN_COMMAND_LINE && Config.project_bindable_in?(line.name, value))
               bound.delete(key)
             else
               bound[key] = value
