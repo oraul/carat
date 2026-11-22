@@ -22,6 +22,11 @@ ok   A path outside the working directory as typed: not otherwise
 ok   No match
 ok   No match: Tab again keeps the line
 ok   No match: no command begins so
+ok   Completing a palette name
+ok   Completing a palette name: the command name first
+ok   Every palette name
+ok   Every palette name: Shift-Tab takes the last
+ok   No palette name matches
 ok   An argument of another command is not completed
 ok   Completing in the middle of the line
 ok   Escape closes the menu first
@@ -38,4 +43,4 @@ ok   The popup stands above the command line: the match in PmenuSel, the others 
 ok   The popup stands above the command line: the typed characters in PmenuMatch
 ok   The popup stands above the command line: the typed text keeps the rows a menu, none selected
 ok   Tab at another prompt does nothing: Ctrl-N moves the palette
-editor_cmdline_complete: 40 passed, 0 failed
+editor_cmdline_complete: 45 passed, 0 failed

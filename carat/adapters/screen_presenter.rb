@@ -3,6 +3,7 @@ require_relative "../domain/frame"
 require_relative "../domain/utf8"
 require_relative "../domain/highlight"
 require_relative "../domain/theme"
+require_relative "../domain/themes"
 require_relative "sgr_table"
 
 module Carat
@@ -23,7 +24,9 @@ module Carat
     # holds what it showed, and drawn in full otherwise, as is the first
     # frame and every frame after a size change. A cell's highlight group
     # is written as the SGR sequence the theme gives it at the terminal's
-    # color depth, built once. A theme that paints the background has its
+    # color depth, built once and again when use_theme names another
+    # palette or background, which drops the last frame so the next is
+    # drawn in full. A theme that paints the background has its
     # Normal sequence in effect when the screen is cleared or scrolled, so
     # the terminal fills the cleared cells with the palette's background.
     class ScreenPresenter
@@ -48,12 +51,18 @@ module Carat
       # @rbs @shape: Symbol
       # @rbs @hl: Integer
       # @rbs @painted: bool
+      # @rbs @colors: Integer
+      # @rbs @theme_name: String
+      # @rbs @background: String
 
       #: (terminal: Ports::TerminalPort, theme: Domain::Theme, colors: Integer) -> void
       def initialize(terminal:, theme:, colors:)
         @terminal = terminal
         @sgr_table = SgrTable.from_theme(theme, colors)
         @painted = theme.paints_background?
+        @colors = colors
+        @theme_name = theme.name
+        @background = @painted ? "theme" : "terminal"
         @glyphs = {}
         @shadow = nil
         @shadow_serial = 0
@@ -73,6 +82,23 @@ module Carat
       def leave
         @terminal.write(LEAVE)
         @terminal.leave
+      end
+
+      # Uses the palette name and the background word the options hold:
+      # when either differs from the ones the SGR table was built for, the
+      # table is built again at the same color depth and the last frame is
+      # dropped, so the next frame clears the screen and writes every cell
+      # in its group's new colors. An unknown name takes the default
+      # palette, as at startup.
+      #: (String, String) -> void
+      def use_theme(name, background)
+        return if name == @theme_name && background == @background
+        theme = Domain::Themes.find(name, background)
+        @sgr_table = SgrTable.from_theme(theme, @colors)
+        @painted = theme.paints_background?
+        @theme_name = name
+        @background = background
+        @shadow = nil
       end
 
       # Writes the frame to the terminal in one write. The caller may

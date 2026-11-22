@@ -17,8 +17,8 @@ ok   so does the bare name
 ok   :set syntax=OFF turns this buffer plain
 ok   and its syntax is empty
 ok   :set syn=ON goes back to the filetype
-ok   theme is an option :set does not handle yet
-ok   and background, by its short name too
+ok   an option only a configuration line sets is unknown to :set
+ok   theme is set by :set, no longer Not implemented
 ok   an unknown option
 ok   a text file is plain
 ok   :se ft=ruby highlights it and sets the syntax

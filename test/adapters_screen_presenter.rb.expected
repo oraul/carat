@@ -94,4 +94,10 @@ ok   a selection on the cursor line keeps its background and takes the palette's
 ok   a 16-color selection on the cursor line is not underlined
 ok   the nearest palette colors: cube corners and grays
 ok   an id out of range is drawn as Normal
-adapters_screen_presenter: 96 passed, 0 failed
+ok   Switching at 16 colors: every group in the new palette, the frame drawn in full
+ok   Switching at 16 colors: the terminal's background clears the screen with no palette color
+ok   Switching at 256 colors: every group in the new palette, the frame drawn in full
+ok   Switching at 256 colors: the terminal's background clears the screen with no palette color
+ok   Switching at 16777216 colors: every group in the new palette, the frame drawn in full
+ok   Switching at 16777216 colors: the terminal's background clears the screen with no palette color
+adapters_screen_presenter: 102 passed, 0 failed

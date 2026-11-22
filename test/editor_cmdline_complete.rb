@@ -79,6 +79,13 @@ module EditorCmdlineCompleteTest
       ["No match", ":e zz<Tab>", "cmdline|:e zz|5|No matches  Esc close"],
       ["No match: Tab again keeps the line", ":e zz<Tab><Tab>", "cmdline|:e zz|5|No matches  Esc close"],
       ["No match: no command begins so", ":zq<Tab>", "cmdline|:zq|3|No matches  Esc close"],
+      # Scenarios "Completing a palette name", "Every palette name", and "No
+      # palette name matches" (command-line-mode).
+      ["Completing a palette name", ":colorscheme one<Tab>", "cmdline|:colorscheme one_dark|21|one_dark,one_light"],
+      ["Completing a palette name: the command name first", ":colo<Tab>", "cmdline|:colorscheme|12|colorscheme"],
+      ["Every palette name", ":colo <Tab>", "cmdline|:colo carat-dark|16|carat-dark,carat-light,one_dark,one_light,dark_plus,light_plus"],
+      ["Every palette name: Shift-Tab takes the last", ":colo <S-Tab>", "cmdline|:colo light_plus|16|carat-dark,carat-light,one_dark,one_light,dark_plus,light_plus"],
+      ["No palette name matches", ":colorscheme zz<Tab>", "cmdline|:colorscheme zz|15|No matches  Esc close"],
       ["An argument of another command is not completed", ":set ft<Tab>", "cmdline|:set ft|7|-"],
       ["Completing in the middle of the line", ":vsx<Home><Right><Right><Tab>", "cmdline|:vsplitx|7|vsplit"],
       ["Escape closes the menu first", ":e lib/<Tab><Esc>", "cmdline|:e lib/a.rb|11|-"],
