@@ -17,6 +17,10 @@ ok   a project file cannot take the user's quit or the leader's save
 ok   a key the user freed is the project's to bind
 ok   a project file cannot bind keys that start with or begin a held key
 ok   a project file binds the command line and the palette only in normal and visual modes
+ok   a project file cannot leave a text-entry mode
+ok   a project file cannot unbind insert-mode or cmdline-mode Esc
+ok   a refused project line leaves insert-mode <CR> splitting the line and <Esc> leaving insert mode
+ok   a project file cannot bind a prompt to keys typed as text
 ok   a project leader leaves <leader>fs and <leader>qw on the user's leader
 ok   a project leader leaves the default leader
 ok   a linked project file is refused
@@ -30,4 +34,4 @@ ok   illegal bytes and a huge tabstop are lines of their files
 ok   the files are found under the home and working directories the port names
 ok   the editor applies the files and shows the first problem with the count of the others
 ok   a refused project line leaves : on the command line and x on delete
-adapters_config_gateway: 32 passed, 0 failed
+adapters_config_gateway: 36 passed, 0 failed

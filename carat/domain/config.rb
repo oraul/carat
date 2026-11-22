@@ -67,6 +67,18 @@ module Carat
       # The modes in which a project file may bind PROMPT_ACTIONS.
       PROMPT_MODES = ["normal", "visual", "visual_line", "visual_block"]
 
+      # The modes in which keys enter text, the grammar reading none of
+      # them: insert, replace, the command line, and the completion layer
+      # over insert mode.
+      TEXT_MODES = ["insert", "replace", "cmdline", "completion"]
+
+      # The actions a project file may bind in TEXT_MODES, entries read as
+      # PROJECT_BINDABLE's: the ones that keep the mode. Any other, a mode
+      # action such as mode.normal or a search that opens its prompt, would
+      # leave it, so a key typed while entering text, such as <CR>, would
+      # turn the letters typed after it into normal-mode keys.
+      TEXT_BINDABLE = ["completion.", "cursor.", "insert.", "palette.next", "palette.previous", "scroll."]
+
       # The keymap value that removes a binding.
       NONE = "none"
 
@@ -79,6 +91,10 @@ module Carat
       # and binds nothing.
       GROUP = "group"
 
+      # The settings stay Array[untyped]: Spinel pins an array only of a
+      # builtin element type (docs/spinel-notes.md), so the lines are read
+      # through line_at, typed RcLine, and counted by count, never through
+      # the member from another file.
       # @rbs @settings: Array[untyped]
       # @rbs @problems: Array[String]
       # @rbs @orders: Array[Integer]
@@ -210,21 +226,30 @@ module Carat
       # Whether a project file may bind the action (PROJECT_BINDABLE).
       #: (String) -> bool
       def self.project_bindable?(action)
+        Config.listed?(PROJECT_BINDABLE, action)
+      end
+
+      # Whether a project file may bind the action in the mode: an action
+      # of PROJECT_BINDABLE; in TEXT_MODES one of TEXT_BINDABLE, elsewhere
+      # one of PROMPT_ACTIONS only in PROMPT_MODES.
+      #: (String, String) -> bool
+      def self.project_bindable_in?(mode, action)
+        return false unless Config.project_bindable?(action)
+        return Config.listed?(TEXT_BINDABLE, action) if TEXT_MODES.include?(mode)
+        !PROMPT_ACTIONS.include?(action) || PROMPT_MODES.include?(mode)
+      end
+
+      # Whether the list names the action: an entry ending in a dot names a
+      # family, any other entry one action.
+      #: (Array[String], String) -> bool
+      def self.listed?(entries, action)
         i = 0
-        while i < PROJECT_BINDABLE.length
-          entry = PROJECT_BINDABLE[i]
+        while i < entries.length
+          entry = entries[i]
           return true if entry.end_with?(".") ? action.start_with?(entry) : action == entry
           i += 1
         end
         false
-      end
-
-      # Whether a project file may bind the action in the mode: an action
-      # of PROJECT_BINDABLE, and one of PROMPT_ACTIONS only in PROMPT_MODES.
-      #: (String, String) -> bool
-      def self.project_bindable_in?(mode, action)
-        return false unless Config.project_bindable?(action)
-        !PROMPT_ACTIONS.include?(action) || PROMPT_MODES.include?(mode)
       end
 
       # Every problem in file and line order, two of one line in the order
@@ -322,8 +347,9 @@ module Carat
       # nothing, is kept. A key sequence to replay is refused, because a
       # replay types anything, :w with any path included, so a project file
       # could write any file the user can. So is an action outside
-      # PROJECT_BINDABLE, in any mode, and one of PROMPT_ACTIONS outside
-      # PROMPT_MODES; a binding, none included, of keys held (held_keys),
+      # PROJECT_BINDABLE, in any mode, one outside TEXT_BINDABLE in
+      # TEXT_MODES, and one of PROMPT_ACTIONS outside PROMPT_MODES or on
+      # keys typed as text; a binding, none included, of keys held (held_keys),
       # which would take the command line, a write, or a quit from the
       # user; a binding but none of keys that start with held keys or begin
       # them, which would make the held keys a prefix or wait on them; and
@@ -340,6 +366,7 @@ module Carat
           return "key sequences are not read from a project file" unless RcParser.key?(value, 0, value.bytesize)
           return "#{value} is not bound from a project file" unless Config.project_bindable?(value)
           return "#{value} is not bound in #{line.name} mode from a project file" unless Config.project_bindable_in?(line.name, value)
+          return "#{keys} is typed as text, so a project file may not bind it to #{value}" if PROMPT_ACTIONS.include?(value) && typed_as_text?(keys, leader)
         end
         key = held_key(line.name, keys, leader)
         action = held[key]
@@ -348,6 +375,25 @@ module Carat
         overlap = held_overlap(held, key)
         return "" if overlap.empty?
         "#{keys} overlaps keys that run #{held[overlap]}, which a project file may not unbind or rebind"
+      end
+
+      # Whether every key of the keys, under the leader, is one typing text
+      # sends: a printable character, Tab, Enter, or Backspace. Only such
+      # keys fire while text is typed in normal mode by mistake; keys that
+      # do not parse bind nothing, and the keymap notes them.
+      #: (String, String) -> bool
+      def typed_as_text?(keys, leader)
+        parsed = KeyNotation.parse(keys, leader)
+        return false unless parsed.ok?
+        codes = parsed.codes
+        return false if codes.empty?
+        i = 0
+        while i < codes.length
+          code = codes[i].to_i
+          return false unless Key.printable?(code) || code == Key::TAB || code == Key::CR || code == Key::NL || code == Key::BS || code == Key::CTRL_H
+          i += 1
+        end
+        true
       end
 
       # The held key (held_keys) that the key starts with or begins, codes

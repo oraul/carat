@@ -109,7 +109,7 @@ module EditorNormalTest
     h.type("<Esc>")
     t.assert_equal([[2, 0], [], :normal], [h.cursor, h.assembly.input.pending_keys, h.mode], "Escape after a waiting prefix drops it and changes nothing")
 
-    jk = Carat::Doubles::FixedConfig.with("keymap.insert jk mode.normal\n")
+    jk = Carat::Doubles::FixedConfig.with_user("keymap.insert jk mode.normal\n")
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "ab\n")
     h = H.new(files: files, config: jk, rows: 10, cols: 80, plugins: [])
