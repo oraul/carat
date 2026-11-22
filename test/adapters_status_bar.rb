@@ -180,6 +180,15 @@ module AdaptersStatusBarTest
       ["Bot", "cursor at the bottom", pad(" NORMAL  a.txt ", "  utf-8   100:1  Bot ", 60)]
     ]) { |name| paint(scenario(name), 60).row_text(0) }
 
+    # Scenario: A plain buffer in normal mode, 40 columns wide.
+    t.assert_equal(pad(" NORMAL  a.txt", "utf-8   1:1  All ", 40), paint(scenario("plain"), 40).row_text(0), "a plain buffer in normal mode: the file at the left, the encoding, position, and percent at the right end")
+    # Scenario: A modified Ruby buffer in insert mode.
+    s = state_for("a.rb", 3)
+    s.buffer.mark_unsaved
+    s.mode = D::Mode::INSERT
+    s.cursor.move_to(2, 4)
+    t.assert_equal([true, pad(" INSERT  a.rb ● ", "  ruby   utf-8   3:5  All ", 60)], [s.buffer.modified?, paint(s, 60).row_text(0)], "a modified Ruby buffer in insert mode")
+
     # Scenario: frame rows show the status bar in carat-dark, carat-light,
     # and option.icons ascii: the pill in its mode's group, the file and the
     # fill in StatusLine, each theme's pill and bar readable.
@@ -217,7 +226,8 @@ module AdaptersStatusBarTest
     end
     t.assert_equal([true, false], [SLOTS.set_lsp("x", :ready, 0), SLOTS.set_lsp("x", :ready, 0)], "setting the same server again changes nothing")
 
-    # One row per width: segments go by priority, the file is cut last.
+    # Scenario: Widths drop segments one by one. One row per width:
+    # segments go by priority, the file is cut last.
     t.table([
       ["40 columns keep every segment", 40, pad(" NORMAL  a.rb ", "  ruby " + "  utf-8 " + "  1:1 " + " All ", 40)],
       ["32 columns drop the encoding", 32, pad(" NORMAL  a.rb ", "  ruby " + "  1:1 " + " All ", 32)],
@@ -234,7 +244,7 @@ module AdaptersStatusBarTest
     SLOTS.branch = "main"
     t.assert_equal(pad(" NORMAL  a.txt   ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", "  1:1 ", 40), paint(s, 40).row_text(0), "at 40 columns the counts stay with the position")
 
-    # A plugin's segment by its priority.
+    # Scenario: A plugin segment by its priority.
     s = scenario("plain")
     UI.segment("high", "hi", 95)
     UI.segment("low", "lo", 10)
