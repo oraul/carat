@@ -142,7 +142,7 @@ module EditorCmdlineTest
     h.type(":e b.txt<CR>")
     h.type(":e new.txt<CR>")
     t.assert_equal(["new.txt", [""], "\"new.txt\" [New]"], [h.buffer.path, h.lines, h.message_row], "edit starts a new file")
-    h.type("ix<Esc>:e b.txt<CR>")
+    h.type(":set nohidden<CR>ix<Esc>:e b.txt<CR>")
     t.assert_equal(["✖ " + E37, "new.txt"], [h.message_row, h.buffer.path], "edit refused while modified")
     h.type(":e!<CR>")
     t.assert_equal([[""], false], [h.lines, h.buffer.modified?], "forced reload discards changes")

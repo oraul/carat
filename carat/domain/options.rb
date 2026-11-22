@@ -42,7 +42,7 @@ module Carat
     # come from option lines of the configuration, and :set changes them
     # through problem and assign, as a line does. A Struct record:
     # mutable, with a reader and a writer per member.
-    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :showtabline, :list, :listchars, keyword_init: true)
+    class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :hidden, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :showtabline, :list, :listchars, keyword_init: true)
       # @rbs @number: bool
       # @rbs @relativenumber: bool
       # @rbs @tabstop: Integer
@@ -61,6 +61,7 @@ module Carat
       # @rbs @smartcase: bool
       # @rbs @hlsearch: bool
       # @rbs @incsearch: bool
+      # @rbs @hidden: bool
       # @rbs @startscreen: bool
       # @rbs @reducedmotion: bool
       # @rbs @cursorline: bool
@@ -81,12 +82,14 @@ module Carat
       # Vim's defaults, the unicode icon set, the default theme painting its
       # own background, syntax highlighting on, and Neovim's search
       # defaults: hlsearch and incsearch on, ignorecase and smartcase off;
+      # hidden on, a modified buffer staying loaded when a window shows
+      # another, as in Neovim;
       # the start screen on, with its animation; cursorline and the
       # indent guides and the whitespace marks off, as in Neovim, which
       # draws no guides.
       #: () -> void
       def initialize
-        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES, showtabline: SHOWTABLINE_ONLY, list: false, listchars: LISTCHARS)
+        super(number: false, relativenumber: false, tabstop: 8, shiftwidth: 8, expandtab: false, autoindent: false, scroll: 0, scrolloff: 0, icons: "unicode", timeoutlen: 1000, undolevels: 1000, theme: Themes::DEFAULT, background: "theme", syntax_on: true, ignorecase: false, smartcase: false, hlsearch: true, incsearch: true, hidden: true, startscreen: true, reducedmotion: false, cursorline: false, keyhints_delay: KEYHINTS_DELAY, layout_left_width: 0, layout_right_width: 0, layout_panel_height: 0, breadcrumbs: "auto", indentguides: false, indentguides_char: GUIDE_CHAR, winborder: BorderStyle::DEFAULT, jumptab: JUMPTAB_KEEP, gt: GT_TAB_PAGES, showtabline: SHOWTABLINE_ONLY, list: false, listchars: LISTCHARS)
       end
 
       # The options a configuration line may set, by name, with the kind
@@ -94,7 +97,7 @@ module Carat
       # kept for the changes that read them.
       KINDS = {
         "number" => "bool", "relativenumber" => "bool", "expandtab" => "bool", "autoindent" => "bool",
-        "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "wrap" => "bool",
+        "ignorecase" => "bool", "smartcase" => "bool", "hlsearch" => "bool", "incsearch" => "bool", "hidden" => "bool", "wrap" => "bool",
         "startscreen" => "bool", "reducedmotion" => "bool", "cursorline" => "bool", "indentguides" => "bool", "list" => "bool",
         "tabstop" => "integer", "shiftwidth" => "integer", "scroll" => "integer", "scrolloff" => "integer", "timeoutlen" => "integer", "undolevels" => "integer", "keyhints.delay" => "integer", "showtabline" => "integer",
         "layout.left_width" => "integer", "layout.right_width" => "integer", "layout.panel_height" => "integer",
@@ -336,6 +339,7 @@ module Carat
         when "smartcase" then self.smartcase = flag
         when "hlsearch" then self.hlsearch = flag
         when "incsearch" then self.incsearch = flag
+        when "hidden" then self.hidden = flag
         when "startscreen" then self.startscreen = flag
         when "reducedmotion" then self.reducedmotion = flag
         when "cursorline" then self.cursorline = flag
@@ -375,6 +379,7 @@ module Carat
         when "smartcase" then smartcase.to_s
         when "hlsearch" then hlsearch.to_s
         when "incsearch" then incsearch.to_s
+        when "hidden" then hidden.to_s
         when "startscreen" then startscreen.to_s
         when "reducedmotion" then reducedmotion.to_s
         when "cursorline" then cursorline.to_s

@@ -28,6 +28,9 @@ module Carat
       option.smartcase true
       option.hlsearch true
       option.incsearch true
+      # A modified buffer stays loaded, hidden, when a window shows another
+      # one (:e, :b, :bn); false refuses with E37 until it is written.
+      option.hidden true
       option.cursorline true
       option.wrap false
       option.scroll 0

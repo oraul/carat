@@ -299,10 +299,23 @@ module UseCasesExTest
     s_w = world(files, ["mem"], "a.txt")
     s = s_w.state
     s.buffer.mark_unsaved
+    s.options.hidden = false
     r = s_w.ex.call(s, "e b.txt")
     t.assert_equal([false, "E37: No write since last change (add ! to override)", ["mem"]], [r.ok, r.message, s.buffer.lines], "edit refused while modified")
     r = s_w.ex.call(s, "e!")
     t.assert_equal([["disk"], false], [s.buffer.lines, s.buffer.modified?], "forced reload discards changes")
+    # Scenario "Edit leaves a modified buffer hidden under hidden"
+    # (command-line-mode): the default, and the reload of the current file
+    # stays refused.
+    s_w = world(files, ["mem"], "a.txt")
+    s = s_w.state
+    s.buffer.mark_unsaved
+    r = s_w.ex.call(s, "e")
+    t.assert_equal([false, "E37: No write since last change (add ! to override)", ["mem"]], [r.ok, r.message, s.buffer.lines], "edit of the current file refused while modified under hidden")
+    r = s_w.ex.call(s, "e a.txt")
+    t.assert_equal([false, "E37: No write since last change (add ! to override)", ["mem"]], [r.ok, r.message, s.buffer.lines], "edit of the current path refused while modified under hidden")
+    r = s_w.ex.call(s, "e b.txt")
+    t.assert_equal([true, "b.txt", ["zz"], true], [r.ok, s.buffer.path.to_s, s.buffer.lines, s_w.buffers.buffer_at(0).modified?], "edit of another file leaves the modified buffer hidden")
     r = s_w.ex.call(s, "edit b.txt")
     t.assert_equal(["zz"], s.buffer.lines, "long form edit")
     s_w = world(files, ["x"], nil)

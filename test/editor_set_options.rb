@@ -46,7 +46,8 @@ module EditorSetOptionsTest
     ["expandtab", "et"],
     ["autoindent", "ai"],
     ["list", "list"],
-    ["reducedmotion", "reducedmotion"]
+    ["reducedmotion", "reducedmotion"],
+    ["hidden", "hid"]
   ]
 
   # The word options: [full name, short name, a value its line takes, one
@@ -164,11 +165,11 @@ module EditorSetOptionsTest
     ]) { |keys| message_after(keys) }
 
     # Scenario "Set all lists every option" (set-command): the heading and
-    # one line for each of the 25 options.
+    # one line for each of the 26 options.
     h = editor("abcd\n")
     h.type(":set all<CR>")
     lines = h.message.split("\n")
-    t.assert_equal(["--- Options ---", 26, true, true, true], [lines[0].to_s, lines.length, lines.include?("  tabstop=2"), lines.include?("  number"), lines.include?("  filetype=")], "Set all lists every option")
+    t.assert_equal(["--- Options ---", 27, true, true, true], [lines[0].to_s, lines.length, lines.include?("  tabstop=2"), lines.include?("  number"), lines.include?("  filetype=")], "Set all lists every option")
 
     # Scenario "The number column follows set number" (set-command).
     h = editor("one\n")

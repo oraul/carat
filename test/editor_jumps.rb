@@ -213,8 +213,12 @@ module EditorJumpsTest
     t.assert_equal(["a.txt 0:0", "E23: No alternate file"], [where(h), h.message], "No alternate buffer")
 
     # Scenario "A modified buffer refuses Ctrl-^".
-    h = fresh(":e b.txt<CR>x<C-^>")
+    h = fresh(":set nohidden<CR>:e b.txt<CR>x<C-^>")
     t.assert_equal(["b.txt", true], [h.buffer.path.to_s, h.message.start_with?("E37")], "A modified buffer refuses Ctrl-^")
+
+    # Scenario "A modified buffer is left hidden by Ctrl-^".
+    h = fresh(":e b.txt<CR>x<C-^>")
+    t.assert_equal(["a.txt", ""], [h.buffer.path.to_s, h.message], "A modified buffer is left hidden by Ctrl-^")
 
     # Scenario "A split keeps the alternate buffer".
     t.assert_equal("a.txt 0:0", where(fresh(":e b.txt<CR>:sp<CR><C-^>")), "A split keeps the alternate buffer")

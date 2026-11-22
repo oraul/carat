@@ -128,7 +128,7 @@ module EditorBuffersTest
       ["the cursor comes back", "jjl:e b.txt<CR>:b 1<CR>", ["a.txt", [2, 1], ""]],
       ["the cursor comes back through :e", "jj:e b.txt<CR>:e a.txt<CR>", ["a.txt", [2, 0], "\"a.txt\" 3L, 14B"]],
       ["the cursor comes back after :only", ":sp b.txt<CR><C-w>jjj<C-w>k:only<CR>:b 1<CR>", ["a.txt", [2, 0], ""]],
-      ["a modified buffer refuses", ":e b.txt<CR>:b 1<CR>x:bn<CR>", ["a.txt", [0, 0], E37]],
+      ["a modified buffer refuses", ":set nohidden<CR>:e b.txt<CR>:b 1<CR>x:bn<CR>", ["a.txt", [0, 0], E37]],
       ["the bang keeps it hidden", ":e b.txt<CR>:b 1<CR>x:bn!<CR>", ["b.txt", [0, 0], ""]],
       ["a count before the command is refused", ":e b.txt<CR>:2bn<CR>", ["b.txt", [0, 0], "E481: No range allowed"]],
       # Scenarios "First and last", "Rewind is first", and "First
@@ -139,7 +139,7 @@ module EditorBuffersTest
       ["Rewind is first", ":e b.txt<CR>:br<CR>", ["a.txt", [0, 0], ""]],
       [":brewind", ":e b.txt<CR>:brewind<CR>", ["a.txt", [0, 0], ""]],
       [":bfirst of the first buffer stays", ":e b.txt<CR>:b 1<CR>:bfirst<CR>", ["a.txt", [0, 0], ""]],
-      ["First refused on a modified buffer", ":e b.txt<CR>x:bfirst<CR>", ["b.txt", [0, 0], E37]],
+      ["First refused on a modified buffer", ":set nohidden<CR>:e b.txt<CR>x:bfirst<CR>", ["b.txt", [0, 0], E37]],
       [":bfirst! keeps it hidden", ":e b.txt<CR>x:bfirst!<CR>", ["a.txt", [0, 0], ""]],
       [":blast with a number", ":blast 2<CR>", ["a.txt", [0, 0], "E488: Trailing characters: 2"]]
     ]) do |keys|
@@ -150,6 +150,47 @@ module EditorBuffersTest
     t.assert_equal("  1  h + \"a.txt\"                        line 1\n  2 %a   \"b.txt\"                        line 1", h.message, "the buffer left with the bang is hidden and modified")
     h.type(":b 1<CR>")
     t.assert_equal([["ne", "two", "three"], true], [h.lines, h.buffer.modified?], "its changes come back with it")
+
+    # The hidden option over a modified buffer: rows are [label, keys,
+    # [path, message]], each switch with option.hidden on, the default,
+    # and off. Scenarios "A modified buffer is left hidden under hidden"
+    # (buffer-list), "First and last leave a modified buffer hidden"
+    # (buffer-list), and "Edit leaves a modified buffer hidden under
+    # hidden" (command-line-mode), and "Set hidden changes the next
+    # switch" (set-command).
+    off = ":set nohidden<CR>"
+    t.table([
+      ["A modified buffer is left hidden under hidden: :e", "x:e b.txt<CR>", ["b.txt", "\"b.txt\" 1L, 3B"]],
+      ["A modified buffer is left hidden under hidden: :b N", ":e b.txt<CR>x:b 1<CR>", ["a.txt", ""]],
+      ["A modified buffer is left hidden under hidden: :bn", ":e b.txt<CR>:b 1<CR>x:bn<CR>", ["b.txt", ""]],
+      ["A modified buffer is left hidden under hidden: :bp", ":e b.txt<CR>x:bp<CR>", ["a.txt", ""]],
+      ["A modified buffer is left hidden under hidden: :bN", ":e b.txt<CR>x:bN<CR>", ["a.txt", ""]],
+      ["First and last leave a modified buffer hidden: :bfirst", ":e b.txt<CR>x:bfirst<CR>", ["a.txt", ""]],
+      ["First and last leave a modified buffer hidden: :blast", ":e b.txt<CR>:b 1<CR>x:blast<CR>", ["b.txt", ""]],
+      ["Edit leaves a modified buffer hidden under hidden: :e of the current file stays refused", "x:e<CR>", ["a.txt", E37]],
+      ["Edit leaves a modified buffer hidden under hidden: :e! discards", "x:e!<CR>", ["a.txt", "\"a.txt\" 3L, 14B"]],
+      ["A modified buffer is refused with hidden off: :e", off + "x:e b.txt<CR>", ["a.txt", E37]],
+      ["A modified buffer is refused with hidden off: :b N", off + ":e b.txt<CR>x:b 1<CR>", ["b.txt", E37]],
+      ["A modified buffer is refused with hidden off: :bn", off + ":e b.txt<CR>:b 1<CR>x:bn<CR>", ["a.txt", E37]],
+      ["A modified buffer is refused with hidden off: :bp", off + ":e b.txt<CR>x:bp<CR>", ["b.txt", E37]],
+      ["A modified buffer is refused with hidden off: :bN", off + ":e b.txt<CR>x:bN<CR>", ["b.txt", E37]],
+      ["A modified buffer is refused with hidden off: :bfirst", off + ":e b.txt<CR>x:bfirst<CR>", ["b.txt", E37]],
+      ["A modified buffer is refused with hidden off: :blast", off + ":e b.txt<CR>:b 1<CR>x:blast<CR>", ["a.txt", E37]],
+      ["Set hidden changes the next switch: off, then on again", off + ":set hid<CR>x:e b.txt<CR>", ["b.txt", "\"b.txt\" 1L, 3B"]]
+    ]) do |keys|
+      h = session(keys)
+      [path(h), h.message]
+    end
+    h = session(off + ":e b.txt<CR>:b 1<CR>x:bn<CR>")
+    t.assert_equal(["a.txt", E37], [path(h), h.message], "Set hidden changes the next switch: the first :bn is refused")
+    h.type(":set hid<CR>:bn<CR>")
+    t.assert_equal(["b.txt", ""], [path(h), h.message], "Set hidden changes the next switch: the second :bn shows b.txt")
+    h = session("x:e b.txt<CR>:ls<CR>")
+    t.assert_equal("  1  h + \"a.txt\"                        line 1\n  2 %a   \"b.txt\"                        line 1", h.message, "the buffer left under hidden is hidden and modified")
+    h = session("x:e b.txt<CR>")
+    t.assert_equal("b.txt", path(h), "A modified hidden buffer is named by :qa under hidden: the window shows b.txt first")
+    h.type(":qa<CR>")
+    t.assert_equal([false, unsaved("a.txt"), "a.txt"], [h.quit?, h.message, path(h)], "A modified hidden buffer is named by :qa under hidden")
 
     # Deleting: rows are [label, keys, [listed paths, path, windows, tab pages, message]].
     # Under option.gt buffers no window closes. Scenarios:
