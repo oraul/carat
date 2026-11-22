@@ -16,7 +16,7 @@
 
 ## 4. Checks
 
-- [ ] 4.1 `make lint`, `make diagnose-one` on the new files, `make docs-lint`, `make gates`, `make spec-validate`.
+- [x] 4.1 `make lint`, `make diagnose-one` on the new files, `make docs-lint`, `make gates`, `make spec-validate`.
 
 ## Quality review
 
