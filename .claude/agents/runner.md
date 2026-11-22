@@ -1,6 +1,6 @@
 ---
 name: runner
-description: Runs the bookkeeping steps the delivery and sprint workflows hand it, the resume recipe and the run state records, exactly as written, and returns their output. Never edits. Use for the resume and record starts of the delivery workflow and the due, record, and records-merged starts of sprint planning.
+description: Runs the bookkeeping steps the delivery and sprint workflows hand it, the resume recipe and the run state records, exactly as written, and returns their output. Never edits. Use for the resume and record starts of the delivery workflow and the due and record starts of sprint planning.
 tools: Bash
 maxTurns: 23
 model: haiku

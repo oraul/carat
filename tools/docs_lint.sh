@@ -27,7 +27,7 @@
 #             file within its lane's budget, QUEUE_BUDGET_FEATURE or
 #             QUEUE_BUDGET_BACKLOG; only the lane being checked
 #             (own_lane, DOCS_LINT_LANE feature, backlog, or all), both on
-#             main, a detached head, or a sprint's records change
+#             main, a detached head, or a branch changing docs/sprints.tsv
 #   required  each file of REQUIRED exists (docs/design.md, the binding look)
 #   histories every non-blank row of each lane history, docs/metrics-*.tsv,
 #             has as many tab-separated fields as its line 1, the header
@@ -190,15 +190,17 @@ $dead"
 # The lane being checked: DOCS_LINT_LANE (feature, backlog, or all), else
 # the lane whose queue holds the checked change's item (own_change), else
 # the branch's type, as tools/run_state.sh lane_of falls back: feature/
-# the feature lane, another type the backlog lane. A sprint's records
-# change, which rewrites both queues, main, and a detached head (CI) check
-# all lanes.
+# the feature lane, another type the backlog lane. A branch whose
+# docs/sprints.tsv differs from BASE (the delivery whose groom rewrote both
+# queues with the sprint's row), main, and a detached head (CI) check all
+# lanes.
 own_lane() {
   case "${DOCS_LINT_LANE:-}" in
     feature|backlog|all) echo "$DOCS_LINT_LANE"; return 0 ;;
   esac
+  git diff --quiet "${BASE:-origin/main}" -- docs/sprints.tsv 2>/dev/null
+  [ $? -ne 1 ] || { echo all; return 0; }
   if name=$(own_change); then
-    case "$name" in sprint-[0-9]*-records) echo all; return 0 ;; esac
     for l in feature backlog; do
       [ -f "docs/queue-$l.md" ] && grep -q -E "^[0-9]+[.] \`$name\` [(]" "docs/queue-$l.md" && { echo "$l"; return 0; }
     done

@@ -332,17 +332,28 @@
 #   groom [CHANGE]              nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
-#                               when the sprint it names has its row in the
-#                               sprints file or BASE's; refuse a CHANGE other
-#                               than sprint-N-records, the records change
-#                               sprint-planning delivers for the sprint-N the
-#                               marker names, so no delivery's package step
-#                               writes the fold or the row; else
+#                               when the sprint it names has its row in
+#                               BASE's sprints file (a row only in the
+#                               working tree's, the carrier's, keeps it,
+#                               so the other lane still reads the plan's
+#                               queues); refuse a run with no CHANGE; a
+#                               delivery's package step runs it
+#                               (planner-loop), the first while a plan
+#                               waits carrying it: nothing while
+#                               PLAN_DIR/sprint.carrier names another
+#                               change of the sprint, or while the plan
+#                               is held (queue_hold: sprint-N or
+#                               sprint-N-sweep records a blocking periodic
+#                               security review no change planned after
+#                               it merged since nor a later whole-tree
+#                               pass superseded, or sprint-N records hold
+#                               security-first and no such merge); else
 #                               apply a waiting sprint plan (PLAN_DIR/sprint
 #                               names the sprint in progress, which the
 #                               sprints file lacks, and sprint-N records its
 #                               security review pass or blocked; else the
-#                               plan waits): check every line of
+#                               plan waits), writing sprint.carrier as
+#                               "sprint-N CHANGE": check every line of
 #                               groom.txt, "listed CHANGE HEADING" (CHANGE
 #                               a change of the sprint whose queue item
 #                               holds HEADING), "fixed COMMIT HEADING"
@@ -379,20 +390,24 @@
 #                               groomed.md's entries the same way (merged
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
-#                               rows, retiring the marker
+#                               rows, the marker kept until BASE holds it
 #   sprint-row COMMIT           print the row groom appends for the sprint
 #                               the marker names (PLAN_DIR/sprint, else
 #                               sprint.applied), against the sprints file
 #                               at COMMIT; refuse a marker naming another
 #                               sprint than the one in progress there
+#   groom-proof COMMIT LINE     exit 0 when the groom line LINE ("listed CHANGE
+#                               HEADING" or "fixed COMMIT HEADING") holds
+#                               groom's proof against the sprint in progress
+#                               at COMMIT, the removed entry's text on stdin
+#                               (the findings gate's check of a plan line)
 #   plan-needed CHANGE          print "needed: REASON" and exit 0 when the
 #                               change is not item 1 of a lane queue,
 #                               docs/queue-feature.md or docs/queue-backlog.md
-#                               (the waiting sprint plan's), and is not a
-#                               sprint's records change, or a
+#                               (the waiting sprint plan's), or a
 #                               pending change holds a proposal or finding
 #                               (PLAN_NOTES) to place that no sprint
-#                               records change merged after it placed, or
+#                               plan placed (placed_by_sprint), or
 #                               the head item names no estimate, or a review run records
 #                               a failing periodic security review with no
 #                               change planned after it was recorded and
@@ -405,8 +420,7 @@
 #                               "no estimate:" with the change's estimate, its
 #                               budget (TOKEN_BUDGETS, MINUTE_BUDGETS), its
 #                               total tokens and wall minutes, and its output
-#                               tokens; a sprint-N-records change's total
-#                               without sprint-planning's own starts
+#                               tokens
 #   spent CHANGE                print "under:", "over:", or "no estimate:" with
 #                               the output tokens spent so far against the
 #                               output budget of the change's estimate
@@ -425,8 +439,9 @@
 #   history [CHANGE]            nothing when CHANGE's run state sets
 #                               records=skip; else append a history row for
 #                               each pending change of CHANGE's lane
-#                               (lane_of; every lane with no CHANGE or a
-#                               sprint's records change), the other lane's
+#                               (lane_of; every lane with no CHANGE or one
+#                               whose groom carries the waiting plan,
+#                               carries), the other lane's
 #                               left to its next package step, but one whose row BASE's
 #                               history holds or whose run state records the
 #                               branch it was appended on (row, written here);
@@ -466,8 +481,11 @@
 #                               when set, unfetched) and merge it into the
 #                               branch when it moved, never a rebase: the
 #                               appended records (APPENDED_RECORDS) merge by
-#                               union, both sides' rows kept; any other conflict
-#                               aborts the merge and names its files, exit 1
+#                               union, both sides' rows kept; a conflict only
+#                               in the lane queues keeps the branch's own
+#                               lane queue (lane_of) and BASE's other; any
+#                               other conflict aborts the merge and names
+#                               its files, exit 1
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
@@ -584,7 +602,7 @@ PLAN_NOTES='retro|overrun|security|quality'
 # the one place that reads it, over the entry's lines joined, without
 # case): the word security and a severity in any wording and order, as the
 # security reviewer records it ("security Low (6)", "periodic security
-# Medium", "security Lows"), the skeptic's "security disputed", or a note
+# Medium", "security Lows"), the planner's "security disputed", or a note
 # words it ("Low finding of the periodic security review"), or a severity
 # and confidence pair ("High (8)", "Critical (9)"); a text that names
 # security with no severity, such as a quoted section title, is not one.
@@ -2154,10 +2172,55 @@ item_named() {
     END { exit !f }'
 }
 
-# True when NAME is a sprint's records change, sprint-N-records, which
-# sprint-planning delivers to apply the closed sprint's plan (groom).
-records_change() {
-  valid 'sprint-[0-9]+-records' "$1"
+# True when CHANGE's package step carries the waiting sprint plan
+# (planner-loop): a plan waits for the sprint in progress, its security
+# review recorded, nothing holds it (queue_hold), and no other change
+# carries it (PLAN_DIR/sprint.carrier). Its history then appends every
+# lane's rows, which groom's sprint row counts; carried_by names a carrier.
+carries() {
+  [ -n "${1:-}" ] || return 1
+  sprint_waiting || return 1
+  sprint_state
+  [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed || return 1
+  ! queue_hold > /dev/null || return 1
+  carried_by=$(carrier_of)
+  [ -z "$carried_by" ] || [ "$carried_by" = "$1" ]
+}
+
+# The change PLAN_DIR/sprint.carrier names for the waiting sprint, "sprint-N
+# CHANGE", or nothing when it names none or another sprint.
+carrier_of() {
+  [ -f "$plan_dir/sprint.carrier" ] || return 0
+  awk -v s="$waiting" '$1 == s && $2 ~ /^[a-z0-9][a-z0-9-]*$/ { print $2; exit }' "$plan_dir/sprint.carrier"
+}
+
+# Prints what holds the waiting plan of sprint-N (sprint_n) and returns 0,
+# else returns 1: a blocking periodic security review of sprint-N or its
+# sweep that no change planned after it merged since (merged_since) nor a
+# later whole-tree pass superseded (passed_since), as plan-needed reads
+# them, or sprint-N's hold security-first, which sprint-planning sets for
+# the plan's security first before the review, until such a merge.
+queue_hold() {
+  for run in "sprint-$sprint_n" "sprint-$sprint_n-sweep"; do
+    record=$(change=$run; read_key review.periodic-security)
+    case "${record%% *}: $record" in
+      blocked:*|*" blocking="[1-9]*) ;;
+      *) continue ;;
+    esac
+    reviewed=${record#* }
+    reviewed=${reviewed%% *}
+    recorded=$(change=$run; read_key at.review.periodic-security)
+    merged_since "$reviewed" "$recorded" && continue
+    passed_since "$reviewed" "$recorded" && continue
+    echo "a blocking security finding of $run"
+    return 0
+  done
+  [ "$(change="sprint-$sprint_n"; read_key hold)" = security-first ] || return 1
+  record=$(change="sprint-$sprint_n"; read_key review.periodic-security)
+  reviewed=${record#* }
+  reviewed=${reviewed%% *}
+  merged_since "$reviewed" "$(change="sprint-$sprint_n"; read_key at.review.periodic-security)" && return 1
+  echo "the plan's security first"
 }
 
 # Applies the delivery planner's directory, PLAN_DIR/CHANGE, for the
@@ -2465,21 +2528,13 @@ estimate_of() {
 
 # The budget line: the run's total tokens and wall minutes against the
 # budgets of its estimate (TOKEN_BUDGETS, MINUTE_BUDGETS), its output tokens
-# beside them, for the retrospective to flag an overrun. A sprint's records
-# change counts its own work: the total tokens of sprint-planning's starts
-# (metric.weighted.sprint, which tokens keys) are set apart and named.
+# beside them, for the retrospective to flag an overrun.
 budget_line() {
   [ -f "$(state_file)" ] || die "no run state for $change"
   size=$(estimate_of)
   total=$(value metric.total_tokens)
   minutes=$(read_key metric.wall_min)
-  apart=""
-  review=$(read_key metric.weighted.sprint | cut -d/ -f1)
-  if records_change "$change" && valid '[0-9]+' "$review" && valid '[0-9]+' "$total"; then
-    total=$(awk -v a="$total" -v b="$review" 'BEGIN { d = a - b; printf "%.0f", d < 0 ? 0 : d }')
-    apart=", $review total tokens of sprint-planning's reviews set apart"
-  fi
-  actual="actual $total total tokens${minutes:+ in $minutes minutes}, $(out_tokens) output tokens$apart"
+  actual="actual $total total tokens${minutes:+ in $minutes minutes}, $(out_tokens) output tokens"
   if [ "$size" = "-" ]; then
     echo "no estimate: neither the run state nor a queue item of $change states a size; $actual"
     return
@@ -2549,8 +2604,7 @@ ci_stages() {
 # counts once, its last line), and agent-ID.meta.json, its label and
 # workflow phase. A start's key is its phase in lowercase, record for the
 # record starts, sprint for sprint-planning's own (a label beginning
-# "sprint:" or naming a sprint, skeptic, or periodic review), which budget
-# sets apart from a records change's work; its tier is cheap when its model contains a tier alias of
+# "sprint:" or naming a sprint or periodic review); its tier is cheap when its model contains a tier alias of
 # an agent file's model: line, else session. Records metric.start.N
 # "KEY/TIER/TOTAL/WEIGHTED", adds to metric.weighted.KEY
 # "TOTAL/WEIGHTED/STARTS" and metric.weighted_tokens, and appends DIR's
@@ -2574,7 +2628,7 @@ add_tokens() {
     label=$(sed -n 's/.*"description":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1)
     case $label in
       record) key=record ;;
-      sprint:*|*': sprint'*|*': skeptic'|*periodic*) key=sprint ;;
+      sprint:*|*': sprint'*|*periodic*) key=sprint ;;
       *) key=$(sed -n 's/.*"workflowPhase":"\([^"]*\)".*/\1/p' "$meta" 2>/dev/null | head -1 | tr 'A-Z' 'a-z' | tr -cd 'a-z0-9') ;;
     esac
     [ -n "$key" ] || key=other
@@ -2723,9 +2777,10 @@ append_history() {
       die "history: $lane_file's line 1 differs from HEADER; rewrite it to HEADER and pad each older row with - for the columns it lacks; nothing appended"
   done
   # The lane whose rows a delivery's package step appends, the change's
-  # own; a sprint's records change, or no change, appends every lane's.
+  # own; one that carries the waiting sprint plan, or no change, appends
+  # every lane's, which groom's sprint row counts.
   only=""
-  if [ -n "${1:-}" ] && ! records_change "$1"; then only=$(change=$1; lane_of); fi
+  if [ -n "${1:-}" ] && ! (carries "$1"); then only=$(change=$1; lane_of); fi
   # Each lane file's rows at BASE, its header stripped, so the second
   # file's header is never read as a row.
   base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null | awk 'NR > 1 && NF'; done)
@@ -2934,7 +2989,7 @@ review_due() {
   sprint_state
   list=$(printf '%s\n' "$sprint_names" | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
   if sprint_waiting && [ "$waiting" = "sprint-$sprint_n" ] && sprint_reviewed; then
-    echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for its records change, sprint-$sprint_n-records"
+    echo "not due: sprint-$sprint_n is planned; its plan waits in $plan_dir/ for the next delivery's package step (groom)"
     return 1
   fi
   uncounted=$(merge_unrecorded | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
@@ -3181,7 +3236,7 @@ security_entry() {
 # longer word, is queued, and one whose whole heading line ends a line of
 # PLAN_DIR/groom.txt, a gone line's before its " -- REASON", is groomed:
 # the closed sprint's removals, which stay in the backlog until the
-# sprint's records change. Any entry naming security ranks first here,
+# package step that carries the sprint's plan. Any entry naming security ranks first here,
 # wider than groom's SECURITY_MARK on purpose: a wider ranking only orders
 # the batches, while groom's guard decides what may leave.
 backlog_pick() {
@@ -3356,9 +3411,15 @@ item_lists() {
 # neither, such as a group of findings. A merge commit lists no file, so it
 # proves nothing. Groom's proof that the commit fixed it.
 touches_entry() {
+  entry_naming "$2" | touches_named "$1"
+}
+
+# True when COMMIT ($1) changes a file the naming text on stdin names, as
+# touches_entry says; the gates read the text of an entry groom removed.
+touches_named() {
   files=$(git diff-tree --no-commit-id --name-only -r --root --end-of-options "$1" 2>/dev/null)
   [ -n "$files" ] || return 1
-  entry_naming "$2" | F="$files" awk '
+  F="$files" awk '
     { text = text "\n" $0 }
     END {
       n = split(ENVIRON["F"], f, "\n")
@@ -3382,7 +3443,12 @@ touches_entry() {
 # lines touches_entry and entry_paths read: the heading and its
 # "- Location:" or "- Where:" lines, or the whole entry when neither.
 entry_naming() {
-  backlog_entry "$1" | awk '
+  backlog_entry "$1" | naming_of
+}
+
+# The same for an entry printed whole on stdin, heading first.
+naming_of() {
+  awk '
     /^#+ / || /^- (Location|Where):/ { named = named "\n" $0; marked += !/^#+ / }
     { all = all "\n" $0 }
     END { s = marked ? named : all; if (s != "") print substr(s, 2) }'
@@ -3454,15 +3520,32 @@ backlog_oldest() {
 groom() {
   if sprint_applied; then
     mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
+    rm -f "$plan_dir/sprint.carrier"
     echo "groom: $waiting already has its row in $applied_in; not applied again, its marker retired"
     return 0
   fi
-  if ! sprint_waiting; then echo "groom: no sprint plan waits in $plan_dir/"; return 0; fi
-  [ "${1:-}" = "$waiting-records" ] || die "groom: the plan of $waiting is applied once, by its records change $waiting-records, which sprint-planning delivers; not by ${1:-a run with no change}"
+  if ! sprint_waiting; then
+    if [ -f "$plan_dir/sprint" ]; then
+      echo "groom: $(sed -n 1p "$plan_dir/sprint") has its row in $sprints_file, carried by this branch; its marker stays until ${BASE:-origin/main} holds the row"
+    else
+      echo "groom: no sprint plan waits in $plan_dir/"
+    fi
+    return 0
+  fi
+  [ -n "${1:-}" ] || die "groom: the plan of $waiting is applied by a delivery's package step, groom CHANGE; not by a run with no change"
   sprint_state
   [ "$waiting" = "sprint-$sprint_n" ] || die "groom: the plan of $waiting is not the sprint in progress, sprint-$sprint_n"
   if ! sprint_reviewed; then
     echo "groom: the plan of sprint-$sprint_n waits for its security review (${sprint_security:-none}); run /sprint again"
+    return 0
+  fi
+  carried_by=$(carrier_of)
+  if [ -n "$carried_by" ] && [ "$carried_by" != "$1" ]; then
+    echo "groom: the plan of sprint-$sprint_n is carried by $carried_by's package step; not applied again (remove $plan_dir/sprint.carrier only when $carried_by will not merge)"
+    return 0
+  fi
+  if hold=$(queue_hold); then
+    echo "groom: the plan of sprint-$sprint_n is held by $hold; the first delivery planned after the fix merged applies it"
     return 0
   fi
   rows=$(printf '%s\n' "$history" | awk -F'\t' -v c="$prev_last" -v r="$REVIEW_RUNS" -v x=" $sprint_uncounted " 'seen && NF && $1 !~ r && !index(x, " " $1 " ") { n++ } $1 == c { seen = 1 } END { print n + 0 }')
@@ -3503,7 +3586,7 @@ groom() {
       fi
       case "$kind" in
         listed)
-          valid '[a-z0-9][a-z0-9-]*' "$word" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$word" ||
+          sprint_change "$word" ||
             die "groom: $word is not a change of sprint-$sprint_n: $line"
           item_lists "$word" "$(merged_of "$word")" "$heading" ||
             die "groom: the queue item of $word does not list the heading: $line" ;;
@@ -3610,23 +3693,62 @@ EOF
   [ "$folded" -eq 0 ] || rm -f "$findings_dir"/*.md
   [ ! -f "$plan_dir/groomed.md" ] || file_entries < "$plan_dir/groomed.md" > /dev/null || die "groom: $plan_dir/groomed.md not filed into $backlog_dir"
   sprint_row >> "$sprints_file"
-  mv "$plan_dir/sprint" "$plan_dir/sprint.applied" || die "groom: $plan_dir/sprint not retired"
-  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, $folded findings file(s) folded, its row appended to $sprints_file"
+  printf 'sprint-%s %s\n' "$sprint_n" "$1" > "$plan_dir/sprint.carrier" || die "groom: $plan_dir/sprint.carrier not written"
+  echo "groom: applied sprint-$sprint_n: $(printf '%s' "$removals$repeats" | grep -c .) headings groomed, $folded findings file(s) folded, its row appended to $sprints_file, carried by $1"
 }
 
-# True when the marker names a sprint (waiting) whose row the sprints file
-# or BASE's holds (applied_in names which).
+# True when the marker names a sprint (waiting) whose row BASE's sprints
+# file holds (applied_in): only then is the plan merged; a row only in the
+# working tree is its carrier's, not yet on main.
 sprint_applied() {
   [ -f "$plan_dir/sprint" ] || return 1
   waiting=$(sed -n '1p' "$plan_dir/sprint")
   valid 'sprint-[0-9]+' "$waiting" || return 1
-  applied_in=$sprints_file
-  if [ -f "$sprints_file" ] && awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }' "$sprints_file"; then
-    return 0
-  fi
   applied_in="${BASE:-origin/main}'s $sprints_file"
   git show "${BASE:-origin/main}:$sprints_file" 2>/dev/null |
     awk -F'\t' -v s="$waiting" '$1 == s { found = 1 } END { exit !found }'
+}
+
+# True when NAME is a change of the sprint in progress (sprint_names).
+sprint_change() {
+  valid '[a-z0-9][a-z0-9-]*' "$1" && printf '%s\n' "$sprint_names" | grep -q -x -F -e "$1"
+}
+
+# True when the groom line $2 ("listed CHANGE HEADING" or "fixed COMMIT
+# HEADING") holds the proof groom applies to it, against the sprint in
+# progress at COMMIT ($1) as sprint_row_at reads it, the text of the entry
+# it removes on stdin, heading first, since the entry no longer stands: a
+# listed change is one of the sprint's and its queue item lists the
+# heading; a fixed commit is in the sprint's range, after its base, and
+# changes a file the entry names. Silent: the gates (tools/gates.sh) ask it
+# of a line of the local plan, which no step but the planner writes.
+groom_proof() {
+  kind=${2%% *}
+  rest=${2#* }
+  case "$kind" in listed|fixed) ;; *) return 1 ;; esac
+  word=${rest%% *}
+  heading=${rest#* }
+  [ "$word" != "$rest" ] || return 1
+  text=$(cat)
+  at=$(commit_at "$1") || return 1
+  rows=$(mktemp) || return 1
+  git show "$at:$sprints_file" > "$rows" 2>/dev/null || { rm -f "$rows"; return 1; }
+  (
+    sprints_file=$rows
+    sprint_state > /dev/null 2>&1 || exit 1
+    case "$kind" in
+      listed) sprint_change "$word" && item_lists "$word" "$(merged_of "$word")" "$heading" ;;
+      fixed)
+        valid '[0-9a-f]{7,40}' "$word" && valid '[0-9a-f]{7,40}' "$sprint_base" &&
+          git merge-base --is-ancestor "$word" HEAD 2>/dev/null &&
+          git rev-parse -q --verify --end-of-options "$sprint_base^{commit}" > /dev/null &&
+          ! git merge-base --is-ancestor "$word" "$sprint_base" 2>/dev/null &&
+          printf '%s\n' "$text" | naming_of | touches_named "$word" ;;
+    esac
+  ) > /dev/null 2>&1
+  proof=$?
+  rm -f "$rows"
+  return $proof
 }
 
 # The row groom appends for the sprint the marker names (PLAN_DIR/sprint,
@@ -3783,7 +3905,7 @@ descends() {
 # a lane queue (docs/queue-feature.md or docs/queue-backlog.md), or when another merged change without a history row
 # holds a note of a PLAN_NOTES kind (a retrospective proposal, an
 # overrun, a periodic finding) that only the planner places, unless a
-# sprint's records change merged after it (placed_by_sprint), or when the
+# sprint plan placed it (placed_by_sprint), or when the
 # head item names no estimate; otherwise the head item is taken as written, its size
 # printed for the run's estimate. It prints one line: a run whose brief is
 # only the change name has its agents read the item in its lane queue.
@@ -3812,10 +3934,6 @@ plan_needed() {
     echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
     return 0
   done
-  if records_change "$change"; then
-    echo "not needed: $change applies the waiting sprint plan, estimated small, and no planner places it"
-    return 1
-  fi
   queue=""
   heads=""
   for q in $queues; do
@@ -3846,18 +3964,27 @@ plan_needed() {
   return 1
 }
 
-# True when a sprint's records change (sprint-N-records) merged after the
-# merged commit MERGED: that sprint's planner read the notes of every
-# change merged before it and wrote the queue the records change applied,
-# so they wait for no delivery's planner (plan-skip-placed).
+# True when the merged commit MERGED is at or before the commit a sprint's
+# security review read (sprint-N's review.periodic-security, pass or
+# blocked) and that sprint's plan was written (PLAN_DIR/sprint or
+# sprint.applied names it, or the sprints file holds its row): that
+# sprint's planner read the notes of every change merged before its review
+# and wrote the queue, so they wait for no delivery's planner
+# (plan-skip-placed, planner-loop).
 placed_by_sprint() {
   valid '[0-9a-f]{7,40}' "$1" || return 1
   placed_since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  for placed_file in "$state_dir"/sprint-*-records.json; do
-    [ -f "$placed_file" ] || continue
-    placed_merged=$(change=$(basename "$placed_file" .json); merged_commit)
-    [ -n "$placed_merged" ] || continue
-    descends "$placed_since" "$placed_merged" && return 0
+  for placed_file in "$state_dir"/sprint-*.json; do
+    placed_run=$(basename "$placed_file" .json)
+    valid "$DIFF_REVIEW_RUN" "$placed_run" || continue
+    placed_review=$(change=$placed_run; read_key review.periodic-security)
+    case "$placed_review" in "pass "*|"blocked "*) ;; *) continue ;; esac
+    placed_at=${placed_review#* }
+    placed_at=${placed_at%% *}
+    valid '[0-9a-f]{7,40}' "$placed_at" || continue
+    { [ "$(sed -n 1p "$plan_dir/sprint" 2>/dev/null)" = "$placed_run" ] || [ "$(sed -n 1p "$plan_dir/sprint.applied" 2>/dev/null)" = "$placed_run" ] ||
+      awk -F'\t' -v s="$placed_run" '$1 == s { found = 1 } END { exit !found }' "$sprints_file" 2>/dev/null; } || continue
+    git merge-base --is-ancestor "$placed_since" "$placed_at" 2>/dev/null && return 0
   done
   return 1
 }
@@ -3998,8 +4125,9 @@ lane_close() {
 # rebase or a force-push. The appended records (each lane's metrics rows,
 # the findings files, the sprint rows) merge by git's union driver, given
 # by an attributes file of this merge alone, both sides' rows kept; a
-# conflict in anything else is the contributor's, by the conflict rules of
-# its push mode.
+# conflict only in the lane queues keeps the branch's own lane's and
+# main's other; a conflict in anything else is the contributor's, by the
+# conflict rules of its push mode.
 APPENDED_RECORDS="docs/metrics-*.tsv docs/findings/*.md docs/sprints.tsv"
 merge_main() {
   branch=$(git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
@@ -4013,6 +4141,9 @@ merge_main() {
     echo "merge-main: $branch holds $base"
     return 0
   fi
+  # The branch's lane, read before the merge leaves conflict markers in
+  # the queues lane_of reads.
+  own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
   if git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
@@ -4023,6 +4154,24 @@ merge_main() {
   fi
   rm -f "$attrs"
   files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+  # Each lane's package step edits only its own lane queue, and the one
+  # that carries a sprint plan (groom) both: a conflict only in the lane
+  # queues keeps the branch's own lane queue and main's other, so both
+  # lanes' edits stand (planner-loop).
+  others=$(git diff --name-only --diff-filter=U | grep -v -x -E 'docs/queue-(feature|backlog)[.]md')
+  if [ -n "$files" ] && [ -z "$others" ] && { [ "$own" = feature ] || [ "$own" = backlog ]; }; then
+    for l in feature backlog; do
+      git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
+      side=--theirs
+      [ "$l" != "$own" ] || side=--ours
+      { git checkout "$side" -- "docs/queue-$l.md" && git add -- "docs/queue-$l.md"; } || { git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
+    done
+    if git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
+        -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" > /dev/null 2>&1; then
+      echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
+      return 0
+    fi
+  fi
   git merge --abort 2>/dev/null
   echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules, or stop and name each file where both sides changed the same logic"
   exit 1
@@ -4110,6 +4259,7 @@ case "$command" in
   backlog-oldest) [ $# -ge 1 ] || usage; backlog_oldest "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
   sprint-row) [ $# -eq 1 ] || usage; sprint_row_at "$1"; exit $? ;;
+  groom-proof) [ $# -eq 2 ] || usage; groom_proof "$1" "$2"; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
 change=$1
@@ -4163,6 +4313,7 @@ case "$command" in
     case "$1" in
       review.*|phase.*|stage.*|at.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, review and plan-needed, check, gated, moved)" ;;
       pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
+      hold) [ "$2" = security-first ] || die "set: refused: hold is security-first, the plan's security first sprint-planning records, not $2" ;;
       merged) value=$(merged_at "$2" set) || exit 1 ;;
       ci)
         valid '(red|green) [0-9a-f]{7,40}' "$2" || die "set: refused: ci is red or green and the pushed head, not $2"

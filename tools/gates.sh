@@ -28,8 +28,11 @@
 #              changes an expect case in tools/tools_test.sh
 #   findings   findings are append-only: every `### ` heading under
 #              docs/findings/ at BASE or at an earlier commit of the branch
-#              is still there at HEAD; only a sprint-N-records change
-#              (groom) may remove entries
+#              is still there at HEAD; only a branch appending groom's
+#              sprint row to docs/sprints.tsv (groom_row: the delivery
+#              whose groom carried the sprint plan) may remove entries,
+#              each one filed under docs/backlog/ or removed by the plan's
+#              groom.txt (a security entry only listed or fixed)
 #   attribution  .claude/settings.json sets Claude Code's attribution to
 #              exactly the trailer on commits, no pull request text, and no
 #              session link
@@ -116,6 +119,12 @@ state() {
 # checker's scopes still read them as documentation. tools/run_state.sh
 # keeps the same line (tools/tools_test.sh compares them).
 INSTRUCTION_RECORDS_RE='docs/goals\.md$'
+
+# What makes an entry a security entry, the copy of tools/run_state.sh's
+# SECURITY_MARK (tools/tools_test.sh compares the lines): the findings gate
+# lets a carrier's removed security entry leave only by listed or fixed.
+SECURITY_SEVERITY='(critical|high|medium|low|disputed)s?'
+SECURITY_MARK="(^|[^a-z])security[^a-z](.*[^a-z])?$SECURITY_SEVERITY([^a-z]|\$)|(^|[^a-z])$SECURITY_SEVERITY[^a-z](.*[^a-z])?security([^a-z]|\$)|(^|[^a-z])(critical|high|medium|low) \\([0-9]+\\)"
 
 # True when the difference from COMMIT to HEAD touches only files no check
 # reads but docs-lint: the records-only paths of tools/rules.sh
@@ -516,26 +525,138 @@ gate_records() {
 # Findings are append-only: each `### ` heading under docs/findings/ at
 # the fork point of BASE and HEAD, and each one a non-merge commit of BASE..HEAD added, is still
 # present at HEAD, in the same file (a merge of a moved main brings in the
-# groomed entries it removed, so the merged tree is not compared). Only the
-# records change of a sprint (sprint-N-records, whose groom folds and
-# prunes the findings) may remove one.
+# groomed entries it removed, so the merged tree is not compared). Only a
+# branch that appends to docs/sprints.tsv from the fork point exactly the
+# row groom appends for the plan's sprint (groom_row), the delivery whose
+# package step ran groom (planner-loop), which folds and prunes the
+# findings, may remove one, and only one groom filed: its heading stands
+# under docs/backlog/ at HEAD (or a "- Merged:" line there names it), or a
+# line of the plan's groom.txt removes it, a security entry (SECURITY_MARK)
+# only by listed or fixed (carrier_unproven); a forged or second row
+# removes none.
 gate_findings() {
   gate=findings
   start=$failed
-  if printf '%s' "$change" | grep -qxE 'sprint-[0-9]+-records'; then
-    ok "a records change may remove entries"
-    return
-  fi
   fork=$(git merge-base "$base" HEAD 2>/dev/null) || fork=$base
+  carrier=""
+  git diff --quiet "$fork" HEAD -- docs/sprints.tsv 2>/dev/null
+  if [ $? -eq 1 ] && appended_rows "$fork" docs/sprints.tsv && groom_row "$fork"; then
+    carrier=1
+  fi
   findings_now=$(git grep -I --no-color -e '^### ' HEAD -- docs/findings 2>/dev/null | sed 's/^[^:]*://' | sort -u)
   findings_gone=$( {
     git grep -I --no-color -e '^### ' "$fork" -- docs/findings 2>/dev/null | sed 's/^[^:]*://'
     git log --no-merges --no-color --no-renames --no-ext-diff --no-textconv --src-prefix=a/ --dst-prefix=b/ --format= -p "$fork..HEAD" -- docs/findings 2>/dev/null |
       awk '/^\+\+\+ /{ f = substr($0, 7) } /^\+### /{ print f ":" substr($0, 2) }'
   } | sort -u | grep -v -x -F -e "$findings_now" )
-  [ -z "$findings_gone" ] || bad "an entry of docs/findings/ present at the base or added by a commit of the branch is missing at HEAD (findings are append-only):
+  carried=""
+  if [ -n "$carrier" ] && [ -n "$findings_gone" ]; then
+    findings_gone=$(carrier_unproven "$findings_gone")
+    carried=1
+  fi
+  if [ -n "$carrier" ]; then
+    [ -z "$findings_gone" ] || bad "a branch carrying a sprint's groom removed an entry of docs/findings/ that docs/backlog/ does not hold and its plan does not remove (a security entry leaves only listed or fixed, or merged into another entry):
 $findings_gone"
-  [ $failed -ne $start ] || ok "no findings entry removed"
+  else
+    [ -z "$findings_gone" ] || bad "an entry of docs/findings/ present at the base or added by a commit of the branch is missing at HEAD (findings are append-only):
+$findings_gone"
+  fi
+  [ $failed -ne $start ] && return
+  if [ -n "$carried" ]; then
+    ok "a branch carrying a sprint's groom removed only entries filed in docs/backlog/ or removed by its plan"
+  else
+    ok "no findings entry removed"
+  fi
+}
+
+# The text of the entry under heading $2 of findings file $1 in its last
+# version: the branch's newest commit holding it, else the fork point.
+findings_entry_text() {
+  for entry_rev in $(git rev-list --no-merges "$fork..HEAD" -- "$1" 2>/dev/null) "$fork"; do
+    entry_text=$(git show "$entry_rev:$1" 2>/dev/null | H="$2" awk '/^#+ / { on = ($0 == ENVIRON["H"]) } on { print }')
+    [ -z "$entry_text" ] || { printf '%s\n' "$entry_text"; return; }
+  done
+}
+
+# The kinds of the lines of the plan's groom.txt that remove heading $1,
+# one per line (the plan is local, so none in CI); $2 is the text of the
+# entry. A listed or fixed line counts only when groom's proof of it holds
+# (run_state.sh groom-proof, against the sprint in progress at the fork
+# point): a change of the sprint whose queue item lists the heading, a
+# commit of the sprint's range changing a file the entry names. The plan
+# is a file the carrying contributor can write, so a line groom would
+# refuse proves nothing.
+groom_removals() {
+  [ -f "${PLAN_DIR:-build/plan}/groom.txt" ] || return 0
+  while IFS= read -r removal_line || [ -n "$removal_line" ]; do
+    removal_rest=${removal_line#* }
+    case "${removal_line%% *}" in
+      listed|fixed) removal_head=${removal_rest#* } ;;
+      gone) removal_head=${removal_rest% -- *} ;;
+      duplicate) removal_head=$removal_rest ;;
+      merged) removal_head=${removal_rest#* <= } ;;
+      *) continue ;;
+    esac
+    [ "$removal_head" = "$1" ] || continue
+    case "${removal_line%% *}" in
+      listed|fixed) printf '%s\n' "$2" | sh "$here/run_state.sh" groom-proof "$fork" "$removal_line" 2>/dev/null || continue ;;
+    esac
+    echo "${removal_line%% *}"
+  done < "${PLAN_DIR:-build/plan}/groom.txt"
+}
+
+# True when docs/backlog at HEAD holds, under a security entry, the line
+# "- Merged: HEADING" ($1) of an entry groom merged into it, and the body
+# of the merged entry ($2, its text) stands after that line: a security
+# entry merges only into another security entry (groom's rule), judged by
+# the kept entry's own lines, before its first "- Merged:" line, since the
+# merged body brings a severity of its own, and no merged line without its
+# body keeps the finding.
+merged_security_kept() {
+  merged_body=$(printf '%s\n' "$2" | awk '/^#+ / || /^- (Category|Added): / || !NF { next } { print }')
+  git grep -I -l -F -e "- Merged: $1" HEAD -- docs/backlog 2>/dev/null | while IFS= read -r merged_file; do
+    git show "$merged_file" 2>/dev/null | H="- Merged: $1" M="$SECURITY_MARK" B="$merged_body" awk '
+      function check(   i, n, own, want, ok) {
+        if (!hit) return
+        own = tolower(own_text) " "
+        if (own !~ ENVIRON["M"]) return
+        n = split(ENVIRON["B"], want, "\n"); ok = 1
+        for (i = 1; i <= n; i++) if (want[i] != "" && !(want[i] in after)) ok = 0
+        if (ok) found = 1
+      }
+      /^#+ / { check(); hit = 0; merged = 0; own_text = ""; split("", after) }
+      /^- Merged: / { merged = 1 }
+      !merged { own_text = own_text " " $0 }
+      $0 == ENVIRON["H"] { hit = 1; split("", after) }
+      merged { after[$0] = 1 }
+      END { check(); if (found) print "ok" }'
+  done | grep -q -x ok
+}
+
+# Prints each line "FILE:### HEADING" of $1 that groom did not file or
+# remove: its heading stands under docs/backlog/ at HEAD, or is named
+# there by a "- Merged:" line (a security entry only under another
+# security entry, its body kept: merged_security_kept); else a groom.txt
+# line removes it with groom's proof (groom_removals), and a security
+# entry (groom's SECURITY_MARK) only by listed or fixed.
+carrier_unproven() {
+  printf '%s\n' "$1" | while IFS= read -r unproven_line; do
+    [ -n "$unproven_line" ] || continue
+    unproven_path=${unproven_line%%:*}
+    unproven_head=${unproven_line#*:}
+    git grep -I -h --no-color -F -e "$unproven_head" HEAD -- docs/backlog 2>/dev/null | grep -q -x -F -e "$unproven_head" && continue
+    unproven_text=$(findings_entry_text "$unproven_path" "$unproven_head")
+    merged_line=""
+    git grep -I -h --no-color -F -e "- Merged: $unproven_head" HEAD -- docs/backlog 2>/dev/null | grep -q -x -F -e "- Merged: $unproven_head" && merged_line=1
+    if printf '%s %s\n' "$unproven_head" "$unproven_text" | tr '\n' ' ' | grep -q -i -E "$SECURITY_MARK"; then
+      if [ -n "$merged_line" ] && merged_security_kept "$unproven_head" "$unproven_text"; then continue; fi
+      groom_removals "$unproven_head" "$unproven_text" | grep -q -x -E 'listed|fixed' && continue
+    else
+      [ -z "$merged_line" ] || continue
+      [ -z "$(groom_removals "$unproven_head" "$unproven_text")" ] || continue
+    fi
+    printf '%s\n' "$unproven_line"
+  done
 }
 
 # Claude Code's attribution, set in .claude/settings.json at the top of the
