@@ -23,5 +23,5 @@ Non-goals: proving the run state against a forged runner (it can write any recor
 
 ## Risks / Trade-offs
 
-- A run that never pushed but whose close records `held-finding` would be refused: `recordLate` picks the kind from the same `pushed` and `merged` values, so it cannot.
+- A run that never pushed but whose close records `held-finding` would be refused: `recordLate` picks the kind from the same `pushed` and `merged` values, so it cannot. Should the run state hold a `merged` record the workflow's memory lacks, the close's `held-finding` line is refused; `recordLine` runs every line whatever an earlier one did, and the close's refused-line note keeps its text.
 - Branch code a check runs that writes the run state by an absolute path is caught by the escape scan, which fails the check and notes it; the note it planted stays, as before.

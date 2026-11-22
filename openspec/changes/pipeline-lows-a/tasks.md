@@ -19,3 +19,10 @@
 ## 4. Docs and checks
 
 - [x] 4.1 README.md steps of the check and the sprint, `.claude/agents/checker.md`, `.claude/agents/security-reviewer.md`, `docs/contributor-notes.md` Checking, `docs/codebase-map.md` area 1. Test: `make docs-lint`, `make gates`, `make spec-validate`, `make check-stage S=tools-test`.
+
+## Quality review
+
+- [x] 5.1 `tools/run_state.sh` `check_stages`: the recorded `phase.check` kept in a variable named `recorded`, a word other commands use for other values; renamed `phase_check`. Fixed.
+- [x] 5.2 `design.md` Risks: a close's `held-finding` line refused when the run state holds a `merged` record the workflow's memory lacks was not stated; added. Fixed.
+- [x] 5.3 `proposal.md` Impact left out `.claude/agents/security-reviewer.md`, which the change edits; added. Fixed.
+- [x] 5.4 The quality reviewer's Periodic mode step 4 still records its own notes as a double-quoted argument, the same exposure the skeptic had; outside this change's scope (the skeptic's notes), recorded in `docs/findings/pipeline-lows-a.md`.

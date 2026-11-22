@@ -30,7 +30,7 @@ None.
 
 ## Impact
 
-- `tools/run_state.sh` (`check_run`, `check_stages`, `COMPILE_STAGES`, `RERUN_STAGES`, `add_note`, header), `tools/agent_guard.sh` (`run_state_form`), `.claude/workflows/sprint-planning.js` (`SKEPTIC`, `skepticNotes`, the skeptic notes start), `.claude/workflows/deliver-change.js` (comments of `claimFrom` and `recordLate`), `.claude/agents/quality-reviewer.md`, `.claude/agents/checker.md`, `docs/contributor-notes.md`, `tools/tools_test.sh`, `docs/codebase-map.md` (area 1).
+- `tools/run_state.sh` (`check_run`, `check_stages`, `COMPILE_STAGES`, `RERUN_STAGES`, `add_note`, header), `tools/agent_guard.sh` (`run_state_form`), `.claude/workflows/sprint-planning.js` (`SKEPTIC`, `skepticNotes`, the skeptic notes start), `.claude/workflows/deliver-change.js` (comments of `claimFrom` and `recordLate`), `.claude/agents/quality-reviewer.md`, `.claude/agents/security-reviewer.md`, `.claude/agents/checker.md`, `docs/contributor-notes.md`, `tools/tools_test.sh`, `docs/codebase-map.md` (area 1).
 - README.md: delivery step 4 names `diagnose` rerun by the checker and no longer compiled-skipped, and step 11 the skeptic's notes recorded by the workflow.
 - CLAUDE.md: unchanged, its Agents and Sprints lines describe the skeptic and the check at a level these fixes leave true.
 - docs/architecture.md: unchanged, section 10 does not describe the check's skips, the skeptic, or the note kinds.

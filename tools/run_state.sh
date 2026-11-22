@@ -1079,15 +1079,15 @@ check_stages() {
   paths=$(scope_paths)
   # The recorded phase.check, twelve digits, which alone backs a pass of
   # RERUN_STAGES at the head.
-  recorded=$(read_key phase.check)
-  [ -z "$recorded" ] || recorded=$(git rev-parse --verify -q --short=12 "$recorded^{commit}" 2>/dev/null) || recorded=""
+  phase_check=$(read_key phase.check)
+  [ -z "$phase_check" ] || phase_check=$(git rev-parse --verify -q --short=12 "$phase_check^{commit}" 2>/dev/null) || phase_check=""
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
     from=$(echo "$record" | sed -n 's/.* carried-from-\([0-9a-f]*\)$/\1/p')
     case "$record" in
       "0 "*)
-        if one_of "$s" "$RERUN_STAGES" && { [ -z "$recorded" ] || [ "$backed" != "$recorded" ]; }; then
+        if one_of "$s" "$RERUN_STAGES" && { [ -z "$phase_check" ] || [ "$backed" != "$phase_check" ]; }; then
           [ -z "$backed" ] || [ "$at" != "$head" ] ||
             echo "stage $s: passed at $head, run again: CI leaves it out and only the recorded phase.check backs its pass"
         elif [ -n "$backed" ] && [ "$at" = "$backed" ] && [ "$at" = "$head" ]; then
