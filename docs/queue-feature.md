@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 28
 
-1. `ui-groups` (T2 user request, estimated medium, pushed back 6): Where: `carat/adapters/status_bar.rb:78` (`paint`), `:219`, `:330`; `docs/design.md:42` (PANEL_DIM `#a4aabd` 5.4:1, light `#5c6173`), `:147`. Why: council (4) of 2026-11-21 puts it after float-painter, before window-surfaces; no PANEL_DIM in the bar. Fix outline: the bar groups of `docs/design.md:147` and the message row's indicators; sapphire fill on the mode pill only. Accepted when frame snapshots show each group's color and spacing, PANEL_DIM at least 4.5:1, at 16 colors and NO_COLOR too. Backlog: none.
-2. `picker-speed` (T2 user request, estimated medium, pushed back 2): Where: `bench/run.sh:69` (the default list omits `lh-float`, `palette`); `make bench-budget`. Why: council (4) asks a float, finder, and palette speed gate before window-surfaces; no budget covers them (grep 774.4 allocations in each of the last 10 backlog rows). Fix outline: those scenarios run by default with budgets. Accepted when `make bench` runs them and `bench-budget` fails on a doubled figure. Backlog: "### the default scenario list omits lh-float, lh-winbar, n, palette at bench/run.sh:69 (sprint-26 sweep quality, note 31)".
-3. `finder-switch` (T2 user request, estimated medium, pushed back 2): moving between files and grep loses the query; grepping the word under the cursor needs typing. Where: `carat/plugins/finder/plugin.rb:52` (keymap lines), `live_prompt` `carat/plugin_api.rb:899`. Fix outline: `<C-g>` switches keeping the query; `<leader>fw` greps the word under the cursor; no API change. Accepted when tests switch both ways keeping the query and `<leader>fw` on a word and a blank opens grep with it or empty, with `docs/actions.md` rows. Backlog: none.
+1. `picker-speed` (T2 user request, estimated medium, pushed back 2): Where: `bench/run.sh:69` (the default list omits `lh-float`, `palette`); `make bench-budget`. Why: council (4) asks a float, finder, and palette speed gate before window-surfaces; no budget covers them (grep 774.4 allocations in each of the last 10 backlog rows). Fix outline: those scenarios run by default with budgets. Accepted when `make bench` runs them and `bench-budget` fails on a doubled figure. Backlog: "### the default scenario list omits lh-float, lh-winbar, n, palette at bench/run.sh:69 (sprint-26 sweep quality, note 31)".
+2. `finder-switch` (T2 user request, estimated medium, pushed back 2): moving between files and grep loses the query; grepping the word under the cursor needs typing. Where: `carat/plugins/finder/plugin.rb:52` (keymap lines), `live_prompt` `carat/plugin_api.rb:899`. Fix outline: `<C-g>` switches keeping the query; `<leader>fw` greps the word under the cursor; no API change. Accepted when tests switch both ways keeping the query and `<leader>fw` on a word and a blank opens grep with it or empty, with `docs/actions.md` rows. Backlog: none.
 
 ## Pool
 
@@ -26,7 +25,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-27 review High 0, Medium 0, Lows (6), (4), (3); no `review.periodic` in the 3 pending runs.
-- Sprint 28 (T2): 3 features, 3 backlog; ui-groups, picker-speed by council (4) of 2026-11-21, then finder-switch (Pool 2's first); finder-rows pushed back 4, the user's order.
-- Size (T2): ui-groups small to medium, no feature row of the last 7 under 1,040,616 (folded-row); last two under budget, no size up.
-- Findings (T2): buffer-picker, folded-row, float-painter feature headings placed in Pool 1, 2, 6.
+- Security first (T0): none; sprint-27 review High 0, Medium 0; no `review.periodic` in the 2 pending runs.
+- Delivery (T2): ui-groups, Sprint 28 item 1, council (4) of 2026-11-21, pushed back 6, removed; Sprint 28 keeps picker-speed, finder-switch.
+- Size (T2): ui-groups medium; last 5 feature rows 1,016,833 to 1,156,082 total under the 1.2M budget; last two under budget, no size up.
+- Split (T2): none; 2 testable parts (bar groups with PANEL_DIM, message row indicators) in one map area, the pill fill a constraint.
+- Findings (T1): sprint-27-records notes 4 to 6 in backlog Pool 13, 14; review-in-openspec note 10 in Pool 14, notes 9, 11 and sprint-27-records note 1 to backlog.md.

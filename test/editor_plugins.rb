@@ -183,9 +183,9 @@ module EditorPluginsTest
 
     h = session(" hh")
     t.assert_equal({ "hello" => "hello 1" }, h.assembly.plugin_ui.segments, "greeting sets the status segment")
-    t.assert_equal("hello 1  utf-8  1:1  All", h.status_row[-24, 24], "the segment shows on the status bar before the encoding")
+    t.assert_equal("hello 1   utf-8   1:1  All", h.status_row[-26, 26], "the segment shows on the status bar before the encoding")
     h.type(" hh<C-w>v")
-    t.assert_equal("hello 2  utf-8  1:1  All", h.row(22)[-24, 24], "the bar shows the segment")
+    t.assert_equal("hello 2   utf-8   1:1  All", h.row(22)[-26, 26], "the bar shows the segment")
     t.assert_equal(h.row(22).index("hello"), h.row(22).rindex("hello"), "one bar under both windows shows it once")
     t.assert_equal("", h.message, "a window command clears the message")
 
