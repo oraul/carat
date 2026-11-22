@@ -70,9 +70,10 @@ QUEUE_BUDGET_BACKLOG=10993
 
 # The paths a change retired that the backlog files, the documents keeping
 # older entries as they were written, may still name: the one queue and
-# history the lanes replaced and the one backlog file docs/backlog/ replaced
-# (backlog-per-file). Every other document names the lane files.
-RETIRED='docs/queue\.md|docs/metrics\.tsv|docs/backlog\.md'
+# history the lanes replaced, the one backlog file docs/backlog/ replaced
+# (backlog-per-file), and the scout's agent file the user's decision
+# deleted (scout-drop). Every other document names the lane files.
+RETIRED='docs/queue\.md|docs/metrics\.tsv|docs/backlog\.md|\.claude/agents/scout\.md'
 # The retired path a lane queue may still name until the planner rewrites
 # it: the one backlog file, which docs/queue-feature.md names while a
 # backlog-lane change may not edit the feature lane's files.

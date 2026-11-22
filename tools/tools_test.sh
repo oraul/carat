@@ -3350,7 +3350,7 @@ for p in read merger contributor; do
   expect "guard: $p refuses a fetch with a refspec" 2 "git fetch other than" guard $p 'git fetch origin x:refs/remotes/origin/main'
   expect "guard: $p refuses a remote that runs a command" 2 "git ls-remote of other than origin" guard $p 'git ls-remote --heads \"ext::sh -c x\" main'
   expect "guard: $p refuses a -C path outside the project's worktrees" 2 "git -C other than the project or a worktree" guard $p 'git -C \"my dir\" push origin x'
-  expect "guard: $p refuses a repository of its own by -C" 2 "git -C other than the project or a worktree" guard $p 'git -C tmp/scout/ev fetch -q origin' tmp/scout
+  expect "guard: $p refuses a repository of its own by -C" 2 "git -C other than the project or a worktree" guard $p 'git -C build/plan/ev fetch -q origin' build/plan
   expect "guard: $p allows -C of the project and of a worktree" 0 "^$" guard $p 'git -C /w log -1 && git -C . status && git -C tmp/.base log -1'
   expect "guard: $p refuses a line continuation inside a comment" 2 "git push" guard $p 'true # x \\\ngit push origin HEAD'
   expect "guard: $p reads a comment to its line break only" 0 "^$" guard $p 'ls # a; git push \\\ngit status'
@@ -3372,9 +3372,9 @@ done
 expect "guard: an unknown profile refuses" 2 "no such profile" guard writer 'ls'
 # A dry run of each agent's commands as its file under .claude/agents/
 # names them, under its profile.
-expect "guard: scout runs its steps" 0 "^$" guard read 'git rev-parse HEAD && git rev-parse --short HEAD && git merge-base --is-ancestor HEAD origin/main && date -u +%Y%m%dT%H%M%SZ' tmp/scout
-expect "guard: scout prunes and writes its directory" 0 "^$" guard read 'mkdir -p tmp/scout && rm tmp/scout/edit-path-abc1234-x.md' tmp/scout
-expect "guard: scout reads the tree" 0 "^$" guard read 'git diff --quiet abc1234 HEAD -- tools/x.sh docs/y.md; git ls-files tools | wc -l; ls tools; grep -n \"def name\" carat/x.rb; git show --stat HEAD' tmp/scout
+expect "guard: read runs the commit steps" 0 "^$" guard read 'git rev-parse HEAD && git rev-parse --short HEAD && git merge-base --is-ancestor HEAD origin/main && date -u +%Y%m%dT%H%M%SZ' build/plan
+expect "guard: read prunes and writes its directory" 0 "^$" guard read 'mkdir -p build/plan/c && rm build/plan/c/backlog.md' build/plan
+expect "guard: read reads the tree" 0 "^$" guard read 'git diff --quiet abc1234 HEAD -- tools/x.sh docs/y.md; git ls-files tools | wc -l; ls tools; grep -n \"def name\" carat/x.rb; git show --stat HEAD' build/plan
 expect "guard: planner reads the run states" 0 "^$" guard read 'sh tools/run_state.sh status && sh tools/run_state.sh pending && sh tools/run_state.sh show c' build/plan
 expect "guard: planner prepares its directory" 0 "^$" guard read 'mkdir -p build/plan && rm -f build/plan/goals.md' build/plan
 expect "guard: checker runs the checks" 0 "^$" guard read 'sh tools/run_state.sh check c abc1234; sh tools/run_state.sh check c'
@@ -3514,19 +3514,19 @@ expect "guard: read refuses a command in a make variable" 2 "a shell character i
 expect "guard: read refuses a toolchain elsewhere" 2 "PREFIX other than" guard read 'make -C tmp/.base dev-build PREFIX=/tmp/evil'
 expect "guard: read refuses a make outside a worktree" 2 "make -C outside a worktree" guard read 'make -C tmp/.toolchain dev-build'
 expect "guard: read refuses a cd elsewhere" 2 "cd other than" guard read 'cd build && cat pipeline/c.json'
-expect "guard: read refuses a write outside its directory" 2 "a write outside tmp/scout" guard read 'echo x > tools/x.sh' tmp/scout
-expect "guard: read refuses a removal outside its directory" 2 "a write outside tmp/scout" guard read 'rm tools/x.sh' tmp/scout
+expect "guard: read refuses a write outside its directory" 2 "a write outside build/plan" guard read 'echo x > tools/x.sh' build/plan
+expect "guard: read refuses a removal outside its directory" 2 "a write outside build/plan" guard read 'rm tools/x.sh' build/plan
 expect "guard: read refuses a removal without a directory" 2 "a write by an agent that writes no file" guard read 'rm tmp/x'
 expect "guard: read refuses sed that writes" 2 "sed other than" guard read 'sed -i s/a/b/ x'
 expect "guard: read refuses sed that runs a command" 2 "sed other than" guard read 'sed -n \"1e git push\" x'
 expect "guard: read refuses find that runs a command" 2 "find -exec" guard read 'find . -exec git push \\;'
 expect "guard: read refuses sort that writes" 2 "the sort option -o" guard read 'sort -o tools/x.sh x'
-expect "guard: read refuses sort -o in a cluster" 2 "the sort option -o in -uo" guard read 'sort -uo .git/config x' tmp/scout
-expect "guard: read refuses a long sort option by its prefix" 2 "the sort option --outp=.git/config" guard read 'sort --outp=.git/config x' tmp/scout
+expect "guard: read refuses sort -o in a cluster" 2 "the sort option -o in -uo" guard read 'sort -uo .git/config x' build/plan
+expect "guard: read refuses a long sort option by its prefix" 2 "the sort option --outp=.git/config" guard read 'sort --outp=.git/config x' build/plan
 expect "guard: read refuses a sort compress program" 2 "the sort option -S" guard read 'sort -S 1 --compress-prog=sh x'
 expect "guard: read refuses a long sort option after its operands" 2 "the sort option --compress-prog=sh" guard read 'sort x --compress-prog=sh'
 expect "guard: read allows sort with its listed options" 0 "^$" guard read 'sort -u -k2,2 -t: -rn -k 3 x | sort -to -- -o'
-expect "guard: read refuses uniq writing from stdin" 2 "uniq with a second operand" guard read 'printf x | uniq - .git/config' tmp/scout
+expect "guard: read refuses uniq writing from stdin" 2 "uniq with a second operand" guard read 'printf x | uniq - .git/config' build/plan
 expect "guard: read refuses uniq with an output file" 2 "uniq with a second operand" guard read 'uniq a b'
 expect "guard: read refuses uniq's output file after --" 2 "uniq with a second operand" guard read 'uniq -c -- -a Makefile'
 expect "guard: read allows uniq with one input" 0 "^$" guard read 'uniq -c a && sort a | uniq -u && uniq -d -'
@@ -3540,11 +3540,11 @@ expect "guard: read refuses git grep -O in a cluster" 2 "git grep -nOCMD, whose 
 expect "guard: read refuses git grep's pager by a prefix" 2 "a prefix of --open-files-in-pager" guard read 'git grep --open=sh x'
 expect "guard: read refuses textconv by a prefix" 2 "a prefix of --textconv" guard read 'git cat-file --textc HEAD:a'
 expect "guard: read allows a git read with a long option" 0 "^$" guard read 'git log --no-ext-diff --exit-code --oneline -1 && git diff -O tmp/order --stat'
-expect "guard: read refuses a quoted digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \"1\">/dev/null' tmp/scout
-expect "guard: read refuses an escaped digit before a redirection" 2 "a write outside tmp/scout, links followed: 1" guard read 'rm -rf \\1>/dev/null' tmp/scout
-expect "guard: read takes a bare digit before a redirection as a descriptor" 0 "^$" guard read 'rm -f tmp/scout/x 2>/dev/null' tmp/scout
+expect "guard: read refuses a quoted digit before a redirection" 2 "a write outside build/plan, links followed: 1" guard read 'rm -rf \"1\">/dev/null' build/plan
+expect "guard: read refuses an escaped digit before a redirection" 2 "a write outside build/plan, links followed: 1" guard read 'rm -rf \\1>/dev/null' build/plan
+expect "guard: read takes a bare digit before a redirection as a descriptor" 0 "^$" guard read 'rm -f build/plan/x 2>/dev/null' build/plan
 expect "guard: read refuses a removal of /dev/null" 2 "a write outside the project: /dev/null" guard read 'rm -f /dev/null; echo x > /dev/null'
-expect "guard: read refuses a removal of /dev/null in its directory" 2 "a write outside the project: /dev/null" guard read 'rm /dev/null' tmp/scout
+expect "guard: read refuses a removal of /dev/null in its directory" 2 "a write outside the project: /dev/null" guard read 'rm /dev/null' build/plan
 expect "guard: read refuses a metrics script of another form" 2 "tools/metrics.sh other than" guard read 'sh tools/metrics.sh shell'
 expect "guard: read refuses a measurement into .git" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure .git/config'
 expect "guard: read refuses a measurement outside the project" 2 "tools/metrics.sh measure into other than build/metrics/current.tsv" guard read 'sh tools/metrics.sh measure /tmp/x'
@@ -3619,21 +3619,21 @@ expect "guard: contributor refuses an edit of the git configuration" 2 "a write 
 expect "guard: contributor writes the body file" 0 "^$" guard_edit contributor Write /w/build/pipeline/c.body.md
 expect "guard: contributor refuses a path through the body file" 2 "a parent step" guard_edit contributor Write /w/build/pipeline/c.body.md/../c.json
 expect "guard: read refuses a file edit without a directory" 2 "a write by an agent that writes no file" guard_edit read Write /w/tools/x.sh
-expect "guard: read allows a pack in its directory, whatever its text" 0 "^$" guard_edit read Write /w/tmp/scout/area.md tmp/scout
+expect "guard: read allows a file in its directory, whatever its text" 0 "^$" guard_edit read Write /w/build/plan/c/queue.md build/plan
 expect "guard: read allows a relative path in its directory" 0 "^$" guard_edit read Write build/plan/queue-backlog.md build/plan
-expect "guard: read refuses a file outside its directory" 2 "a write outside tmp/scout" guard_edit read Write /w/tools/x.sh tmp/scout
-expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/tmp/scout/../../tools/x.sh tmp/scout
+expect "guard: read refuses a file outside its directory" 2 "a write outside build/plan" guard_edit read Write /w/tools/x.sh build/plan
+expect "guard: read refuses a parent step out of its directory" 2 "a parent step" guard_edit read Write /w/build/plan/../../tools/x.sh build/plan
 expect "guard: merger refuses every file edit" 2 "a write by an agent that writes no file" guard_edit merger Write /w/tmp/x.md
 expect "guard: merger refuses the body file" 2 "a write to the run state's directory" guard_edit merger Write /w/build/pipeline/c.body.md
 
 # A real tree: a body file that is a link to the run state, a directory
-# linked to the run state's, and a link out of the scout's directory.
+# linked to the run state's, and a link out of the planner's directory.
 proj="$work/proj"
-mkdir -p "$proj/build/pipeline" "$proj/tmp/scout" "$proj/tools"
+mkdir -p "$proj/build/pipeline" "$proj/build/plan" "$proj/tmp" "$proj/tools"
 echo '{}' > "$proj/build/pipeline/c.json"
 ln -s c.json "$proj/build/pipeline/d.body.md"
 ln -s ../build/pipeline "$proj/tmp/run"
-ln -s ../../tools "$proj/tmp/scout/out"
+ln -s ../../tools "$proj/build/plan/out"
 ln -s missing "$proj/tmp/gone"
 ln -s nope/../run/c.json "$proj/tmp/hop"
 ln -s ../build/pipeline/c.body.md "$proj/tmp/body"
@@ -3650,10 +3650,10 @@ expect "guard: contributor refuses a parent step after a missing directory" 2 "a
 expect "guard: contributor refuses a relative parent step" 2 "a parent step" guard_edit contributor Write "tmp/nope/../run/c.json"
 expect "guard: contributor refuses a link whose target steps back" 2 "a parent step after a missing directory" guard_edit contributor Write "$proj/tmp/hop"
 expect "guard: contributor allows a name with two dots" 0 "^$" guard_edit contributor Write "$proj/tmp/a..b.md"
-expect "guard: read allows a name with two dots in its directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/a..b.md" tmp/scout
-expect "guard: read refuses a link out of its directory" 2 "a write outside tmp/scout, links followed" guard_edit read Write "$proj/tmp/scout/out/x.sh" tmp/scout
-expect "guard: read refuses a redirection through a link out of its directory" 2 "a write outside tmp/scout, links followed" guard read 'echo x > tmp/scout/out/x.sh' tmp/scout
-expect "guard: read allows a pack in its real directory" 0 "^$" guard_edit read Write "$proj/tmp/scout/area.md" tmp/scout
+expect "guard: read allows a name with two dots in its directory" 0 "^$" guard_edit read Write "$proj/build/plan/a..b.md" build/plan
+expect "guard: read refuses a link out of its directory" 2 "a write outside build/plan, links followed" guard_edit read Write "$proj/build/plan/out/x.sh" build/plan
+expect "guard: read refuses a redirection through a link out of its directory" 2 "a write outside build/plan, links followed" guard read 'echo x > build/plan/out/x.sh' build/plan
+expect "guard: read allows a file in its real directory" 0 "^$" guard_edit read Write "$proj/build/plan/queue.md" build/plan
 expect "guard: contributor writes the body file in a real tree" 0 "^$" guard_edit contributor Write "$proj/build/pipeline/c.body.md"
 expect "guard: contributor allows the body gate in a real tree" 0 "^$" guard contributor 'sh tools/gates.sh pr-body build/pipeline/c.body.md'
 # A measurement through a link into .git, in a worktree and in the project.
@@ -3722,7 +3722,7 @@ hook() {
 }
 agents="$here/../.claude/agents"
 expect "guard: no hook line reads the local origin/main" 1 "^$" sh -c 'grep -h "command: .*origin/main" "$1"/*.md' _ "$agents"
-expect "guard: every hook line resolves main the same way" 0 "^10 1$" \
+expect "guard: every hook line resolves main the same way" 0 "^9 1$" \
   sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show FETCH_HEAD:tools\\/agent_guard[.]sh)\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
 fresh hooks
 hooks=$PWD
@@ -3730,7 +3730,7 @@ hosted="https:/""/host.invalid/o/carat.git"
 hosted_ssh="ssh:/""/git""@host.invalid/o/carat.git"
 hosted_scp="git""@host.invalid:o/carat.git"
 pins=$(printf %s "${hosted%.git}" | git hash-object --stdin)
-expect "guard: every hook line carries the one pinned digest" 0 "^10$" \
+expect "guard: every hook line carries the one pinned digest" 0 "^9$" \
   sh -c 'grep -h -c -E "^ *command: .* in [0-9a-f]{40}[)];;[*][)]echo origin is not hosted" "$1"/*.md | awk "{ n += \$1 } END { print n }"' _ "$agents"
 expect "guard: no hook line names an address, host, or path" 1 "^$" sh -c 'grep -h -E "^ *command: .*(://|[.]com|@[a-z])" "$1"/*.md' _ "$agents"
 fork="https:/""/host.invalid/a/fork.git"
@@ -4129,13 +4129,13 @@ expect "docs_lint: a marker not at a line start does not count" 1 "FAIL queue: t
 printf '# Queue\n\n## Sprint 8\n\n1. `a` (T1 pipeline, estimated small): one.\n2. `b` (T1 pipeline, estimated small): two.\n\n## Pool\n\nThe user-approved exception (Guide): a pool line.\n' > docs/queue-backlog.md
 expect "docs_lint: a marker outside the sprint section does not count" 1 "FAIL queue: the sprint holds 2 pipeline items across both lanes" doclint
 # The retired paths: a backlog file may name the one queue, history, and
-# backlog file the lanes and the folder replaced, a lane queue only the
-# backlog file, any other document none, and a path that never existed
+# backlog file the lanes and the folder replaced and the scout's agent
+# file scout-drop deleted, a lane queue only the backlog file, any other document none, and a path that never existed
 # fails in a backlog file too (backlog-per-file).
 docs retired
 mkdir -p docs/backlog/tools
-printf '# Backlog: entries naming no file\n\n### Old\n\n- Location: `docs/queue.md` and `docs/metrics.tsv:3`, `docs/backlog.md:12`.\n' > docs/backlog/_general.md
-expect "docs_lint: a backlog file may name the retired queue, history, and backlog file" 0 "ok   paths: 1 path" doclint
+printf '# Backlog: entries naming no file\n\n### Old\n\n- Location: `docs/queue.md` and `docs/metrics.tsv:3`, `docs/backlog.md:12`, `.claude/agents/scout.md:35`.\n' > docs/backlog/_general.md
+expect "docs_lint: a backlog file may name the retired queue, history, backlog file, and scout agent file" 0 "ok   paths: 1 path" doclint
 printf -- '- Location: `docs/queue-gone.md`.\n' >> docs/backlog/_general.md
 printf '# Backlog: tools/x.sh\n\n### Deep\n\n- Location: `tools/gone.sh`.\n' > docs/backlog/tools/x.sh.md
 expect "docs_lint: a backlog file naming a path that never existed fails, in any folder of the backlog" 0 "^2 1$" \
@@ -5087,7 +5087,7 @@ cap_of() {
   printf '%s\n' "$caps" "$fixed" | sed -n "s/^$1://p"
 }
 missing=""
-for kind in planner scout implement fix closing package push checker security bench close resume areas record merger; do
+for kind in planner implement fix closing package push checker security bench close resume record merger; do
   cap_of "$kind" | grep -q -E '^[0-9]+$' || missing="$missing $kind"
 done
 for kind in $(grep -o -E "(capLine|callCap)\\('[a-z]+'\\)" "$wf" | sed "s/.*('\\(.*\\)')/\\1/" | sort -u); do
@@ -5103,7 +5103,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner retrospective:close security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -5147,18 +5147,18 @@ profile_of() {
 profile_re=$(sed -n 's/^const PROFILE = \/\(.*\)\/$/\1/p' "$wf" | sed 's#\\/#/#g')
 expect "calibration: the workflow's PROFILE pattern reads as an anchored pattern" 0 '^\^[(]agent[|].+\$$' printf '%s\n' "$profile_re"
 missing=""
-for kind in resume planner areas scout contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
+for kind in resume planner contributor checker quality security bench record merger close $(grep -o -E "calibrate\\('[a-z]+'" "$wf" | sed "s/.*('//; s/'//" | sort -u); do
   profile_of "$kind" | grep -q -E "${profile_re:-^unread$}" || missing="$missing $kind"
 done
 expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missing:-none}"
 expect "calibration: every agent start takes its options from the table" 0 "^same$" \
   sh -c '[ "$(grep -c "agent(" "$1")" -eq "$(grep -c "calibrate(.[a-z]*., [{]" "$1")" ] && ! grep -q "effort: .low." "$1" && echo same' _ "$wf"
 wrong=""
-for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close scout:scout security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close security-reviewer:security; do
   if grep -q -E '^model: ' "$agents/${pair%%:*}.md"; then tier=agent; else tier=session; fi
   case "$(profile_of "${pair#*:}")" in "$tier"/*) ;; *) wrong="$wrong ${pair#*:}" ;; esac
 done
-for kind in resume areas record; do
+for kind in resume record; do
   case "$(profile_of "$kind")" in session/*) ;; *) wrong="$wrong $kind" ;; esac
 done
 expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
@@ -5194,12 +5194,12 @@ work_js() {
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', globalThis.selfFix = 0, $1)"
 }
-expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"scout":"agent/low","planner":"session/session"[}]\]$' \
-  calib_js "[calibrate('scout', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
-expect "workflow: the metric line carries the profiles" 0 ' calib[.]scout=agent/low calib[.]contributor=agent/high calib[.]security=session/session"$' \
-  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('scout', {}); calibrate('contributor', {}); calibrate('security', {}); return metricLine() })()"
-expect "workflow: a restart restores the recorded profiles of the kinds not used yet, a medium effort among them" 0 '^[{]"planner":"session/session","scout":"agent/low","bench":"agent/medium"[}]$' \
-  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.scout': 'agent/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/max', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1', 'metric.calib.bench': 'agent/medium' }, calibrated) })()"
+expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"checker":"agent/low","planner":"session/session"[}]\]$' \
+  calib_js "[calibrate('checker', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
+expect "workflow: the metric line carries the profiles" 0 ' calib[.]checker=agent/low calib[.]contributor=agent/high calib[.]security=session/session"$' \
+  calib_js "(() => { rework = 0; extra = 0; stopKind = 'none'; ciMinutes = null; ciWaitCalls = null; estimate = ''; planned = null; state = { change: 'c' }; calibrate('checker', {}); calibrate('contributor', {}); calibrate('security', {}); return metricLine() })()"
+expect "workflow: a restart restores the recorded profiles of the kinds not used yet, a medium effort among them" 0 '^[{]"planner":"session/session","record":"session/low","bench":"agent/medium"[}]$' \
+  calib_js "(() => { calibrate('planner', {}); return restoreCalibration({ 'metric.calib.record': 'session/low', 'metric.calib.planner': 'agent/low', 'metric.calib.checker': 'agent/max', 'metric.calib.merger': 'cheap/low', 'metric.rework': '1', 'metric.calib.bench': 'agent/medium' }, calibrated) })()"
 # Tier routing (contributor-tier-routing): a normal contributor start carries
 # the high effort, a critical one (the plan's rule, or a large estimate) and one
 # after an escalation take the session's model and effort, none passed.
@@ -5415,42 +5415,17 @@ expect "workflow: a records-skip package step runs no history" 0 '^\[false,true\
 expect "workflow: the records change's package step runs neither again" 0 '^true$' \
   plan_js "packagePlan({ change: 'sprint-3-records' }, 0).includes('ran history and groom; run neither again')"
 expect "workflow: the planner prompt names its plan directory" 0 "^1$" grep -c -F 'Write your files under ${planDir(state.change)}' "$wf"
-# The scouts read only the change's locations, and none starts for an area
-# given no location, such as a root file in no map area (scout-focus).
-scout_js() {
-  js "$wf" "LINES SCOUT_AREA scoutTargets scoutPrompt" "$1"
-}
-expect "workflow: the area plan asks for each area's locations" 0 '^\["area","question","locations"\]$' \
-  scout_js "SCOUT_AREA.required"
-expect "workflow: an area without locations starts no scout" 0 '^\[\["2"\],\["1","3"\]\]$' \
-  scout_js "(t => [t.needed.map((n) => n.area), t.unplaced.map((n) => n.area)])(scoutTargets({ current: [], needed: [{ area: '1', question: 'q', locations: [' '] }, { area: '2', question: 'q', locations: ['tools/x.sh:3'] }, { area: '3', question: 'q' }] }, 3))"
-expect "workflow: a plan of no area starts no scout" 0 '^\[0,0,0\]$' \
-  scout_js "[scoutTargets({ current: [], needed: [] }, 3).needed.length, scoutTargets(null, 3).needed.length, scoutTargets(null, 3).current.length]"
-expect "workflow: no scout start without a needed area" 0 '^1$' grep -c "targets[.]needed[.]length ? await measured('scout'" "$wf"
-expect "workflow: the areas beyond the room are cut" 0 '^\[\["p"\],\["a","b"\],\["c"\]\]$' \
-  scout_js "(t => [t.current, t.needed.map((n) => n.area), t.beyond.map((n) => n.area)])(scoutTargets({ current: ['p'], needed: ['a', 'b', 'c'].map((a) => ({ area: a, question: 'q', locations: ['x'] })) }, 3))"
-expect "workflow: the scout prompt carries the locations" 0 '^"Area: 1[.] Build and CI[.] Locations: a[.]js:9, b[.]md; read only what these locations need[.] Question: q[.]' \
-  scout_js "scoutPrompt({ area: '1. Build and CI', question: 'q', locations: ['a.js:9', 'b.md'] }, 'the brief')"
-expect "workflow: a pack missing a location is reused with its unread locations" 0 '^\[true,true,false\]$' \
-  js "$wf" "PACK_CURRENT" "[/reuse it even when its Locations: line lacks some location/.test(PACK_CURRENT), /list each location it lacks under unread/.test(PACK_CURRENT), /is not current/.test(PACK_CURRENT)]"
-# scout-pack-reuse: an area whose every location the brief names by path
-# starts no scout, its locations and a current pack's unread ones going to
-# the contributor; an area the brief does not name is scouted.
-expect "workflow: an area whose locations the brief names starts no scout" 0 '^\[\[\],\["1"\],\["p:3","tools/x.sh:3","b.md"\]\]$' \
-  scout_js "(t => [t.needed.map((n) => n.area), t.named.map((n) => n.area), t.unread])(scoutTargets({ current: ['k'], unread: ['p:3'], needed: [{ area: '1', question: 'q', locations: ['tools/x.sh:3', 'b.md'] }] }, 3, 'edit tools/x.sh and b.md'))"
-expect "workflow: an area the brief does not name is scouted" 0 '^\[\["1"\],\[\],\[\]\]$' \
-  scout_js "(t => [t.needed.map((n) => n.area), t.named.map((n) => n.area), t.unread])(scoutTargets({ current: [], needed: [{ area: '1', question: 'q', locations: ['tools/x.sh:3', 'c.md'] }] }, 3, 'edit tools/x.sh'))"
-expect "workflow: the contributor is told the locations no pack covers" 0 '^\[" Locations no pack covers, read them yourself at those locations only: a.sh:3, b.md.",""\]$' \
-  js "$wf" "unreadLine" "[unreadLine(['a.sh:3', 'b.md']), unreadLine([])]"
-expect "workflow: the implement start carries the unread locations" 0 '^1$' grep -c -F "Scout packs: \${packs.join(', ') || 'none'}.\${unreadLine(unread)}" "$wf"
-expect "workflow: the area plan applies the pack currency rule" 0 '^1$' grep -c -F 'Then ${PACK_CURRENT}. List current packs by path, the locations they lack under unread' "$wf"
-expect "scout: a current pack is reused even when it lacks a given location" 0 '^1$' grep -c -E '^3[.] Reuse: .*still current, even when its `Locations:` line lacks some of your locations' "$agents/scout.md"
-expect "workflow: the area plan is measured apart from the scouts" 0 '^1 1$' \
-  sh -c 'echo "$(grep -c "measured(.areas., () => agent(" "$1") $(grep -c "measured(.scout.," "$1")"' _ "$wf"
-expect "scout: the steps read only the locations" 0 '^4[.] Read only what the locations need; never a whole file' grep -E '^4[.] ' "$agents/scout.md"
-expect "scout: step 8 copies the Rules line whatever it names" 0 '^1 0$' \
-  sh -c 'echo "$(grep -c "^8[.] .*as written, whether it names sections" "$1") $(grep -c "the Rules line names the sections" "$1")"' _ "$agents/scout.md"
-expect "scout: the pack records its tool calls" 0 '^2$' grep -c -E '^Tool calls: |`tool_calls` the number the pack.s `Tool calls:` line records' "$agents/scout.md"
+expect "workflow: the planner prompt asks for the locations the change edits" 0 "^1$" grep -c -F 'Among your notes, give the locations the change edits, path:line each, which the contributor starts from (no scout runs).' "$wf"
+# scout-drop: a delivery starts no scout and no area plan (the user's
+# decision of 2026-11-22): no start names either kind, every agent type
+# the workflow starts has its agent file, and the scout's file is gone; the
+# implement start takes its locations from the plan notes, else the queue
+# entry or the brief.
+expect "workflow: a delivery starts no scout" 0 '^0 none absent$' \
+  sh -c 'm=""; for t in $(grep -o -E "agentType: .[a-z-]+." "$1" | sed "s/^agentType: .//; s/.$//" | sort -u); do [ -f "$2/$t.md" ] || m="$m $t"; done; echo "$(grep -c -F -e "$3" -e "$4" "$1") ${m:-none} $([ -e "$2/scout.md" ] && echo present || echo absent)"' _ "$wf" "$agents" "'scout'" "'areas'"
+expect "workflow: the implement start takes its locations from the plan notes, the queue entry, or the brief" 0 '^"Locations: take the paths and lines the change edits from the plan notes, else from its queue entry or the brief' \
+  js "$wf" "LOCATIONS" "LOCATIONS"
+expect "workflow: the implement start carries the locations line" 0 '^1$' grep -c -F "contributor('implement', \`\${LOCATIONS}\${planNotes.length" "$wf"
 # The Plan phase is skipped on plan-needed's not-needed line whatever the
 # brief says: a brief for the queue's head keeps the order (sprint-tidy).
 expect "workflow: a brief fixing the order skips the planner" 0 '^\[true,false,false,false,false\]$' \
@@ -6148,7 +6123,7 @@ expect "sprint: sprint-planning still starts its quality review of the combined 
 expect "workflow: the delivery never starts the periodic review" 1 "" grep -q -E "periodic-review[.]js|phase[(]'Review'[)]" "$wf"
 # No delivery reads or greps the backlog: the contributor only appends.
 backlog_reads() {
-  out=$(for f in "$agents"/contributor.md "$agents"/scout.md "$agents"/checker.md "$agents"/quality-reviewer.md \
+  out=$(for f in "$agents"/contributor.md "$agents"/checker.md "$agents"/quality-reviewer.md \
     "$agents"/security-reviewer.md "$agents"/benchmark.md "$agents"/merger.md "$agents"/retrospective.md "$wf"; do
     awk -v f="$(basename "$f")" '/backlog/ && (/[Gg]rep/ || (/(^|[^a-z])(reads?|cat|sed|head|tail)( |$)/ && !/never read/)) { print f ":" FNR }' "$f"
   done)
