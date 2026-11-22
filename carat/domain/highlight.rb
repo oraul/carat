@@ -198,10 +198,18 @@ module Carat
       FLOAT_GROUPS = [POPUP_MENU_SELECTED, POPUP_MENU_MATCH, POPUP_MENU_MARK_SELECTED, POPUP_MENU_LABEL_SELECTED]
       private_constant :FLOAT_GROUPS
 
+      # Whether a float span in the group id is still drawn under NO_COLOR,
+      # which keeps the fills: a selected row's bar and bold label
+      # (PmenuMarkSel, PmenuLabelSel), so the row keeps its mark and
+      # weight; every other span is left plain.
+      #: (Integer) -> bool
+      def self.plain_style?(id)
+        id == POPUP_MENU_MARK_SELECTED || id == POPUP_MENU_LABEL_SELECTED
+      end
+
       # Whether id is a group a plugin float's span may carry: a token's
       # group or one of FLOAT_GROUPS (PmenuSel, PmenuMatch, PmenuMarkSel,
-      # PmenuLabelSel); every other
-      # UI group is refused.
+      # PmenuLabelSel); every other UI group is refused.
       #: (Integer) -> bool
       def self.float_style?(id)
         return true if token?(id)

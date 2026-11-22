@@ -17,8 +17,8 @@ module Carat
       # editing window (it arrives as the prompt's answer, and with no
       # match the prompt opens again on the same text); the prompt's own
       # keys move the highlight and open it in a split, a vertical split,
-      # or as a tab; Esc closes it. Each change closes the floats and opens them again,
-      # as the command palette does.
+      # or as a tab; Esc closes it. Each change closes the floats and
+      # opens them again, as the command palette does.
       # The grep picker (plugin.finder.grep) is the same picker over the
       # lines of the files: Grep reads them once when it opens, each row
       # is a line, Enter opens the file at its line and column, and a wide

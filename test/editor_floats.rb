@@ -352,14 +352,14 @@ module EditorFloatsTest
     t.assert_equal([true, [mark, label, label, label, label, sel], sel], [styled.ok, float_groups(h, 0, 6), hl.base(h.frame.hl_at(window.row, window.col - 1))], "The selected row's mark and label groups style a span: the first cell in PmenuMarkSel, the rest of alpha in PmenuLabelSel, the padding in PmenuSel")
     h.plugins.window_requests.style_float("test", id, -1, ints([]))
 
-    # Scenario: Popup menu spans under NO_COLOR.
+    # Scenario: Selected row spans under NO_COLOR.
     bare = configured("", 12, 40)
     bare.terminal.no_color = true
     bare.open("a.txt")
     bare_id = open(bare, options("editor", 2, 4, 3, 10, true, "", 50, false), ["alpha", "beta", "gamma"])
-    styled = bare.plugins.window_requests.style_float("test", bare_id, -1, ints([0, 0, 2, label, 1, 0, 2, hl::COMMENT]))
+    styled = bare.plugins.window_requests.style_float("test", bare_id, -1, ints([0, 0, 1, mark, 0, 1, 2, label, 1, 0, 2, hl::COMMENT, 2, 0, 2, match]))
     bare.redraw
-    t.assert_equal([true, [label, label, plain], [plain, plain, plain]], [styled.ok, float_groups(bare, 0, 3), float_groups(bare, 1, 3)], "Popup menu spans under NO_COLOR: the PmenuLabelSel span is drawn and the Comment span is not")
+    t.assert_equal([true, [mark, label, label, plain], [plain, plain, plain], [plain, plain, plain]], [styled.ok, float_groups(bare, 0, 4), float_groups(bare, 1, 3), float_groups(bare, 2, 3)], "Selected row spans under NO_COLOR: the PmenuMarkSel and PmenuLabelSel spans are drawn, the Comment and PmenuMatch spans are not")
 
     # Scenario: A refill drops the style.
     h.plugins.window_requests.style_float("test", id, 0, ints([1, 0, 2, match]))

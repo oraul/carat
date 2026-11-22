@@ -8,7 +8,7 @@
 
 - The finder's pickers (files, grep, buffers, recent) mark the highlighted row with `▎ ` instead of `> `, the other rows keeping two spaces, and style the list float after every refill with `style_float`: the highlighted row selected (the SELECTION fill of `PmenuSel`), its `▎` in the new `PmenuMarkSel` group (sapphire on SELECTION, bold) and its label in the new `PmenuLabelSel` group (the float's text on SELECTION, bold); at 16 colors both are reverse and bold, as the selected row's fill is reverse there.
 - Add the UI groups `PmenuMarkSel` and `PmenuLabelSel` before `StatusLineDim`, which stays the last UI group, moving it and the syntax, file-icon, and markup ids up by two, in every palette, the bar in a new `MARK` color role (the palette's blue, a lighter blue in `dark_plus`, whose blue reads 2.9:1 on its selection) held to 3:1 as a decoration; a float span may carry them and `syntax_group` resolves them, a tokenizer's token in either still dropped. Plugin API 2.15.
-- Under `NO_COLOR` a float still draws its spans in the popup menu groups (`PmenuSel`, `PmenuMatch`, `PmenuMarkSel`, `PmenuLabelSel`), as it draws the selected row's fill; spans in a token group (syntax, file-icon, markup) stay unpainted, as today.
+- Under `NO_COLOR` a float still draws its spans in `PmenuMarkSel` and `PmenuLabelSel`, as it draws the selected row's fill; every other span (`PmenuSel`, `PmenuMatch`, a token group) stays unpainted, as today, so the palette and the command-line menu do not change.
 - The grep preview's matched line takes the list's mark, so it starts with `▎ ` instead of `> `.
 - Remove the finder's row from the Known drift table of `docs/design.md` section 7.
 

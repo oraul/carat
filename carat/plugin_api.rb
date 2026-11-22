@@ -794,7 +794,7 @@ module Carat
       # group, PmenuSel, PmenuMatch, or (from 2.15) PmenuMarkSel and
       # PmenuLabelSel, a selected row's mark and bold label on its fill,
       # by its id from syntax_group; under NO_COLOR only the spans in
-      # those four are drawn. Fails
+      # PmenuMarkSel and PmenuLabelSel are drawn. Fails
       # with "No float N" as set_float_lines does, "No row N" for a
       # selected row or a span row outside the float's lines, "Spans are
       # row, column, length, and group" for a length not a multiple of

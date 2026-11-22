@@ -18,7 +18,7 @@ module Carat
     # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel) with
     # a column of padding in the same colors on each side, a
     # documentation row's styles on the float layer (under plain only
-    # those in the popup menu groups a span may carry, its fill's kind), the
+    # a selected row's bar and label, PmenuMarkSel and PmenuLabelSel), the
     # border of option.winborder or the float's own style in FloatBorder
     # (none under none, ASCII when plain or under option.icons ascii),
     # and the title centered on the top edge with a blank on each side in
@@ -260,7 +260,7 @@ module Carat
 
       # One row of a float's box: its text, its padding, and the fill of
       # its group across both, a documentation row's styles on the float
-      # layer (only its popup menu groups when plain, NO_COLOR), then its
+      # layer (only a selected row's bar and label when plain, NO_COLOR), then its
       # border and, on the top edge, its title.
       #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
       def paint_float_row(frame, float, r, tabstop, cols)

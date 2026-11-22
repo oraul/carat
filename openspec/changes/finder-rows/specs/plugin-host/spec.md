@@ -111,9 +111,9 @@ The request `set_float_border(window, style)` (API 2.13) SHALL give one of the p
 
 ## ADDED Requirements
 
-### Requirement: A float's popup menu spans are drawn under NO_COLOR
-Under `NO_COLOR` a plugin float SHALL still draw its spans in `PmenuSel`, `PmenuMatch`, `PmenuMarkSel`, and `PmenuLabelSel`, as it draws its selected row's fill, while its spans in a syntax, file-icon, or markup group SHALL stay unpainted, the text in the row's own group.
+### Requirement: A float's selected row spans are drawn under NO_COLOR
+Under `NO_COLOR` a plugin float SHALL still draw its spans in `PmenuMarkSel` and `PmenuLabelSel`, as it draws its selected row's fill, so a selected row keeps its bar and weight, while its spans in every other group (`PmenuSel`, `PmenuMatch`, a syntax, file-icon, or markup group) SHALL stay unpainted, as before.
 
-#### Scenario: Popup menu spans under NO_COLOR
-- **WHEN** `NO_COLOR` is set and a plugin styles its float with a `PmenuLabelSel` span on its first row and a `Comment` span on its second
-- **THEN** the first row's span cells are in `PmenuLabelSel` and the second row's cells stay in `NormalFloat`
+#### Scenario: Selected row spans under NO_COLOR
+- **WHEN** `NO_COLOR` is set and a plugin styles its float with a `PmenuMarkSel` and a `PmenuLabelSel` span on its first row, a `Comment` span on its second, and a `PmenuMatch` span on its third
+- **THEN** the first row's span cells are in `PmenuMarkSel` and `PmenuLabelSel` and the second and third rows' cells stay in `NormalFloat`

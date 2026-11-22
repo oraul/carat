@@ -65,7 +65,7 @@ ok   a length of zero
 ok   Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style
 ok   An empty style clears it: every row in NormalFloat again
 ok   The selected row's mark and label groups style a span: the first cell in PmenuMarkSel, the rest of alpha in PmenuLabelSel, the padding in PmenuSel
-ok   Popup menu spans under NO_COLOR: the PmenuLabelSel span is drawn and the Comment span is not
+ok   Selected row spans under NO_COLOR: the PmenuMarkSel and PmenuLabelSel spans are drawn, the Comment and PmenuMatch spans are not
 ok   A refill drops the style: the rows are drawn in NormalFloat with no span
 ok   a span over a multi-byte line counts code points, and a span past the line's end is cut there
 ok   Another plugin's float is not styled, nor an unknown id or a layout window
