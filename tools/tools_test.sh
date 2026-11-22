@@ -5951,10 +5951,10 @@ expect "sprint: the security reviewer gets one more start, its result merged bef
   sh -c 'echo "$(grep -c "label: .security-reviewer: sprint, continued." "$1") $(grep -c "^    return mergeSecurity(first, again)$" "$1") $(grep -c "^const ran = securityDone(security)$" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
   sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
-expect "sprint: the diff reviewers record nothing, the workflow and the skeptic record" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c "record nothing, the workflow and the skeptic record" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
-expect "sprint: the planner starts only after a complete security review, its notes, the skeptic, and the sweep" 0 "^1 1 1$" \
-  sh -c 'echo "$(grep -c "^const reviewed = ran && !missed && noted && skeptical && swept$" "$1") $(grep -c "^const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
+expect "sprint: the diff reviewers record nothing, the workflow records" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "record nothing, the workflow records; return the findings" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
+expect "sprint: the planner starts only after a complete security review, its notes, the skeptic and its notes, and the sweep" 0 "^1 1 1$" \
+  sh -c 'echo "$(grep -c "^const reviewed = ran && !missed && noted && skeptical && skepticNoted && swept$" "$1") $(grep -c "^const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)$" "$1") $(grep -c "^const plan = !reviewed [?] null : await agent[(]$" "$1")"' _ "$swf"
 # Each security finding is recorded from the reviewer's own result, before
 # the skeptic, so a capped skeptic loses none; the text reaches the run
 # state verbatim, never read by the shell.
@@ -5964,6 +5964,16 @@ expect "sprint: each security finding is recorded verbatim from the reviewer's r
   sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s\n" "$(sh "$2" get sprint-9 note.1)" "$(sh "$2" get sprint-9 note.2)" "$( [ -e pwned ] && echo pwned || echo no file)"' _ "$note_lines" "$here/run_state.sh"
 expect "sprint: the notes are recorded before the skeptic starts" 0 "^first$" \
   sh -c 'n=$(grep -n "label: .sprint: notes. })" "$1" | cut -d: -f1); k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$k" ] && [ "$n" -lt "$k" ] && echo first' _ "$swf"
+# pipeline-lows-a: the skeptic records nothing; the workflow records each
+# note it returns as one single-quoted shell word, so a finding holding a
+# command substitution is recorded literally, and drops any other kind.
+skeptic_lines=$(js "$swf" "shellWord skepticNotes" "skepticNotes('sprint-9', [{ kind: 'security', text: 'disputed: no caller; tools/x.sh:3 it\\'s \$(touch pwned-skeptic) \\\"q\\\"' }, { kind: 'quality', text: 'tools/y.sh:2 \`id\` reason; fix: z' }, { kind: 'phase', text: 'check abc1234' }, { kind: 'quality', text: '  ' }]).join(' && ')" | node -e 'process.stdout.write(JSON.parse(require("fs").readFileSync(0, "utf8")))')
+expect "sprint: each skeptic note is recorded literally, a finding holding a command substitution included" 0 "^security disputed: no caller; tools/x[.]sh:3 it's [$][(]touch pwned-skeptic[)] \"q\"[|]quality tools/y[.]sh:2 .id. reason; fix: z[|][|]no file$" \
+  sh -c 'eval "$(printf "%s" "$1" | sed "s|sh tools/run_state.sh|sh \"\$2\"|g")" > /dev/null && printf "%s|%s|%s|%s\n" "$(sh "$2" get sprint-9 note.3)" "$(sh "$2" get sprint-9 note.4)" "$(sh "$2" get sprint-9 note.5)" "$( [ -e pwned-skeptic ] && echo pwned || echo no file)"' _ "$skeptic_lines" "$here/run_state.sh"
+expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^first$" \
+  sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
+expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
+  sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
 expect "sprint: a sweep that failed to start is recorded as not run" 0 "^1$" \
   grep -c -F 'if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)' "$swf"
 expect "sprint: the report names a partial security review" 0 '^\["partial, 2 file\(s\) not reviewed \(a.rb, b.rb\); 1 finding\(s\), 0 blocking; run /sprint again","1 finding\(s\), 1 blocking, 0 disputed","did not run; run /sprint again"\]$' \

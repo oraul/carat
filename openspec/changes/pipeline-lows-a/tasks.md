@@ -7,8 +7,8 @@
 
 ## 2. Skeptic notes recorded literally
 
-- [ ] 2.1 `.claude/workflows/sprint-planning.js`: `SKEPTIC.notes`, `skepticNotes` with `shellWord`, a record start before the planner, `skepticNoted` in `reviewed`. Test: "sprint: each skeptic note is recorded literally, a finding holding a command substitution included", "sprint: the skeptic's notes are recorded before the planner starts".
-- [ ] 2.2 `.claude/agents/quality-reviewer.md` skeptic mode: record nothing, return `notes`. Test: "agents: the skeptic records nothing and returns its notes".
+- [x] 2.1 `.claude/workflows/sprint-planning.js`: `SKEPTIC.notes`, `skepticNotes` with `shellWord`, a record start before the planner, `skepticNoted` in `reviewed`. Test: "sprint: each skeptic note is recorded literally, a finding holding a command substitution included", "sprint: the skeptic's notes are recorded before the planner starts".
+- [x] 2.2 `.claude/agents/quality-reviewer.md` skeptic mode: record nothing, return `notes`; `.claude/agents/security-reviewer.md` sprint mode names the skeptic's disputes as the workflow's records. Test: "agents: the skeptic records nothing and returns its notes".
 
 ## 3. Held and unpushed finding notes only from the workflow
 
