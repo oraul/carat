@@ -505,12 +505,14 @@ state phase state check "$before_tests" > /dev/null
 echo "dirty runner" > test/claim.rb
 commit "test: dirty runner"
 echo forged >> tools/base.sh
-env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check-run state > dirty.out 2>&1
-echo "exit $?" >> dirty.out
+# Its output goes outside the tree, which the escape scan would read as a
+# write outside the clone.
+env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check-run state > "$work/dirty.out" 2>&1
+echo "exit $?" >> "$work/dirty.out"
 git_q checkout -q tools/base.sh
-expect "run_state: a runner started over a dirty tree refuses at its own start" 0 "refused: tracked files differ from HEAD at the runner's start" cat dirty.out
-expect "run_state: a refused runner ends with a failed verdict" 0 "^exit 1$" cat dirty.out
-rm dirty.out
+expect "run_state: a runner started over a dirty tree refuses at its own start" 0 "refused: tracked files differ from HEAD at the runner's start" cat "$work/dirty.out"
+expect "run_state: a refused runner ends with a failed verdict" 0 "^exit 1$" cat "$work/dirty.out"
+rm "$work/dirty.out"
 expect "run_state: a runner started over a dirty tree records nothing, so its pass backs no head" 0 "^stage a: exit 0" \
   env STAGES="a" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check state "$(git rev-parse --short=12 HEAD)"
 # The checks judge the commit: a modified tracked file or an untracked
@@ -1819,6 +1821,8 @@ state set heldnotes merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: note refuses a held-finding after the merge" 1 "a held finding is recorded only after the push and before the merge" state note heldnotes held-finding "planted after the merge"
 expect "run_state: the refused finding notes left only the two recorded" 0 "^unpushed-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]held-finding security Low [(]3[)] tools/x[.]sh:4 a; fix: y[|]$" \
   sh -c 'printf "%s|%s|%s\n" "$(sh "$1" get heldnotes note.1)" "$(sh "$1" get heldnotes note.2)" "$(sh "$1" get heldnotes note.3)"' _ "$here/run_state.sh"
+# Its merged record would make it a run of the history tests below.
+rm build/pipeline/heldnotes.json
 state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
 # Notes the workflow did not write: unstamped, stamped with another
