@@ -30,7 +30,7 @@ The prerequisites are a C compiler, `make`, `git`, and `curl`. No Ruby interpret
 | `make diagnose` | Run `spinel-doctor` on every compile root: `bin/*.rb` and the test runner |
 | `make diagnose-one T=path` | Run `spinel-doctor` on one file |
 | `make bench` | Build and run the key benchmark: time, bytes written, collector share, and allocations per key |
-| `make bench-budget` | Build the benchmark with the development flags, fail when a key of the cursor scenario allocates 100 objects or more, and print the time per key of the grep scenario over 150,000 lines; CI runs it |
+| `make bench-budget` | Build the benchmark with the development flags, fail when a key of the cursor scenario allocates 100 objects or more or a key of the float, finder, or palette scenario allocates its maximum of 40, 600, or 450 objects or more, and print the time per key of the grep scenario over 150,000 lines; CI runs it |
 | `make analysis-budget` | Fail when Spinel's analysis of `bin/carat.rb` or the test runner needs more than 2 re-narrowing rounds, a sign that a value widened to `untyped`; `make dev-build` and `make test-build` check their own reports on every build |
 | `make profile` | Build the benchmark with `spinel --profile` and print the top functions with `perf` when it works |
 | `make snapshots` | Rebuild the test runner and rewrite every test's snapshot from it |

@@ -513,7 +513,7 @@ Designs: `render-core` (all Decisions; Measured result), `escape-c1-control-code
 
 Rules: the presenters read the state only; `docs/architecture.md` section 8.2; what they draw follows `docs/design.md`, the binding look (its Known drift lists the gaps).
 
-Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`, `lh-float` (a 60 by 15 float open), `lh-winbar` (two file windows with winbars, as many allocations per key as two without), `lh-noguides`, `j-noguides`, `insert-noguides` (the indent guides off; the shipped `lh`, `j`, and `insert` draw them, two levels a row); `make profile` for `j` and `lh`; `make bench-budget` on `lh`.
+Bench: `lh`, `j`, `long-ascii`, `long-utf8`, `open-plain`, `lh-float` (a 60 by 15 float open), `lh-winbar` (two file windows with winbars, as many allocations per key as two without), `lh-noguides`, `j-noguides`, `insert-noguides` (the indent guides off; the shipped `lh`, `j`, and `insert` draw them, two levels a row); `make profile` for `j` and `lh`; `make bench-budget` on `lh`, and on `lh-float` with `finder` and `palette` through `PICKER_BUDGETS`, a doubled figure failing.
 
 ## 14. Syntax highlighting
 
@@ -695,7 +695,7 @@ Rules: `docs/architecture.md` sections 2.1 (signal handlers set a flag; `STDIN.r
 
 What: the assertion harness, the doubles, the test runner, the lint and smoke tests, and the key benchmark.
 
-Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every test module, into one program; `make test-run` runs each test by name in its own process through `tools/run_tests.sh` and compares its merged output with its `.expected` snapshot; `make test-one T=test/NAME.rb` compiles one test alone (its `main if __FILE__ == $0` guard). Editor tests drive `EditorHarness` over the doubles with keys in Vim notation. `make bench` compiles `bench/keys.rb` and runs its scenarios through `bench/run.sh`; `make bench-budget` checks `lh`'s allocations and prints `grep`'s time per key; `make metrics` measures nine scenarios through `bench/run.sh` (area 1); `make profile` runs `bench/profile.sh`.
+Flow: `make test-build` compiles `test/runner/run_all.rb`, which requires every test module, into one program; `make test-run` runs each test by name in its own process through `tools/run_tests.sh` and compares its merged output with its `.expected` snapshot; `make test-one T=test/NAME.rb` compiles one test alone (its `main if __FILE__ == $0` guard). Editor tests drive `EditorHarness` over the doubles with keys in Vim notation. `make bench` compiles `bench/keys.rb` and runs its scenarios through `bench/run.sh`; `make bench-budget` checks `lh`'s allocations and those of `lh-float`, `finder`, and `palette`, and prints `grep`'s time per key; `make metrics` measures nine scenarios through `bench/run.sh` (area 1); `make profile` runs `bench/profile.sh`.
 
 Files:
 
@@ -712,7 +712,7 @@ Files:
 - `test/smoke_editor.rb`: the binary (`build/bin/carat` or `CARAT_BIN`) in a pseudo-terminal, also in a hostile project and home.
 - `tools/run_tests.sh`: runs tests from a compiled runner, compares each with its snapshot, prints a diff and a summary.
 - `bench/keys.rb`: the key benchmark over the doubles at 200 by 60; `SCENARIOS` (name, keys, count, lines, setup, text kind, plugins); time per key, slowest key, bytes, collector share, open time, lines tokenized, live heap.
-- `bench/run.sh`: runs the scenarios pinned to one core with `SPINEL_ALLOC_REPORT`, allocations per key, and the budget.
+- `bench/run.sh`: runs the scenarios pinned to one core with `SPINEL_ALLOC_REPORT`, allocations per key, and the budget (`--budget`, and `--budgets` for a list of name:maximum pairs, every pair checked); with no scenario named it runs the default list, the float, finder, and palette scenarios among them.
 - `bench/profile.sh`: the `perf` report with Ruby names from the symbol map.
 
 Tests: every file under `test/`; snapshots only through `make snapshots`, diff reviewed.

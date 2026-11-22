@@ -156,7 +156,9 @@ jobs:
         run: make test-run CARAT_BIN=build/dev/carat
 
       # One key of the cursor scenario of the benchmark must allocate fewer
-      # than ALLOC_BUDGET objects (see the Makefile). The benchmark is a
+      # than ALLOC_BUDGET objects, and one key of the float, finder, and
+      # palette scenarios fewer than its PICKER_BUDGETS maximum (see the
+      # Makefile). The benchmark is a
       # development build too: every scenario allocates the same objects
       # and bytes per key at -O 0 as at -O 2.
       - name: Allocation budget

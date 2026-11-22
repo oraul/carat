@@ -14,6 +14,9 @@
 #        bench/run.sh --budget SCENARIO MAX
 #                                         fail unless SCENARIO allocates
 #                                         fewer than MAX objects per key
+#        bench/run.sh --budgets "NAME:MAX ..."
+#                                         the same for each pair, every one
+#                                         checked, failing when any exceeds
 set -eu
 
 BIN=${BENCH_BIN:-build/bench/keys}
@@ -65,8 +68,24 @@ if [ "${1:-}" = "--budget" ]; then
   exit 0
 fi
 
+# Every pair is checked, so one run names each scenario over its maximum.
+if [ "${1:-}" = "--budgets" ]; then
+  failed=0
+  for pair in $2; do
+    case "$pair" in
+      *:*) ;;
+      *)
+        echo "bench/run.sh: $pair is not NAME:MAX" >&2
+        exit 2
+        ;;
+    esac
+    sh "$0" --budget "${pair%%:*}" "${pair#*:}" || failed=1
+  done
+  exit "$failed"
+fi
+
 if [ $# -eq 0 ]; then
-  set -- lh j insert lh-noguides j-noguides insert-noguides w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer j-explorer undo undo-line r dot-r dd dot-dd ciw dot-ciw memory memory-10k lh-ruby j-ruby insert-ruby heredoc-ruby string-ruby quote-ruby open-plain open-ruby G-ruby finder
+  set -- lh j insert lh-noguides j-noguides insert-noguides w ddp lh-utf8 j-utf8 long-ascii long-utf8 lh-explorer lh-float j-explorer undo undo-line r dot-r dd dot-dd ciw dot-ciw memory memory-10k lh-ruby j-ruby insert-ruby heredoc-ruby string-ruby quote-ruby open-plain open-ruby G-ruby finder palette
 fi
 for scenario in "$@"; do
   case "$scenario" in
