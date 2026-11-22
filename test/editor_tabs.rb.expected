@@ -62,6 +62,7 @@ ok   gt keeps the tab page
 ok   gT keeps the tab page
 ok   2gt keeps the tab page
 ok   gt refuses a modified buffer
+ok   gt leaves a modified buffer hidden
 ok   Bracket b steps through the buffers: ]b
 ok   Bracket b steps through the buffers: 2]b wraps
 ok   Bracket b steps through the buffers: [b wraps back
@@ -148,4 +149,4 @@ ok   :tabonly keeps the current tab page on its last line
 ok   :tabn back to a tab page keeps its cursor on the last line
 ok   :tabnew and :tabclose over an empty buffer leave its one empty line
 ok   :tabclose of the tab page over an empty buffer keeps the other
-editor_tabs: 150 passed, 0 failed
+editor_tabs: 151 passed, 0 failed

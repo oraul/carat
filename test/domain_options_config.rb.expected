@@ -29,6 +29,10 @@ ok   the shipped scroll is 0
 ok   the shipped search options
 ok   Neovim's search defaults
 ok   the search options are stored
+ok   hidden is on in the shipped options
+ok   hidden is on by default
+ok   hidden is stored
+ok   hidden takes true or false
 ok   the start screen on, with its animation, by default
 ok   both are stored
 ok   each takes true or false
@@ -113,4 +117,4 @@ ok   listchars that does not read
 ok   empty listchars draws no mark
 ok   a name that is no member has no value
 ok   Options.shipped reads config/default.caratrc alone
-domain_options_config: 115 passed, 0 failed
+domain_options_config: 119 passed, 0 failed

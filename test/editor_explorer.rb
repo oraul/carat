@@ -265,12 +265,12 @@ module EditorExplorerTest
       [":bn from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:bn<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
       [":bp from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:bn<CR><C-w>h:bp<CR>", [[[0, 30, "explorer"], [31, 49, "a.md"]], 2, "a.md", 1]],
       [":b N from the explorer switches the file window", ":e b.rb<CR>:b 1<CR> e:b 2<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, "b.rb", 1]],
-      ["a refused switch keeps the focus in the explorer", ":e b.rb<CR>:b 1<CR>x e:bn<CR>", [[[0, 30, "explorer"], [31, 49, "a.md"]], 1, "", 1]]
+      ["a refused switch keeps the focus in the explorer", ":set nohidden<CR>:e b.rb<CR>:b 1<CR>x e:bn<CR>", [[[0, 30, "explorer"], [31, 49, "a.md"]], 1, "", 1]]
     ]) do |keys|
       h = session(keys)
       [shape(h), h.window_index, h.buffer.path.to_s, h.tab_count]
     end
-    h = session(":e b.rb<CR>:b 1<CR>x e:bn<CR>")
+    h = session(":set nohidden<CR>:e b.rb<CR>:b 1<CR>x e:bn<CR>")
     t.assert_equal("E37: No write since last change (add ! to override)", h.message, "the refusal is E37")
     # Scenario "A switch from a lone side window is refused".
     h = session(" e:only<CR>:bn<CR>")

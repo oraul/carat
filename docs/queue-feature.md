@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 26
 
-1. `hidden-option` (T2 user request, split from set-options, estimated medium): Where: `carat/use_cases/ex/file_command_handler.rb:106` (`:e` E37), the E37 of `:b`, `:bn`, `:bp`, `:bN`, `:bfirst`, `:blast`, `config/default.caratrc`, `docs/compatibility.md:349` (the 'hidden off' Difference). Why: council of 2026-11-21 (2): switching files with unsaved work means writing first, while closing a window already keeps a modified buffer hidden. Fix outline: a global `option.hidden` (`hid`), true by default, mirrored by `make gen-config`, read from the configuration and by `:set`; on, the 7 commands leave a modified buffer hidden; off keeps E37; `:q`, `:qa` name a modified hidden buffer as today. Accepted when a table-driven test of `:e` and `:b` over a modified buffer with hidden on and off, and `:qa` naming it, fails before the fix, the Difference updated, `make gen-config` current. Backlog: none.
-2. `colorscheme-command` (T2 user request, split from set-options, estimated large, critical e carat/use_cases/ex/set_command_handler.rb): Where: `set_command_handler.rb:29` (PENDING's `theme`, `background`, `bg`), `Themes::NAMES`, `docs/compatibility.md` Themes ('The theme is read once at startup'). Why: council (2): a theme change needs a restart. Fix outline: `:colo[rscheme] [name]` switches the palette at once (every group repainted, 256 and 16 colors as at startup), `E185: Cannot find color scheme 'name'` for another name, no name shows the current one; Tab completes the names (cmdline-completion, #283); `:set theme=`, `:set background=` alike, with `?` and `&`. Accepted when a table-driven test of each shipped name, an unknown name, no name, and both `:set` forms fails before the fix with the frame's groups repainted, and a `:colorscheme` row exists. Backlog: none.
+1. `colorscheme-command` (T2 user request, split from set-options, estimated large, critical e carat/use_cases/ex/set_command_handler.rb): Where: `set_command_handler.rb:29` (PENDING's `theme`, `background`, `bg`), `Themes::NAMES`, `docs/compatibility.md` Themes ('The theme is read once at startup'). Why: council (2): a theme change needs a restart. Fix outline: `:colo[rscheme] [name]` switches the palette at once (every group repainted, 256 and 16 colors as at startup), `E185: Cannot find color scheme 'name'` for another name, no name shows the current one; Tab completes the names (cmdline-completion, #283); `:set theme=`, `:set background=` alike, with `?` and `&`. Accepted when a table-driven test of each shipped name, an unknown name, no name, and both `:set` forms fails before the fix with the frame's groups repainted, and a `:colorscheme` row exists. Backlog: none.
 
 ## Pool
 
@@ -28,8 +27,9 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-25 review High 0, Medium 0 at 8+; 0 review.periodic in 2 pending runs (review-in-openspec, spinel-catchup-b).
-- Split (T2, the brief's 3 independently testable parts): set-options delivers `:set` for PENDING's options but `theme`, `background`; `hidden-option` and `colorscheme-command` (with those two) are Sprint 26 items 1, 2: 3 features, 3 backlog.
-- Size (T2): set-options large: comparable medium rows over 1.2M (showtabline 1,365,817 in 88 min, listchars-folds 1,499,684 in 98, cmdline-editing 1,418,893 in 131); no size up, the last row under (cmdline-completion 1,248,692).
-- Order (T2, council (2), the brief): set-options' scope ahead of buffer-picker, folded-row (pushed back 1, 2).
-- Retro (T1): review-in-openspec notes 8 to 12, spinel-catchup-b 2 to 4 are backlog Pool 7, 8, 10 evidence.
+- Security first (T0): none; sprint-25 review High 0, Medium 0 at 8+; 0 review.periodic in 3 pending runs (review-in-openspec, set-options, spinel-catchup-b).
+- Delivered (T2 user request, council (2)): hidden-option, Sprint 26 item 1, removed; Sprint 26 holds set-options (merged 6a24eae2bb70), hidden-option, colorscheme-command: 3 features, 3 backlog.
+- Size (T2): medium; one option over 7 E37 sites, narrower than set-options (large, 1,285,703 in 86 min); smallest comparable medium status-winbar-tabs 1,226,138 in 62 min; last two under (cmdline-completion 1,248,692, set-options 1,285,703 of 2.5M), no size up; 4 of 4 medium rows of the last ten over 1.2M (backlog Pool 7 budget-recalibrate).
+- Split (T2): none; one option, one guard, 2 areas, one test table. Critical: none (no security heading, gate path, or parser edit).
+- Order (T2): buffer-picker, folded-row stay pushed back 1, 2.
+- Retro placed (T1): set-options note 2 (scout 28.7 percent of output, 56 of 237 calls) is backlog Pool 10 scout-prune evidence, note 3 (merge 15.6 percent, 14 calls, 6 CI waits) Pool 8 merge-wait-bound evidence.

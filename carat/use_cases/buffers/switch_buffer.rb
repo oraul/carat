@@ -11,10 +11,11 @@ module Carat
     # buffer tab (nothing when the row has fewer): shows another listed file
     # buffer in the current window, as the request says, with the cursor
     # where a window last left it, the position left joining the window's
-    # jump list. The buffer the window showed stays listed, hidden. A
-    # modified current file buffer refuses the switch with E37 unless the
-    # request carries the bang, as :e does; a number of no listed file
-    # buffer is E86 and a list without file buffers E85, as Neovim's
+    # jump list. The buffer the window showed stays listed, hidden. With
+    # option.hidden off a modified current file buffer refuses the switch
+    # with E37 unless the request carries the bang, as :e does; with it on,
+    # the default, the buffer is left hidden with its changes. A number
+    # of no listed file buffer is E86 and a list without file buffers E85, as Neovim's
     # do_buffer answers. Run with the focus in a side window, a slot's
     # window such as the explorer (TabPage#side_window?), the switch acts
     # on the tab page's editing window (TabPage#editing_leaf), focused
@@ -76,7 +77,7 @@ module Carat
           return Outcome.failure(E85) if found.nil?
         end
         return Outcome.none if found.equal?(current)
-        return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch? && !request.bang
+        return Outcome.failure(Domain::Messages::E37) if current.modified? && !current.scratch? && !request.bang && !state.options.hidden
         @buffers.enter(found)
         Outcome.none
       end

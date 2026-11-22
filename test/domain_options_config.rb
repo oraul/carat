@@ -82,6 +82,19 @@ module DomainOptionsConfigTest
       [read.ignorecase, read.smartcase, read.hlsearch, read.incsearch]
     end
 
+    # The hidden option: rows are [label, project lines, [hidden,
+    # problems]]; on in Options.new and in the shipped configuration.
+    t.assert_equal([true, true], [D::Options.new.hidden, options.hidden], "hidden is on in the shipped options")
+    t.table([
+      ["hidden is on by default", "", [true, []]],
+      ["hidden is stored", "option.hidden false\n", [false, []]],
+      ["hidden takes true or false", "option.hidden maybe\n", [true, [".caratrc:1: option.hidden takes true or false"]]]
+    ]) do |text|
+      config = D::Config.new
+      config.read(".caratrc", text.to_s, false)
+      [D::Options.from_config(config).hidden, config.report]
+    end
+
     # The start screen options: rows are [label, project lines,
     # [startscreen, reducedmotion, problems]].
     t.table([

@@ -86,6 +86,9 @@ ok   edit opens another file
 ok   edit starts a new file
 ok   edit refused while modified
 ok   forced reload discards changes
+ok   edit of the current file refused while modified under hidden
+ok   edit of the current path refused while modified under hidden
+ok   edit of another file leaves the modified buffer hidden
 ok   long form edit
 ok   edit with no path and no argument
 ok   edit without argument reloads
@@ -190,4 +193,4 @@ ok   normal is normal
 ok   nor is not normal
 ok   p is print
 ok   prin is print
-use_cases_ex: 192 passed, 0 failed
+use_cases_ex: 195 passed, 0 failed

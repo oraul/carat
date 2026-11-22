@@ -38,8 +38,8 @@ module Carat
 
       # The options :set handles, by full name in the order the listings
       # show them, and their short names, "" for none.
-      NAMES = ["autoindent", "breadcrumbs", "cursorline", "expandtab", "filetype", "hlsearch", "icons", "ignorecase", "incsearch", "list", "listchars", "number", "reducedmotion", "relativenumber", "scroll", "scrolloff", "shiftwidth", "showtabline", "smartcase", "startscreen", "syntax", "tabstop", "timeoutlen", "undolevels", "winborder"]
-      SHORT_NAMES = ["ai", "", "cul", "et", "ft", "hls", "", "ic", "is", "", "lcs", "nu", "", "rnu", "scr", "so", "sw", "stal", "scs", "", "syn", "ts", "tm", "ul", ""]
+      NAMES = ["autoindent", "breadcrumbs", "cursorline", "expandtab", "filetype", "hidden", "hlsearch", "icons", "ignorecase", "incsearch", "list", "listchars", "number", "reducedmotion", "relativenumber", "scroll", "scrolloff", "shiftwidth", "showtabline", "smartcase", "startscreen", "syntax", "tabstop", "timeoutlen", "undolevels", "winborder"]
+      SHORT_NAMES = ["ai", "", "cul", "et", "ft", "hid", "hls", "", "ic", "is", "", "lcs", "nu", "", "rnu", "scr", "so", "sw", "stal", "scs", "", "syn", "ts", "tm", "ul", ""]
       # The options Carat has that :set does not handle yet.
       PENDING = ["theme", "background", "bg"]
       private_constant :NAMES, :SHORT_NAMES, :PENDING

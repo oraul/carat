@@ -14,7 +14,11 @@ module Carat
     # The ex commands that write, quit, and edit files: :w, :wq, :x, :wa,
     # :wqa, :xa, :q, :qa, and :e, with their bang and argument. The "all"
     # commands act on every buffer in the list, across every tab page.
-    # ":e #" edits the file of the window's alternate buffer.
+    # ":e #" edits the file of the window's alternate buffer. :e of
+    # another file with a modified current buffer leaves that buffer
+    # hidden under option.hidden, the default, and is E37 without it,
+    # unless it has the bang; :e of the current file reloads it, so a
+    # modified buffer refuses it either way.
     class FileCommandHandler < ExHandler
       # @rbs @save_file: SaveFile
       # @rbs @save_all: SaveAll
@@ -103,8 +107,17 @@ module Carat
           return Outcome.failure("E499: Empty file name for '%' or '#', only works with \":p:h\"") if path.nil?
         end
         return Outcome.failure("E32: No file name") if path.nil?
-        return Outcome.failure(Domain::Messages::E37) if state.buffer.modified? && !command.bang
+        return Outcome.failure(Domain::Messages::E37) if state.buffer.modified? && !command.bang && (!state.options.hidden || reload?(state, path))
         @open_file.call(state, path)
+      end
+
+      # Whether :e of the path reloads the current buffer in place, which
+      # drops its changes and so is refused while it is modified even with
+      # option.hidden on, as in Vim.
+      #: (Domain::EditorState, String) -> bool
+      def reload?(state, path)
+        listed = @buffers.for_path(path)
+        !listed.nil? && listed.equal?(state.buffer)
       end
     end
   end
