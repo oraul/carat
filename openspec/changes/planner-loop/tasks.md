@@ -17,7 +17,7 @@
 
 - [x] 3.1 Planner sprint mode, quality and security reviewer modes, contributor package step, runner, retrospective, `/sprint`; proved by the agents cases
 - [x] 3.2 CLAUDE.md, README.md, docs/codebase-map.md; checked by `make docs-lint` and `make gates`
-- [ ] 3.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`
+- [x] 3.3 Run `make tools-test`, `make docs-lint`, `make gates`, `make spec-validate`
 
 ## 4. Quality review
 

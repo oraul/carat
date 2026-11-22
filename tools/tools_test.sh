@@ -5348,6 +5348,11 @@ expect "calibration: the security reviewer keeps the session's tier and effort" 
 expect "calibration: the contributor runs on its agent file's tier at high effort" 0 "^agent/high$" profile_of contributor
 expect "calibration: the close start runs on the retrospective's agent file's tier at high effort, the tier of the contributor's file" 0 "^agent/high same$" \
   sh -c 'echo "$1 $([ "$(grep "^model: " "$2/retrospective.md")" = "$(grep "^model: " "$2/contributor.md")" ] && echo same)"' _ "$(profile_of close)" "$agents"
+# By the user's decision of 2026-11-22, the contributor's file itself carries
+# the high effort beside its model line, so the tier and effort hold even if
+# the workflow changes (planner-loop).
+expect "calibration: the contributor's agent file carries a model line and the high effort in its frontmatter" 0 "^1 1 1$" \
+  sh -c 'fm=$(sed -n "2,/^---\$/p" "$1/contributor.md"); echo "$(printf "%s\n" "$fm" | grep -c "^model: [a-z]*\$") $(printf "%s\n" "$fm" | grep -c "^effort: high\$") $(printf "%s\n" "$fm" | grep -c "^effort: ")"' _ "$agents"
 judged=""
 for kind in planner quality security; do
   judged="$judged $kind=$(profile_of "$kind" | cut -d/ -f1)"
@@ -5410,7 +5415,7 @@ plan_js() {
 expect "workflow: two deliveries' planners write separate plan directories" 0 '^\["build/plan/a/","build/plan/b/"\]$' \
   plan_js "[planDir('a'), planDir('b')]"
 expect "workflow: a package start runs groom when a sprint plan waits, after history and before plan-apply" 0 '^\[true,true,true,true\]$' \
-  plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), /run_state[.]sh groom c.., which applies a waiting sprint plan once/.test(p), p.indexOf('history c') < p.indexOf('groom c') && p.indexOf('groom c') < p.indexOf('plan-apply c')])(packagePlan({ change: 'c' }, 1))"
+  plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), /run_state[.]sh groom c., which applies a waiting sprint plan once/.test(p), p.indexOf('history c') < p.indexOf('groom c') && p.indexOf('groom c') < p.indexOf('plan-apply c')])(packagePlan({ change: 'c' }, 1))"
 expect "workflow: an unplanned package step copies no plan and runs history and groom" 0 '^\[false,true,true,false\]$' \
   plan_js "(p => [p.includes('plan-apply c'), p.includes('history c'), p.includes('groom c'), /records change|never run groom/.test(p)])(packagePlan({ change: 'c' }, 0))"
 # The check runs in a start of the checker file's Mode: run, whose lines

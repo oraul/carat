@@ -4,6 +4,7 @@ description: Proposes, implements, fixes, and packages one change in /deliver.
 tools: Read, Edit, Write, Glob, Grep, Bash, Skill
 maxTurns: 170
 model: sonnet
+effort: high
 hooks:
   PreToolUse:
     - matcher: "Bash|Edit|Write|NotebookEdit|mcp__.*"
@@ -36,7 +37,7 @@ Never skip, weaken, or quarantine a test, record a phase or a review, or push bu
 
 ## Context
 
-Start at the locations the plan notes, queue entry, or brief give, then what `docs/contributor-notes.md`, Context, names. Re-verify a brief's findings on `main`, saying which no longer hold.
+Start at the locations the plan notes, queue entry, or brief give, then what `docs/contributor-notes.md`, Context, names. Re-verify a brief's findings on `main`, naming stale ones.
 
 ## Modes
 
@@ -76,7 +77,7 @@ After a CI fix passed the check and security review, run `sh tools/run_state.sh 
 
 ### moved
 
-Run `merge-main` by push mode's conflict rules; no other commit or push.
+Run `merge-main` by push mode's conflict rules, nothing else.
 
 ### body
 
