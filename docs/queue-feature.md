@@ -4,9 +4,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 27
 
-1. `buffer-picker` (T2 user request, council (2), (3), estimated large, pushed back 1, critical e carat/plugins/finder/plugin.rb): Where: `carat/plugins/finder/plugin.rb:101` binds only `<leader>ff`, `<leader>fg`, `<C-p>`. Why: the council of 2026-11-21 approved (2) a buffer picker with recent files and (3) `<leader>fr`, `<leader>fR`; 0 of the 3 keys bound. Fix outline: `<leader>fb` open buffers, `<leader>fr` recent files (bounded), `<leader>fR` resumes the last search. Accepted when a test per key passes, frame rows in both themes and ascii, `docs/actions.md` rows. Backlog: none.
-2. `folded-row` (T2 user request, Facet wave 2, estimated large, pushed back 2, critical e carat/adapters/frame_presenter.rb): Where: the closed-fold row of `carat/adapters/frame_presenter.rb` (`:813`, `:799` at 7156f43). Why: it paints Normal, not `docs/design.md`'s fold row look. Fix outline: paint it in its own theme group. Accepted when frame rows in both themes, ascii, 16 colors, and NO_COLOR show it. Backlog: none.
-3. `float-painter` (T2 user request, council (4), estimated medium): Where: `carat/adapters/frame_presenter.rb:649` (`paint_floats`), `:669`, `:712`, in a class of 1469 lines and 60 methods. Why: council (4) puts it before window-surfaces; sprint-26 sweep note 35. Fix outline: floats and notifications painted by a collaborator, as StatusBar, Winbar, TabBar were, the window path explicit. Accepted when every frame snapshot is unchanged, `lh-float` time and allocations held, the map updated. Backlog: "### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)".
+1. `folded-row` (T2 user request, Facet wave 2, estimated large, pushed back 2, critical e carat/adapters/frame_presenter.rb): Where: the closed-fold row of `carat/adapters/frame_presenter.rb` (`:813`, `:799` at 7156f43). Why: it paints Normal, not `docs/design.md`'s fold row look. Fix outline: paint it in its own theme group. Accepted when frame rows in both themes, ascii, 16 colors, and NO_COLOR show it. Backlog: none.
+2. `float-painter` (T2 user request, council (4), estimated medium): Where: `carat/adapters/frame_presenter.rb:649` (`paint_floats`), `:669`, `:712`, in a class of 1469 lines and 60 methods. Why: council (4) puts it before window-surfaces; sprint-26 sweep note 35. Fix outline: floats and notifications painted by a collaborator, as StatusBar, Winbar, TabBar were, the window path explicit. Accepted when every frame snapshot is unchanged, `lh-float` time and allocations held, the map updated. Backlog: "### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)".
 
 ## Pool
 
@@ -27,7 +26,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-26 review High 0, Medium 0, Lows (5), (4), (3); periodic security at 3370625 high=0 medium=0 low=3.
-- Sprint 27 (T2): 3 features, 3 backlog; buffer-picker, folded-row, float-painter, the pool's first three (council of 2026-11-21 (2), (3), (4)); ui-groups pushed back 6 with its reason.
-- Size (T2): buffer-picker, folded-row large, critical e (colorscheme-command 1,156,082 in 73 min, set-options 1,285,703 in 86); float-painter medium (hidden-option 1,099,813 in 68); the last two feature rows under budget, no size up.
-- Groom (T2): set-options listed 4 headings; feature findings filed by groom: hidden-option 1 (`walk_jumps.rb:49`, also in backlog sweep-bugs), set-options 3 (`:set theme` fixed since by colorscheme-command b95cff4).
+- Security first (T0): none; sprint-26 review High 0, Medium 0; periodic security at 3370625 high=0 medium=0 low=3; no periodic review in the 2 pending runs.
+- Delivered (T2): buffer-picker, council of 2026-11-21 (2), (3); 0 of 3 keys bound at `plugin.rb:101`; Sprint 27 keeps folded-row, float-painter, the pool unchanged.
+- No split (T2): 3 keys in 1 map area (finder plugin), one picker path; the last 5 large feature rows 1,156,082 to 1,499,363 total (46 to 60 percent of 2.5M), rework 0 to 1; on a stop, `<leader>fR` goes to the pool as `finder-resume`.
+- Size (T2): large, critical e carat/plugins/finder/plugin.rb; the last two feature rows under budget (hidden-option 1,099,813 medium, colorscheme-command 1,156,082 large), no size up.
+- Notes (T1): sprint-26-records 3 near backlog Pool 13 records-bench-skip, 1, 2, 5 near Pool 14 head-drop, 4 (6 pool items lacked a size) to backlog.md; review-in-openspec 8 to 12 placed by sprint-26.
