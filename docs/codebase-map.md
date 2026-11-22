@@ -419,9 +419,9 @@ Files:
 - `carat/domain/delimited_pattern.rb`: `DelimitedPattern` value; `parse` (the delimiter and pattern of `:s`, `:g`, and `:v`; `E146`), the one reader `SubstituteArgs` and `GlobalArgs` call, and `typed` (a `/` or `?` prompt's pattern and offset).
 - `carat/domain/substitute_args.rb`: `SubstituteArgs` value; `parse` (delimiter, pattern, string, flags, count; `E146`, `E488`).
 - `carat/domain/last_substitute.rb`: `LastSubstitute`, what the next substitute reuses; `apply_flags`, `keep_replacement`, `keep_previous`.
-- `carat/domain/replacement.rb`: `Replacement`; `tilde`, `check`, `expand` (the string's special characters; a line break as `BREAK`).
+- `carat/domain/replacement.rb`: `Replacement`; `tilde`, `check`, `expand` (the string's special characters; a line break as `BREAK`), `size` (the bytes `expand` builds, counted without building them).
 - `carat/domain/substituted_line.rb`: `SubstitutedLine` value (`text`, `count`); `changed?`.
-- `carat/domain/substitution.rb`: `Substitution.line`, one line under the budget, Vim's empty-match rule, `OUTPUT_COST` per character of replacement.
+- `carat/domain/substitution.rb`: `Substitution.line`, one line under the budget, Vim's empty-match rule, `OUTPUT_COST` per character of replacement, charged before the replacement is built.
 - `carat/domain/global_args.rb`: `GlobalArgs` value; `parse` (delimiter, pattern, command; `E146`, `E148`).
 - `carat/domain/global_marks.rb`: `GlobalMarks`, a running global's marked lines, moved by `Buffer#splice` through `LineSplice.shift_marks`; `mark`, `take`, `shift`, `clear`.
 - `carat/domain/register_count.rb`: `RegisterCount` value; `parse` (`[x] [count]` of a line command; `E488`, `E939`), `parse_count` (`[count]` of a line command that takes no register, as `:j` and `:p`).
@@ -441,7 +441,7 @@ Files:
 - `carat/use_cases/actions/substitute_handler.rb`: `SubstituteHandler.register` (`substitute.repeat`, `substitute.repeat_all`).
 - `carat/use_cases/enter_command_line.rb`, `carat/use_cases/edit_command_line.rb`, `carat/use_cases/erase_command_line.rb`, `carat/use_cases/cancel_command_line.rb`, `carat/use_cases/execute_command_line.rb`: `call`.
 - `carat/use_cases/actions/command_line_handler.rb`: `CommandLineHandler.register`.
-- `carat/use_cases/files/open_file.rb`: `OpenFile#call` (`:e!` reloads through `Buffer#reload`; a directory, a FIFO, a device, or a file over 64 MiB is refused; under `option.gt buffers` it retires the startup buffer).
+- `carat/use_cases/files/open_file.rb`: `OpenFile#call` (`:e!` reloads through `Buffer#reload`; one `ProbePath` question per path; a directory, a FIFO, a device, a dangling link, or a file over 64 MiB is refused; under `option.gt buffers` it retires the startup buffer).
 - `carat/use_cases/files/save_file.rb`: `SaveFile#call` (`E382` for a scratch buffer, `E45` for a read-only one, `mark_saved`, `buffer_save` to the host).
 - `carat/use_cases/files/save_all.rb`: `SaveAll#call`, the write-all loop of `:wa`, `:wqa`, `:xa`.
 - `carat/use_cases/files/quit.rb`: `Quit#call(state, way)` with `:quit`, `:force`, or `:written`; a file window beside only side windows counts as the last; under `option.gt buffers` the last window closes the buffer's tab while another listed file buffer exists.
@@ -703,7 +703,7 @@ Files:
 - `carat/test_support.rb`: the require graph of tests and the benchmark, `carat.rb` and the doubles.
 - `carat/doubles/fake_terminal.rb`: `FakeTerminal` (256 colors, `no_color=`, `""` for `background`); `push`, `writes`, `last_write`, `read_key`, `write`.
 - `carat/doubles/manual_clock.rb`: `ManualClock`; `now`, `advance`, `sleep`.
-- `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `link_to`, `special`, `move_to`, `move_home`, and the `FilePort` methods, `create` refusing a marked link.
+- `carat/doubles/memory_files.rb`: `MemoryFiles`, files and directories under `/project` and a home `/home/user`, both movable; `put`, `get`, `link`, `link_to`, `special`, `dangling` (a link whose target is missing), `pad` (a size its text does not hold), `move_to`, `move_home`, and the `FilePort` methods, `create` refusing a marked link.
 - `carat/doubles/fixed_config.rb`: `FixedConfig`; `shipped` (the defaults alone), `defaults` (shipped plus `option.showtabline 1`, the test configuration), `with(text)`, `with_user`, `load`.
 - `carat/doubles/manual_signals.rb`: `ManualSignals`; `resize`, `terminate`, `resize_after`, `terminate_after`.
 - `carat/doubles/editor_harness.rb`: `EditorHarness`; `default` (no plugins), `with_plugins`, `open`, `type`, `raw`, `wait`, `resize`, `lines`, `cursor`, `mode`, `message`, `screen`, `row`, `window_count`, `tab_count`, `status_row`.

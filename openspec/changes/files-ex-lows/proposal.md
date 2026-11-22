@@ -10,7 +10,7 @@ A substitute builds each replacement before it charges the work budget for it, s
 - `OpenFile#call` asks the port once, through `ProbePath`, and takes `exists` from that answer; a dangling link is therefore refused with `"path" is not a file`, as a FIFO is, instead of opening as a new buffer.
 - `MemoryFiles` gains `pad(path, bytes)`, a file whose size counts bytes its text does not hold, and `dangling(path)`, a link whose target is missing as the driver reports it; `test/editor_cmdline.rb` puts the files over and at the limit with `pad` and builds no 64 MiB string.
 - The openat gap (the three file-operation headings) is appended to `docs/findings/files-ex-lows.md` with its fix outline.
-- Docs: `docs/compatibility.md` (`:e` row and the Differences paragraphs of the files and substitute sections), `docs/codebase-map.md` (`replacement.rb`, `substitution.rb`, `open_file.rb`, `memory_files.rb`), README's `:e` sentence.
+- Docs: `docs/compatibility.md` (`:e` row and the Differences paragraphs of the files and substitute sections), `docs/codebase-map.md` (`replacement.rb`, `substitution.rb`, `open_file.rb`, `memory_files.rb`), README's `:e` sentence, and `docs/architecture.md` trimmed under its budget (Impact).
 
 ## Capabilities
 
@@ -34,7 +34,7 @@ None.
 ## Impact
 
 - README.md: the `:e` sentence names a dangling link among the refused paths.
-- docs/architecture.md: unchanged, no layer, port, or module rule changes; the budget and the open rules it names stay as written.
+- docs/architecture.md: section 7's project-file line loses 11 bytes of wording ("a replay or action", "Servers self-start"), no rule changed, since the file at 41a1654 sat 8 bytes over its docs-lint budget and every check stage would fail; no layer, port, or module rule of this change needs it.
 - docs/codebase-map.md: the `replacement.rb`, `substitution.rb`, `open_file.rb`, and `memory_files.rb` lines.
 - docs/compatibility.md: the `:e` row and the Differences paragraphs of the files and substitute sections.
 - docs/actions.md: unchanged, no bound action changes.
