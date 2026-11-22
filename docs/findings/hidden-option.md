@@ -2,3 +2,4 @@
 - Location: `carat/use_cases/definitions/walk_jumps.rb:49` and `carat/use_cases/definitions/visit_target.rb:80`
 - Why: with `option.hidden` on, the default, `:e`, the buffer commands, Ctrl-^, and `gt` leave a modified buffer hidden, but a jump list walk and a jump to a definition or other target in another file still answer E37, where Neovim lets them through; the brief named `:e` and the six buffer commands only, so the Difference in `docs/compatibility.md` names the gap.
 - Fix: read `state.options.hidden` where each returns `Outcome.failure(Domain::Messages::E37)`, add the rows to the tables of `test/editor_jumps.rb` and `test/adapters_definitions.rb` with `:set nohidden` for the refusing ones, update the `jump-list` and `definitions` specs and drop the Difference's clause.
+none
