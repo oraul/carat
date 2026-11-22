@@ -175,23 +175,39 @@ module UseCasesActionsTest
     t.assert_equal([], wrong, "every registered action handler returns an Outcome")
     t.assert_true(names.length >= 100, "the table holds every core action")
 
-    # The actions a project file may not bind are registered names, so a
-    # rename cannot leave the refusal stale, and the command-line prefix
-    # names some.
+    # Every entry of the project allowlist names a registered action, so
+    # a rename cannot leave it stale, and the registered actions it
+    # leaves out are exactly the writes, the quits, and the command
+    # line's own actions; every plugin action is refused too.
     stale = []
     i = 0
-    while i < D::Config::PROJECT_REFUSED.length
-      stale << D::Config::PROJECT_REFUSED[i] unless names.include?(D::Config::PROJECT_REFUSED[i])
+    while i < D::Config::PROJECT_BINDABLE.length
+      entry = D::Config::PROJECT_BINDABLE[i]
+      named = false
+      k = 0
+      while k < names.length
+        named = true if entry.end_with?(".") ? names[k].start_with?(entry) : names[k] == entry
+        k += 1
+      end
+      stale << entry unless named
+      i += 1
+    end
+    refused = []
+    i = 0
+    while i < names.length
+      refused << names[i] unless D::Config.project_bindable?(names[i]) || names[i].start_with?("cmdline.")
       i += 1
     end
     command_line = 0
     i = 0
     while i < names.length
-      command_line += 1 if names[i].start_with?(D::Config::COMMAND_LINE)
+      command_line += 1 if names[i].start_with?("cmdline.") && !D::Config.project_bindable?(names[i])
       i += 1
     end
-    t.assert_equal([], stale, "the actions a project file may not bind are registered")
+    t.assert_equal([], stale, "every entry of the project allowlist names a registered action")
+    t.assert_equal(["file.save", "quit.all", "quit.write_all", "window.quit"], refused.sort, "the project allowlist leaves out the writes and the quits")
     t.assert_true(command_line > 0, "the command line has actions a project file may not bind")
+    t.assert_equal([false, false, true], [D::Config.project_bindable?("plugin.explorer.delete"), D::Config.project_bindable?("window.quit_all"), D::Config.project_bindable?("window.split")], "a plugin action and an unnamed window action are refused")
 
     # Every core action is described in 1 to 32 characters for the key
     # hints.

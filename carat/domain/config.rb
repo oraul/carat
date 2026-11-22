@@ -2,6 +2,8 @@ require_relative "rc_parse"
 require_relative "rc_line"
 require_relative "rc_parser"
 require_relative "root_word"
+require_relative "key"
+require_relative "key_notation"
 
 module Carat
   module Domain
@@ -35,13 +37,47 @@ module Carat
       # own: a language line, so only the defaults and the user file set it.
       TRUSTED_ROOTS = "language.trusted_roots"
 
-      # The actions that write the buffer or quit, which a project file
-      # may not bind in any mode, as a key the user types would run them.
-      PROJECT_REFUSED = ["file.save", "quit.all", "quit.write_all", "window.quit"]
+      # The actions a project file may bind, in any mode: an entry ending
+      # in a dot names a family, any other entry one action. Every other
+      # action is refused, as a key the user types would run it: the
+      # writes and quits (file.save, quit.*, window.quit), the command
+      # line's own actions (cmdline.*), which run or recall an ex command,
+      # every plugin action (plugin.explorer.delete deletes a file), and
+      # any family added later until it is named here.
+      PROJECT_BINDABLE = [
+        "buffer.", "completion.", "cursor.", "definition.", "docs.", "float.",
+        "fold.", "history.", "insert.", "jump.", "layout.", "message.", "mode.",
+        "motion.", "operator.", "palette.", "register.", "scroll.", "search.",
+        "substitute.", "tab.", "tabline.", "textobject.", "visual.",
+        "window.close", "window.down", "window.equalize", "window.last_accessed",
+        "window.left", "window.next", "window.only", "window.previous",
+        "window.right", "window.split", "window.up", "window.vsplit"
+      ]
 
-      # The prefix of the command line's actions, which run or recall an
-      # ex command, so a project file may not bind them in any mode.
-      COMMAND_LINE = "cmdline."
+      # The action that opens the command line: a project file may bind it,
+      # but may not take it from the key the defaults or the user gave it.
+      OPEN_COMMAND_LINE = "mode.cmdline"
+
+      # The actions that open a prompt whose Enter runs what was typed, an
+      # ex command or any action: a project file binds them only in
+      # PROMPT_MODES, so a key typed while inserting text, such as <CR>,
+      # does not turn the next line typed into a command.
+      PROMPT_ACTIONS = ["mode.cmdline", "palette.open"]
+
+      # The modes in which a project file may bind PROMPT_ACTIONS.
+      PROMPT_MODES = ["normal", "visual", "visual_line", "visual_block"]
+
+      # The keymap value that removes a binding.
+      NONE = "none"
+
+      # The keymap line that sets the leader, and Vim's mapleader when the
+      # configuration names none.
+      LEADER = "leader"
+      DEFAULT_LEADER = "\\"
+
+      # The keymap line that names a normal-mode prefix for the key hints
+      # and binds nothing.
+      GROUP = "group"
 
       # @rbs @settings: Array[untyped]
       # @rbs @problems: Array[String]
@@ -80,18 +116,21 @@ module Carat
       # names an unknown scope, or is a setting it may not make is noted
       # and skipped. An untrusted file, the project's, may not set language
       # commands, which name programs to run, nor bind keys to a key
-      # sequence to replay, which can run any ex command.
+      # sequence to replay, which can run any ex command, nor take a key
+      # from a binding it could not make itself (held_keys).
       #: (String, String, bool) -> void
       def read(source, text, trusted)
         file = files
         self.files = file + 1
+        held = trusted ? Config.no_keys : held_keys
+        at = trusted ? "" : leader
         n = text.bytesize
         start = 0
         number = 1
         while start < n
           stop = start
           stop += 1 while stop < n && text.getbyte(stop).to_i != RcParser::NEWLINE
-          add(source, file, number, RcParser.parse_range(text, start, stop), trusted)
+          add(source, file, number, RcParser.parse_range(text, start, stop), trusted, held, at)
           start = stop + 1
           number += 1
         end
@@ -103,7 +142,7 @@ module Carat
       def refuse(source, reason)
         file = files
         self.files = file + 1
-        note_at(file * RcLine::FILE_SPAN, "#{source}: #{reason}")
+        note_at(RcLine.order_at(file, 0), "#{source}: #{reason}")
       end
 
       # The number of setting lines kept.
@@ -133,6 +172,59 @@ module Carat
       #: (RcLine, String) -> void
       def note(line, message)
         note_at(line.order, line.problem(message))
+      end
+
+      # The leader: the value of the last keymap.leader line that is one
+      # key in notation, Vim's backslash when there is none. The keymap
+      # notes the lines that are not.
+      #: () -> String
+      def leader
+        found = DEFAULT_LEADER
+        i = 0
+        while i < settings.length
+          line = line_at(i)
+          found = line.words[0].to_s if line.scope == "keymap" && line.name == LEADER && Config.leader_problem(line.words).empty?
+          i += 1
+        end
+        found
+      end
+
+      # Why the words cannot be the leader, or "".
+      #: (Array[String]) -> String
+      def self.leader_problem(words)
+        return "keymap.leader takes one key" unless words.length == 1
+        parsed = KeyNotation.parse(words[0].to_s, "")
+        return parsed.error.to_s unless parsed.ok?
+        return "keymap.leader takes one key" if parsed.codes.empty?
+        ""
+      end
+
+      # An empty table typed as the keys an untrusted file may not take.
+      #: () -> Hash[String, String]
+      def self.no_keys
+        table = { "" => "" }
+        table.clear
+        table
+      end
+
+      # Whether a project file may bind the action (PROJECT_BINDABLE).
+      #: (String) -> bool
+      def self.project_bindable?(action)
+        i = 0
+        while i < PROJECT_BINDABLE.length
+          entry = PROJECT_BINDABLE[i]
+          return true if entry.end_with?(".") ? action.start_with?(entry) : action == entry
+          i += 1
+        end
+        false
+      end
+
+      # Whether a project file may bind the action in the mode: an action
+      # of PROJECT_BINDABLE, and one of PROMPT_ACTIONS only in PROMPT_MODES.
+      #: (String, String) -> bool
+      def self.project_bindable_in?(mode, action)
+        return false unless Config.project_bindable?(action)
+        !PROMPT_ACTIONS.include?(action) || PROMPT_MODES.include?(mode)
       end
 
       # Every problem in file and line order, two of one line in the order
@@ -177,11 +269,13 @@ module Carat
 
       private
 
-      #: (String, Integer, Integer, RcParse, bool) -> void
-      def add(source, file, number, parsed, trusted)
+      # Keeps the parsed line, or notes why not. held and leader are an
+      # untrusted file's held_keys and the leader, empty for a trusted one.
+      #: (String, Integer, Integer, RcParse, bool, Hash[String, String], String) -> void
+      def add(source, file, number, parsed, trusted, held, leader)
         return if parsed.blank?
         unless parsed.ok?
-          note_at(file * RcLine::FILE_SPAN + number, "#{source}:#{number}: #{parsed.error}")
+          note_at(RcLine.order_at(file, number), RcLine.problem_at(source, number, parsed.error))
           return
         end
         line = RcLine.from_parse(source, file, number, parsed)
@@ -192,78 +286,119 @@ module Carat
           note(line, "unknown setting #{line.key}")
           return
         end
-        return if scope == "language" && !language?(line, trusted)
-        return if scope == "keymap" && !trusted && !binding?(line)
-        settings << line
+        problem = ""
+        problem = language_problem(line, trusted) if scope == "language"
+        problem = binding_problem(line, held, leader) if scope == "keymap" && !trusted
+        if problem.empty?
+          settings << line
+        else
+          note(line, problem)
+        end
       end
 
-      # Whether a language line may be kept: from a trusted file, as
-      # language.<name>.<setting> with a known setting or as
-      # language.trusted_roots, a root's command with a root (RootWord)
-      # and a command word. Notes why not, a planned setting as not
-      # supported yet.
-      #: (RcLine, bool) -> bool
-      def language?(line, trusted)
-        unless trusted
-          note(line, "language commands are not read from a project file")
-          return false
-        end
+      # Why a language line may not be kept, or "": it is kept from a
+      # trusted file, as language.<name>.<setting> with a known setting or
+      # as language.trusted_roots, a root's command with a root (RootWord)
+      # and a command word; a planned setting is not supported yet.
+      #: (RcLine, bool) -> String
+      def language_problem(line, trusted)
+        return "language commands are not read from a project file" unless trusted
         name = line.name
-        return true if line.key == TRUSTED_ROOTS
+        return "" if line.key == TRUSTED_ROOTS
         dot = name.index(".")
-        if dot.nil?
-          note(line, "unknown setting #{line.key}")
-          return false
-        end
+        return "unknown setting #{line.key}" if dot.nil?
         setting = name[dot + 1, name.length - dot - 1].to_s
-        if PLANNED_SETTINGS.include?(setting)
-          note(line, "language setting #{setting} is not supported yet")
-          return false
-        end
-        unless LANGUAGE_SETTINGS.include?(setting)
-          note(line, "unknown language setting #{setting}")
-          return false
-        end
-        if setting == ROOTED_SETTING && line.words.length < 2
-          note(line, "#{line.key} needs a root and a command")
-          return false
-        end
-        if setting == ROOTED_SETTING
-          root = line.words[0].to_s
-          unless RootWord.root?(root)
-            note(line, "#{line.key} #{root} is not a root")
-            return false
-          end
-        end
-        true
+        return "language setting #{setting} is not supported yet" if PLANNED_SETTINGS.include?(setting)
+        return "unknown language setting #{setting}" unless LANGUAGE_SETTINGS.include?(setting)
+        return "" unless setting == ROOTED_SETTING
+        return "#{line.key} needs a root and a command" if line.words.length < 2
+        root = line.words[0].to_s
+        return "#{line.key} #{root} is not a root" unless RootWord.root?(root)
+        ""
       end
 
-      # Whether an untrusted file's keymap line may be kept: one whose
-      # value is an action name or none, or a group name, which binds
-      # nothing. A key sequence to replay is noted
-      # and refused, because a replay types anything, :w with any path
-      # included, so a project file could write any file the user can. So
-      # is an action that writes, quits, or runs the command line, in any
-      # mode (PROJECT_REFUSED, COMMAND_LINE), and a leader, which would
-      # move the defaults' and the user's <leader> write and quit
-      # bindings onto keys such as d.
-      #: (RcLine) -> bool
-      def binding?(line)
+      # Why an untrusted file's keymap line may not be kept, or "": one
+      # whose value is an action name or none, or a group name, which binds
+      # nothing, is kept. A key sequence to replay is refused, because a
+      # replay types anything, :w with any path included, so a project file
+      # could write any file the user can. So is an action outside
+      # PROJECT_BINDABLE, in any mode, and one of PROMPT_ACTIONS outside
+      # PROMPT_MODES; a binding, none included, of keys held (held_keys),
+      # which would take the command line, a write, or a quit from the
+      # user; a binding but none of keys that start with held keys or begin
+      # them, which would make the held keys a prefix or wait on them; and
+      # a leader, which would move the defaults' and the user's <leader>
+      # write and quit bindings onto keys such as d.
+      #: (RcLine, Hash[String, String], String) -> String
+      def binding_problem(line, held, leader)
+        return "keymap.leader is not read from a project file" if line.name == LEADER
         words = line.words
-        if line.name == "leader"
-          note(line, "keymap.leader is not read from a project file")
-          return false
-        end
-        return true if line.name == "group" || words.length != 2
+        return "" if line.name == GROUP || words.length != 2
+        keys = words[0].to_s
         value = words[1].to_s
-        return true if value == "none"
-        unless RcParser.key?(value, 0, value.bytesize)
-          note(line, "key sequences are not read from a project file")
-          return false
+        unless value == NONE
+          return "key sequences are not read from a project file" unless RcParser.key?(value, 0, value.bytesize)
+          return "#{value} is not bound from a project file" unless Config.project_bindable?(value)
+          return "#{value} is not bound in #{line.name} mode from a project file" unless Config.project_bindable_in?(line.name, value)
         end
-        return true unless PROJECT_REFUSED.include?(value) || value.start_with?(COMMAND_LINE)
-        note(line, "write, quit, and command-line actions are not bound from a project file")
-        false
+        key = held_key(line.name, keys, leader)
+        action = held[key]
+        return "#{keys} runs #{action}, which a project file may not unbind or rebind" unless action.nil?
+        return "" if value == NONE
+        overlap = held_overlap(held, key)
+        return "" if overlap.empty?
+        "#{keys} overlaps keys that run #{held[overlap]}, which a project file may not unbind or rebind"
+      end
+
+      # The held key (held_keys) that the key starts with or begins, codes
+      # compared whole, or "": unbinding either leaves the other, but
+      # binding one would turn a held key into a prefix or wait on it.
+      #: (Hash[String, String], String) -> String
+      def held_overlap(held, key)
+        names = held.keys
+        i = 0
+        while i < names.length
+          name = names[i].to_s
+          return name if key.start_with?("#{name} ") || name.start_with?("#{key} ")
+          i += 1
+        end
+        ""
+      end
+
+      # The keys of the bindings in effect that a project file may not
+      # take, each as held_key, to the action or key sequence they run:
+      # a value it could not bind itself, and the key that opens the
+      # command line. Read once before an untrusted file's lines.
+      #: () -> Hash[String, String]
+      def held_keys
+        bound = Config.no_keys
+        at = leader
+        i = 0
+        while i < settings.length
+          line = line_at(i)
+          words = line.words
+          if line.scope == "keymap" && line.name != LEADER && line.name != GROUP && words.length == 2
+            key = held_key(line.name, words[0].to_s, at)
+            value = words[1].to_s
+            if value == NONE || (value != OPEN_COMMAND_LINE && Config.project_bindable_in?(line.name, value))
+              bound.delete(key)
+            else
+              bound[key] = value
+            end
+          end
+          i += 1
+        end
+        bound
+      end
+
+      # The key of a binding in held_keys: the keymap line's name and the
+      # codes its keys spell under the leader, so <leader>fs and <Space>fs
+      # are one key; keys that do not parse are their text.
+      #: (String, String, String) -> String
+      def held_key(name, keys, leader)
+        parsed = KeyNotation.parse(keys, leader)
+        return "#{name} #{keys}" unless parsed.ok?
+        "#{name} #{parsed.codes.join(" ")}"
       end
 
       # Appends the problems of index[from, mid - from] and

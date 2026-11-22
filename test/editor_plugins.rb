@@ -372,18 +372,19 @@ module EditorPluginsTest
 
     # Configuration problems are reported when the configuration loads, with
     # the file and line; the binding is not added and the rest loads. A
-    # plugin's action, enabled or not, is a known name.
-    config = Carat::Doubles::FixedConfig.with("keymap.normal zq foo.bar\nkeymap.normal zh plugin.hello.greet\n")
+    # plugin's action, enabled or not, is a known name. The user file binds
+    # them, since a project file binds no plugin action.
+    config = Carat::Doubles::FixedConfig.with_user("keymap.normal zq foo.bar\nkeymap.normal zh plugin.hello.greet\n")
     h = editor_with(config, 24, 80)
-    t.assert_equal([[".caratrc:1: unknown action foo.bar"], ".caratrc:1: unknown action foo.bar", true], [h.assembly.config_errors, h.message, h.state.message_error], "an unknown action is reported after startup with the file and line")
+    t.assert_equal([["~/.config/carat/caratrc:1: unknown action foo.bar"], "~/.config/carat/caratrc:1: unknown action foo.bar", true], [h.assembly.config_errors, h.message, h.state.message_error], "an unknown action is reported after startup with the file and line")
     h.type("zq")
     t.assert_equal([[0, 0], ""], [h.cursor, h.message], "the refused binding does nothing")
     h.type("zh")
     t.assert_equal("#{INFO} Hello, world! 1 buffer opened", h.message, "a binding of a plugin action loads")
-    config = Carat::Doubles::FixedConfig.with("option.theme solarized\nkeymap.normal zq foo.bar\nkeymap.insert zw foo.baz\noption.tabstop wide\n")
+    config = Carat::Doubles::FixedConfig.with_user("option.theme solarized\nkeymap.normal zq foo.bar\nkeymap.insert zw foo.baz\noption.tabstop wide\n")
     h = editor_with(config, 24, 80)
-    t.assert_equal([".caratrc:1: unknown theme solarized", ".caratrc:2: unknown action foo.bar", ".caratrc:3: unknown action foo.baz", ".caratrc:4: option.tabstop takes a number"], h.assembly.config_errors, "every problem is reported in file and line order")
-    t.assert_equal(".caratrc:1: unknown theme solarized (and 3 more)", h.message, "the message row shows the first with the count of the others")
+    t.assert_equal(["~/.config/carat/caratrc:1: unknown theme solarized", "~/.config/carat/caratrc:2: unknown action foo.bar", "~/.config/carat/caratrc:3: unknown action foo.baz", "~/.config/carat/caratrc:4: option.tabstop takes a number"], h.assembly.config_errors, "every problem is reported in file and line order")
+    t.assert_equal("~/.config/carat/caratrc:1: unknown theme solarized (and 3 more)", h.message, "the message row shows the first with the count of the others")
     t.assert_equal([], editor.assembly.config_errors, "the default configuration has no problem")
 
     t.finish

@@ -231,8 +231,8 @@ module AdaptersAssemblyTest
     t.assert_equal([true, true], [through.config.equal?(gateway), through.files.equal?(gateway.files)], "the assembly and the gateway hold the one file port")
     bare = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Domain::Config.new, rows: 10, cols: 40, plugins: [])
     t.assert_equal([1000, "\\", false, 1000, 1000], [bare.state.options.timeoutlen, Carat::Domain::Keymap.leader_from(Carat::Domain::Config.new), bare.state.options.number, bare.state.options.undolevels, bare.assembly.buffers.feed.undolevels], "a configuration without lines falls back to Vim's defaults")
-    odd = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("keymap.normal zq foo.bar\n"), rows: 10, cols: 40, plugins: [])
-    t.assert_equal([".caratrc:1: unknown action foo.bar"], odd.assembly.config_errors, "a configuration problem names its file and line")
+    odd = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with_user("keymap.normal zq foo.bar\n"), rows: 10, cols: 40, plugins: [])
+    t.assert_equal(["~/.config/carat/caratrc:1: unknown action foo.bar"], odd.assembly.config_errors, "a configuration problem names its file and line")
 
     t.finish
   end

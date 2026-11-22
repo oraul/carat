@@ -9,6 +9,20 @@ module AdaptersConfigGatewayTest
   USER = "/home/user/.config/carat/caratrc"
   PROJECT = "/project/.caratrc"
 
+  # The keymap lines a configuration kept from files other than the
+  # defaults, as "source mode keys action".
+  #: (Carat::Domain::Config) -> Array[String]
+  def self.project_bindings(config)
+    bound = []
+    i = 0
+    while i < config.count
+      line = config.line_at(i)
+      bound << "#{line.source} #{line.name} #{line.words.join(" ")}" if line.scope == "keymap" && !config.shipped?(line) && line.source == ".caratrc"
+      i += 1
+    end
+    bound
+  end
+
   # A file system whose project file is there but raises on read.
   class UnreadableFiles < Carat::Doubles::MemoryFiles
     # Raises for the project file and reads the others.
@@ -112,6 +126,8 @@ module AdaptersConfigGatewayTest
 
     # Key sequences: the user file may bind them, the project file not,
     # since a replay can write any file with :w.
+    # Scenario: Key sequence in the project file.
+    # Scenario: Action binding in the project file.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.normal Q :w<CR>\n")
     files.put(PROJECT, "keymap.normal j :e<Space>.git/config<CR>\nkeymap.normal K cursor.down\n")
@@ -157,8 +173,55 @@ module AdaptersConfigGatewayTest
       bound << "#{line.source} #{line.name} #{line.words.join(" ")}" unless config.shipped?(line)
       i += 1
     end
-    refused = "write, quit, and command-line actions are not bound from a project file"
-    t.assert_equal([["~/.config/carat/caratrc normal Q quit.all", ".caratrc normal ZZ none", ".caratrc normal K cursor.down", ".caratrc normal ; mode.cmdline"], [".caratrc:1: #{refused}", ".caratrc:2: #{refused}", ".caratrc:3: #{refused}", ".caratrc:4: #{refused}", ".caratrc:5: #{refused}"]], [bound, config.report], "a project file cannot bind a write, a quit, or the command line")
+    refused = "is not bound from a project file"
+    t.assert_equal([["~/.config/carat/caratrc normal Q quit.all", ".caratrc normal ZZ none", ".caratrc normal K cursor.down", ".caratrc normal ; mode.cmdline"], [".caratrc:1: file.save #{refused}", ".caratrc:2: quit.write_all #{refused}", ".caratrc:3: cmdline.execute #{refused}", ".caratrc:4: cmdline.history_older #{refused}", ".caratrc:5: window.quit #{refused}"]], [bound, config.report], "a project file cannot bind a write, a quit, or the command line")
+
+    # Scenario: A plugin's file action in the project file.
+    # Scenario: The project file unbinds the command line.
+    # Only the allowlist binds: a plugin's actions, a family no entry
+    # names, and window.quit are refused, the other window actions kept.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.normal x plugin.explorer.delete\nkeymap.normal : none\nkeymap.visual_block : cursor.down\nkeymap.normal y plugin.finder.open\nkeymap.normal gz future.thing\nkeymap.normal <C-w>z window.only\n")
+    config = load(files)
+    t.assert_equal([".caratrc normal <C-w>z window.only"], project_bindings(config), "a project file keeps only the allowlist's bindings")
+    t.assert_equal([".caratrc:1: plugin.explorer.delete #{refused}", ".caratrc:2: : runs mode.cmdline, which a project file may not unbind or rebind", ".caratrc:3: : runs mode.cmdline, which a project file may not unbind or rebind", ".caratrc:4: plugin.finder.open #{refused}", ".caratrc:5: future.thing #{refused}"], config.report, "a project file cannot bind a plugin's file action or unbind the command line")
+
+    # Scenario: The project file takes the user's quit or the leader's save.
+    # Keys compare by their codes under the leader, so <Space>fs is the
+    # defaults' <leader>fs, and the user's key sequence is held too.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.normal Q quit.all\nkeymap.normal gw :w<CR>\n")
+    files.put(PROJECT, "keymap.normal Q none\nkeymap.normal <Space>fs cursor.down\nkeymap.normal <C-S> none\nkeymap.normal gw none\nkeymap.insert <C-s> cursor.left\nkeymap.cmdline <CR> none\n")
+    config = load(files)
+    held = "which a project file may not unbind or rebind"
+    t.assert_equal([[], [".caratrc:1: Q runs quit.all, #{held}", ".caratrc:2: <Space>fs runs file.save, #{held}", ".caratrc:3: <C-S> runs file.save, #{held}", ".caratrc:4: gw runs :w<CR>, #{held}", ".caratrc:5: <C-s> runs file.save, #{held}", ".caratrc:6: <CR> runs cmdline.execute, #{held}"]], [project_bindings(config), config.report], "a project file cannot take the user's quit or the leader's save")
+
+    # Scenario: A key the user freed.
+    # A key the user unbound or bound to a plain action is the project's.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.normal <C-s> none\nkeymap.normal <leader>qq cursor.up\n")
+    files.put(PROJECT, "keymap.normal <C-s> cursor.down\nkeymap.normal <Space>qq none\nkeymap.visual : none\n")
+    config = load(files)
+    t.assert_equal([[".caratrc normal <C-s> cursor.down", ".caratrc normal <Space>qq none"], [".caratrc:3: : runs mode.cmdline, #{held}"]], [project_bindings(config), config.report], "a key the user freed is the project's to bind")
+
+    # Scenario: The project file binds keys around a held key.
+    # A binding that starts with held keys, or begins them, would make a
+    # quickly typed :w run the project's action or wait on <leader>qq;
+    # none on either leaves the held key, and <leader>wx holds none.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(PROJECT, "keymap.normal :w cursor.down\nkeymap.normal <Space>q cursor.down\nkeymap.normal <leader>fsx cursor.up\nkeymap.visual :x cursor.down\nkeymap.normal <C-w>qa none\nkeymap.normal <leader>wx cursor.down\n")
+    config = load(files)
+    overlaps = "overlaps keys that run"
+    t.assert_equal([[".caratrc normal <C-w>qa none", ".caratrc normal <leader>wx cursor.down"], [".caratrc:1: :w #{overlaps} mode.cmdline, #{held}", ".caratrc:2: <Space>q #{overlaps} quit.all, #{held}", ".caratrc:3: <leader>fsx #{overlaps} file.save, #{held}", ".caratrc:4: :x #{overlaps} mode.cmdline, #{held}"]], [project_bindings(config), config.report], "a project file cannot bind keys that start with or begin a held key")
+
+    # Scenario: The project file binds a prompt outside normal and visual.
+    # Bound to insert-mode <CR>, mode.cmdline or palette.open would turn
+    # the next line typed into a command; the user's such binding is held.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put(USER, "keymap.insert <F3> palette.open\n")
+    files.put(PROJECT, "keymap.insert <CR> mode.cmdline\nkeymap.completion <CR> palette.open\nkeymap.operator_pending <F2> palette.open\nkeymap.cmdline <F2> mode.cmdline\nkeymap.insert <F3> none\nkeymap.visual_line <F2> palette.open\nkeymap.normal <F2> mode.cmdline\n")
+    config = load(files)
+    t.assert_equal([[".caratrc visual_line <F2> palette.open", ".caratrc normal <F2> mode.cmdline"], [".caratrc:1: mode.cmdline is not bound in insert mode from a project file", ".caratrc:2: palette.open is not bound in completion mode from a project file", ".caratrc:3: palette.open is not bound in operator_pending mode from a project file", ".caratrc:4: mode.cmdline is not bound in cmdline mode from a project file", ".caratrc:5: <F3> runs palette.open, #{held}"]], [project_bindings(config), config.report], "a project file binds the command line and the palette only in normal and visual modes")
 
     # Scenario: A project leader leaves the leader bindings where they were.
     files = Carat::Doubles::MemoryFiles.new
@@ -203,6 +266,17 @@ module AdaptersConfigGatewayTest
     editor = Carat::Adapters::EditorAssembly.new(terminal: terminal, clock: clock, files: files, config: Carat::Adapters::RcConfigGateway.new(files: files), processes: Carat::Doubles::FakeProcesses.new, messages: Carat::Doubles::MemoryQueue.new, completions: Carat::Doubles::FixedCompletions.new, plugin_list: [])
     editor.open("a.txt")
     t.assert_equal([3, false, "~/.config/carat/caratrc:2: unknown theme solarized (and 1 more)", true], [editor.state.options.tabstop, editor.state.options.number, editor.state.message, editor.state.message_error], "the editor applies the files and shows the first problem with the count of the others")
+
+    # The refused lines leave the keys as they were: : opens the command
+    # line and x deletes a character.
+    files = Carat::Doubles::MemoryFiles.new
+    files.put("a.txt", "one\n")
+    h = Carat::Doubles::EditorHarness.new(files: files, config: Carat::Doubles::FixedConfig.with("keymap.normal : none\nkeymap.normal x plugin.explorer.delete\n"), rows: 10, cols: 60, plugins: [])
+    h.open("a.txt")
+    h.type(":")
+    opened = h.mode
+    h.type("<Esc>x")
+    t.assert_equal([:cmdline, ["ne"]], [opened, h.lines], "a refused project line leaves : on the command line and x on delete")
 
     t.finish
   end
