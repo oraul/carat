@@ -12,3 +12,4 @@
 - Location: carat/use_cases/ex/set_command_handler.rb (PENDING), the queue entry's backlog heading ":set handles only filetype, syntax, the search options, and cursorline"
 - Why: set-options answers the heading for every option but theme and background (bg), which the planner split into colorscheme-command, so the heading is only partly answered until that change lands.
 - Fix: colorscheme-command moves theme and background into NAMES, repainting every group when either changes, as its queue entry says.
+none
