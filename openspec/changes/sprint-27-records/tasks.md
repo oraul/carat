@@ -10,3 +10,7 @@
 
 - [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
 
+
+## 3. Review findings
+
+- [x] 3.1 `make docs-lint` failed on seven Pool items of `docs/queue-feature.md` the plan wrote without the word "estimated" before their size; the word is added to each (no other change to the queue), so the queue passes the lint. The planner's cause (it writes a size without the word) is outside this change's files.
