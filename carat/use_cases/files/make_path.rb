@@ -12,7 +12,9 @@ module Carat
     # a usable name, the path strictly inside the root, the target absent,
     # its parent a directory, and that parent, with every symbolic link
     # resolved, the root or inside it, both resolved, so a link inside the
-    # tree that leads out of it is never created through. Paths are
+    # tree that leads out of it is never created through. A file is made
+    # by the port's exclusive create, so a link planted at the target
+    # after the checks is refused, not written through. Paths are
     # resolved against the working directory and shown relative to it in
     # messages.
     class MakePath
@@ -44,7 +46,7 @@ module Carat
           if directory
             @files.mkdir(target)
           else
-            @files.write(target, "")
+            @files.create(target)
           end
         rescue StandardError => error
           return Outcome.failure(error.message)

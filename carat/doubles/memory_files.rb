@@ -125,6 +125,17 @@ module Carat
         @files[k] = text
       end
 
+      # Puts an empty file at path, raising, as the driver's exclusive
+      # open does, when a file, a directory, or a marked link is there or
+      # the parent directory is missing.
+      #: (String) -> void
+      def create(path)
+        k = key(path)
+        raise ArgumentError, "File exists: #{path}" if @files.key?(k) || @dirs.key?(k) || @links.key?(k)
+        raise ArgumentError, "No such file or directory: #{path}" unless @dirs.key?(PluginApi::Paths.dirname(k))
+        @files[k] = ""
+      end
+
       # Returns whether a file or a directory is at the path.
       # @rbs path: String
       def exist?(path)

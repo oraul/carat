@@ -7,10 +7,11 @@ module Carat
     class DiskFiles < Ports::FilePort
       # Returns the regular file's text, of at most limit bytes. The open
       # does not block, so a FIFO is refused instead of waiting for a
-      # writer, and the kind is checked on the opened file, so a path
-      # swapped after a caller's stat is refused too. One byte past the
-      # limit is read to tell a file of exactly the limit from a longer
-      # one; the bytes are UTF-8, as File.read gives them.
+      # writer, and the kind is judged on the opened descriptor, so a path
+      # swapped after a caller's stat, or after the open, is refused too.
+      # One byte past the limit is read to tell a file of exactly the
+      # limit from a longer one; the bytes are UTF-8, as File.read gives
+      # them.
       # @rbs path: String
       # @rbs limit: Integer
       def read(path, limit)
@@ -28,6 +29,15 @@ module Carat
       #: (String, String) -> void
       def write(path, text)
         File.write(path, text)
+      end
+
+      # Creates the empty file with O_CREAT and O_EXCL, which fail on any
+      # entry at path, a dangling link included, and never follow a final
+      # link, and O_NOFOLLOW besides, so what it makes is always a new
+      # regular file at path.
+      #: (String) -> void
+      def create(path)
+        File.open(path, File::WRONLY | File::CREAT | File::EXCL | File::NOFOLLOW).close
       end
 
       # Returns whether path exists.
@@ -62,16 +72,21 @@ module Carat
         names.sort
       end
 
-      # Returns the PathInfo of the path: a link whose target is missing
-      # reads as an empty link, and a missing path as PathInfo.missing.
-      # The pinned Spinel answers File.file? true for a FIFO and a device,
-      # so regular comes from File.stat, which follows a link.
+      # Returns the PathInfo of the path from File.symlink?, which reads
+      # the link itself, and one File.stat, which follows it: a link whose
+      # target is missing, or that cannot be followed, reads as an empty
+      # link, and a missing path as PathInfo.missing. The pinned Spinel
+      # answers File.file? true for a FIFO and a device, so regular comes
+      # from the stat (docs/spinel-notes.md).
       # @rbs path: String
       def stat(path)
         link = File.symlink?(path)
-        return Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: false, symlink: true, regular: false) if link && !File.exist?(path)
-        return Domain::PathInfo.missing unless link || File.exist?(path)
-        Domain::PathInfo.new(exists: true, size: File.size(path), mtime: File.mtime(path).to_i, directory: File.directory?(path), symlink: link, regular: File.stat(path).file?)
+        begin
+          info = File.stat(path)
+        rescue StandardError
+          return link ? Domain::PathInfo.new(exists: true, size: 0, mtime: 0, directory: false, symlink: true, regular: false) : Domain::PathInfo.missing
+        end
+        Domain::PathInfo.new(exists: true, size: info.size, mtime: info.mtime.to_i, directory: info.directory?, symlink: link, regular: info.file?)
       end
 
       # Returns the path with every link resolved, through File.realpath.
@@ -119,10 +134,15 @@ module Carat
       private
 
       # Opens path with the flags and returns the regular file's text, of at
-      # most limit bytes, checking the kind on the opened file.
+      # most limit bytes, judging the kind on the opened descriptor.
+      # IO.sysopen is a plain open(2): File.open would wait for a FIFO's
+      # writer while other threads run, whatever O_NONBLOCK asked. The
+      # handle IO.for_fd wraps has no path, so its stat is an fstat(2) of
+      # the descriptor, where a File's stat reads its path again
+      # (docs/spinel-notes.md).
       #: (String, Integer, Integer) -> String
       def read_open(path, flags, limit)
-        file = File.open(path, flags)
+        file = IO.for_fd(IO.sysopen(path, flags))
         begin
           info = file.stat
           raise IOError, "Is a directory" if info.directory?
