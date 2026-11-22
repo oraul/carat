@@ -15,7 +15,8 @@ export const meta = {
   ],
 }
 
-// args: { change?, brief?, branch?, records?: 'skip' }, or a string that is a change name or a brief. The run state, written only by
+// args: { change?, brief?, branch?, records?: 'skip' }, or a string that
+// is a change name or a brief. The run state, written only by
 // tools/run_state.sh and read through its trusted command (only the records
 // at a commit of the branch or of main), decides which phases are already
 // done: a phase whose recorded commit is the current one is skipped, so a
@@ -1628,7 +1629,8 @@ if (!resume || resume.status !== 'done') {
 // would (planSkipped). Otherwise the head item is taken as written, with its
 // size as the estimate, and the brief still reaches the contributor. A
 // brief that is only the change name gives the contributor nothing to
-// work from, so it reads the queue item naming the change in its lane queue themselves: the
+// work from, so it reads the queue item naming the change in its lane
+// queue itself: the
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
 // The resume brief names the lane queues plan-needed read: the waiting

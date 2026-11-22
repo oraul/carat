@@ -1301,7 +1301,7 @@ index_view() {
 
 # tree_scan DIR [TEST...]: the paths of the work tree DIR passing the find
 # TESTs changed since escape_mark, without following links, but its git
-# directory, tmp/ (the lanes, scouts, and toolchain links), and the run
+# directory, tmp/ (the lanes and toolchain links), and the run
 # states, stage logs, plans, and compile cache, which concurrent lanes and
 # the runner write.
 tree_scan() {

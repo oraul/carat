@@ -23,7 +23,8 @@ The Scout phase of `.claude/workflows/deliver-change.js` starts an area-plan age
 - `scout` and `areas` leave `CALL_CAPS`, `FIXED_CAPS`, and `CALIBRATION`: no start uses them, and the tools-test loops that require a cap and a profile for every started kind still pass. `restoreCalibration` keeps reading any `metric.calib.KIND`, so a restored older run state carrying `calib.scout` is harmless.
 - The `read` profile guard cases move from `tmp/scout` to `build/plan`, the directory the planner's hook passes, the same forms and refusals asserted; the three dry runs of the scout's steps become the same commands under the `read` profile with `build/plan`, which the planner can run.
 - `.claude/agents/scout.md` is deleted, by the user's decision; its tools-test cases (steps 3, 4, 8, the Tool calls line, its maxTurns, its calibration pair) go with it, and the rules-check agent list drops it.
-- The planner's step 7 asks for the locations the change edits among its notes, the first source the contributor's line names.
+- The planner's prompt in the workflow asks for the locations the change edits, `path:line` each, among its notes, the first source the contributor's line names; `.claude/agents/planner.md` only drops "never a scout", since it sits at its docs-lint budget.
+- `tools/docs_lint.sh` adds `.claude/agents/scout.md` to `RETIRED`: backlog entries written before this change name the file in backticks, the paths check would fail on them, and no delivery may edit the backlog; the sprint's grooming retires those entries.
 
 ## Risks / Trade-offs
 
