@@ -227,6 +227,8 @@ module DomainBufferListTest
     lists.buffers.remove(b)
     lists.buffers.load(D::Buffer.from_text("", nil))
     t.assert_equal([["a.rb", "c.rb", "b.rb"], ["a.rb", "c.rb"]], [lists.buffers.recent, lists.buffers.file_paths], "Recent files most recent first: a.rb shown again moves to the top, b.rb stays after it leaves the list, the unnamed buffer never enters; the file paths are the listed named buffers")
+    lists.buffers.add(buffer_named("z.rb"))
+    t.assert_equal(["a.rb", "c.rb", "b.rb"], lists.buffers.recent, "listing a buffer no window shows records no recent file")
     # Scenario: The recent files are bounded.
     lists = lists_over(buffer_named("f0.rb"))
     i = 1

@@ -2,7 +2,7 @@
 
 ## 1. Host requests
 
-- [x] 1.1 Record the recent file paths in `Domain::BufferList` (`recent`, `RECENT_LIMIT`, recorded in `add`, kept after `remove`) and prove order, move to top, `:bd`, scratch and unnamed, and the bound in `test/use_cases_plugins.rb`
+- [x] 1.1 Record the recent file paths in `Domain::BufferList` (`recent`, `RECENT_LIMIT`, recorded when a window shows the buffer, kept after `remove`) and prove order, move to top, `:bd`, scratch and unnamed, and the bound in `test/use_cases_plugins.rb`
 - [x] 1.2 Add `list_buffers` and `recent_files` to `PluginApi::Host`, `PluginLink`, and `BufferRequests`, bump the API to 2.14, update the version assertions (`test/use_cases_plugins.rb`, `test/domain_plugin_manifest.rb`, `test/editor_floats.rb`), and prove both requests and the disabled refusal in `test/use_cases_plugins.rb`
 - [x] 1.3 Document the requests and 2.14 in `docs/plugins.md`, section 9.1 of `docs/architecture.md`, and `docs/codebase-map.md`; verify with `make docs-lint`
 
@@ -17,3 +17,7 @@
 
 - Run the quality step, `make gates`, `make spec-validate`, and `sh tools/run_state.sh check buffer-picker`.
 - Archive the change in the package step.
+
+## Quality review
+
+- [x] Q.1 Fix a modified buffer re-listed by `WindowRequests#open_file` (`carat/use_cases/plugins/window_requests.rb:177`) moving above the picked file in the recent files: `BufferList` records a recent file where a window shows it (`load`, `withdraw`), not in `add`; proven by "listing a buffer no window shows records no recent file" in `test/domain_buffer_list.rb`

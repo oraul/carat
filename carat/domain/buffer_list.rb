@@ -16,8 +16,9 @@ module Carat
     # leaves as soon as no window shows it. The feed reports closed
     # transactions to the tab list, which keeps the cursors inside the
     # text. It also keeps the recent files: the path of every file buffer
-    # that entered a window, most recent first, at most RECENT_LIMIT, kept
-    # after the buffer leaves the list, for the finder's recent picker.
+    # a window started showing, most recent first, at most RECENT_LIMIT,
+    # kept after the buffer leaves the list, for the finder's recent
+    # picker.
     # A Struct record: mutable, with a reader and a writer per member.
     class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, :recent, keyword_init: true)
       # The number of the buffer the editor starts with, listed first.
@@ -269,12 +270,10 @@ module Carat
       # Lists a buffer that is not listed yet, or lists again one a jump
       # left unlisted. A buffer entering the list for the first time
       # receives the next id, which it keeps for as long as the editor
-      # runs, also after leaving the list. Its path, for a file buffer,
-      # becomes the most recent file.
+      # runs, also after leaving the list.
       #: (Buffer) -> void
       def add(target)
         target.listed = true
-        note_recent(target)
         return if index_of(target) >= 0
         if target.id == 0
           target.id = next_id
@@ -337,6 +336,7 @@ module Carat
         end
         add(target)
         current.show(target)
+        note_recent(target)
         restore(current)
         release(old)
       end
@@ -492,6 +492,7 @@ module Carat
             if window.buffer.equal?(target)
               remember(window)
               window.show(other)
+              note_recent(other)
               restore(window)
             end
             i += 1
