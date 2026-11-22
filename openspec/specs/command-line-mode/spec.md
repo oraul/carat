@@ -115,7 +115,7 @@ A command whose name is not an editor command SHALL show "E492: Not an editor co
 - **THEN** "a.txt" is written, the editor stays, the message names "b.txt" with E162, and the window shows "b.txt"
 
 ### Requirement: Edit opens a file or reloads the current one
-":e path" and ":edit path" SHALL show the file in the current window: the listed buffer for that path, with the cursor where a window last left it, else the file read from disk, or an empty buffer if it does not exist, with the cursor at (0, 0). ":e" alone or with the buffer's own path SHALL reload the buffer in place. Both SHALL be refused with E37 on a modified buffer unless the bang is used, which discards the changes. The buffer left SHALL stay listed, hidden, as the buffer list requires.
+":e path" and ":edit path" SHALL show the file in the current window: the listed buffer for that path, with the cursor where a window last left it, else the file read from disk, or an empty buffer if it does not exist,, the cursor at (0, 0). ":e" alone or with the buffer's own path SHALL reload the buffer in place. A modified buffer SHALL refuse it with E37 when `option.hidden` is off or it reloads, unless the bang discards the changes. The buffer left SHALL stay listed, hidden.
 
 #### Scenario: Open another file
 - **WHEN** ":e b.txt" is run on an unmodified buffer and "b.txt" holds "zz"
@@ -126,7 +126,7 @@ A command whose name is not an editor command SHALL show "E492: Not an editor co
 - **THEN** the buffer path is "new.txt", the lines are [""], and the message is "\"new.txt\" [New]"
 
 #### Scenario: Refused while modified
-- **WHEN** ":e b.txt" is run on a modified buffer
+- **WHEN** `option.hidden` is off and ":e b.txt" is run on a modified buffer
 - **THEN** the message is "E37: No write since last change (add ! to override)" and the buffer is unchanged
 
 #### Scenario: Forced reload discards changes
@@ -144,6 +144,10 @@ A command whose name is not an editor command SHALL show "E492: Not an editor co
 #### Scenario: The buffer left stays listed
 - **WHEN** ":e b.txt" is run on an unmodified "a.txt"
 - **THEN** "a.txt" is still listed, hidden
+
+#### Scenario: Edit leaves a modified buffer hidden under hidden
+- **WHEN** `option.hidden` is on and ":e b.txt" is run on a modified "a.txt"
+- **THEN** the window shows "b.txt" and "a.txt" stays listed, hidden and modified; ":e" and ":e a.txt" on the modified buffer are still refused with E37
 
 ### Requirement: Command names accept a bang and an argument
 A command line SHALL be parsed as a name of letters, an optional "!" directly after it, and the rest after whitespace as the argument. Leading and trailing whitespace and leading colons SHALL be ignored.

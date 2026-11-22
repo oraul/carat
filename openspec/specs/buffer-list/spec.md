@@ -83,19 +83,23 @@ An argument to `:ls` SHALL keep only the buffers that match every one of its fla
 - **THEN** the window shows "a.txt"
 
 ### Requirement: Refusals of the buffer switch
-When the current buffer is a modified file buffer, a switch SHALL be refused with "E37: No write since last change (add ! to override)" unless the bang is given, which keeps it hidden with its changes. A number of no listed file buffer SHALL report "E86: Buffer N does not exist", no listed file buffer at all "E85: There is no listed buffer", an argument to `:bn`, `:bp`, or `:bN` that is not a number "E488: Trailing characters: arg", and `:b name` "Not implemented: :buffer name".
+With `option.hidden` off, a switch from a modified file buffer SHALL be refused with "E37: No write since last change (add ! to override)" unless the bang is given, which keeps it hidden with its changes. A number of no listed file buffer SHALL report "E86: Buffer N does not exist", no listed file buffer at all "E85: There is no listed buffer", an argument to `:bn`, `:bp`, or `:bN` that is not a number "E488: Trailing characters: arg", and `:b name` "Not implemented: :buffer name".
 
 #### Scenario: A missing number
 - **WHEN** ":b 9" is run with two buffers
 - **THEN** the message is "E86: Buffer 9 does not exist" and the window keeps its buffer
 
 #### Scenario: Refused on a modified buffer
-- **WHEN** "x" is pressed on "a.txt" with "b.txt" listed and ":bn" is run
+- **WHEN** `option.hidden` is off, "x" is pressed on "a.txt" with "b.txt" listed and ":bn" is run
 - **THEN** the message is "E37: No write since last change (add ! to override)" and the window keeps "a.txt"
 
 #### Scenario: Forced switch keeps the changes hidden
 - **WHEN** "x" is pressed on "a.txt" with "b.txt" listed and ":bn!" is run
 - **THEN** the window shows "b.txt" and ":ls" lists "a.txt" as hidden and modified
+
+#### Scenario: A modified buffer is left hidden under hidden
+- **WHEN** `option.hidden` is on, "x" is pressed on "a.txt" with "b.txt" listed, and ":bn", ":bp", ":bN", or ":b 2" is run
+- **THEN** the window shows the other buffer with no message and ":ls" lists "a.txt" as hidden and modified
 
 ### Requirement: Deleting a buffer from the list
 `:bd`, `:bdelete`, `:bd N`, and `<leader>bd` SHALL remove the current buffer or buffer N from the list. Under `option.gt buffers` every window showing it SHALL stay and show the next listed file buffer, or the one before, or a new empty buffer when none is left, side windows untouched. Under `option.gt tabpages` those windows SHALL close, but the current window while it is the last one, and the last file window of a tab page beside side windows, SHALL stay and show that replacement.
@@ -167,7 +171,7 @@ A buffer that lost its tab to a jump SHALL be unlisted as in Neovim: loaded, wit
 - **THEN** `a.rb` is current and the tabs are `b.rb` then `a.rb`
 
 ### Requirement: Moving to the first and the last buffer
-`:bf`, `:bfirst`, `:br`, and `:brewind` SHALL show the first listed file buffer in the current window, and `:bl` and `:blast` the last one, with the refusals of the buffer switch (E37 without the bang over a modified buffer, E85 with no listed file buffer); showing the buffer already shown SHALL change nothing.
+`:bf`, `:bfirst`, `:br`, and `:brewind` SHALL show the first listed file buffer in the current window, and `:bl` and `:blast` the last one, with the rules of the buffer switch (a modified buffer left hidden under `option.hidden`, E37 without the bang when it is off, E85 with no listed file buffer); showing the buffer already shown SHALL change nothing.
 
 #### Scenario: First and last
 - **WHEN** "a.txt", "b.txt", and "c.txt" are listed in that order, "b.txt" is current, and ":bfirst" is run
@@ -178,8 +182,12 @@ A buffer that lost its tab to a jump SHALL be unlisted as in Neovim: loaded, wit
 - **THEN** the window shows "a.txt"
 
 #### Scenario: First refused on a modified buffer
-- **WHEN** "x" is pressed on "b.txt" with "a.txt" listed first and ":bfirst" is run
+- **WHEN** `option.hidden` is off, "x" is pressed on "b.txt" with "a.txt" listed first and ":bfirst" is run
 - **THEN** the message is "E37: No write since last change (add ! to override)" and the window keeps "b.txt"
+
+#### Scenario: First and last leave a modified buffer hidden
+- **WHEN** `option.hidden` is on, "x" is pressed on "b.txt" with "a.txt" listed first, and ":bfirst" is run, then "x" is pressed and ":blast" is run
+- **THEN** the window shows "a.txt", then "b.txt", with no message
 
 ### Requirement: Control characters in a buffer's name
 
@@ -246,3 +254,14 @@ A side window is a window of the tab page's sidebar or panel showing a plugin's 
 #### Scenario: Buffer switches from a reading view in a split act on the focused window
 - **WHEN** the reading view of "notes.md" is focused in a split beside a window showing "alpha.txt" and ":bn", ":bp", ":b N", Ctrl-^, or "gt" is run
 - **THEN** the focused window shows the buffer the command names and the other window still shows "alpha.txt"
+
+### Requirement: The hidden option decides whether a switch leaves a modified buffer
+The global option `hidden` (`hid`), a flag read from the `option.hidden` line and set by `:set`, SHALL be on by default. When it is on, `:e` of another file and every buffer switch (`:b`, `:bn`, `:bp`, `:bN`, `:bfirst`, `:blast`, Ctrl-^, `gt`, `gT`) SHALL leave a modified file buffer hidden with its changes; when it is off they SHALL refuse it with E37 unless the bang is given. ":qa" SHALL still name a hidden modified buffer with E37 and E162.
+
+#### Scenario: A hidden modified buffer is named when quitting
+- **WHEN** `option.hidden` is on, "x" is pressed on "a.txt", ":e b.txt" is run, and ":qa" is run
+- **THEN** the editor stays, the message is "E37: No write since last change" and "E162: No write since last change for buffer "a.txt"" on two lines, and the window shows "a.txt"
+
+#### Scenario: Hidden is on by default
+- **WHEN** no configuration line sets `option.hidden`
+- **THEN** the option is on

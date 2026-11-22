@@ -131,7 +131,7 @@ A window SHALL remember the buffer it showed before the current one, set by ever
 - **THEN** the new tab page's window shows `a.txt`
 
 ### Requirement: Ctrl-^ shows the alternate buffer
-Ctrl-^, and Ctrl-6, which terminals send as the same key, SHALL show the window's alternate buffer as `:b N` does, recording the position left and making the buffer left the alternate one; with a count it SHALL show the buffer of that number. Without an alternate buffer it SHALL answer `E23: No alternate file`, and a modified current file buffer SHALL refuse it with `E37`.
+Ctrl-^, and Ctrl-6, which terminals send as the same key, SHALL show the window's alternate buffer as `:b N` does, recording the position left and making the buffer left the alternate one; with a count it SHALL show the buffer of that number. Without an alternate buffer it SHALL answer `E23: No alternate file`, and a modified current file buffer SHALL refuse it with `E37` when `option.hidden` is off.
 
 #### Scenario: Ctrl-^ goes back and forth
 - **WHEN** line 3 of `a.txt` was left by `:e b.txt` and Ctrl-^ is typed twice
@@ -150,8 +150,12 @@ Ctrl-^, and Ctrl-6, which terminals send as the same key, SHALL show the window'
 - **THEN** the message is `E23: No alternate file` and the buffer stays
 
 #### Scenario: A modified buffer refuses Ctrl-^
-- **WHEN** `b.txt` was modified after leaving `a.txt` and Ctrl-^ is typed
+- **WHEN** `option.hidden` is off, `b.txt` was modified after leaving `a.txt`, and Ctrl-^ is typed
 - **THEN** the message is `E37` and `b.txt` stays
+
+#### Scenario: A modified buffer is left hidden by Ctrl-^
+- **WHEN** `option.hidden` is on, `b.txt` was modified after leaving `a.txt`, and Ctrl-^ is typed
+- **THEN** the window shows `a.txt` with no message and `b.txt` stays listed, hidden and modified
 
 ### Requirement: :e # edits the alternate file
 `:e #` SHALL edit the file of the window's alternate buffer as `:e` with its name does, `:e! #` discarding the changes; without an alternate buffer it SHALL answer `E194: No alternate file name to substitute for '#'`, and for one without a name `E499`.
