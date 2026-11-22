@@ -183,6 +183,9 @@ ok   blockwise: the block's columns on the first row
 ok   a tab is selected only in the block's columns
 ok   the cursor's cell keeps its highlight
 ok   the blockwise mode line
+ok   the blockwise indicator is in MsgDim
+ok   the charwise indicator is in MsgDim
+ok   the linewise indicator is in MsgDim
 ok   a wide character fills the block's two columns
 ok   the same columns on the next row
 ok   after $ the block reaches every row's end
@@ -247,4 +250,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 249 passed, 0 failed
+adapters_frame_presenter: 252 passed, 0 failed

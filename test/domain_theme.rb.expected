@@ -1,6 +1,6 @@
 ok   every id has a name
-ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, and Folded are the last UI groups
-ok   66 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups
+ok   67 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   the status bar's count groups follow its lsp groups
@@ -109,6 +109,44 @@ ok   The bar reads at 16 colors: one_light
 ok   The bar reads at 16 colors: dark_plus
 ok   The bar reads at 16 colors: light_plus
 ok   the basic dark yellow and green the lsp slot had on the light gray bar read below 2:1
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-dark on the terminal's background
+ok   StatusLineDim shares the bar's background: carat-dark on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-dark on the theme's background
+ok   StatusLineDim shares the bar's background: carat-dark on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: carat-dark [540, 518, 1667]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: carat-dark
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-light on the terminal's background
+ok   StatusLineDim shares the bar's background: carat-light on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: carat-light on the theme's background
+ok   StatusLineDim shares the bar's background: carat-light on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: carat-light [493, 479, 1667]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: carat-light
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: one_dark on the terminal's background
+ok   StatusLineDim shares the bar's background: one_dark on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: one_dark on the theme's background
+ok   StatusLineDim shares the bar's background: one_dark on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: one_dark [479, 512, 1667]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: one_dark
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: one_light on the terminal's background
+ok   StatusLineDim shares the bar's background: one_light on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: one_light on the theme's background
+ok   StatusLineDim shares the bar's background: one_light on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: one_light [505, 479, 1667]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: one_light
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: dark_plus on the terminal's background
+ok   StatusLineDim shares the bar's background: dark_plus on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: dark_plus on the theme's background
+ok   StatusLineDim shares the bar's background: dark_plus on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: dark_plus [487, 555, 939]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: dark_plus
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: light_plus on the terminal's background
+ok   StatusLineDim shares the bar's background: light_plus on the terminal's background
+ok   StatusLineDim is PANEL_DIM on the bar's background, not bold: light_plus on the theme's background
+ok   StatusLineDim shares the bar's background: light_plus on the theme's background
+ok   PANEL_DIM reads on the bar at 24 bits, 256 colors, and 16 colors: light_plus [487, 555, 939]
+ok   StatusLine leads in bold and StatusLineDim does not at 16 colors: light_plus
+ok   the carat themes' PANEL_DIM are the design's values
+ok   the bar's quiet group is named StatusLineDim and is a UI group
 ok   carat-dark on the theme background: the selected tab reads at a glance
 ok   carat-dark on the terminal background: the selected tab reads at a glance
 ok   carat-light on the theme background: the selected tab reads at a glance
@@ -334,4 +372,4 @@ ok   vt100
 ok   xterm-color
 ok   a -16color name
 ok   another COLORTERM
-domain_theme: 336 passed, 0 failed
+domain_theme: 374 passed, 0 failed

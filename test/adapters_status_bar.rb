@@ -148,9 +148,20 @@ module AdaptersStatusBarTest
     list
   end
 
+  # One letter per cell of the bar row, by group: P the normal pill, S
+  # StatusLine, d StatusLineDim, e the error count, and ? any other.
+  def self.group_letters(frame, cols)
+    letters = ""
+    cols.to_i.times do |x|
+      hl = frame.cell(0, x).hl
+      letters += hl == H::STATUS_MODE_NORMAL ? "P" : (hl == H::STATUS ? "S" : (hl == H::STATUS_DIM ? "d" : (hl == H::STATUS_DIAGNOSTIC_ERROR ? "e" : "?")))
+    end
+    letters
+  end
+
   def self.main
     t = Carat::Testing.new("adapters_status_bar")
-    right = " utf-8  1:1  All "
+    right = "  utf-8   1:1  All "
 
     # One row per segment, 60 columns wide, the unicode icons.
     t.table([
@@ -158,16 +169,25 @@ module AdaptersStatusBarTest
       ["the modified icon after the file", "modified", pad(" NORMAL  a.txt ● ", right, 60)],
       ["an unnamed buffer", "unnamed", pad(" NORMAL  " + D::Messages::NO_NAME + " ", right, 60)],
       ["a scratch title", "scratch", pad(" NORMAL  list ", right, 60)],
-      ["the file type", "ruby", pad(" NORMAL  a.rb ", " ruby " + right, 60)],
-      ["the git branch", "branch", pad(" NORMAL  a.txt  ± main ", right, 60)],
-      ["the counts above zero", "two counts", pad(" NORMAL  a.txt  ✖ 2 ◇ 1 ", right, 60)],
-      ["every count in order", "four counts", pad(" NORMAL  a.txt  ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", right, 60)],
-      ["the lsp slot", "lsp", pad(" NORMAL  a.txt ", " ruby-lsp " + right, 60)],
-      ["the lsp slot after the plugins' segments", "plugin and lsp", pad(" NORMAL  a.txt ", " x  ruby-lsp " + right, 60)],
-      ["the position and Top", "cursor at the top", pad(" NORMAL  a.txt ", " utf-8  5:3  Top ", 60)],
-      ["a percentage", "cursor in the middle", pad(" NORMAL  a.txt ", " utf-8  51:1  50% ", 60)],
-      ["Bot", "cursor at the bottom", pad(" NORMAL  a.txt ", " utf-8  100:1  Bot ", 60)]
+      ["the file type", "ruby", pad(" NORMAL  a.rb ", "  ruby " + right, 60)],
+      ["the git branch", "branch", pad(" NORMAL  a.txt   ± main ", right, 60)],
+      ["the counts above zero", "two counts", pad(" NORMAL  a.txt   ✖ 2 ◇ 1 ", right, 60)],
+      ["every count in order", "four counts", pad(" NORMAL  a.txt   ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", right, 60)],
+      ["the lsp slot", "lsp", pad(" NORMAL  a.txt ", "  ruby-lsp " + right, 60)],
+      ["the lsp slot after the plugins' segments", "plugin and lsp", pad(" NORMAL  a.txt ", "  x   ruby-lsp " + right, 60)],
+      ["the position and Top", "cursor at the top", pad(" NORMAL  a.txt ", "  utf-8   5:3  Top ", 60)],
+      ["a percentage", "cursor in the middle", pad(" NORMAL  a.txt ", "  utf-8   51:1  50% ", 60)],
+      ["Bot", "cursor at the bottom", pad(" NORMAL  a.txt ", "  utf-8   100:1  Bot ", 60)]
     ]) { |name| paint(scenario(name), 60).row_text(0) }
+
+    # Scenario: A plain buffer in normal mode, 40 columns wide.
+    t.assert_equal(pad(" NORMAL  a.txt", "utf-8   1:1  All ", 40), paint(scenario("plain"), 40).row_text(0), "a plain buffer in normal mode: the file at the left, the encoding, position, and percent at the right end")
+    # Scenario: A modified Ruby buffer in insert mode.
+    s = state_for("a.rb", 3)
+    s.buffer.mark_unsaved
+    s.mode = D::Mode::INSERT
+    s.cursor.move_to(2, 4)
+    t.assert_equal([true, pad(" INSERT  a.rb ● ", "  ruby   utf-8   3:5  All ", 60)], [s.buffer.modified?, paint(s, 60).row_text(0)], "a modified Ruby buffer in insert mode")
 
     # Scenario: frame rows show the status bar in carat-dark, carat-light,
     # and option.icons ascii: the pill in its mode's group, the file and the
@@ -202,17 +222,18 @@ module AdaptersStatusBarTest
       SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 42)
       text = paint(s, 80).row_text(0)
       at = text.index(" ruby-lsp").to_i
-      text[at, text.index("  utf-8").to_i - at + 1]
+      text[at, text.index("  utf-8").to_i - at]
     end
     t.assert_equal([true, false], [SLOTS.set_lsp("x", :ready, 0), SLOTS.set_lsp("x", :ready, 0)], "setting the same server again changes nothing")
 
-    # One row per width: segments go by priority, the file is cut last.
+    # Scenario: Widths drop segments one by one. One row per width:
+    # segments go by priority, the file is cut last.
     t.table([
-      ["40 columns keep every segment", 40, pad(" NORMAL  a.rb ", " ruby  utf-8  1:1  All ", 40)],
-      ["30 columns drop the encoding", 30, pad(" NORMAL  a.rb ", " ruby  1:1  All ", 30)],
-      ["25 columns drop the file type", 25, pad(" NORMAL  a.rb ", " 1:1  All ", 25)],
-      ["22 columns drop the percent", 22, pad(" NORMAL  a.rb ", " 1:1 ", 22)],
-      ["17 columns drop the position", 17, " NORMAL  a.rb"],
+      ["40 columns keep every segment", 40, pad(" NORMAL  a.rb ", "  ruby " + "  utf-8 " + "  1:1 " + " All ", 40)],
+      ["32 columns drop the encoding", 32, pad(" NORMAL  a.rb ", "  ruby " + "  1:1 " + " All ", 32)],
+      ["25 columns drop the file type", 25, pad(" NORMAL  a.rb ", "  1:1 " + " All ", 25)],
+      ["20 columns drop the percent", 20, pad(" NORMAL  a.rb ", "  1:1 ", 20)],
+      ["19 columns drop the position", 19, " NORMAL  a.rb"],
       ["12 columns cut the file", 12, " NORMAL  a.r"],
       ["6 columns cut the pill", 6, " NORMA"]
     ]) { |cols| paint(scenario("ruby"), cols).row_text(0) }
@@ -221,15 +242,15 @@ module AdaptersStatusBarTest
     s = scenario("four counts")
     SLOTS.set_lsp("ruby-lsp", :ready, 0)
     SLOTS.branch = "main"
-    t.assert_equal(pad(" NORMAL  a.txt  ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", " 1:1 ", 40), paint(s, 40).row_text(0), "at 40 columns the counts stay with the position")
+    t.assert_equal(pad(" NORMAL  a.txt   ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", "  1:1 ", 40), paint(s, 40).row_text(0), "at 40 columns the counts stay with the position")
 
-    # A plugin's segment by its priority.
+    # Scenario: A plugin segment by its priority.
     s = scenario("plain")
     UI.segment("high", "hi", 95)
     UI.segment("low", "lo", 10)
-    t.assert_equal(pad(" NORMAL  a.txt ", " hi  lo  utf-8  1:1  All ", 60), paint(s, 60).row_text(0), "both segments in the order they were set")
-    t.assert_equal(pad(" NORMAL  a.txt ", " hi  1:1  All ", 32), paint(s, 32).row_text(0), "the segment of priority 10 goes before the encoding")
-    t.assert_equal(pad(" NORMAL  a.txt ", " hi ", 20), paint(s, 20).row_text(0), "the segment of priority 95 outlasts the position")
+    t.assert_equal(pad(" NORMAL  a.txt ", "  hi   lo   utf-8   1:1  All ", 60), paint(s, 60).row_text(0), "both segments in the order they were set")
+    t.assert_equal(pad(" NORMAL  a.txt ", "  hi " + "  utf-8 " + "  1:1 " + " All ", 39), paint(s, 39).row_text(0), "the segment of priority 10 goes before the encoding")
+    t.assert_equal(pad(" NORMAL  a.txt ", "  hi ", 20), paint(s, 20).row_text(0), "the segment of priority 95 outlasts the position")
 
     # The pill names the mode and takes its group.
     t.table([
@@ -252,12 +273,47 @@ module AdaptersStatusBarTest
     f = paint(scenario("plain"), 60)
     t.assert_equal([H::STATUS_MODE_NORMAL, H::STATUS, H::STATUS, H::STATUS], [f.cell(0, 7).hl, f.cell(0, 8).hl, f.cell(0, 30).hl, f.cell(0, 59).hl], "the pill ends at its closing space and the status group fills the rest")
 
+    # Scenario: The spacing between the groups and Scenario: The bar's groups and spacing. A row of every group, 80
+    # columns wide: the pill, the file and the position in StatusLine, the
+    # branch, the stopped server, the file type, and the encoding in
+    # StatusLineDim, the counts in their own group; two cells between the
+    # pill and the file and between the position and the percent, three
+    # between the other groups, the fill in StatusLine. NO_COLOR draws the
+    # same groups and the same cells.
+    s = scenario("ruby")
+    SLOTS.branch = "main"
+    SLOTS.errors = 2
+    SLOTS.set_lsp("ruby-lsp", :stopped, 0)
+    text = " NORMAL  a.rb " + "  ± main " + "  ✖ 2 "
+    right = "  ruby-lsp stopped " + "  ruby " + "  utf-8 " + "  1:1 " + " All "
+    groups = "P" * 8 + "S" * 6 + "S" + "d" * 8 + "S" + "e" * 5
+    right_groups = "S" + "d" * 18 + "S" + "d" * 6 + "S" + "d" * 7 + "S" + "S" * 5 + "S" * 5
+    fill = 80 - text.length - right.length
+    expected = groups + "S" * fill + right_groups
+    f = paint(s, 80)
+    t.assert_equal([pad(text, right, 80), expected], [f.row_text(0), group_letters(f, 80)], "each group's color and the spacing between the groups")
+    BAR.plain = true
+    f = paint(s, 80)
+    t.assert_equal([pad(text, right, 80), expected], [f.row_text(0), group_letters(f, 80)], "NO_COLOR keeps the groups and the spacing")
+    BAR.plain = false
+
+    # Scenario: The quiet text. The branch, the file type, and the encoding
+    # are in StatusLineDim, while the file and the position lead in
+    # StatusLine; a stopped server is quiet too.
+    s = scenario("ruby")
+    SLOTS.branch = "main"
+    f = paint(s, 60)
+    text = f.row_text(0)
+    quiet = ["main", "ruby", "utf-8"].map { |word| f.cell(0, text.index(word).to_i).hl }
+    lead = ["a.rb", "1:1", "All"].map { |word| f.cell(0, text.index(word).to_i).hl }
+    t.assert_equal([[H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM], [H::STATUS, H::STATUS, H::STATUS]], [quiet, lead], "the branch, the type, and the encoding step back; the file, the position, and the percent do not")
+
     # The lsp slot's group follows its state; the counts take theirs.
     t.table([
       ["starting", "starting", H::STATUS_LSP_STARTING],
       ["ready", "ready", H::STATUS_LSP_READY],
       ["indexing", "indexing", H::STATUS_LSP_STARTING],
-      ["stopped", "stopped", H::STATUS],
+      ["stopped", "stopped", H::STATUS_DIM],
       ["crashed", "crashed", H::STATUS_LSP_ERROR]
     ]) do |state|
       s = scenario("lsp")
@@ -285,14 +341,14 @@ module AdaptersStatusBarTest
 
     # The progress of long work before the lsp slot.
     t.cases([
-      ["a bar at a percent", ["Indexing", [40], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━──────  utf-8  1:1  All ", 60)],
-      ["a percent rounds down to whole cells", ["Indexing", [99], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━━━━━━━─  utf-8  1:1  All ", 60)],
-      ["without a percent three cells move per report", ["Indexing", [-1, -1, -1], false, false], pad(" NORMAL  a.txt ", " Indexing ──━━━─────  utf-8  1:1  All ", 60)],
-      ["a report without a percent keeps the last", ["Indexing", [30, -1], false, false], pad(" NORMAL  a.txt ", " Indexing ━━━───────  utf-8  1:1  All ", 60)],
-      ["reduced motion leaves out a bar without a percent", ["Indexing", [-1], true, false], pad(" NORMAL  a.txt ", " Indexing  utf-8  1:1  All ", 60)],
-      ["reduced motion keeps a bar with a percent", ["Indexing", [40], true, false], pad(" NORMAL  a.txt ", " Indexing ━━━━──────  utf-8  1:1  All ", 60)],
-      ["a plain bar under NO_COLOR", ["Indexing", [40], false, true], pad(" NORMAL  a.txt ", " Indexing ####------  utf-8  1:1  All ", 60)],
-      ["no title, the bar alone", ["", [100], false, false], pad(" NORMAL  a.txt ", " ━━━━━━━━━━  utf-8  1:1  All ", 60)]
+      ["a bar at a percent", ["Indexing", [40], false, false], pad(" NORMAL  a.txt ", "  Indexing ━━━━──────   utf-8   1:1  All ", 60)],
+      ["a percent rounds down to whole cells", ["Indexing", [99], false, false], pad(" NORMAL  a.txt ", "  Indexing ━━━━━━━━━─   utf-8   1:1  All ", 60)],
+      ["without a percent three cells move per report", ["Indexing", [-1, -1, -1], false, false], pad(" NORMAL  a.txt ", "  Indexing ──━━━─────   utf-8   1:1  All ", 60)],
+      ["a report without a percent keeps the last", ["Indexing", [30, -1], false, false], pad(" NORMAL  a.txt ", "  Indexing ━━━───────   utf-8   1:1  All ", 60)],
+      ["reduced motion leaves out a bar without a percent", ["Indexing", [-1], true, false], pad(" NORMAL  a.txt ", "  Indexing   utf-8   1:1  All ", 60)],
+      ["reduced motion keeps a bar with a percent", ["Indexing", [40], true, false], pad(" NORMAL  a.txt ", "  Indexing ━━━━──────   utf-8   1:1  All ", 60)],
+      ["a plain bar under NO_COLOR", ["Indexing", [40], false, true], pad(" NORMAL  a.txt ", "  Indexing ####------   utf-8   1:1  All ", 60)],
+      ["no title, the bar alone", ["", [100], false, false], pad(" NORMAL  a.txt ", "  ━━━━━━━━━━   utf-8   1:1  All ", 60)]
     ]) do |input|
       progress(input[0], input[1], input[2], input[3])
     end
@@ -314,7 +370,7 @@ module AdaptersStatusBarTest
     s.options.icons = "unicode"
     SLOTS.branch = "main"
     # A narrow bar drops the segment before the file type.
-    t.assert_equal(pad(" NORMAL  a.txt  ± main ", " 1:1  All ", 36), paint(s, 36).row_text(0), "a narrow bar drops the progress (35) before the branch (40)")
+    t.assert_equal(pad(" NORMAL  a.txt   ± main ", "  1:1 " + " All ", 36), paint(s, 36).row_text(0), "a narrow bar drops the progress (35) before the branch (40)")
     t.assert_equal([true, false, false], [SLOTS.clear_progress, SLOTS.clear_progress, SLOTS.progress?], "clearing ends the progress once")
 
     t.finish
