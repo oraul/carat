@@ -47,27 +47,15 @@ This repository follows the **Conventional Branch** specification, which pairs w
 
 Format: `<type>/<description>`
 
-Allowed types:
-
-| Type | Use for |
-| --- | --- |
-| `feature/` | New features or enhancements |
-| `bugfix/` | Fixes for bugs found in development |
-| `hotfix/` | Urgent fixes that go straight to production |
-| `release/` | Preparing a versioned release, for example `release/1.2.0` |
-| `chore/` | Maintenance, tooling, dependencies, docs, refactors with no behavior change |
+Allowed types: `feature/` (features, enhancements), `bugfix/` (bugs found in development), `hotfix/` (urgent production fixes), `release/` (for example `release/1.2.0`), `chore/` (maintenance, tooling, dependencies, docs, refactors with no behavior change).
 
 Rules:
 
 - `description` is lowercase kebab-case: letters, digits, and hyphens only. No underscores, spaces, dots, or extra slashes.
 - Keep it to 2 to 5 words that describe the change.
 - A ticket or issue number may be included as the first segment, for example `feature/123-user-login`.
-- Branch from `main` and open a pull request back into `main` when asked.
-- Branches are short-lived. They are squash-merged and deleted after merge.
 - Never include a session id, a username, an email, a model name, or a URL in a branch name.
 - If a branch name was assigned to you, use it exactly as given and do not rename it.
-
-Examples: `feature/user-login`, `bugfix/null-price-crash`, `chore/bump-dependencies`.
 
 ## Commit messages
 
@@ -84,11 +72,10 @@ Format:
 - `type` is one of: `feat`, `fix`, `chore`, `docs`, `refactor`, `test`, `perf`, `style`, `build`, `ci`, `revert`.
 - A breaking change is marked with `!` after the type or scope, for example `feat(api)!: drop v1 endpoints`, and explained in the body. Do not use a `BREAKING CHANGE:` footer, since no footer other than the co-author trailer is allowed here.
 - `scope` is optional. Use a short lowercase module or area name, for example `auth`, `api`, `db`. Omit the parentheses when there is no scope.
-- `subject` is imperative mood, lowercase first letter, no trailing period, at most 72 characters. Say what the change does, not what you did.
+- `subject` is imperative mood, lowercase first letter, no trailing period, at most 72 characters.
 - `body` is optional plain text, wrapped at 72 characters. Use it to explain why, not how. Separate it from the subject with one blank line.
 - One logical change per commit. Do not mix a refactor with a feature or a fix.
 - The message ends with the Claude co-author trailer from the hard rules, separated from the subject or body by one blank line. Nothing else follows it.
-- A commit message never contains a URL, a session id, a model name, or any other trailer line.
 
 Example of a complete message:
 
@@ -105,12 +92,11 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 
 Pull requests are **squash-merged** into `main`. Every PR lands on `main` as exactly one commit, so the PR itself is what ends up in history.
 
-- The PR title becomes the subject of the squash commit, followed by a space and the PR number in parentheses, exactly as GitHub pre-fills it, for example `feat(auth): add password reset flow (#12)`. The number is what links the commit on `main` back to the pull request. The title itself MUST follow the Conventional Commits format above.
+- The PR title becomes the subject of the squash commit, followed by a space and the PR number in parentheses, exactly as GitHub pre-fills it, for example `feat(auth): add password reset flow (#12)`. The title itself MUST follow the Conventional Commits format above.
 - The PR description becomes the body of the squash commit. Follow the "Pull request description" standard below.
 - Before merging, check the squash commit message GitHub pre-fills: keep the `(#number)` suffix and the `Co-Authored-By: Claude <noreply@anthropic.com>` line last, and remove anything the rules above forbid.
-- Branch commits follow the commit rules but do not survive the merge; do not spend effort rewriting them.
 - One PR covers one logical change. If the squash commit would need more than one `type`, split the PR.
-- A breaking change is marked with `!` in the PR title, for example `feat(api)!: drop v1 endpoints`, and explained in the description.
+- A breaking change is marked with `!` in the PR title and explained in the description.
 - Never merge a pull request yourself unless explicitly asked; `/deliver` counts, its `merger` merging last.
 - The source branch is deleted after merge.
 
@@ -192,7 +178,7 @@ Closes issue 42. Tokens are stored hashed, so existing sessions are unaffected. 
 
 Specs and change proposals live under `openspec/`; the commands and skills OpenSpec installs live under `.claude/`.
 
-- Run it with `npx @fission-ai/openspec@2.1.1 <command>` (pinned), not a project dependency. Usage statistics are disabled: `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0`; outside Claude Code, export it or run `openspec config set telemetry.enabled false` once.
+- Run it with `npx @fission-ai/openspec@2.1.1 <command>` (pinned), not a project dependency. Usage statistics are disabled: `.claude/settings.json` sets `OPENSPEC_TELEMETRY=0`.
 - `/opsx:propose`, `/opsx:apply`, and `/opsx:archive` before the pull request, so the squash commit carries the implementation, the synced specs, and the archived change together. `/deliver` runs the whole loop (Agents).
 - Every change goes through OpenSpec, refactors, tooling, and docs included. A change that alters no behavior still gets a proposal, a design, and tasks, sets `skip_specs: true` in its `.openspec.yaml`, and is archived with `--skip-specs`. The archived change records why the code looks the way it does.
 - Specs in `openspec/specs/` are the source of truth for behavior, changed only through a proposal. Constraints for the artifacts go in `openspec/config.yaml`. `.claude/commands/opsx/` and `.claude/skills/openspec-*/` are generated: refresh them with `openspec update`, never edit them.
@@ -209,6 +195,16 @@ Agents live in `.claude/agents/` and obey this file. Agents cannot start agents,
 - Backlog: `docs/backlog/<path>.md`, one per first-named path, `.x` as `_x`; no delivery reads or greps it: the contributor appends findings it is handed to `docs/findings/<change>.md` with `>>`, and `plan-apply` the planner's `build/plan/<change>/backlog.md`, which `groom` files per path. Only the planner's sprint mode reads it: `groom` proves removals by evidence (repeats, near-same notes merged, none dropped, listed, fixed, gone with a reason), a security entry only listed or fixed; only groom's carrier removes findings.
 - Run state: `build/pipeline/<change>.json`, written only by `tools/run_state.sh`, its phases, reviews, and figures only by the workflow; stage logs in `build/stages/<change>/`. A package step commits only its lane's history rows (`history`) and queue (`plan-apply`).
 - Lanes: each delivery runs in its own worktree `tmp/.lane-<change>` (`lane-open`; removed after the merge or when replaced, kept on a stop), sharing the toolchain, compile cache, and run states; `merge-main` takes in a moved main, keeping both sides' appended rows and each lane's own queue. The main session may start one feature-lane and one backlog-lane delivery at once, never two of one lane.
+
+## Main session
+
+How the main session runs the pipeline (`docs/goals.md`, Main session).
+
+- Never stop a running delivery. Resume a stopped or dead run with its run id and exactly the same args, and never amend a brief once its run started, so the replay cache holds.
+- Report a run's cost as both total and weighted tokens.
+- The contributor runs on its agent file's tier at high effort.
+- Follow the user's instructions as written, keep replies short with no padding, and when following one, ask about the parts that could be improved.
+- After each merge: the squash body has the four sections and its last line exactly the trailer; `usage` with the run's real total; `tokens` of the run's transcript directory; remove the stage logs; `review-due` (the `/sprint` start); then the lane's next queue item.
 
 ## Stack
 
