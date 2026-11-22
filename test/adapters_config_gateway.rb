@@ -126,6 +126,8 @@ module AdaptersConfigGatewayTest
 
     # Key sequences: the user file may bind them, the project file not,
     # since a replay can write any file with :w.
+    # Scenario: Key sequence in the project file.
+    # Scenario: Action binding in the project file.
     files = Carat::Doubles::MemoryFiles.new
     files.put(USER, "keymap.normal Q :w<CR>\n")
     files.put(PROJECT, "keymap.normal j :e<Space>.git/config<CR>\nkeymap.normal K cursor.down\n")
