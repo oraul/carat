@@ -13,4 +13,10 @@
 - [x] 2.2 Refuse a symbolic link under `openspec/` in `tools/spec_validate.sh`; proved by "spec_validate: refuses a symbolic link under openspec" and the codebase map's `spec_validate.sh` row
 - [x] 2.3 Run the Notes phase's command through the quality reviewer in record mode, the guard storing a note's text that names the run state's directory or a parent step, which the read profile refused; proved by "guard: read records a note whose text names the run state's directory and a parent step" and "sprint: the security notes run under the guarded quality reviewer in record mode"
 - [x] 2.4 Move the report's Security line into `securityReport`; proved by "sprint: the report's security line names unrecorded findings"
-- [ ] 2.5 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
+- [x] 2.5 Run `make tools-test`, `make docs-lint`, `make gates`, and `make spec-validate`
+
+## Quality review
+
+- [x] 3.1 The proposal's assumption said a copy into the project root was not refused; it is, as a write outside the project; corrected, proved by "guard: contributor refuses a copy into the project root, where a directory could bring a local settings file"
+- [x] 3.2 `securityReport`'s count parameter was named like the array `missedBoth`; renamed `bothMissed`
+- [x] 3.3 A dangling `.claude` link makes every write refuse with the dangling-path message; recorded in `docs/findings/merge-path-lows.md`: the refusal is on the safe side, and a clearer message needs the paths resolved once at the start, new code beyond the brief

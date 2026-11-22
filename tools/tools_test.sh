@@ -3681,6 +3681,7 @@ expect "guard: contributor refuses a write through a link to the local settings"
 expect "guard: contributor refuses a copy onto the local settings through a linked .claude" 2 "a write of tmp/conf/settings[.]local[.]json, a local settings file" guard contributor 'cp x tmp/conf/settings.local.json'
 expect "guard: contributor refuses a move into the .claude directory" 2 "a write of [.]claude/, a local settings file" guard contributor 'mv tmp/x .claude/'
 expect "guard: contributor writes beside the linked .claude's target" 0 "^$" guard contributor 'cp x tmp/conf/other.json'
+expect "guard: contributor refuses a copy into the project root, where a directory could bring a local settings file" 2 "a write outside the project: [.]" guard contributor 'cp -r tmp/x .'
 rm -f "$proj/.claude" "$proj/tmp/settings"
 # A measurement through a link into .git, in a worktree and in the project.
 git_q init -q "$proj"

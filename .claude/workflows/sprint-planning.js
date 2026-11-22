@@ -183,8 +183,8 @@ function securityLine(r, blocking, disputed) {
 // The report's whole Security line: securityLine, the findings both
 // reviewers missed, and, when the review ran but its findings were not
 // recorded, that suffix. tools/tools_test.sh runs this helper.
-function securityReport(r, blocking, disputed, missedBoth, noted) {
-  return `Security: ${securityLine(r, blocking, disputed)}${missedBoth ? `; ${missedBoth} missed by both reviewers` : ''}${securityDone(r) && !noted ? '; its findings were not recorded' : ''}`
+function securityReport(r, blocking, disputed, bothMissed, noted) {
+  return `Security: ${securityLine(r, blocking, disputed)}${bothMissed ? `; ${bothMissed} missed by both reviewers` : ''}${securityDone(r) && !noted ? '; its findings were not recorded' : ''}`
 }
 // The report's sweep line from periodic-review.js's result: its counts,
 // the security and quality areas a partial sweep left, and whether its

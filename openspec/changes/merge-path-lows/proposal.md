@@ -48,7 +48,7 @@ Backlog headings this change covers, from its queue entry: "## Security Lows of 
 
 Re-verified on main at 90b013a: every point above still holds but one, the Sweep line of the last heading, which has tools-test cases on main since #255 ("sprint: the sweep line names unrecorded results", "sprint: the report's sweep line is sweepLine's"), so this change adds none for it. The queue entry's `deliver-change.js:805` is line 765 at 90b013a.
 
-Minor assumptions: the untracked-file refusal checks the three files at the top of the main checkout, where Claude Code reads them; a user who keeps a `.claude/settings.local.json` there moves its rules to the user settings, since its presence refuses every agent call. A `cp -r` of a directory holding one of those files into the project root is not refused as a write, since its target is the root; the start check refuses every later call while the file stands.
+Minor assumptions: the untracked-file refusal checks the three files at the top of the main checkout, where Claude Code reads them; a user who keeps a `.claude/settings.local.json` there moves its rules to the user settings, since its presence refuses every agent call. A copy into the project root is already refused as a write outside the project, so a directory holding one of those files cannot be copied there; the start check covers a file that arrives from outside an agent.
 
 ## Out of scope
 
