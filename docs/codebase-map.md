@@ -99,7 +99,7 @@ Files:
 - `carat/domain/default_config.rb`: generated, `DEFAULT_CARATRC`; never edited by hand.
 - `carat/domain/root_word.rb`: `RootWord.root?`, what a root word is (`~`, `~/...`, or absolute, no `.` or `..` segment), the one rule of the configuration reader and of `TrustedRoots.root_of`.
 - `carat/domain/trusted_roots.rb`: `TrustedRoots.cover?`, whether the last `language.trusted_roots` line covers the working directory, and `under?`, one root word, a `language.<name>.lsp.root` root's rule too; the language gateway (area 17) and the plugin host's `run_program` (area 15) ask it.
-- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), `showtabline` (0, 1, 2; 1 in code, 2 shipped, read by `BufferList#tab_row?`), and the rest); `from_config`, `apply` (each bounded number through `bounded`: tabstop 1 to 9999, shiftwidth, scroll, and scrolloff 0 to 9999, timeoutlen and undolevels 0 to 10000; each named value through `named`), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`), `list` and `listchars` (`listchar_code` with the ASCII marks, read by `WhitespaceMarks`, over the private `listchars?` and `listchar_value`, which share the item scan of `item_stop` and `item_colon`).
+- `carat/domain/options.rb`: `Options` record (`icons`, `timeoutlen`, `undolevels`, `theme`, `syntax_on`, `cursorline`, `keyhints_delay` (0 to 10000), `breadcrumbs` (`auto`, `always`, `never`), `showtabline` (0, 1, 2; 1 in code, 2 shipped, read by `BufferList#tab_row?`), and the rest); `from_config`, `apply` (the kind, then `problem`, then `assign`), `problem` (the message a line would note, shared with `:set`: each number through `range_problem`, tabstop 1 to 9999, shiftwidth, scroll, and scrolloff 0 to 9999, timeoutlen and undolevels 0 to 10000; each named value through `word_problem`), `assign`, `value_of` (the value as a line words it), `shipped` (the options of `config/default.caratrc` alone), `tab_width`, `jump_takes_tab?` (the jumptab rule, read by `VisitTarget` and `WalkJumps`), `gt_follows_buffers?` (the gt rule, read by `TabHandler`), `list` and `listchars` (`listchar_code` with the ASCII marks, read by `WhitespaceMarks`, over the private `listchars?` and `listchar_value`, which share the item scan of `item_stop` and `item_colon`).
 - `carat/domain/registry_source.rb`: `RegistrySource.render`, `entry?`, `names`; the registry text from the plugin list lines.
 - `carat/adapters/rc_config_gateway.rb`: `RcConfigGateway#load`, the `ConfigPort` driver over `FilePort` (`home`, `cwd`); refuses a linked project file, a file that is not regular, and one over `LIMIT`, and reads the project file with `read_no_link`.
 - Outside the five roots: `config/default.caratrc` (every default option, binding, language command, and plugin setting) and `config/plugins.caratrc` (`plugin.<name> <path> <class>` per compiled plugin).
@@ -469,7 +469,7 @@ Files:
 - `carat/use_cases/close_cmdline_menu.rb`: `CloseCmdlineMenu#call`, closes the completion popup and forgets the matches; `HandleKey` runs it when a key left the line, `NormalModeHandler` on `<Esc>` before the line is discarded.
 - `carat/use_cases/actions/command_line_complete_handler.rb`: `CommandLineCompleteHandler.register` (`cmdline.complete_next`, `cmdline.complete_previous`), the step 1 or -1 of `CompleteCommandLine`.
 
-Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`, `test/editor_cmdline_complete.rb`.
+Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`, `test/editor_cmdline_complete.rb`, `test/editor_set_options.rb` (every `:set` form of every number, flag, and word option, the listings, and the live effects).
 
 Bench: `cmdline-tab` (`<Tab>` and `<S-Tab>` stepping through the `:` prompt's completion popup, each key reopening its float).
 
@@ -531,7 +531,7 @@ Files:
 - `carat/use_cases/syntax/highlight_view.rb`: `HighlightView#call`, `tokenized` (read by the benchmark); a failing plugin's buffer dropped or taken over by the next plugin in the same frame.
 - `carat/use_cases/plugins/plugin_syntax.rb`: `PluginSyntax`; `provider`, `tokenize`, `copied_tokens`.
 - `carat/use_cases/ex/syntax_command_handler.rb`: `SyntaxCommandHandler` (`:syntax on`, `enable`, `off`).
-- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, the four search options, and `cursorline`).
+- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, and the global numbers, flags, and words, each value checked by `Options#problem`; `&` from `Options.shipped`; the bare and `all` listings).
 - `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
 - `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
 - `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
@@ -543,7 +543,7 @@ Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_ca
 
 Designs: `syntax-highlighting` (all ten Decisions), `cursor-shapes` (The cursor line is a layer of group ids).
 
-Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, the rest of `:set`, user themes, and semantic highlighting are in `docs/backlog/`.
+Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, `:set theme` and `background`, user themes, and semantic highlighting are in `docs/backlog/`.
 
 Bench: `lh-ruby`, `j-ruby`, `insert-ruby`, `heredoc-ruby`, `string-ruby`, `quote-ruby`, `open-ruby`, `G-ruby`.
 

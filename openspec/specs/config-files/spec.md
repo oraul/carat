@@ -313,10 +313,3 @@ A `keymap.leader` line in the project file SHALL be reported as "keymap.leader i
 #### Scenario: A value out of range
 - **WHEN** the project file holds "option.showtabline 0" and then "option.showtabline 3" on line 2
 - **THEN** ".caratrc:2: option.showtabline takes a number from 0 to 2" is reported and the option stays 0
-
-### Requirement: :set answers showtabline as not implemented
-`:set showtabline=N` and `:set stal=N` SHALL be answered `Not implemented: :set <argument>` until `:set` handles numeric options, never `E518`.
-
-#### Scenario: :set answers not implemented
-- **WHEN** ":set showtabline=2" or ":set stal=0" is run
-- **THEN** the message row shows `Not implemented: :set showtabline=2` or `Not implemented: :set stal=0`

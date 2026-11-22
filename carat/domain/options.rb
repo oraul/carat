@@ -5,6 +5,7 @@ require_relative "rc_value"
 require_relative "utf8"
 require_relative "display_width"
 require_relative "border_style"
+require_relative "default_config"
 
 module Carat
   module Domain
@@ -13,8 +14,7 @@ module Carat
     # timeoutlen is the milliseconds the keymap waits for the rest
     # of an ambiguous binding. scroll is the lines <C-d> and <C-u>
     # scroll, half the window when 0. Only the ones the editor
-    # reads are members; :set and local options arrive with the
-    # options change. undolevels is how many undo states a buffer
+    # reads are members; local options arrive later. undolevels is how many undo states a buffer
     # keeps. theme names the palette, background says whether the
     # terminal ("terminal") or the palette ("theme") paints the
     # background, and syntax_on is the switch of :syntax on and
@@ -39,7 +39,8 @@ module Carat
     # pages or files, 2 when it always does, Neovim's option. list draws
     # the marks of listchars over the tabs, trailing spaces, and no-break
     # spaces of file windows, Neovim's options and default. All but syntax_on
-    # come from option lines of the configuration. A Struct record:
+    # come from option lines of the configuration, and :set changes them
+    # through problem and assign, as a line does. A Struct record:
     # mutable, with a reader and a writer per member.
     class Options < Struct.new(:number, :relativenumber, :tabstop, :shiftwidth, :expandtab, :autoindent, :scroll, :scrolloff, :icons, :timeoutlen, :undolevels, :theme, :background, :syntax_on, :ignorecase, :smartcase, :hlsearch, :incsearch, :startscreen, :reducedmotion, :cursorline, :keyhints_delay, :layout_left_width, :layout_right_width, :layout_panel_height, :breadcrumbs, :indentguides, :indentguides_char, :winborder, :jumptab, :gt, :showtabline, :list, :listchars, keyword_init: true)
       # @rbs @number: bool
@@ -283,103 +284,152 @@ module Carat
           return
         end
         word = words[0].to_s
-        case name
-        when "number" then self.number = word == "true"
-        when "relativenumber" then self.relativenumber = word == "true"
-        when "expandtab" then self.expandtab = word == "true"
-        when "autoindent" then self.autoindent = word == "true"
-        when "ignorecase" then self.ignorecase = word == "true"
-        when "smartcase" then self.smartcase = word == "true"
-        when "hlsearch" then self.hlsearch = word == "true"
-        when "incsearch" then self.incsearch = word == "true"
-        when "startscreen" then self.startscreen = word == "true"
-        when "reducedmotion" then self.reducedmotion = word == "true"
-        when "cursorline" then self.cursorline = word == "true"
-        when "indentguides" then self.indentguides = word == "true"
-        when "list" then self.list = word == "true"
-        when "listchars"
-          if listchars?(word)
-            self.listchars = word
-          else
-            config.note(line, "#{line.key} takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide")
-          end
-        when "indentguides.char"
-          if Options.guide_char?(word)
-            self.indentguides_char = word
-          else
-            config.note(line, "#{line.key} takes one character one column wide")
-          end
-        when "tabstop"
-          value = bounded(config, line, word, 1, WIDTH_MAX)
-          self.tabstop = value if value >= 0
-        when "shiftwidth"
-          value = bounded(config, line, word, 0, WIDTH_MAX)
-          self.shiftwidth = value if value >= 0
-        when "scroll"
-          value = bounded(config, line, word, 0, LINES_MAX)
-          self.scroll = value if value >= 0
-        when "scrolloff"
-          value = bounded(config, line, word, 0, LINES_MAX)
-          self.scrolloff = value if value >= 0
-        when "timeoutlen"
-          value = bounded(config, line, word, 0, TIMEOUTLEN_MAX)
-          self.timeoutlen = value if value >= 0
-        when "undolevels"
-          value = bounded(config, line, word, 0, UNDOLEVELS_MAX)
-          self.undolevels = value if value >= 0
-        when "keyhints.delay"
-          value = bounded(config, line, word, 0, KEYHINTS_DELAY_MAX)
-          self.keyhints_delay = value if value >= 0
-        when "layout.left_width", "layout.right_width", "layout.panel_height"
-          value = bounded(config, line, word, 0, SLOT_SIZE_MAX)
-          set_slot_size(name, value) if value >= 0
-        when "icons"
-          value = named(config, line, word, Icons.set?(word), "icon set")
-          self.icons = value unless value.empty?
-        when "theme"
-          value = named(config, line, word, Themes.known?(word), "theme")
-          self.theme = value unless value.empty?
-        when "background"
-          value = named(config, line, word, Themes.background?(word), "background")
-          self.background = value unless value.empty?
-        when "breadcrumbs"
-          value = named(config, line, word, BREADCRUMBS.include?(word), "breadcrumbs mode")
-          self.breadcrumbs = value unless value.empty?
-        when "jumptab"
-          value = named(config, line, word, JUMPTABS.include?(word), "jumptab mode")
-          self.jumptab = value unless value.empty?
-        when "showtabline"
-          value = bounded(config, line, word, SHOWTABLINE_NEVER, SHOWTABLINE_ALWAYS)
-          self.showtabline = value if value >= 0
-        when "gt"
-          value = named(config, line, word, GTS.include?(word), "gt mode")
-          self.gt = value unless value.empty?
-        when "winborder"
-          value = named(config, line, word, BorderStyle.style?(word), "border style")
-          self.winborder = value unless value.empty?
+        message = problem(name, line.key, word)
+        if message.empty?
+          assign(name, word)
+        else
+          config.note(line, message)
         end
+      end
+
+      # What a line setting the option to a word of its kind notes, named
+      # by key, or "" when the word can be stored: a number out of its
+      # range, an unknown word, or listchars or a guide character that
+      # does not read. :set checks its values here too, so it never stores
+      # one a line would refuse.
+      #: (String, String, String) -> String
+      def problem(name, key, word)
+        case name
+        when "listchars" then listchars?(word) ? "" : "#{key} takes tab:xy, trail:x, and nbsp:x, comma-separated, each one column wide"
+        when "indentguides.char" then Options.guide_char?(word) ? "" : "#{key} takes one character one column wide"
+        when "tabstop" then range_problem(key, word, 1, WIDTH_MAX)
+        when "shiftwidth" then range_problem(key, word, 0, WIDTH_MAX)
+        when "scroll", "scrolloff" then range_problem(key, word, 0, LINES_MAX)
+        when "timeoutlen" then range_problem(key, word, 0, TIMEOUTLEN_MAX)
+        when "undolevels" then range_problem(key, word, 0, UNDOLEVELS_MAX)
+        when "keyhints.delay" then range_problem(key, word, 0, KEYHINTS_DELAY_MAX)
+        when "layout.left_width", "layout.right_width", "layout.panel_height" then range_problem(key, word, 0, SLOT_SIZE_MAX)
+        when "showtabline" then range_problem(key, word, SHOWTABLINE_NEVER, SHOWTABLINE_ALWAYS)
+        when "icons" then word_problem(word, Icons.set?(word), "icon set")
+        when "theme" then word_problem(word, Themes.known?(word), "theme")
+        when "background" then word_problem(word, Themes.background?(word), "background")
+        when "breadcrumbs" then word_problem(word, BREADCRUMBS.include?(word), "breadcrumbs mode")
+        when "jumptab" then word_problem(word, JUMPTABS.include?(word), "jumptab mode")
+        when "gt" then word_problem(word, GTS.include?(word), "gt mode")
+        when "winborder" then word_problem(word, BorderStyle.style?(word), "border style")
+        else ""
+        end
+      end
+
+      # Stores a word of the option's kind that problem accepts: a flag
+      # as true or false, a number, or the word itself. An option that is
+      # no member (wrap, clipboard) is not stored.
+      #: (String, String) -> void
+      def assign(name, word)
+        flag = word == "true"
+        case name
+        when "number" then self.number = flag
+        when "relativenumber" then self.relativenumber = flag
+        when "expandtab" then self.expandtab = flag
+        when "autoindent" then self.autoindent = flag
+        when "ignorecase" then self.ignorecase = flag
+        when "smartcase" then self.smartcase = flag
+        when "hlsearch" then self.hlsearch = flag
+        when "incsearch" then self.incsearch = flag
+        when "startscreen" then self.startscreen = flag
+        when "reducedmotion" then self.reducedmotion = flag
+        when "cursorline" then self.cursorline = flag
+        when "indentguides" then self.indentguides = flag
+        when "list" then self.list = flag
+        when "listchars" then self.listchars = word
+        when "indentguides.char" then self.indentguides_char = word
+        when "tabstop" then self.tabstop = word.to_i
+        when "shiftwidth" then self.shiftwidth = word.to_i
+        when "scroll" then self.scroll = word.to_i
+        when "scrolloff" then self.scrolloff = word.to_i
+        when "timeoutlen" then self.timeoutlen = word.to_i
+        when "undolevels" then self.undolevels = word.to_i
+        when "keyhints.delay" then self.keyhints_delay = word.to_i
+        when "layout.left_width", "layout.right_width", "layout.panel_height" then set_slot_size(name, word.to_i)
+        when "showtabline" then self.showtabline = word.to_i
+        when "icons" then self.icons = word
+        when "theme" then self.theme = word
+        when "background" then self.background = word
+        when "breadcrumbs" then self.breadcrumbs = word
+        when "jumptab" then self.jumptab = word
+        when "gt" then self.gt = word
+        when "winborder" then self.winborder = word
+        end
+      end
+
+      # The option's value as a configuration line words it: "true" or
+      # "false", a number, or the word; "" for a name that is no member.
+      #: (String) -> String
+      def value_of(name)
+        case name
+        when "number" then number.to_s
+        when "relativenumber" then relativenumber.to_s
+        when "expandtab" then expandtab.to_s
+        when "autoindent" then autoindent.to_s
+        when "ignorecase" then ignorecase.to_s
+        when "smartcase" then smartcase.to_s
+        when "hlsearch" then hlsearch.to_s
+        when "incsearch" then incsearch.to_s
+        when "startscreen" then startscreen.to_s
+        when "reducedmotion" then reducedmotion.to_s
+        when "cursorline" then cursorline.to_s
+        when "indentguides" then indentguides.to_s
+        when "list" then list.to_s
+        when "listchars" then listchars
+        when "indentguides.char" then indentguides_char
+        when "tabstop" then tabstop.to_s
+        when "shiftwidth" then shiftwidth.to_s
+        when "scroll" then scroll.to_s
+        when "scrolloff" then scrolloff.to_s
+        when "timeoutlen" then timeoutlen.to_s
+        when "undolevels" then undolevels.to_s
+        when "keyhints.delay" then keyhints_delay.to_s
+        when "layout.left_width" then layout_left_width.to_s
+        when "layout.right_width" then layout_right_width.to_s
+        when "layout.panel_height" then layout_panel_height.to_s
+        when "showtabline" then showtabline.to_s
+        when "icons" then icons
+        when "theme" then theme
+        when "background" then background
+        when "breadcrumbs" then breadcrumbs
+        when "jumptab" then jumptab
+        when "gt" then gt
+        when "winborder" then winborder
+        else ""
+        end
+      end
+
+      # The options of the shipped configuration alone, the defaults :set
+      # resets to and compares with.
+      #: () -> Options
+      def self.shipped
+        config = Config.new
+        config.read_defaults("config/default.caratrc", DEFAULT_CARATRC)
+        from_config(config)
       end
 
       private
 
-      # The word's number when it lies from low to high, else -1 with the
-      # range noted on the configuration; every low is 0 or 1, so -1 is
-      # never a value.
-      #: (Config, RcLine, String, Integer, Integer) -> Integer
-      def bounded(config, line, word, low, high)
+      # A number word's problem: "" when it lies from low to high, else
+      # the range under the key.
+      #: (String, String, Integer, Integer) -> String
+      def range_problem(key, word, low, high)
         value = word.to_i
-        return value if value >= low && value <= high
-        config.note(line, "#{line.key} takes a number from #{low} to #{high}")
-        -1
+        return "" if value >= low && value <= high
+        "#{key} takes a number from #{low} to #{high}"
       end
 
-      # The word when it is known, else "" with the word noted on the
-      # configuration as an unknown what.
-      #: (Config, RcLine, String, bool, String) -> String
-      def named(config, line, word, known, what)
-        return word if known
-        config.note(line, "unknown #{what} #{word}")
-        ""
+      # A word's problem: "" when it is known, else the word as an unknown
+      # what.
+      #: (String, bool, String) -> String
+      def word_problem(word, known, what)
+        return "" if known
+        "unknown #{what} #{word}"
       end
 
       # The byte index where the characters of key's last item start in a
