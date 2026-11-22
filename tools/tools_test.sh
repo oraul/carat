@@ -5357,6 +5357,8 @@ expect "workflow: an unpinned git would run the replaced gates past fsck" 0 '^ec
 # add"); rewrite writes the copy's gates.sh once the fsck passed ("The
 # merge gates' worktree file can be rewritten on disk after the fsck").
 # Each stops the line before main's merge gates, which the old line ran.
+# They run after the cases above, reusing objplant-lane's planted object
+# and objplant-clean's store, and remove the copy those cases left.
 mkdir -p "$work/race-bin"
 cat > "$work/race-bin/git" <<'GIT'
 #!/bin/sh
