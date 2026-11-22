@@ -15,4 +15,4 @@
 
 ## 4. Docs and checks
 
-- [ ] 4.1 README.md delivery step 9, `.claude/agents/merger.md` step 4, `docs/codebase-map.md` area 1. Test: `make docs-lint`, `make gates`, `make spec-validate`, `make tools-test`.
+- [x] 4.1 README.md delivery step 9, `docs/codebase-map.md` area 1 (`.claude/agents/merger.md` step 4 stays true and at its byte budget). Test: `make docs-lint`, `make gates`, `make spec-validate`, `make tools-test`.
