@@ -4,7 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 27
 
-1. `float-painter` (T2 user request, council (4), estimated medium): Where: `carat/adapters/frame_presenter.rb:649` (`paint_floats`), `:669`, `:712`, in a class of 1469 lines and 60 methods. Why: council (4) puts it before window-surfaces; sprint-26 sweep note 35. Fix outline: floats and notifications painted by a collaborator, as StatusBar, Winbar, TabBar were, the window path explicit. Accepted when every frame snapshot is unchanged, `lh-float` time and allocations held, the map updated. Backlog: "### 1469 lines and 60 methods paint windows, headers, winbars at carat/adapters/frame_presenter.rb:1 (sprint-26 sweep quality, note 35)".
+Drained: buffer-picker, folded-row, float-painter delivered, the 3 features of the sprint; /sprint draws the next.
 
 ## Pool
 
@@ -25,9 +25,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-26 review High 0, Medium 0; periodic security at 3370625 high=0 medium=0 low=3; no periodic review in the 3 pending runs (buffer-picker, merge-gate-lows, review-in-openspec).
-- Delivered (T2): folded-row, Facet wave 2, Sprint 27 item 1, removed; the closed-fold row is painted at `frame_presenter.rb:881` to `:883` at 489459a (comment `:813`), `docs/design.md:75`, `:76` (`▸` faint, `⋯ 12 lines` dim); float-painter moves up, the pool unchanged, none pushed back.
-- No split (T2): one fix in 2 files of 2 areas (`carat/domain/themes.rb`, 4 palettes at `:226`, `:278`, `:330`, `:382`; the frame presenter) plus snapshots, not 3 independently testable parts.
-- Size (T2): large, critical e carat/adapters/frame_presenter.rb; theme rows ran over medium (listchars-folds 1,499,684, border-vocabulary 1,499,363 total); the last two feature runs under budget (colorscheme-command 1,156,082 large, buffer-picker 1,069,800 large), no size up.
+- Security first (T0): none; periodic security at 3370625 high=0 medium=0 low=3; sprint-26 review High 0, Medium 0; no `review.periodic` in the 3 pending runs (folded-row, merge-gate-lows, review-in-openspec).
+- Delivered (T2): float-painter, council (4), the third Sprint 27 feature after buffer-picker and folded-row, removed; the sprint's feature share drained (0 of 3 waiting), the pool unchanged, none pushed back.
+- Size (T2): large, critical e carat/adapters/frame_presenter.rb; the extraction it repeats ran over medium (status-winbar-tabs 1,226,138 in 62 min, status-winbar-tabs-b 2,192,549 in 143); the last two feature runs under budget (folded-row 1,040,616 large, buffer-picker 1,069,800 large), so no size up.
+- No split (T2): one collaborator for the float layer, `build_float_key` `:461` to `clamp` `:760` at 3411c26 (about 300 of 1474 lines, 60 methods), its wiring and map entry; one acceptance (every frame snapshot unchanged), not 3 independently testable parts.
+- Lines (T2): the brief's `:649`, `:669`, `:712` are `:653`, `:673`, `:716` at 3411c26 (folded-row added 4); calls `:266`, `:267`, `:314`, `:315`; `paint_edge` `:567` serves notices `:551` and floats `:739`.
 - Merge gate rules (T1): the outline edits no `tools/rules.sh` pattern.
-- Notes (T1): buffer-picker retro 2 to 4, merge-gate-lows retro 2 to 4 go to backlog.md (this lane leaves `docs/queue-backlog.md` alone); the overruns (note 5 of both) are sprint-26-records', placed in backlog Pool 13.
+- Notes (T1): folded-row retro 2 to 4, with head-form notes 1, 5 as note 4's evidence, go to backlog.md, merged into backlog Pool 14 (`areas-in-plan`, `scout-prune`, `merge-wait-bound`, `head-drop`); this lane leaves `docs/queue-backlog.md` alone; merge-gate-lows and review-in-openspec notes were placed by earlier plans.

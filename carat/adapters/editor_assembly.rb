@@ -592,7 +592,7 @@ module Carat
         @wiring.record("show_key_hints", "hide_key_hints", @hide_key_hints)
         @start_screen = Domain::StartScreen.new
         @controller = InputController.new(terminal: terminal, clock: clock, decoder: KeyDecoder.new, handle_key: @handle_key, input: @input, start_screen: @start_screen, services: @services, show_completion: @show_completion, show_hover: @show_hover, show_definition: @show_definition, show_signature: @show_signature, signature: @signature, show_key_hints: @show_key_hints, notices: @notices, plugins: @plugins)
-        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), notices: @notices)
+        @frame_presenter = FramePresenter.new(input: @input, plugin_ui: @plugin_ui, cache: @cache, last_search: @last_search, search_prompt: @search_prompt, palette: @palette, start_screen: @start_screen, status_bar: StatusBar.new(plugin_ui: @plugin_ui, slots: @status_slots), tab_bar: TabBar.new(buffers: @buffers), winbar: Winbar.new(symbols: @symbols), float_painter: FloatPainter.new(cache: @cache, notices: @notices))
         @screen_presenter = ScreenPresenter.new(terminal: terminal, theme: Domain::Themes.find(@state.options.theme, @state.options.background), colors: terminal.colors)
       end
 

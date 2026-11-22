@@ -3,7 +3,6 @@ require_relative "../domain/frame"
 require_relative "../domain/text_lines"
 require_relative "../domain/highlight"
 require_relative "../domain/display_width"
-require_relative "../domain/border_style"
 require_relative "../domain/decoded_line"
 require_relative "../domain/line_cache"
 require_relative "../domain/syntax_line"
@@ -19,13 +18,14 @@ require_relative "../domain/search"
 require_relative "../domain/search_budget"
 require_relative "../domain/search_pattern"
 require_relative "../domain/start_screen"
-require_relative "../domain/notices"
 require_relative "painted_rows"
 require_relative "indent_guides"
 require_relative "whitespace_marks"
 require_relative "status_bar"
 require_relative "tab_bar"
 require_relative "winbar"
+require_relative "line_painter"
+require_relative "float_painter"
 
 module Carat
   module Adapters
@@ -83,20 +83,16 @@ module Carat
     # frame forgets its layout key and painted rows, so the next frames
     # repaint every window row and are compared in full.
     #
-    # The floating windows of the tab page are painted last, by z, over
-    # the windows, the status bar, and the start screen: their text in
-    # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel) with
-    # a column of padding in the same colors on each side, the border of
-    # option.winborder or the float's own style in FloatBorder (none
-    # under none, ASCII when plain or under option.icons ascii), and the title centered on the top
-    # edge with a blank on each side in FloatTitle. The notifications follow at the top right in the same
-    # border, their severity centered as a title is. A frame keeps the
-    # boxes it was painted with; when they
-    # differ from the ones to paint, the frame forgets the window rows the
-    # old boxes covered, so those are repainted, and every row a box
-    # covers in this frame or in the frame shown is compared cell by cell.
-    # A window under any of those boxes records no scroll. With no float
-    # in the tab page or either frame none of this runs.
+    # The floating windows of the tab page and the notification boxes are
+    # painted last (FloatPainter), over the windows, the status bar, and
+    # the start screen; the text of a window row and of a float row is
+    # painted by LinePainter. A frame keeps the boxes it was painted with,
+    # the float painter's key; when they differ from the ones to paint,
+    # the frame forgets the window rows the old boxes covered, so those
+    # are repainted, and every row a box covers in this frame or in the
+    # frame shown is compared cell by cell. A window under any of those
+    # boxes records no scroll. With no float in the tab page or either
+    # frame none of this runs.
     #
     # While the start screen shows, its frame is painted over the current
     # window's text rows after the windows, and the frame forgets its
@@ -116,14 +112,6 @@ module Carat
       # end, in Folded. One shared value, so the row cache's identity key
       # stays the same from frame to frame.
       FOLD_SYNTAX = Domain::SyntaxLine.new(text: String.new("fold"), start: -1, tokens: [0, FAR, Domain::Highlight::FOLDED], end_state: -1)
-      FLOAT_STRIDE = 11
-      # The title of a notification box by its level.
-      NOTICE_TITLES = ["Info", "Warning", "Error"]
-      # The rows of a notification box and its narrowest width.
-      NOTICE_HEIGHT = 3
-      NOTICE_MIN_WIDTH = 20
-      # The narrowest screen that draws notification boxes.
-      NOTICE_NARROWEST = 8
       # The code points a frame may read to find the bracket matching the
       # cursor's.
       PAIR_BUDGET = 200_000
@@ -138,7 +126,7 @@ module Carat
       attr_reader :status_bar #: StatusBar
       attr_reader :tab_bar #: TabBar
       attr_reader :winbar #: Winbar
-      attr_reader :notices #: Domain::Notices
+      attr_reader :float_painter #: FloatPainter
       attr_reader :plain #: bool
 
       # @rbs @front: Domain::Frame
@@ -167,25 +155,19 @@ module Carat
       # @rbs @pair_here: Integer
       # @rbs @current: bool
       # @rbs @number_hl: Integer
-      # @rbs @float_key: Array[Integer]
       # @rbs @floating: bool
       # @rbs @repainted: Array[Integer]
-      # @rbs @notice_from: Integer
       # @rbs @guides: IndentGuides
       # @rbs @guide_row: Integer
       # @rbs @marks: WhitespaceMarks
+      # @rbs @lines: LinePainter
       # @rbs @mark_here: bool
-      # @rbs @border: Array[Integer]
-      # @rbs @ascii: bool
 
-      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, notices: Domain::Notices) -> void
-      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, notices:)
+      #: (input: Domain::InputState, plugin_ui: Domain::PluginUi, cache: Domain::LineCache, last_search: Domain::LastSearch, search_prompt: Domain::SearchPrompt, palette: Domain::Palette, start_screen: Domain::StartScreen, status_bar: StatusBar, tab_bar: TabBar, winbar: Winbar, float_painter: FloatPainter) -> void
+      def initialize(input:, plugin_ui:, cache:, last_search:, search_prompt:, palette:, start_screen:, status_bar:, tab_bar:, winbar:, float_painter:)
         @winbar = winbar
-        @notices = notices
+        @float_painter = float_painter
         @plain = false
-        @notice_from = 0
-        @border = Domain::BorderStyle::ROUNDED
-        @ascii = false
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -209,7 +191,6 @@ module Carat
         @pair_here = 0
         @current = false
         @number_hl = Domain::Highlight::LINE_NUMBER
-        @float_key = []
         @floating = false
         @repainted = [1]
         @front = Domain::Frame.new(rows: 1, cols: 1)
@@ -219,6 +200,7 @@ module Carat
         @guides = IndentGuides.new
         @guide_row = -1
         @marks = WhitespaceMarks.new
+        @lines = LinePainter.new
         @mark_here = false
         @serial = 0
         @key = []
@@ -245,8 +227,7 @@ module Carat
         back.base_serial = based ? base.serial : -1
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
-        @ascii = @plain || options.icons == "ascii"
-        @border = Domain::BorderStyle.glyphs(options.winborder, @ascii)
+        @float_painter.configure(options)
         tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count, options.showtabline) ? 1 : 0
         tab = state.tab
         layout = tab.layout
@@ -260,15 +241,15 @@ module Carat
         base_same = based && same_ints?(@key, base.layout)
         floats = tab.floats
         in_float = floats.focused?
-        @floating = floats.count > 0 || @notices.count > 0 || back.floats.length > 0 || base.floats.length > 0
+        @floating = @float_painter.boxes?(floats) || back.floats.length > 0 || base.floats.length > 0
         full_floats = false
+        float_key = @float_painter.key
         if @floating
-          build_float_key(floats)
-          add_notice_boxes(rows, cols, tabline)
-          full_floats = !same_ints?(@float_key, back.floats) || ids.length > 1 || in_float
-          unless same_ints?(@float_key, back.floats)
+          @float_painter.build_key(floats, rows, cols, tabline)
+          full_floats = !same_ints?(float_key, back.floats) || ids.length > 1 || in_float
+          unless same_ints?(float_key, back.floats)
             forget_rows(back.floats, rows)
-            copy_ints(@float_key, back.floats)
+            copy_ints(float_key, back.floats)
           end
           clear_repainted(rows)
         end
@@ -311,10 +292,9 @@ module Carat
           @start_screen.paint(back, window.row, window.col, window.height, window.width)
         end
         if @floating
-          paint_floats(back, floats, tabstop, rows, cols, full_floats || start)
-          paint_notices(back, cols, full_floats || start)
-          unless based && same_ints?(@float_key, base.floats)
-            compare_boxes(back, base, @float_key)
+          @float_painter.paint(back, floats, @repainted, tabstop, rows, cols, full_floats || start)
+          unless based && same_ints?(float_key, base.floats)
+            compare_boxes(back, base, float_key)
             compare_boxes(back, base, base.floats)
           end
         end
@@ -365,6 +345,7 @@ module Carat
       def plain=(value)
         @plain = value
         @status_bar.plain = value
+        @float_painter.plain = value
       end
 
       private
@@ -452,143 +433,6 @@ module Carat
         end
       end
 
-      # What the floats to paint show, FLOAT_STRIDE integers each: the box
-      # (top, the row after it, left, the column after it), the first
-      # row and column the float shows, its buffer's change counters, its
-      # window id, so a float reopened at the same box repaints, its
-      # selected menu row, and its style count, so a restyle repaints.
-      #: (Domain::FloatLayer) -> void
-      def build_float_key(floats)
-        key = @float_key
-        key.clear
-        i = 0
-        while i < floats.count
-          float = floats.at(i)
-          window = float.window
-          buffer = window.buffer
-          key << float.box_top
-          key << float.box_bottom
-          key << float.box_left
-          key << float.box_right
-          key << window.top
-          key << window.left
-          key << buffer.closed_count
-          key << buffer.changes
-          key << window.id
-          key << float.selected
-          key << float.style_count
-          i += 1
-        end
-      end
-
-      # Appends to the float key a box per notification, oldest first from
-      # the row under the buffer tabs down, its right edge one column from
-      # the screen's, as wide as its text and its border, at least
-      # NOTICE_MIN_WIDTH so the title fits, within half the screen; a box
-      # reaching the status bar and those after it are left out, and every
-      # box on a screen narrower than NOTICE_NARROWEST. Its serial and
-      # level follow the box, so a new notification repaints.
-      #: (Integer, Integer, Integer) -> void
-      def add_notice_boxes(rows, cols, tabline)
-        key = @float_key
-        @notice_from = key.length
-        notices = @notices
-        widest = cols / 2
-        widest = NOTICE_MIN_WIDTH if widest < NOTICE_MIN_WIDTH
-        right = cols - 1
-        return if cols < NOTICE_NARROWEST
-        i = 0
-        while i < notices.count
-          top = tabline + i * NOTICE_HEIGHT
-          return if top + NOTICE_HEIGHT > rows - 2
-          width = Domain::DisplayWidth.text_width(notices.text_at(i), 0) + 4
-          width = NOTICE_MIN_WIDTH if width < NOTICE_MIN_WIDTH
-          width = widest if width > widest
-          left = right - width
-          left = 0 if left < 0
-          key << top
-          key << top + NOTICE_HEIGHT
-          key << left
-          key << right
-          key << notices.serial_at(i)
-          key << notices.level_at(i)
-          key << 0
-          key << 0
-          key << 0
-          key << -1
-          key << 0
-          i += 1
-        end
-      end
-
-      # Each notification box of the float key: every row when full, else
-      # only the rows painted again under it in this frame.
-      #: (Domain::Frame, Integer, bool) -> void
-      def paint_notices(frame, cols, full)
-        key = @float_key
-        i = @notice_from
-        n = 0
-        while i < key.length
-          r = key[i]
-          while r < key[i + 1]
-            paint_notice_row(frame, n, r, key[i], key[i + 2], key[i + 3], cols) if full || @repainted[r] == 1
-            r += 1
-          end
-          i += FLOAT_STRIDE
-          n += 1
-        end
-      end
-
-      # One row of notification n's box from left to the column before
-      # right: the border with its level's title on top, or its text.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer) -> void
-      def paint_notice_row(frame, n, r, top, left, right, cols)
-        mend_edges(frame, r, left, right, cols)
-        plain = @plain
-        last = right - 1
-        bottom = top + NOTICE_HEIGHT - 1
-        border = plain ? Domain::Highlight::NORMAL : Domain::Highlight::FLOAT_BORDER
-        paint_edge(frame, r, left, last, top, bottom, border, @border)
-        if r == top
-          level = @notices.level_at(n)
-          paint_title(frame, r, left, last, NOTICE_TITLES[level], plain ? Domain::Highlight::NORMAL : notice_group(level))
-        elsif r != bottom
-          text = plain ? Domain::Highlight::NORMAL : Domain::Highlight::NORMAL_FLOAT
-          frame.blank(r, left + 1, last)
-          frame.fill(r, left + 1, last, text)
-          frame.put_within(r, left + 2, @notices.text_at(n), text, last - 1)
-        end
-      end
-
-      # One row of a box's border from left to last in hl, in the border
-      # glyphs given: on its top or bottom row the corners and the edge
-      # between them, on any other row its two sides.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, Integer, Integer, Array[Integer]) -> void
-      def paint_edge(frame, r, left, last, top, bottom, hl, glyphs)
-        if r == top || r == bottom
-          frame.put_code(r, left, glyphs[r == top ? Domain::BorderStyle::TOP_LEFT : Domain::BorderStyle::BOTTOM_LEFT], 1, hl)
-          frame.put_code(r, last, glyphs[r == top ? Domain::BorderStyle::TOP_RIGHT : Domain::BorderStyle::BOTTOM_RIGHT], 1, hl)
-          code = glyphs[Domain::BorderStyle::HORIZONTAL]
-          c = left + 1
-          while c < last
-            frame.put_code(r, c, code, 1, hl)
-            c += 1
-          end
-        else
-          code = glyphs[Domain::BorderStyle::VERTICAL]
-          frame.put_code(r, left, code, 1, hl)
-          frame.put_code(r, last, code, 1, hl)
-        end
-      end
-
-      # The diagnostic group of a notification level's title.
-      #: (Integer) -> Integer
-      def notice_group(level)
-        return Domain::Highlight::DIAGNOSTIC_ERROR if level == Domain::MessageHistory::ERROR
-        return Domain::Highlight::DIAGNOSTIC_WARN if level == Domain::MessageHistory::WARNING
-        Domain::Highlight::DIAGNOSTIC_INFO
-      end
-
       # Forgets the window rows the boxes of a key cover.
       #: (Array[Integer], Integer) -> void
       def forget_rows(key, rows)
@@ -600,7 +444,7 @@ module Carat
             @back_rows.forget(r)
             r += 1
           end
-          i += FLOAT_STRIDE
+          i += FloatPainter::STRIDE
         end
       end
 
@@ -616,7 +460,7 @@ module Carat
             frame.dirty[r] = 1 unless frame.same_cells?(r, key[i + 2] - 1, key[i + 3] + 1, base)
             r += 1
           end
-          i += FLOAT_STRIDE
+          i += FloatPainter::STRIDE
         end
       end
 
@@ -624,7 +468,7 @@ module Carat
       # rows from top to the row before bottom.
       #: (Integer, Integer) -> bool
       def under_float?(top, bottom)
-        covers?(@float_key, top, bottom) || covers?(@front.floats, top, bottom)
+        covers?(@float_painter.key, top, bottom) || covers?(@front.floats, top, bottom)
       end
 
       #: (Array[Integer], Integer, Integer) -> bool
@@ -632,7 +476,7 @@ module Carat
         i = 0
         while i < key.length
           return true if key[i] < bottom && key[i + 1] > top
-          i += FLOAT_STRIDE
+          i += FloatPainter::STRIDE
         end
         false
       end
@@ -644,116 +488,6 @@ module Carat
           @repainted[r] = 0
           r += 1
         end
-      end
-
-      # Each float in drawing order, one whose box leaves the screen above
-      # the message row skipped: every row of it when full, else only the
-      # rows painted again under it in this frame.
-      #: (Domain::Frame, Domain::FloatLayer, Integer, Integer, Integer, bool) -> void
-      def paint_floats(frame, floats, tabstop, rows, cols, full)
-        i = 0
-        while i < floats.count
-          float = floats.at(i)
-          if float.box_top >= 0 && float.box_left >= 0 && float.box_bottom < rows && float.box_right <= cols
-            r = float.box_top
-            while r < float.box_bottom
-              paint_float_row(frame, float, r, tabstop, cols) if full || @repainted[r] == 1
-              r += 1
-            end
-          end
-          i += 1
-        end
-      end
-
-      # One row of a float's box: its text, its padding, and the fill of
-      # its group across both, a documentation row's styles on the float
-      # layer unless plain (NO_COLOR), then its border and, on the top
-      # edge, its title.
-      #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
-      def paint_float_row(frame, float, r, tabstop, cols)
-        mend_edges(frame, r, float.box_left, float.box_right, cols)
-        window = float.window
-        if r >= window.row && r < window.row + window.height
-          x = window.col
-          width = window.width
-          inner_left = x - Domain::FloatWindow::PAD
-          inner_right = x + width + Domain::FloatWindow::PAD
-          buffer = window.buffer
-          row = window.top + r - window.row
-          text = row < buffer.line_count
-          if text
-            paint_text(frame, r, x, @cache.fetch(buffer.line(row), tabstop), width, window.left)
-          else
-            frame.blank(r, x, x + width)
-          end
-          frame.blank(r, inner_left, x)
-          frame.blank(r, x + width, inner_right)
-          frame.fill(r, inner_left, inner_right, float_group(float, row))
-          if text && buffer.styled? && !@plain
-            line = buffer.line(row)
-            paint_tokens(frame, r, x, @cache.fetch(line, tabstop), width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER)
-          end
-          paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
-        end
-        paint_border_row(frame, float, r) if float.edged?
-      end
-
-      # The marked columns of a float's first row in Visual, within its
-      # text area of width cells from x.
-      #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
-      def paint_mark(frame, float, r, x, width)
-        left = float.window.left
-        from = x + float.mark_from - left
-        to = x + float.mark_to - left
-        from = x if from < x
-        to = x + width if to > x + width
-        frame.fill(r, from, to, Domain::Highlight::VISUAL) if to > from
-      end
-
-      # The group of a float's text row: NormalFloat, or for a menu Pmenu
-      # and PmenuSel on its selected row.
-      #: (Domain::FloatWindow, Integer) -> Integer
-      def float_group(float, row)
-        return Domain::Highlight::NORMAL_FLOAT unless float.menu?
-        row == float.selected ? Domain::Highlight::POPUP_MENU_SELECTED : Domain::Highlight::POPUP_MENU
-      end
-
-      # Blanks the halves of wide characters a box cuts at its edges, so
-      # no cell is left holding half of one.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer) -> void
-      def mend_edges(frame, row, left, right, cols)
-        frame.blank(row, left - 1, left) if left > 0 && frame.width_at(row, left - 1) == 2
-        frame.blank(row, right, right + 1) if right < cols && frame.width_at(row, right) == 0
-      end
-
-      # The border cells of one row of a float's box in FloatBorder, in
-      # the float's own border style or the frame's, and, on its top
-      # edge, its title centered between the corners.
-      #: (Domain::Frame, Domain::FloatWindow, Integer) -> void
-      def paint_border_row(frame, float, r)
-        left = float.box_left
-        last = float.box_right - 1
-        top = float.box_top
-        style = float.border_style
-        glyphs = style.empty? ? @border : Domain::BorderStyle.glyphs(style, @ascii)
-        paint_edge(frame, r, left, last, top, float.box_bottom - 1, Domain::Highlight::FLOAT_BORDER, glyphs)
-        title = float.spec.title
-        paint_title(frame, r, left, last, title, Domain::Highlight::FLOAT_TITLE) if r == top && !title.empty?
-      end
-
-      # A title between the corners at left and last, with a blank on each
-      # side, centered and cut to the cells between them, in hl: FloatTitle
-      # for a float, the severity's group for a notification.
-      #: (Domain::Frame, Integer, Integer, Integer, String, Integer) -> void
-      def paint_title(frame, r, left, last, title, hl)
-        room = last - left - 1
-        return if room < 3
-        width = Domain::DisplayWidth.text_width(title, 0) + 2
-        width = room if width > room
-        from = left + 1 + (room - width) / 2
-        frame.put_code(r, from, 0x20, 1, hl)
-        stop = frame.put_within(r, from + 1, title, hl, from + width - 1)
-        frame.put_code(r, stop, 0x20, 1, hl)
       end
 
       #: (Integer, Integer) -> Integer
@@ -1084,94 +818,13 @@ module Carat
           end
         end
         decoded = @cache.fetch(line, tabstop)
-        paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
-        paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
+        @lines.paint_text(frame, frame_row, x + gutter, decoded, text_width, left)
+        @lines.paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0) unless syntax.tokens.empty?
         @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
         @marks.paint(frame, frame_row, x + gutter, decoded, text_width, left) if @mark_here
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
         paint_pair(frame, frame_row, x + gutter, decoded, text_width, left) if @pair_here > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
-      end
-
-      # Paints the visible part of a decoded line from frame column col
-      # over width cells: characters whose display columns fall inside
-      # [left, left + width), C0 controls as ^X, delete and C1 controls as
-      # <xx>, and blanks everywhere else, tabs included.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer) -> void
-      def paint_text(frame, frame_row, col, decoded, width, left)
-        if decoded.plain
-          paint_plain(frame, frame_row, col, decoded.text, width, left)
-          return
-        end
-        codes = decoded.codes
-        cols = decoded.cols
-        n = codes.length
-        limit = left + width
-        filled = col
-        k = left > 0 ? decoded.index_at(left) : 0
-        while k < n
-          dcol = cols[k]
-          break if dcol >= limit
-          w = cols[k + 1] - dcol
-          code = codes[k]
-          if dcol >= left && dcol + w <= limit && w > 0 && code != 9
-            at = col + dcol - left
-            frame.blank(frame_row, filled, at) if at > filled
-            if code < 32
-              frame.put_code(frame_row, at, 94, 1, Domain::Highlight::NORMAL)
-              frame.put_code(frame_row, at + 1, code + 64, 1, Domain::Highlight::NORMAL)
-            elsif w == 4 && Domain::DisplayWidth.control?(code)
-              frame.put_code(frame_row, at, 60, 1, Domain::Highlight::NORMAL)
-              frame.put_code(frame_row, at + 1, hex_digit(code >> 4), 1, Domain::Highlight::NORMAL)
-              frame.put_code(frame_row, at + 2, hex_digit(code & 15), 1, Domain::Highlight::NORMAL)
-              frame.put_code(frame_row, at + 3, 62, 1, Domain::Highlight::NORMAL)
-            else
-              frame.put_code(frame_row, at, code, w, Domain::Highlight::NORMAL)
-            end
-            filled = at + w
-          end
-          k += 1
-        end
-        frame.blank(frame_row, filled, col + width) if filled < col + width
-      end
-
-      # paint_text for a line of printable ASCII: one cell per byte.
-      #: (Domain::Frame, Integer, Integer, String, Integer, Integer) -> void
-      def paint_plain(frame, frame_row, col, text, width, left)
-        n = text.bytesize
-        k = left
-        stop = left + width
-        stop = n if stop > n
-        at = col
-        while k < stop
-          frame.put_code(frame_row, at, text.getbyte(k).to_i, 1, Domain::Highlight::NORMAL)
-          k += 1
-          at += 1
-        end
-        frame.blank(frame_row, at, col + width) if at < col + width
-      end
-
-      # Gives the cells of each token the token's group plus the layer: the
-      # display columns of its code points inside [left, left + width), a
-      # token past the end of the line cut there.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer], Integer) -> void
-      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens, layer)
-        size = decoded.size
-        limit = left + width
-        i = 0
-        while i + 2 < tokens.length
-          from = tokens[i]
-          if from < size
-            to = from + tokens[i + 1]
-            to = size if to > size
-            first = decoded.col(from)
-            last = decoded.col(to)
-            first = left if first < left
-            last = limit if last > limit
-            frame.fill(frame_row, col + first - left, col + last - left, tokens[i + 2] + layer) if first < last
-          end
-          i += 3
-        end
       end
 
       # Gives the matches of the highlighted pattern on the row being
@@ -1313,16 +966,10 @@ module Carat
         frame.fill(frame_row, col + from - left, col + to - left, group) if from < to
       end
 
-      # The code point of a lowercase hexadecimal digit.
-      #: (Integer) -> Integer
-      def hex_digit(value)
-        value < 10 ? 48 + value : 87 + value
-      end
-
       # Paints the Visual highlight over the selected display columns of a
-      # row that paint_text drew, cell by cell so a tab is covered only
-      # where selected, and the cell after the last character when the line
-      # break is selected.
+      # row that LinePainter#paint_text drew, cell by cell so a tab is
+      # covered only where selected, and the cell after the last character
+      # when the line break is selected.
       #: (Domain::Frame, Integer, Integer, Integer, Integer) -> void
       def paint_selection(frame, frame_row, col, width, left)
         to = @sel_to
