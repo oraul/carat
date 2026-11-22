@@ -106,6 +106,23 @@ module Carat
         out
       end
 
+      # The UTF-16 code units of text, which language server positions
+      # count: two for a four-byte character, outside the basic plane, and
+      # one for any other character, a byte that starts no well-formed
+      # sequence included, as it decodes to U+FFFD.
+      #: (String) -> Integer
+      def self.utf16_length(text)
+        bytes = text.bytesize
+        count = 0
+        i = 0
+        while i < bytes
+          size = text.getbyte(i).to_i < 0x80 ? 1 : size_at(text, i, bytes)
+          count += size == 4 ? 2 : 1
+          i += size
+        end
+        count
+      end
+
       # Names boundary and scalar? in every program that requires this
       # file, which already have them public. Spinel drops a method that
       # nothing in the program names, unless it is the last statement of
