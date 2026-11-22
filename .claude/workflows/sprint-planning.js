@@ -238,9 +238,11 @@ function recordsLine(name, merged, delivered) {
 }
 
 phase('Due')
-// The bookkeeping starts (due, notes, skeptic notes, record, records-merged)
-// run as the runner agent, the cheapest tier at low effort, under its guard
-// profile (cheap-tier).
+// The bookkeeping starts (due, record, records-merged) run as the runner
+// agent, the cheapest tier at low effort, under its guard profile
+// (cheap-tier). The notes and skeptic notes starts, whose texts quote
+// reviewed code, stay on the read profile's quality reviewer in record
+// mode, which records notes and no review or phase.
 const due = await agent(
   `Run \`sh tools/run_state.sh review-due\` with the Bash tool from the repository root and return its one line verbatim as line (exit 1 means not due, not a failure). Only when the line begins with \`due: sprint-N\`, run \`sh tools/run_state.sh init sprint-N main\`, and when it ends with \`sweep: yes\` also \`sh tools/run_state.sh init sprint-N-sweep main\`, N being its number; return initialized true when they exited 0.${capLine(CAPS.due)}`,
   { agentType: 'runner', schema: DUE, effort: 'low', label: 'sprint: due' })
@@ -283,13 +285,13 @@ phase('Notes')
 // Each security finding reaches the run state from the reviewer's own
 // result, before the skeptic, so a skeptic stopped at its cap leaves none
 // unrecorded; without them recorded the planner does not start. The
-// texts quote reviewed code, so the start is the runner agent, whose hook
-// runs tools/agent_guard.sh's runner profile, as
+// texts quote reviewed code, so the start is the quality reviewer in its
+// record mode, whose hook runs tools/agent_guard.sh's read profile, as
 // for the skeptic's notes below.
 const notes = ran ? securityNotes(sprint.sprint, security.findings) : []
 const notesRun = !notes.length ? null : await agent(
-  `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { agentType: 'runner', schema: RAN, effort: 'low', label: 'sprint: notes' })
+  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
+  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: notes' })
 const noted = !notes.length || Boolean(notesRun && notesRun.ok)
 
 phase('Skeptic')
@@ -301,15 +303,15 @@ const skeptic = await agent(
 const skeptical = Boolean(skeptic && isCommit(skeptic.head))
 // The skeptic's notes reach the run state before the planner, which reads
 // them there; each text one single-quoted shell word (skepticNotes). The
-// texts quote reviewed code, so the start is the runner agent, whose hook
-// runs tools/agent_guard.sh's runner profile: text
+// texts quote reviewed code, so the start is the quality reviewer in its
+// record mode, whose hook runs tools/agent_guard.sh's read profile: text
 // that leads it astray runs no command but that profile's.
 const missedBoth = skeptical ? missedSecurity(skeptic) : []
 const sprintBlocking = blocking.concat(blockingOf(missedBoth))
 const kept = skeptical ? skepticNotes(sprint.sprint, skeptic.notes).concat(securityNotes(sprint.sprint, missedBoth, 'missed by both: ')) : []
 const keptRun = !kept.length ? null : await agent(
-  `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${kept.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { agentType: 'runner', schema: RAN, effort: 'low', label: 'sprint: skeptic notes' })
+  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${kept.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
+  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: skeptic notes' })
 const skepticNoted = !kept.length || Boolean(keptRun && keptRun.ok)
 // The planner starts only after a complete security review (not partial)
 // with its findings recorded, the skeptic with its notes recorded, and in an even sprint the

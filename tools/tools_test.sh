@@ -3468,6 +3468,11 @@ expect "guard: merger refuses the remote branch deletion" 2 "git push is not a c
 expect "guard: runner runs the resume steps" 0 "^$" guard runner 'git fetch -q origin && make doctor && make toolchain && sh tools/run_state.sh lane-open c chore/c && sh tools/run_state.sh init c chore/c && cd tmp/.lane-c && sh tools/run_state.sh trusted c && git -C tmp/.lane-c rev-parse --short=12 HEAD && cd tmp/.lane-c && sh tools/run_state.sh plan-needed c'
 expect "guard: runner runs the records" 0 "^$" guard runner 'sh tools/run_state.sh review c security pass \"high=0 low=1\" abc1234 || echo refused: 1; sh tools/run_state.sh phase c check abc1234 && sh tools/run_state.sh note c overrun \"over\" && sh tools/run_state.sh set c records skip && sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && sh tools/run_state.sh metric c phase.check=1/2'
 expect "guard: runner runs sprint planning's due and records-merged steps" 0 "^$" guard runner 'sh tools/run_state.sh review-due && sh tools/run_state.sh init sprint-3 main && sh tools/run_state.sh get sprint-3-records merged'
+# cheap-tier security Low: the late, held, and unpushed finding notes,
+# which seed reads back as findings, are the close profile's alone.
+for k in late-finding held-finding unpushed-finding; do
+  expect "guard: runner refuses a $k note" 2 "which only the workflow's close profile records" guard runner "sh tools/run_state.sh note c $k x"
+done
 for c in 'make test' 'make -C tmp/.lane-c doctor' 'make doctor PREFIX=x' 'sh tools/gates.sh trailer' 'sh tools/run_state.sh push c' 'sh tools/run_state.sh check c' 'sh tools/run_state.sh set c merged abc1234' 'sh tools/run_state.sh init c other' 'sh tools/run_state.sh lane-open c chore/c extra' 'git push origin chore/c' 'git commit -m x' 'echo x > f' 'mkdir d'; do
   expect "guard: runner refuses $c" 2 "refused for the runner profile" guard runner "$c"
 done
@@ -6102,18 +6107,23 @@ expect "sprint: the report's sweep line is sweepLine's" 0 "^1$" grep -c -F '`Swe
 expect "sprint: the report's security line names unrecorded findings" 0 '^\["Security: 1 finding[(]s[)], 0 blocking, 0 disputed; its findings were not recorded","Security: 1 finding[(]s[)], 0 blocking, 0 disputed; 2 missed by both reviewers","Security: did not run; run /sprint again"\]$' \
   js "$swf" "isCommit securityDone securityLine securityReport" "[securityReport({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: [] }, 0, 0, 0, false), securityReport({ ran: true, head: 'abc1234', findings: [{}], not_reviewed: [] }, 0, 0, 2, true), securityReport(null, 0, null, 0, false)]"
 expect "sprint: the report's security line is securityReport's" 0 "^1$" grep -c -F '  securityReport(security, sprintBlocking.length, skeptical ? skeptic.disputed : null, missedBoth.length, noted),' "$swf"
-# The security notes quote reviewed code: the runner runs them under its
-# guard profile (cheap-tier; before it the quality reviewer under read),
-# never a general agent with Bash (merge-path-lows); the guard stores a
+# The security notes quote reviewed code: the quality reviewer runs them in
+# its record mode, under the guard's read profile, never a general agent
+# with Bash (merge-path-lows) nor the runner, whose profile also records
+# reviews and phases (cheap-tier security Medium); the guard stores a
 # note's text, a run-state path or a parent step in it included.
-expect "sprint: the security notes run under the guarded runner" 0 "^1 1$" \
-  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'runner'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: notes'"'"' })" "$1") $(grep -B1 -F "label: '"'"'sprint: notes'"'"'" "$1" | grep -c "^  .Run this one command")"' _ "$swf"
+expect "sprint: the security notes run under the guarded quality reviewer in record mode" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: notes'"'"' })" "$1") $(grep -B1 -F "label: '"'"'sprint: notes'"'"'" "$1" | grep -c "^  .Mode: record[.] Run this one command")"' _ "$swf"
+# The read profile the notes run under records no review and no phase
+# (cheap-tier security Medium), which the runner's would.
+expect "guard: the notes' read profile refuses a review record" 2 "refused for the read profile" guard read 'sh tools/run_state.sh note sprint-3 security x && sh tools/run_state.sh review sprint-3-sweep periodic-security pass "x"'
+expect "guard: the notes' read profile refuses a phase record" 2 "refused for the read profile" guard read 'sh tools/run_state.sh note sprint-3 security x && sh tools/run_state.sh phase c check abc1234'
 expect "guard: runner records a note whose text names the run state's directory and a parent step" 0 "^$" \
   guard runner "$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-3', [{ severity: 'Low', confidence: 4, file: 'tools/x.sh', line: 2, title: 'reads build/pipeline/c.json and ../x', fix: 'f' }]).join(' && ')" | sed 's/^"//; s/"$//')"
-# cheap-tier: every bookkeeping start of sprint planning (due, notes,
-# skeptic notes, record, records-merged) runs as the runner at low effort.
-expect "sprint: the bookkeeping starts run as the runner at low effort" 0 "^5 5$" \
-  sh -c 'echo "$(grep -c -E "[{] agentType: .runner., schema: [^ ]+.* effort: .low., label: .sprint: (due|notes|skeptic notes|record|records-merged)." "$1") $(grep -c "agentType: .runner." "$1")"' _ "$swf"
+# cheap-tier: sprint planning's due, record, and records-merged starts run
+# as the runner at low effort; the notes and skeptic notes starts do not.
+expect "sprint: the bookkeeping starts run as the runner at low effort" 0 "^3 3$" \
+  sh -c 'echo "$(grep -c -E "[{] agentType: .runner., schema: [^ ]+.* effort: .low., label: .sprint: (due|record|records-merged)." "$1") $(grep -c "agentType: .runner." "$1")"' _ "$swf"
 expect "guard: read records a note whose text names the run state's directory and a parent step" 0 "^$" \
   guard read "$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-3', [{ severity: 'Low', confidence: 4, file: 'tools/x.sh', line: 2, title: 'reads build/pipeline/c.json and ../x', fix: 'f' }]).join(' && ')" | sed 's/^"//; s/"$//')"
 expect "guard: read still refuses a run-state path outside a note's text" 2 "a word naming the run state's directory" guard read 'sh tools/run_state.sh note build/pipeline/c security x'
@@ -6188,12 +6198,12 @@ expect "sprint: each skeptic note is recorded literally, a finding holding a com
 expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^first$" \
   sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
 # pipeline-lows-a security Low (4): the notes quote reviewed code, so the
-# start running them is the runner (cheap-tier; before it the quality
-# reviewer's record mode, now gone), whose hook runs tools/agent_guard.sh,
-# never an unguarded general agent. Two record starts give the line: the
-# skeptic's notes and the security notes.
-expect "sprint: the skeptic's notes run under the guarded runner" 0 "^1 3 0$" \
-  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'runner'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:" "$1") $(grep -c "Mode: record" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
+# start running them is the quality reviewer in its record mode, whose hook
+# runs tools/agent_guard.sh's read profile, never an unguarded general agent
+# nor the runner (cheap-tier security Medium). Two record starts give the
+# line: the skeptic's notes and the security notes.
+expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 2 1$" \
+  sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
   sh -c 'echo "$(grep -c "Record nothing: the workflow records .notes." "$1") $(grep -c "note <change> security \"disputed" "$1")"' _ "$agents/quality-reviewer.md"
 # sprint-close-lows: the quality reviewer leaves a security point to the

@@ -110,9 +110,10 @@
 #                plan-needed review-due, lane-open and init as CHANGE
 #                BRANCH (a Conventional Branch or main), and the
 #                workflow's records phase review metric ci-stages note
-#                and set CHANGE records skip: the resume and record
-#                starts and sprint planning's bookkeeping starts, which
-#                write no file and run no tools/gates.sh
+#                (never a late, held, or unpushed finding) and set
+#                CHANGE records skip: the resume and record starts and
+#                sprint planning's due, record, and records-merged
+#                starts, which write no file and run no tools/gates.sh
 #   close        the read profile, plus sh tools/run_state.sh phase CHANGE
 #                NAME COMMIT with NAME one of CLOSE_PHASES, the phases
 #                no merge gate reads, or CHANGE NAME merged (NAME merge,
@@ -679,9 +680,18 @@ run_state_form() {
     merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
     contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
     # The runner: the resume recipe and the records the workflow wrote
-    # (cheap-tier), the note text data as for read.
+    # (cheap-tier), the note text data as for read. Sprint planning's notes
+    # and skeptic notes, which quote reviewed code, stay on the read
+    # profile, which records no review or phase.
     runner:show|runner:get|runner:trusted|runner:plan-needed|runner:review-due|runner:phase|runner:review|runner:metric|runner:ci-stages) ;;
-    runner:note) [ $# -ne 4 ] || data_at=6 ;;
+    runner:note)
+      # As for read: the late, held, and unpushed finding notes are the
+      # close profile's alone, which seed reads back as findings.
+      case "${3:-}" in
+        late-finding|held-finding|unpushed-finding)
+          refuse "tools/run_state.sh note of ${3}, which only the workflow's close profile records" ;;
+      esac
+      [ $# -ne 4 ] || data_at=6 ;;
     runner:lane-open|runner:init)
       [ $# -eq 3 ] && matches "$2" "$CHANGE_NAME" && { [ "$3" = main ] || matches "$3" "$BRANCH"; } ||
         refuse "tools/run_state.sh $verb other than CHANGE BRANCH" ;;

@@ -8,7 +8,7 @@
 ## 2. Workflows
 
 - [x] 2.1 Start resume and record as `runner` at `agent/low` in `deliver-change.js`; proved by "calibration: the agent tier is the agent files' model lines" and "calibration: the resume and record starts run as the runner"
-- [x] 2.2 Start sprint-planning's due, notes, skeptic notes, record, and records-merged as `runner`; proved by "sprint: the bookkeeping starts run as the runner at low effort"
+- [x] 2.2 Start sprint-planning's due, record, and records-merged as `runner` (the notes starts: 7.1); proved by "sprint: the bookkeeping starts run as the runner at low effort"
 
 ## 3. Merger
 
@@ -25,5 +25,10 @@
 
 ## Quality review
 
-- [x] 6.1 The quality reviewer's record mode and the prose naming it (README.md, docs/codebase-map.md, sprint-planning.js comments, the agent's description) went stale once the notes starts moved to the runner; fixed in place
+- [x] 6.1 The quality reviewer's record mode and the prose naming it (README.md, docs/codebase-map.md, sprint-planning.js comments, the agent's description) went stale once the notes starts moved to the runner; fixed in place, then undone by 7.1, which keeps the notes starts on the record mode
 - [x] 6.2 `.claude/workflows/periodic-review.js`'s record start still runs as the default agent on the session's model, unguarded; recorded in `docs/findings/cheap-tier.md`: the brief names only the delivery and sprint starts
+
+## Security review
+
+- [x] 7.1 Medium (5) `tools/agent_guard.sh:683`: the sprint notes and skeptic notes starts, whose commands quote reviewed code, ran under the `runner` profile, which also records reviews, phases, metrics, ci-stages, init, and lane-open of any change; they stay on the quality reviewer's record mode under the `read` profile (its record mode, README.md, and the comments restored); proved by "sprint: the security notes run under the guarded quality reviewer in record mode", "sprint: the skeptic's notes run under the guarded quality reviewer's record mode", "sprint: the bookkeeping starts run as the runner at low effort" (3 3), and the two "guard: the notes' read profile refuses" cases
+- [x] 7.2 Low (4) `tools/agent_guard.sh:684`: `runner:note` refuses the late, held, and unpushed finding kinds as `read:note` does; proved by "guard: runner refuses a late-finding note", "held-finding", and "unpushed-finding" (fail with the fix reverted)
