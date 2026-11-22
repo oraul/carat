@@ -9,3 +9,7 @@
 ## 2. Checks
 
 - [x] 2.1 Run `make spec-validate`, `make gates`, and `make docs-lint`, all pass.
+
+## 3. Review findings
+
+- [x] 3.1 Security Low: the sprint-26 Groom line of `docs/queue-backlog.md` cites the fixing commit of the four security Low entries groom removed (9e4aca0, #289). Fixed in the line; making groom itself require a fixing commit for a security entry needs new code in `tools/run_state.sh`, outside this change's files, so it stays recorded in `docs/findings/sprint-26-records.md`.
