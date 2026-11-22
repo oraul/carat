@@ -18,4 +18,4 @@
 
 ## 4. Docs and checks
 
-- [ ] 4.1 README.md steps of the check and the sprint, `.claude/agents/checker.md`, `docs/contributor-notes.md` Checking, `docs/codebase-map.md` area 1. Test: `make docs-lint`, `make gates`, `make spec-validate`, `make check-stage S=tools-test`.
+- [x] 4.1 README.md steps of the check and the sprint, `.claude/agents/checker.md`, `.claude/agents/security-reviewer.md`, `docs/contributor-notes.md` Checking, `docs/codebase-map.md` area 1. Test: `make docs-lint`, `make gates`, `make spec-validate`, `make check-stage S=tools-test`.
