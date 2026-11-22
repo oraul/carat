@@ -800,8 +800,8 @@ The request `set_float_lines(window, lines, title)` (API 2.11) SHALL replace the
 - **THEN** the request fails with "No float N" and the scratch buffer keeps its lines and title
 
 #### Scenario: A plugin written against 2.10 still loads
-- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.14
-- **THEN** the plugin is accepted, while a manifest naming "2.15" is refused naming both versions
+- **WHEN** a plugin's manifest names API version "2.10" and the host has 2.15
+- **THEN** the plugin is accepted, while a manifest naming "2.16" is refused naming both versions
 
 ### Requirement: A plugin styles its float
 The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the style of one of the plugin's floats, 0 for the current window: `selected` is the row drawn in `PmenuSel`, the others then in `Pmenu`, or -1; `spans` are flat quadruples of row, column, length, and group id, drawn as tokens, `PmenuMatch` on the selected row in `PmenuMatchSel`. A refill SHALL drop the style.
@@ -827,19 +827,23 @@ The request `style_float(window, selected, spans)` (API 2.12) SHALL replace the 
 - **THEN** the float's rows are drawn in `NormalFloat` with no span
 
 #### Scenario: A plugin written against 2.11 still loads
-- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.14
+- **WHEN** a plugin's manifest names API version "2.11" and the host has 2.15
 - **THEN** the plugin is accepted
 
-### Requirement: A float span admits only the popup menu's two groups beside the token groups
-A span's group SHALL be a syntax, file-icon, or markup group, `PmenuSel`, or `PmenuMatch`; any other id SHALL fail with "No float group N". `syntax_group` SHALL resolve `PmenuSel` and `PmenuMatch` and still refuse every other UI group's name, and a tokenizer's token in either group SHALL still be dropped.
+### Requirement: A float span admits only the popup menu's four groups beside the token groups
+A span's group SHALL be a syntax, file-icon, or markup group, `PmenuSel`, `PmenuMatch`, `PmenuMarkSel`, or `PmenuLabelSel` (the last two from API 2.15); any other id SHALL fail with "No float group N". `syntax_group` SHALL resolve those four names and still refuse every other UI group's name, and a tokenizer's token in any of the four SHALL still be dropped.
 
 #### Scenario: Other UI groups are refused
 - **WHEN** the plugin styles its float with a span in `Visual`, `PmenuMatchSel`, `Normal`, `MsgDim`, a negative id, or an id past the last group
 - **THEN** each request fails with "No float group N" and the float keeps its previous style
 
 #### Scenario: The popup menu groups resolve
-- **WHEN** a plugin asks `syntax_group` for "PmenuSel", "PmenuMatch", and "Visual"
-- **THEN** the first two answer their group ids and "Visual" fails with "No highlight group named Visual"
+- **WHEN** a plugin asks `syntax_group` for "PmenuSel", "PmenuMatch", "PmenuMarkSel", "PmenuLabelSel", and "Visual"
+- **THEN** the first four answer their group ids and "Visual" fails with "No highlight group named Visual"
+
+#### Scenario: The selected row's mark and label groups style a span
+- **WHEN** a plugin styles its float with its first row selected, a `PmenuMarkSel` span on its first cell and a `PmenuLabelSel` span on the rest of the row
+- **THEN** the request succeeds, the first cell is in `PmenuMarkSel`, the rest of the row's text in `PmenuLabelSel`, and the row's padding in `PmenuSel`
 
 ### Requirement: A bad float style is refused
 `style_float` SHALL fail with "No float N" where `set_float_lines` does, "No row N" for a selected row or a span row outside the float's lines, "Spans are row, column, length, and group" for a list whose length is not a multiple of four, and "No span at column C length L" for a negative column or a length below one. A refused request SHALL leave the float's style unchanged.
@@ -884,7 +888,7 @@ The request `set_float_border(window, style)` (API 2.13) SHALL give one of the p
 - **THEN** the request succeeds and the float takes the double style with a border, while a disabled plugin's request is refused with "Plugin NAME is disabled" and the float keeps its border
 
 #### Scenario: A plugin written against 2.12 still loads
-- **WHEN** a plugin's manifest names API version "2.12" and the host has 2.14
+- **WHEN** a plugin's manifest names API version "2.12" and the host has 2.15
 - **THEN** the plugin is accepted, its bordered float takes `option.winborder` with an edge, and its unbordered float has no edge
 
 ### Requirement: A bad border style request is refused
@@ -922,3 +926,10 @@ A file a plugin or the explorer creates SHALL be made only as a new regular file
 #### Scenario: A link planted at the target after the checks
 - **WHEN** a plugin creates "tree/new.rb" under the root "tree" and a symbolic link to a file outside the tree appears at "tree/new.rb" after the checks passed
 - **THEN** the response is failed and the outside file keeps its text
+
+### Requirement: A float's selected row spans are drawn under NO_COLOR
+Under `NO_COLOR` a plugin float SHALL still draw its spans in `PmenuMarkSel` and `PmenuLabelSel`, as it draws its selected row's fill, so a selected row keeps its bar and weight, while its spans in every other group (`PmenuSel`, `PmenuMatch`, a syntax, file-icon, or markup group) SHALL stay unpainted, as before.
+
+#### Scenario: Selected row spans under NO_COLOR
+- **WHEN** `NO_COLOR` is set and a plugin styles its float with a `PmenuMarkSel` and a `PmenuLabelSel` span on its first row, a `Comment` span on its second, and a `PmenuMatch` span on its third
+- **THEN** the first row's span cells are in `PmenuMarkSel` and `PmenuLabelSel` and the second and third rows' cells stay in `NormalFloat`
