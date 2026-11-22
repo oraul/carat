@@ -10,11 +10,13 @@ module Carat
       # out, links that leave the project skipped), opens a live prompt on
       # the command line, and after every change of the typed text filters
       # the list again through Matcher, best match first, in a bordered
-      # float titled with the counts, the highlighted row marked; a screen
-      # of PREVIEW_COLUMNS or more also previews the highlighted file in a
-      # second float. Enter opens the file in the editing window (it
-      # arrives as the prompt's answer, and with no match the prompt opens
-      # again on the same text); the prompt's own keys move the
+      # float titled with the counts, the highlighted row drawn as a
+      # selected list row (a sapphire bar, the selection fill, a bold
+      # label); a screen of PREVIEW_COLUMNS or more also previews the
+      # highlighted file in a second float. Enter opens the file in the
+      # editing window (it arrives as the prompt's answer, and with no
+      # match the prompt opens again on the same text); the prompt's own
+      # keys move the
       # highlight and open it in a split, a vertical split, or as a tab;
       # Esc closes it. Each change closes the floats and opens them again,
       # as the command palette does.
@@ -38,8 +40,10 @@ module Carat
         PROMPT = "> "
         TITLE = "Files"
         EMPTY = "No match"
-        MARK = "> "
+        MARK = "▎ "
         SPACE = "  "
+        MARK_GROUP = "PmenuMarkSel"
+        LABEL_GROUP = "PmenuLabelSel"
         PREVIEW_COLUMNS = 100
         Z = 900
         OPEN = "plugin.finder.open"
@@ -84,6 +88,8 @@ module Carat
         # @rbs @preview_box: String
         # @rbs @rows: Integer
         # @rbs @cols: Integer
+        # @rbs @mark_group: Integer
+        # @rbs @label_group: Integer
 
         #: () -> void
         def initialize
@@ -105,6 +111,8 @@ module Carat
           @preview_box = ""
           @rows = 24
           @cols = 80
+          @mark_group = 0
+          @label_group = 0
         end
 
         # Returns the manifest.
@@ -140,6 +148,8 @@ module Carat
         #: (Carat::PluginApi::Host) -> void
         def activate(host)
           @host = host
+          @mark_group = host.syntax_group(MARK_GROUP).number
+          @label_group = host.syntax_group(LABEL_GROUP).number
         end
 
         #: () -> void
@@ -432,7 +442,9 @@ module Carat
           width = 1 if width < 1
           title = grep? ? "#{GREP_TITLE} #{@index.counts}" : "#{list_title} #{@matches.length}/#{@paths.length}"
           list = float_at(margin, height, width, title)
-          @list_float = show_float(host, @list_float, @list_box, list, list_lines(height))
+          rows = list_lines(height)
+          @list_float = show_float(host, @list_float, @list_box, list, rows)
+          style_list(host, rows, height)
           @list_box = box_key(list)
           unless preview && !@matches.empty?
             close_preview(host)
@@ -500,8 +512,7 @@ module Carat
             lines << (grep? && @index.idle? ? HINT : EMPTY)
             return lines
           end
-          top = @selected - height + 1
-          top = 0 if top < 0
+          top = list_top(height)
           r = top
           while r < top + height && r < matches.length
             mark = r == @selected ? MARK : SPACE
@@ -509,6 +520,28 @@ module Carat
             r += 1
           end
           lines
+        end
+
+        # The index of the match on the list float's first row: the
+        # highlight on its last row once it moves past the float's height.
+        #: (Integer) -> Integer
+        def list_top(height)
+          top = @selected - height + 1
+          top < 0 ? 0 : top
+        end
+
+        # Styles the list float's highlighted row as design section 5 draws
+        # a selected list row, after every fill, which drops the style: the
+        # row in the selection fill, its mark in PmenuMarkSel and its label,
+        # the text after the mark, in PmenuLabelSel. The empty list (No
+        # match, the grep hint) is left unstyled.
+        #: (Carat::PluginApi::Host, Array[String], Integer) -> void
+        def style_list(host, rows, height)
+          return if @list_float == 0 || @matches.empty?
+          row = @selected - list_top(height)
+          length = rows[row].length - MARK.length
+          spans = length > 0 ? [row, 0, 1, @mark_group, row, MARK.length, length, @label_group] : [row, 0, 1, @mark_group]
+          host.style_float(@list_float, row, spans)
         end
 
         # Opens the path, relative to the working directory, in the

@@ -56,15 +56,17 @@ module Carat
 
       # Gives the cells of each token the token's group plus the layer: the
       # display columns of its code points inside [left, left + width), a
-      # token past the end of the line cut there.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer], Integer) -> void
-      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens, layer)
+      # token past the end of the line cut there; with ui_only a token in a
+      # syntax, file-icon, or markup group is skipped, so only the UI
+      # groups a float span may carry are painted (NO_COLOR).
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Array[Integer], Integer, bool) -> void
+      def paint_tokens(frame, frame_row, col, decoded, width, left, tokens, layer, ui_only)
         size = decoded.size
         limit = left + width
         i = 0
         while i + 2 < tokens.length
           from = tokens[i]
-          if from < size
+          if from < size && !(ui_only && Domain::Highlight.token?(tokens[i + 2]))
             to = from + tokens[i + 1]
             to = size if to > size
             first = decoded.col(from)

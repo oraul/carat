@@ -168,6 +168,8 @@ module Carat
         Highlight::LINE_NUMBER_FIFTH, DIM, NONE, 0, 0,
         Highlight::MESSAGE_DIM, DIM, NONE, 0, 0,
         Highlight::FOLDED, DIM, NONE, 0, 0,
+        Highlight::POPUP_MENU_MARK_SELECTED, BLUE, SELECTION, BOLD, REVERSE | BOLD,
+        Highlight::POPUP_MENU_LABEL_SELECTED, FG, SELECTION, BOLD, REVERSE | BOLD,
         Highlight::STATUS_DIM, PANEL_DIM, PANEL, 0, 0,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,

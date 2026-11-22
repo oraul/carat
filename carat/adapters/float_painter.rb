@@ -17,7 +17,8 @@ module Carat
     # and the start screen. The floats are drawn by z: their text in
     # NormalFloat (a menu's in Pmenu, its selected row in PmenuSel) with
     # a column of padding in the same colors on each side, a
-    # documentation row's styles on the float layer unless plain, the
+    # documentation row's styles on the float layer (under plain only
+    # those in the popup menu groups a span may carry, its fill's kind), the
     # border of option.winborder or the float's own style in FloatBorder
     # (none under none, ASCII when plain or under option.icons ascii),
     # and the title centered on the top edge with a blank on each side in
@@ -259,8 +260,8 @@ module Carat
 
       # One row of a float's box: its text, its padding, and the fill of
       # its group across both, a documentation row's styles on the float
-      # layer unless plain (NO_COLOR), then its border and, on the top
-      # edge, its title.
+      # layer (only its popup menu groups when plain, NO_COLOR), then its
+      # border and, on the top edge, its title.
       #: (Domain::Frame, Domain::FloatWindow, Integer, Integer, Integer) -> void
       def paint_float_row(frame, float, r, tabstop, cols)
         mend_edges(frame, r, float.box_left, float.box_right, cols)
@@ -281,9 +282,9 @@ module Carat
           frame.blank(r, inner_left, x)
           frame.blank(r, x + width, inner_right)
           frame.fill(r, inner_left, inner_right, float_group(float, row))
-          if text && buffer.styled? && !@plain
+          if text && buffer.styled?
             line = buffer.line(row)
-            @lines.paint_tokens(frame, r, x, @cache.fetch(line, tabstop), width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER)
+            @lines.paint_tokens(frame, r, x, @cache.fetch(line, tabstop), width, window.left, buffer.style_at(row, line).tokens, Domain::Highlight::FLOAT_LAYER, @plain)
           end
           paint_mark(frame, float, r, x, width) if row == 0 && float.marked?
         end
