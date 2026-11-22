@@ -739,14 +739,26 @@ async function flush(force = false) {
 // store the lane shares with the main checkout (loose, packed, and
 // alternate) and verifies the commit graph: branch code can plant a loose
 // object under the id of a blob of a later main, which a small fetch
-// keeps and the add writes into the copy, so a planted object fails the
-// line before main's gates run. Given a head, fsck reads no index or
-// reflog, so another lane's work in progress does not fail it.
+// keeps and the add writes into the copy, so a planted object still in
+// the store fails the line before main's gates run. Given a head, fsck
+// reads no index or reflog, so another lane's work in progress does not
+// fail it. fsck reads the store, never the copy: an object swapped back
+// to the true one between the add and the fsck passes it with the
+// planted text checked out, and a copy file rewritten after the add
+// passes it too. So after the fsck, read-tree puts main's tree into the
+// copy's index with no stat data and diff --quiet hashes every tracked
+// file of the copy against it, failing on a text that is not main's (or
+// on its own failure), right before the gates run; a same-user process
+// writing the copy between that diff and the gates' own reads is left to
+// CI, the reviews, and branch protection.
 // fsck ignores replace refs, so a refs/replace entry pointing main's
 // gates.sh blob at a valid planted one would pass it while the add
 // checked out the planted text: every pinned git runs with
 // --no-replace-objects, and the line stops before the add when any
-// refs/replace entry stands.
+// refs/replace entry stands. That stop passes only when for-each-ref,
+// listing refs/replace and origin/main newest name first, printed
+// origin/main's one line, which every replace entry sorts before, so a
+// for-each-ref that fails, printing nothing, stops the line too.
 // The line runs in the delivery's worktree, whose HEAD is the branch, so
 // its merge gates are a worktree under the lane's own tmp/ and two
 // deliveries never share one (mergeGatesDir); when the cd fails the rest
@@ -790,7 +802,7 @@ function mergeLines(pushed) {
   const first = (line) => [metricLine(), line].filter(Boolean).join(' && ')
   const ci = (result) => `sh tools/run_state.sh set ${state.change} ci "${result} ${pushed}"`
   return {
-    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref refs/replace | wc -l | grep -q -x -E ' *0' && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
+    green: `cd ${laneDir(state.change)} && git worktree prune; git worktree remove --force ${MERGE_GATES}; ${first(ci('green'))} && ${originCheck()} && ${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && ${PINNED_GIT} for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\\n' | grep -q -x -F refs/remotes/origin/main && ${PINNED_GIT} worktree add -q --detach ${MERGE_GATES} origin/main && ${PINNED_GIT} fsck --no-dangling --no-progress origin/main && ${PINNED_GIT} -C ${MERGE_GATES} read-tree origin/main && ${PINNED_GIT} -C ${MERGE_GATES} diff --quiet && CHANGE=${state.change} RECORDS="${records.join(' ')}" sh ${MERGE_GATES}/tools/gates.sh merge build/pipeline/${state.change}.body.md`,
     red: first(ci('red')),
   }
 }

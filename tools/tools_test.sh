@@ -3437,10 +3437,14 @@ expect "guard: read refuses git hash-object" 2 "git hash-object is not a command
 expect "guard: merger hashes every object before the merge gates" 0 "^$" guard merger 'git fsck --no-dangling --no-progress origin/main'
 expect "guard: merger refuses another fsck" 2 "git fsck other than" guard merger 'git fsck --lost-found origin/main'
 expect "guard: read refuses git fsck" 2 "git fsck is not a command of this profile" guard read 'git fsck --no-dangling --no-progress origin/main'
+expect "guard: merger reads main's tree into a worktree's index" 0 "^$" guard merger 'git -C tmp/.merge-gates read-tree origin/main'
+expect "guard: merger refuses another read-tree" 2 "git read-tree other than of origin/main" guard merger 'git -C tmp/.merge-gates read-tree -u origin/main'
+expect "guard: merger refuses a read-tree of the project's index" 2 "git read-tree outside a worktree" guard merger 'git read-tree origin/main'
+expect "guard: read refuses git read-tree" 2 "git read-tree is not a command of this profile" guard read 'git -C tmp/.merge-gates read-tree origin/main'
 # The merger's first green: the green and red lines as the workflow builds
 # them (mergeLines), and its two closing calls, each one call the guard
 # admits.
-expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null for-each-ref refs/replace | wc -l | grep -q -x -E '\'' *0'\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
+expect "guard: merger runs the green line" 0 "^$" guard merger 'cd tmp/.lane-c && git worktree prune; git worktree remove --force tmp/.merge-gates; sh tools/run_state.sh metric c phase.check=1200/5 rework=0 stop=none estimate=medium && sh tools/run_state.sh set c ci \"green abc1234\" && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null remote get-url origin | tr -d '\''\\n'\'' | GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null hash-object --stdin | grep -q -x -E '\'''"$inv_ids"''\'' && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2 | tr -d '\''\\n'\'' | grep -q -x -F refs/remotes/origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null worktree add -q --detach tmp/.merge-gates origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null fsck --no-dangling --no-progress origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates read-tree origin/main && GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null -C tmp/.merge-gates diff --quiet && CHANGE=c RECORDS=\"security:pass:abc1234 quality:pass:abc1234 bench:pass:abc1234 check:pass:abc1234\" sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger refuses another global configuration before git" 2 "a GIT_CONFIG_GLOBAL other than /dev/null" guard merger 'GIT_CONFIG_GLOBAL=tmp/g git fetch -q --prune origin'
 expect "guard: merger refuses a pinned configuration before another command" 2 "an assignment before ls" guard merger 'GIT_CONFIG_NOSYSTEM=1 ls'
 expect "guard: merger refuses another assignment before git" 2 "an assignment of BASE before git" guard merger 'BASE=main git fetch -q --prune origin'
@@ -5287,19 +5291,25 @@ expect "workflow: a finding confirmed fixed in place leaves the hand-over" 0 '^\
 lane_js() {
   js "$wf" "MERGE_GATES PINNED_GIT ORIGIN_IDS laneDir mergeGatesDir originCheck mergeRecords mergeLines intro" "(() => { globalThis.metricLine = () => ''; globalThis.ran = {}; globalThis.head = 'abc1234'; globalThis.state = { change: 'a', branch: 'chore/a' }; return $1 })()"
 }
+# The guard admits the green line exactly as mergeLines builds it, its
+# JSON string handed to the hook's JSON as it is.
+expect "guard: merger runs the green line the workflow builds" 0 "^$" \
+  guard merger "$(lane_js "mergeLines('abc1234').green" | sed 's/^"//; s/"$//')"
 expect "workflow: two concurrent deliveries' merge-gates paths are distinct" 0 '^\["tmp/[.]lane-a/tmp/[.]merge-gates","tmp/[.]lane-b/tmp/[.]merge-gates"\]$' \
   lane_js "[mergeGatesDir('a'), mergeGatesDir('b')]"
 expect "workflow: the green line runs the merge gates in the delivery's worktree" 0 '^\[true,true\]$' \
   lane_js "(g => [g.startsWith('cd tmp/.lane-a && '), g.includes('worktree add -q --detach tmp/.merge-gates origin/main')])(mergeLines().green)"
 expect "workflow: the green line hashes every object after the add and before the merge gates" 0 '^true$' \
-  lane_js "mergeLines().green.includes('worktree add -q --detach tmp/.merge-gates origin/main && ' + PINNED_GIT + ' fsck --no-dangling --no-progress origin/main && CHANGE=a ')"
+  lane_js "mergeLines().green.includes('worktree add -q --detach tmp/.merge-gates origin/main && ' + PINNED_GIT + ' fsck --no-dangling --no-progress origin/main && ')"
+expect "workflow: the green line checks the copy's content after the fsck and before the merge gates" 0 '^true$' \
+  lane_js "mergeLines().green.includes(' fsck --no-dangling --no-progress origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates read-tree origin/main && ' + PINNED_GIT + ' -C tmp/.merge-gates diff --quiet && CHANGE=a ')"
 # A loose object branch code planted under the id of the blob of a later
 # main's tools/gates.sh, which a small fetch keeps (objplant-lane): the
 # green line from its fetch on, as the workflow builds it, stops at the
 # fsck before main's merge gates, though the worktree add wrote the
 # planted text; over a clean store (objplant-clean) it runs main's gates.
 back=$PWD
-green_tail=$(lane_js "(g => g.slice(g.indexOf(PINNED_GIT + ' fetch')))(mergeLines('abc1234').green)" | sed 's/^"//; s/"$//; s/\\"/"/g')
+green_tail=$(lane_js "(g => g.slice(g.indexOf(PINNED_GIT + ' fetch')))(mergeLines('abc1234').green)" | sed 's/^"//; s/"$//; s/\\"/"/g; s/\\\\/\\/g')
 cd "$work" || exit 1
 rm -rf objplant-origin.git objplant-lane objplant-clean
 git_q init -q --bare objplant-origin.git
@@ -5329,7 +5339,7 @@ git_q clone -q "$work/objplant-origin.git" "$work/replace-lane" 2>/dev/null
 cd "$work/replace-lane" || exit 1
 fake=$(printf 'echo planted\n' | git hash-object -w --stdin)
 git_q update-ref "refs/replace/$real" "$fake"
-no_check=$(printf %s "$green_tail" | sed 's/ && [^&]*for-each-ref refs\/replace[^&]*//')
+no_check=$(printf %s "$green_tail" | sed 's/ && [^&]*for-each-ref [^&]*//')
 neither=$(printf %s "$no_check" | sed 's/ --no-replace-objects//g')
 expect "workflow: a refs/replace entry stops the green line before the worktree add" 1 '^$' sh -c 'cd "$1" && sh -c "$2"' _ "$work/replace-lane" "$green_tail"
 expect "workflow: the line stopped by a refs/replace entry added no merge-gates worktree" 1 '' test -e "$work/replace-lane/tmp/.merge-gates"
@@ -5337,6 +5347,45 @@ expect "workflow: the pinned git ignores a refs/replace entry and runs main's me
 rm -rf "$work/replace-lane/tmp/.merge-gates"
 git -C "$work/replace-lane" worktree prune
 expect "workflow: an unpinned git would run the replaced gates past fsck" 0 '^echo planted$' sh -c 'cd "$1" && sh -c "$2" >/dev/null 2>&1; cat tmp/.merge-gates/tools/gates.sh' _ "$work/replace-lane" "$neither"
+# A git first on the PATH (race-bin) stands in for what the store and the
+# copy can meet between the line's commands, STUB_MODE choosing: eachref
+# fails for-each-ref, which printed nothing for wc to count as 0 ("The
+# green line's refs/replace check fails open when for-each-ref errors");
+# swapback puts the true object back over the planted one as the fsck
+# starts, which then passes though the add wrote the planted text ("The
+# merge gates' fsck misses an object swapped back after the worktree
+# add"); rewrite writes the copy's gates.sh once the fsck passed ("The
+# merge gates' worktree file can be rewritten on disk after the fsck").
+# Each stops the line before main's merge gates, which the old line ran.
+# They run after the cases above, reusing objplant-lane's planted object
+# and objplant-clean's store, and remove the copy those cases left.
+mkdir -p "$work/race-bin"
+cat > "$work/race-bin/git" <<'GIT'
+#!/bin/sh
+for a in "$@"; do
+  case "$STUB_MODE:$a" in
+    eachref:for-each-ref) echo "fatal: for-each-ref failed" >&2; exit 128 ;;
+    swapback:fsck) rm -f "$SWAP_OBJ"; printf 'echo main gates\n' | "$REAL_GIT" hash-object -w --stdin > /dev/null ;;
+    rewrite:fsck) "$REAL_GIT" "$@" || exit; echo "echo planted" > tmp/.merge-gates/tools/gates.sh; exit 0 ;;
+  esac
+done
+exec "$REAL_GIT" "$@"
+GIT
+chmod +x "$work/race-bin/git"
+real_git=$(command -v git)
+race() {
+  env PATH="$work/race-bin:$PATH" REAL_GIT="$real_git" STUB_MODE="$1" SWAP_OBJ="$work/objplant-lane/.git/objects/$(echo "$real" | cut -c1-2)/$(echo "$real" | cut -c3-)" \
+    sh -c 'cd "$1" && rm -rf tmp/.merge-gates && git worktree prune && sh -c "$2"' _ "$2" "$green_tail"
+}
+cd "$work" || exit 1
+rm -rf eachref-lane
+git_q clone -q "$work/objplant-origin.git" "$work/eachref-lane" 2>/dev/null
+expect "workflow: a failing for-each-ref stops the green line before the worktree add" 1 'for-each-ref failed' race eachref "$work/eachref-lane"
+expect "workflow: the line stopped by a failing for-each-ref added no merge-gates worktree" 1 '' test -e "$work/eachref-lane/tmp/.merge-gates"
+expect "workflow: an object swapped back before the fsck stops the green line before the merge gates" 1 '^$' race swapback "$work/objplant-lane"
+expect "workflow: the swapped-back object passed the fsck, the add having written the planted text" 0 '^echo planted$' sh -c 'git -C "$1" fsck --no-dangling --no-progress origin/main && cat "$1/tmp/.merge-gates/tools/gates.sh"' _ "$work/objplant-lane"
+expect "workflow: a merge-gates file rewritten after the fsck stops the green line before the merge gates" 1 '^$' race rewrite "$work/objplant-clean"
+expect "workflow: the copy the stopped line left holds the rewritten text" 0 '^echo planted$' cat "$work/objplant-clean/tmp/.merge-gates/tools/gates.sh"
 cd "$back" || exit 1
 expect "workflow: every agent start runs its commands in the change's worktree" 0 '^true$' \
   lane_js "intro().includes('cd tmp/.lane-a && ')"
@@ -5846,7 +5895,7 @@ expect "claude: the Agents section names the lanes rule" 0 "^2$" \
   sh -c 'sed -n "/^## Agents/,/^## Stack/p" "$1" | grep -o -e "^- Lanes: each delivery runs in its own worktree .tmp/[.]lane-<change>." -e "may start one feature-lane and one backlog-lane delivery at once, never two of one lane" | wc -l | tr -d " "' _ "$here/../CLAUDE.md"
 expect "claude: the Agents section names the self-check, the review fix, the gate-rules rule, and the merged-name refusal" 0 "^4$" \
   sh -c 'sed -n "/^## Agents/,/^## Stack/p" "$1" | grep -o -e "It self-checks tests, docs, and the brief" -e "may fix a new blocking review once (.push --review-fix.)" -e "an edit of the merge gate.s rules (.tools/rules.sh.) goes first" -e ".init. refuses a merged name" | wc -l | tr -d " "' _ "$here/../CLAUDE.md"
-expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} for-each-ref refs/replace | wc -l | grep -q -x -E" "$1"' _ "$wf"
+expect "workflow: the green line fetches and adds the copy with no global configuration or hook" 0 "^2$" sh -c 'grep -c -F -e "const PINNED_GIT = '\''GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 git --no-replace-objects -c core.hooksPath=/dev/null'\''" -e "&& \${PINNED_GIT} fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main && \${PINNED_GIT} for-each-ref --sort=-refname refs/replace refs/remotes/origin/main | cut -f2" "$1"' _ "$wf"
 # A local bare origin planted after the push, by branch code the checks
 # ran: the green line's origin check, the script's, fails before the
 # fetch, whose main would bring its own gates and guard, and main's guard

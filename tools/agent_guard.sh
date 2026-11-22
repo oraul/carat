@@ -84,7 +84,10 @@
 #                hash-object --stdin, with no other option; git fsck
 #                --no-dangling --no-progress origin/main, which writes
 #                nothing, the green line's hash of every object before
-#                the merge gates
+#                the merge gates; git -C tmp/.NAME read-tree origin/main,
+#                with no other option, which writes that worktree's index
+#                alone, the green line's reset of the copy's index before
+#                its diff --quiet hashes every file against main's tree
 #   contributor  adds git -c user.name=X -c user.email=Y, git add commit mv
 #                rm restore, git merge origin/main; make -s -k TARGET with
 #                the variables of MAKE_VARS, no shell character in a value;
@@ -576,6 +579,12 @@ git_form() {
       # gates, so no object branch code planted reaches them.
       only_profiles merger "git fsck"
       [ "$*" = "--no-dangling --no-progress origin/main" ] || refuse "git fsck other than --no-dangling --no-progress origin/main" ;;
+    read-tree)
+      # The green line reads main's tree into the copy's index with no
+      # stat data, so its diff --quiet hashes every file of the copy.
+      only_profiles merger "git read-tree"
+      [ -n "$wt" ] && worktree "$wt" || refuse "git read-tree outside a worktree tmp/.NAME"
+      [ "$*" = origin/main ] || refuse "git read-tree other than of origin/main" ;;
     add|commit|mv|rm|restore)
       only_profiles contributor "git $verb" ;;
     *) refuse "git $verb is not a command of this profile" ;;
