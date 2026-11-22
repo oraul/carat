@@ -165,6 +165,7 @@ ok   the side window has no line numbers while the file window keeps them
 ok   its one-cell sign column still shows
 ok   A sidebar beside the editor draws no separator glyph: a blank cell of the sidebar's layer, the editor's own gutter after it
 ok   the sidebar's text and tilde rows are in its layer, the editor's tilde rows are not
+ok   the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's
 ok   two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell
 ok   NO_COLOR keeps the glyph at the sidebar's edge
 ok   16 colors keep the glyph at the sidebar's edge
@@ -256,4 +257,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 258 passed, 0 failed
+adapters_frame_presenter: 259 passed, 0 failed

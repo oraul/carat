@@ -14,3 +14,8 @@
 ## 3. Docs
 
 - [x] 3.1 Update `docs/design.md` (the fallback edge), `docs/architecture.md`, `docs/compatibility.md`, `docs/codebase-map.md`, and README.md
+
+## Quality review
+
+- [x] 4.1 The cursor row of a current sidebar (cursor-line layer over the sidebar layer) had no test of its own; add it to `test/adapters_frame_presenter.rb`, fixed
+- [x] 4.2 The bottom panel stays on `Normal`, though the design lists it among the panels; recorded in `docs/findings/window-surfaces.md` as out of this change's scope (the brief names the sidebar), recorded
