@@ -156,7 +156,34 @@ module EditorFinderTest
       ["Enter with no match on a wide screen still shows no preview", ["<C-p>zzqx<CR>", 120], [:cmdline, "> zzqx", ["Files 0/3|No match"]]],
       ["typing after Enter with no match filters again", ["<C-p>zzqx<CR><BS><BS><BS><BS>bet", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
       # A narrow screen shows no preview
-      ["A narrow screen shows no preview", ["<Space>ffbet", 99], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]]
+      ["A narrow screen shows no preview", ["<Space>ffbet", 99], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
+      # Space f b lists the open buffers
+      ["Space f b lists the open buffers", [":e lib/beta.rb<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 2/2|> lib/alpha.rb\n  lib/beta.rb"]]],
+      # The buffer picker filters and opens the pick (its open row is in the table below)
+      ["The buffer picker filters and opens the pick: typing filters", [":e lib/beta.rb<CR><Space>fbalp", 80], [:cmdline, "> alp", ["Buffers 1/2|> lib/alpha.rb"]]],
+      ["the buffer picker previews on a wide screen", [":e lib/beta.rb<CR><Space>fb<C-n>", 120], [:cmdline, ">", ["Buffers 2/2|  lib/alpha.rb\n> lib/beta.rb", "lib/beta.rb|b = 2"]]],
+      # Unnamed buffers are not listed
+      ["Unnamed buffers are not listed", [":new<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      # A deleted buffer leaves the buffer picker
+      ["A deleted buffer leaves the buffer picker", [":e lib/beta.rb<CR>:bd<CR><Space>fb", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      # Space f r lists the recent files most recent first
+      ["Space f r lists the recent files most recent first", [":e lib/beta.rb<CR>:e docs/guide.md<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|> docs/guide.md\n  lib/beta.rb\n  lib/alpha.rb"]]],
+      # A file shown again moves to the top
+      ["A file shown again moves to the top", [":e lib/beta.rb<CR>:e docs/guide.md<CR>:e lib/alpha.rb<CR><Space>fr", 80], [:cmdline, ">", ["Recent 3/3|> lib/alpha.rb\n  docs/guide.md\n  lib/beta.rb"]]],
+      # A deleted buffer stays recent (its Enter row is in the table below)
+      ["A deleted buffer stays recent", [":e lib/beta.rb<CR>:bd<CR><Space>fr", 80], [:cmdline, ">", ["Recent 2/2|> lib/alpha.rb\n  lib/beta.rb"]]],
+      ["the recent files filter", [":e lib/beta.rb<CR><Space>frbet", 80], [:cmdline, "> bet", ["Recent 1/2|> lib/beta.rb"]]],
+      # Space f R resumes the file finder after Esc
+      ["Space f R resumes the file finder after Esc", ["<Space>ffa<C-n><Esc><Space>fR", 80], [:cmdline, "> a", ["Files 2/3|  lib/alpha.rb\n> lib/beta.rb"]]],
+      ["Space f R resumes the file finder after Esc on an empty prompt", ["<Space>ff<Esc><Space>fR", 80], [:cmdline, ">", ["Files 3/3|> docs/guide.md\n  lib/alpha.rb\n  lib/beta.rb"]]],
+      # Space f R resumes after a pick
+      ["Space f R resumes after a pick", [":e lib/beta.rb<CR><Space>fbalp<CR><Space>fR", 80], [:cmdline, "> alp", ["Buffers 1/2|> lib/alpha.rb"]]],
+      ["Space f R resumes after a split pick, the text typed kept", ["<Space>ffbet<C-x><Space>fR", 80], [:cmdline, "> bet", ["Files 1/3|> lib/beta.rb"]]],
+      # The resumed highlight is clamped
+      ["The resumed highlight is clamped", [":e lib/beta.rb<CR><Space>fb<C-n><Esc>:bd<CR><Space>fR", 80], [:cmdline, ">", ["Buffers 1/1|> lib/alpha.rb"]]],
+      # Nothing to resume
+      ["Nothing to resume", ["<Space>fR", 80], [:normal, "No search to resume", []]]
+
     ]) do |row|
       view(session(row[0], row[1]))
     end
@@ -217,7 +244,14 @@ module EditorFinderTest
       ["The query is kept for a correction", "<C-p>zzqx<CR><BS><BS><BS><BS>bet<CR>", [:normal, "lib/beta.rb", [0], 1, 1, 0]],
       ["Esc after Enter with no match closes the finder", "<C-p>zzqx<CR><Esc>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
       ["Esc opens nothing", "<Space>ffbet<Esc>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
-      ["the finder opens again after a pick", "<Space>ffbet<CR><Space>ffgu<CR>", [:normal, "docs/guide.md", [0], 1, 1, 0]]
+      ["the finder opens again after a pick", "<Space>ffbet<CR><Space>ffgu<CR>", [:normal, "docs/guide.md", [0], 1, 1, 0]],
+      # The buffer picker filters and opens the pick
+      ["The buffer picker filters and opens the pick", ":e lib/beta.rb<CR><Space>fbalp<CR>", [:normal, "lib/alpha.rb", [0], 1, 1, 0]],
+      ["the buffer picker opens its pick in a vertical split", ":e lib/beta.rb<CR><Space>fbalp<C-v>", [:normal, "lib/alpha.rb", [0, 41], 1, 1, 0]],
+      # A deleted buffer stays recent: Enter on it opens it again
+      ["A deleted buffer stays recent: Enter opens it again", ":e lib/beta.rb<CR>:bd<CR><Space>fr<C-n><CR>", [:normal, "lib/beta.rb", [0], 1, 1, 0]],
+      ["Esc closes the recent files picker", ":e lib/beta.rb<CR><Space>fr<Esc>", [:normal, "lib/beta.rb", [0], 1, 1, 0]]
+
     ]) do |keys|
       h = session(keys, 80)
       [h.mode, h.buffer.path.to_s, columns(h), h.tab_index, h.tab_count, h.state.tab.floats.count]
@@ -319,6 +353,25 @@ module EditorFinderTest
     # Scenario: The finder boxes share an edge without a border.
     h = configured("option.winborder none\n", "<Space>ffbet", 120)
     t.assert_equal([1, 60, 60, 119], boxes(h), "The finder boxes share an edge without a border: the host's frame closes the gap")
+    # Scenario: Space f R resumes the grep picker.
+    h = session("<Space>fgb<Esc><Space>fR", 80)
+    t.assert_equal([:cmdline, "> b", true], [h.mode, h.message_row.rstrip, floats(h)[0].to_s.include?("lib/beta.rb")], "Space f R resumes the grep picker: the prompt keeps b and the matching line of lib/beta.rb is listed")
+
+    # Scenario: The buffer picker's rows in both themes.
+    shown = []
+    ["carat-dark", "carat-light"].each do |name|
+      h = configured("option.theme #{name}\n", ":e lib/beta.rb<CR><Space>fb", 80)
+      theme = Carat::Domain::Themes.find(name, "theme")
+      top = h.row(1)
+      at = top.index("Buffers").to_i
+      shown << "#{top}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}"
+      t.assert_equal([theme.fg(Carat::Domain::Highlight::FLOAT_BORDER), theme.fg(Carat::Domain::Highlight::FLOAT_TITLE)], [theme.fg(h.frame.cell(1, 1).hl), theme.fg(h.frame.cell(1, at).hl)], "The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under #{name}")
+    end
+    rounded = " ╭#{"─" * 31} Buffers 2/2 #{"─" * 32}╮\n~│ > lib/alpha.rb#{" " * 61}│\n~│   lib/beta.rb#{" " * 62}│\n~╰#{"─" * 76}╯"
+    t.assert_equal([rounded, rounded], shown, "The buffer picker's rows in both themes: the same rows, the title on the top edge")
+    # Scenario: The recent files picker's rows in ASCII.
+    h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
+    t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| > lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
     t.finish
   end
 end

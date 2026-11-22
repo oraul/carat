@@ -238,10 +238,13 @@ In the Modes column, `visual` stands for the three visual maps, `visual`, `visua
 | `plugin.explorer.help` | `explorer` | `?` in the tree | Show the tree's keys in the message row |
 | `plugin.finder.open` | `finder` | `<leader>ff`, `<C-p>` | Find a file of the project by a substring or initials match of its path (terms in any order; a substring above initials, a file name above a directory) |
 | `plugin.finder.grep` | `finder` | `<leader>fg` | Find a line in the files of the project by the words of its text, and open the file there |
+| `plugin.finder.buffers` | `finder` | `<leader>fb` | Find an open buffer by a substring or initials match of its path |
+| `plugin.finder.recent` | `finder` | `<leader>fr` | Find a recently opened file, most recent first, by a substring or initials match of its path |
+| `plugin.finder.resume` | `finder` | `<leader>fR` | Open the last finder search again with its text and highlight |
 | `plugin.finder.next` | `finder` | `<C-n>`, `<Down>` in the finder | Highlight the next file in the finder |
 | `plugin.finder.previous` | `finder` | `<C-p>`, `<Up>` in the finder | Highlight the previous file in the finder |
 | `plugin.finder.open_split` | `finder` | `<C-x>`, `<C-s>` in the finder | Open the highlighted file in a horizontal split |
 | `plugin.finder.open_vsplit` | `finder` | `<C-v>` in the finder | Open the highlighted file in a vertical split |
 | `plugin.finder.open_tab` | `finder` | `<C-t>` in the finder | Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages |
 
-The keys marked "in the finder" are bound in the finder's prompt, shared by the file finder and the grep picker, a live prompt whose own keymap answers before the command-line keymap while it is open; `<CR>` opens the highlighted file and `<Esc>` closes the finder, as they end any prompt. The keys marked "in the tree" are bound in the tree window's own keymap, which the plugin gives its scratch buffer, so they apply only while the tree is the current window; every other key falls through to the normal keymap. The test fixture `hello` (`carat/plugins/hello/`) declares `plugin.hello.greet` on `<leader>hh`, but it is not in the registry, so the editor does not contain it.
+The keys marked "in the finder" are bound in the finder's prompt, shared by the file finder, the grep picker, and the buffer and recent files pickers, a live prompt whose own keymap answers before the command-line keymap while it is open; `<CR>` opens the highlighted file and `<Esc>` closes the finder, as they end any prompt. The keys marked "in the tree" are bound in the tree window's own keymap, which the plugin gives its scratch buffer, so they apply only while the tree is the current window; every other key falls through to the normal keymap. The test fixture `hello` (`carat/plugins/hello/`) declares `plugin.hello.greet` on `<leader>hh`, but it is not in the registry, so the editor does not contain it.

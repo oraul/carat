@@ -179,6 +179,22 @@ module Carat
       end
 
       # Returns a Response.
+      # @rbs skip
+      def list_buffers
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @buffers.list_buffers(@name)
+      end
+
+      # Returns a Response.
+      # @rbs skip
+      def recent_files
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @buffers.recent_files(@name)
+      end
+
+      # Returns a Response.
       # @rbs text: String
       def run_ex(text)
         why = refusal
