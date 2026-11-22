@@ -75,6 +75,9 @@ ok   an untrusted file cannot bind cmdline.execute
 ok   an untrusted file cannot bind cmdline.backspace
 ok   an untrusted file cannot bind cmdline.history_older
 ok   an untrusted file cannot bind cmdline.history_newer
+ok   an untrusted file cannot bind plugin.explorer.delete
+ok   an untrusted file cannot bind an action no allowlist entry names
+ok   an untrusted file binds a window action the allowlist names
 ok   a trusted file binds a write and the command line
 ok   an untrusted file opens the command line and unbinds a quit
 ok   an untrusted file sets anything else
@@ -99,4 +102,4 @@ ok   a list
 ok   an empty list
 ok   an unknown kind
 ok   each kind says what it takes
-domain_rc_parser: 101 passed, 0 failed
+domain_rc_parser: 104 passed, 0 failed

@@ -114,17 +114,21 @@ module DomainRcParserTest
     t.assert_equal([["1 keymap|normal [\"q\", \":w<CR>\"]"], []], config_of("keymap.normal q :w<CR>\n", true), "a trusted file binds a key sequence")
     # Scenario: A write or quit binding in the project file.
     # Scenario: A command-line binding in any mode.
-    # Every refused action in turn.
-    refused = "write, quit, and command-line actions are not bound from a project file"
+    # Scenario: A plugin's file action in the project file.
+    # Every refused action in turn, named in its problem.
+    refused = "is not bound from a project file"
     t.table([
-      ["an untrusted file cannot bind file.save", "keymap.normal j file.save\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind quit.all", "keymap.normal j quit.all\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind quit.write_all", "keymap.insert j quit.write_all\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind window.quit", "keymap.visual j window.quit\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind cmdline.execute", "keymap.cmdline <Space> cmdline.execute\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind cmdline.backspace", "keymap.operator_pending j cmdline.backspace\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind cmdline.history_older", "keymap.normal k cmdline.history_older\n", [[], [".caratrc:1: #{refused}"]]],
-      ["an untrusted file cannot bind cmdline.history_newer", "keymap.visual_block k cmdline.history_newer\n", [[], [".caratrc:1: #{refused}"]]]
+      ["an untrusted file cannot bind file.save", "keymap.normal j file.save\n", [[], [".caratrc:1: file.save #{refused}"]]],
+      ["an untrusted file cannot bind quit.all", "keymap.normal j quit.all\n", [[], [".caratrc:1: quit.all #{refused}"]]],
+      ["an untrusted file cannot bind quit.write_all", "keymap.insert j quit.write_all\n", [[], [".caratrc:1: quit.write_all #{refused}"]]],
+      ["an untrusted file cannot bind window.quit", "keymap.visual j window.quit\n", [[], [".caratrc:1: window.quit #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.execute", "keymap.cmdline <Space> cmdline.execute\n", [[], [".caratrc:1: cmdline.execute #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.backspace", "keymap.operator_pending j cmdline.backspace\n", [[], [".caratrc:1: cmdline.backspace #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.history_older", "keymap.normal k cmdline.history_older\n", [[], [".caratrc:1: cmdline.history_older #{refused}"]]],
+      ["an untrusted file cannot bind cmdline.history_newer", "keymap.visual_block k cmdline.history_newer\n", [[], [".caratrc:1: cmdline.history_newer #{refused}"]]],
+      ["an untrusted file cannot bind plugin.explorer.delete", "keymap.normal x plugin.explorer.delete\n", [[], [".caratrc:1: plugin.explorer.delete #{refused}"]]],
+      ["an untrusted file cannot bind an action no allowlist entry names", "keymap.insert j foo.bar\n", [[], [".caratrc:1: foo.bar #{refused}"]]],
+      ["an untrusted file binds a window action the allowlist names", "keymap.normal j window.split\n", [["1 keymap|normal [\"j\", \"window.split\"]"], []]]
     ]) do |text|
       config_of(text.to_s, false)
     end

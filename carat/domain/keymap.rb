@@ -46,15 +46,6 @@ module Carat
         RcParser.key?(value, 0, value.bytesize)
       end
 
-      # Vim's mapleader when the configuration names none.
-      DEFAULT_LEADER = "\\"
-
-      # The action that removes a binding.
-      NONE = "none"
-
-      # The keymap line that names a normal-mode prefix for the key hints.
-      GROUP = "group"
-
       # The keymap lines, keymap.pick <keys> <action>, that bind in normal
       # mode of a pick list's buffer, as the definition pick list's, and in
       # no editor mode.
@@ -65,30 +56,10 @@ module Carat
       # hostile binding of a million keys would overflow the stack.
       MAX_KEYS = 64
 
-      # The leader of a configuration: the value of its last keymap.leader
-      # line that is one key in notation, Vim's backslash when there is
-      # none. add_checked notes the lines that are not.
+      # The leader of a configuration, as Config#leader reads it.
       #: (Config) -> String
       def self.leader_from(config)
-        leader = DEFAULT_LEADER
-        i = 0
-        n = config.count
-        while i < n
-          line = config.line_at(i)
-          leader = line.words[0].to_s if line.scope == "keymap" && line.name == "leader" && leader_problem(line.words).empty?
-          i += 1
-        end
-        leader
-      end
-
-      # Why the words cannot be the leader, or "".
-      #: (Array[String]) -> String
-      def self.leader_problem(words)
-        return "keymap.leader takes one key" unless words.length == 1
-        parsed = KeyNotation.parse(words[0].to_s, "")
-        return parsed.error.to_s unless parsed.ok?
-        return "keymap.leader takes one key" if parsed.codes.empty?
-        ""
+        config.leader
       end
 
       # The keymap of a pick list's buffer: the configuration's
@@ -173,11 +144,11 @@ module Carat
       def apply(line, leader, owner, known, check)
         name = line.name
         words = line.words
-        if name == "leader"
+        if name == Config::LEADER
           return "a plugin cannot set keymap.leader" unless owner.empty?
-          return Keymap.leader_problem(words)
+          return Config.leader_problem(words)
         end
-        return name_group(line, leader) if name == GROUP
+        return name_group(line, leader) if name == Config::GROUP
         pick = name == PICK
         mode = pick ? Mode::NORMAL : Mode.from_name(name)
         return "unknown mode #{name}" if mode.nil?
@@ -207,7 +178,7 @@ module Carat
           conflicts << "#{Mode.name_of(mode)}.#{keys} is already bound by plugin #{holder}"
           return ""
         end
-        bind_owned(mode, parsed.codes, value == NONE ? nil : value, owner)
+        bind_owned(mode, parsed.codes, value == Config::NONE ? nil : value, owner)
         ""
       end
 

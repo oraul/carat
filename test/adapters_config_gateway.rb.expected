@@ -11,6 +11,10 @@ ok   a directory named .caratrc is skipped
 ok   a file that cannot be read is reported and skipped
 ok   a project file swapped for a link after the check is not read
 ok   a project file cannot bind a write, a quit, or the command line
+ok   a project file keeps only the allowlist's bindings
+ok   a project file cannot bind a plugin's file action or unbind the command line
+ok   a project file cannot take the user's quit or the leader's save
+ok   a key the user freed is the project's to bind
 ok   a project leader leaves <leader>fs and <leader>qw on the user's leader
 ok   a project leader leaves the default leader
 ok   a linked project file is refused
@@ -23,4 +27,5 @@ ok   a linked user file is read
 ok   illegal bytes and a huge tabstop are lines of their files
 ok   the files are found under the home and working directories the port names
 ok   the editor applies the files and shows the first problem with the count of the others
-adapters_config_gateway: 25 passed, 0 failed
+ok   a refused project line leaves : on the command line and x on delete
+adapters_config_gateway: 30 passed, 0 failed
