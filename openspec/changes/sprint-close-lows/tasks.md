@@ -8,7 +8,7 @@
 ## 2. Security findings both reviewers missed
 
 - [x] 2.1 `.claude/workflows/sprint-planning.js`: `SKEPTIC.security_missed`, the prompt asking for it, `missedSecurity`, the `missed by both:` notes in the skeptic's record start, `blockingOf` over both. Test: "sprint: a security finding both reviewers missed is recorded and counts as blocking", "sprint: the skeptic is asked for the security findings both missed".
-- [x] 2.2 `.claude/agents/quality-reviewer.md`: the skeptic returns what both missed in `security_missed`; a security matter named in one line, unexamined; the sprint cap's continuation. Test: "agents: the quality reviewer leaves security points unexamined and returns missed ones in security_missed".
+- [x] 2.2 `.claude/agents/quality-reviewer.md`: the skeptic returns what both missed in `security_missed`; a security matter named in one line, unexamined. Test: "agents: the quality reviewer leaves security points unexamined and returns missed ones in security_missed".
 
 ## 3. The records change held by a blocking security finding
 
@@ -21,3 +21,8 @@
 ## 5. Docs and checks
 
 - [x] 5.1 README.md step 11, `docs/codebase-map.md` area 1. Test: `make docs-lint`, `make gates`, `make spec-validate`, `make tools-test`.
+
+## Quality review
+
+- [x] 6.1 `proposal.md` and task 2.2 said the quality reviewer's sprint mode gained the continuation at its cap, which its step 6 already states; the file's budget trims (step 4, the sprint and skeptic wording) were not named. Corrected. Fixed.
+- [x] 6.2 `design.md` did not say that the whole-tree sweep's blocking security findings hold the records change only through the plan's `security_first`, which the planner writes from the sweep's run state; stated. Fixed.

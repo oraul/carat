@@ -12,7 +12,7 @@ The sprint close keeps six gaps (the sprint-planning half of the queue's `sprint
   - The skeptic returns each security finding both reviewers missed in `security_missed`, findings of the reviewer's schema; the prompt asks for them; the workflow records each as a `security` note `missed by both: <finding>` with the skeptic's notes, and counts a High or Medium at confidence 8 or above among the blocking findings of the review record, the report, and the records gate.
   - `recordsHeld`: the records change is not started while the sprint has a blocking security finding or the plan names `security_first`; the report's Records line says it is held and why, and to resume it with `/deliver` once the fix merged.
 - `tools/run_state.sh` `add_note`: a `security` note whose text is already recorded for the change is not recorded again (the precedent of `quality-advisory`), so a `/sprint` rerun adds no duplicate.
-- `.claude/agents/quality-reviewer.md`: a possible security matter is named in one advisory line, unexamined, and left to the security reviewer; the skeptic returns what both missed in `security_missed`; the sprint mode's cap gets the continuation.
+- `.claude/agents/quality-reviewer.md`: a possible security matter is named in one advisory line, unexamined, and left to the security reviewer; the skeptic returns what both missed in `security_missed`; to stay within the file's 8192-byte budget, step 4 drops "not only the first" and the sprint and skeptic modes say the same in fewer words (its step 6 already names the continuation at the cap).
 - `.claude/commands/sprint.md`: a held records change is resumed only after its security fix merged.
 - `tools/tools_test.sh` cases for each heading, each failing before its fix.
 
