@@ -43,3 +43,12 @@
 - Also: CLAUDE.md
 - Category: editor
 - Added: 2026-11-19
+
+### the generated header tells the reader to run spin at bin/carat-gen-config.rb:30 (sprint-26 sweep quality, note 9)
+
+- Location: bin/carat-gen-config.rb:30
+- Why: the generated header tells the reader to run spin run carat-gen-config, while CLAUDE.md Commands makes make gen-config the one way (the target logs and checks the run), and the write-only-when-changed block is written twice (lines 42 and 51)
+- Fix: name make gen-config in the header and regenerate, and fold the two writes into one helper
+- Also: CLAUDE.md
+- Category: editor
+- Added: 2026-11-22

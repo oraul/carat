@@ -75,3 +75,11 @@
 - Fix: return nil when the target equals the cursor.
 - Category: editor
 - Added: 2026-11-17
+
+### wanted_col repeats the clamp of EditorState#clamp_col at carat/domain/motions.rb:254 (sprint-26 sweep quality, note 12)
+
+- Location: carat/domain/motions.rb:254
+- Why: wanted_col repeats the clamp of EditorState#clamp_col
+- Fix: return state.clamp_col(row, want < 0 ? state.max_col(row) : want)
+- Category: editor
+- Added: 2026-11-22

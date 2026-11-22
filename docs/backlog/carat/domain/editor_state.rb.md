@@ -66,3 +66,12 @@
 - Also: test/lint.rb
 - Category: editor
 - Added: 2026-11-21
+
+### the class comment lines 13 and 16 run far at carat/domain/editor_state.rb:13 (sprint-26 sweep quality, note 8)
+
+- Location: carat/domain/editor_state.rb:13
+- Why: the class comment lines 13 and 16 run far past the wrap of the rest, end_visual (editor_state.rb:153) repeats clamp_col, and the map line of area 4 omits replace_cmdline and cmdline_position
+- Fix: rewrap, set c.col = clamp_col(c.row, c.col), and add the two methods to the EditorState line of docs/codebase-map.md
+- Also: docs/codebase-map.md
+- Category: editor
+- Added: 2026-11-22

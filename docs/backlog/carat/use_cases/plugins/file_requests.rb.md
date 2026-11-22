@@ -82,3 +82,29 @@ Match the existing style: the domain require is wedged between the `../files` us
 - Fix: correct the comment.
 - Category: plugins
 - Added: 2026-11-21
+
+### run_program refuses a slash in argv[0] but Process.spawn resolves at carat/use_cases/plugins/file_requests.rb:160 (sprint-26 sweep security Low (4), note 18)
+
+- Location: carat/use_cases/plugins/file_requests.rb:160
+- Why: run_program refuses a slash in argv[0] but Process.spawn resolves the name through PATH, so an empty or relative PATH entry (such as . or ::) makes a trusted-root project's own ./git run, against the comment's promise
+- Fix: resolve argv[0] against absolute PATH entries only and spawn the absolute path, refusing when none matches
+- Category: security
+- Added: 2026-11-22
+
+### the timeout message 'ran past 2 seconds' is spelled at carat/use_cases/plugins/file_requests.rb:144 (sprint-26 sweep quality, note 30)
+
+- Location: carat/use_cases/plugins/file_requests.rb:144
+- Why: the timeout message 'ran past 2 seconds' is spelled apart from ProcessRunner::CAPTURE_SECONDS (carat/drivers/process_runner.rb:30), and carat/plugins/git_signs/plugin.rb:42 detects a stall by matching that suffix (TEXT_LIMIT 65_532 at :41 is likewise tied to CAPTURE_LIMIT by hand), so changing the deadline or the limit silently breaks git_signs' stall back-off
+- Fix: give TextResponse a timed_out flag (or the port a capture_seconds reader the message is built from) and have git_signs read the flag instead of the text
+- Also: carat/drivers/process_runner.rb, carat/plugins/git_signs/plugin.rb
+- Category: plugins
+- Added: 2026-11-22
+
+### and :75, carat/use_cases/plugins/file_requests.rb:28, and carat/drivers/process_runner.rb:20 have class comments with at carat/use_cases/plugins/window_requests.rb:32 (sprint-26 sweep quality, note 39)
+
+- Location: carat/use_cases/plugins/window_requests.rb:32
+- Why: and :75, carat/use_cases/plugins/file_requests.rb:28, and carat/drivers/process_runner.rb:20 have class comments with broken wrapping (a one-word line, lines past 100 columns, a stray sentence 'The use cases have no reader named as a request.')
+- Fix: rewrap the comments and drop or reword the stray sentence
+- Also: carat/drivers/process_runner.rb, carat/use_cases/plugins/window_requests.rb
+- Category: plugins
+- Added: 2026-11-22

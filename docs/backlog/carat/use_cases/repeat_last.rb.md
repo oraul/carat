@@ -29,3 +29,11 @@
 - Also: carat/use_cases/arrange_view.rb, carat/use_cases/leave_insert.rb, carat/use_cases/insert_tab.rb, carat/use_cases/dispatcher.rb, carat/domain/options.rb
 - Category: editor
 - Added: 2026-11-19
+
+### robustness: last.replaying = true is reset only on the at carat/use_cases/repeat_last.rb:49 (sprint-26 sweep quality, note 27)
+
+- Location: carat/use_cases/repeat_last.rb:49
+- Why: robustness: last.replaying = true is reset only on the normal path (56), so a handler that raises leaves LastChange replaying and later changes unrecorded for the dot command
+- Fix: wrap the handler call and the insert replay in begin/ensure last.replaying = false
+- Category: editor
+- Added: 2026-11-22

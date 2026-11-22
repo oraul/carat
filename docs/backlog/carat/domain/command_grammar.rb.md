@@ -82,3 +82,11 @@
 - Also: config/default.caratrc
 - Category: editor
 - Added: 2026-11-21
+
+### accept and accept_visual repeat the same opening (the want at carat/domain/command_grammar.rb:144 (sprint-26 sweep quality, note 11)
+
+- Location: carat/domain/command_grammar.rb:144
+- Why: accept and accept_visual repeat the same opening (the want reset to :cancel, remember, and the :search prompt branch)
+- Fix: one private helper for the shared start that both call
+- Category: editor
+- Added: 2026-11-22

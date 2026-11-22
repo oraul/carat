@@ -64,3 +64,11 @@
 - Fix: fail in END for every unseen strict base name and treat an empty value as unmeasured.
 - Category: pipeline
 - Added: 2026-11-21
+
+### compare ignores a name present only in BASE, so at tools/metrics.sh:110 (sprint-26 sweep quality, note 43)
+
+- Location: tools/metrics.sh:110
+- Why: compare ignores a name present only in BASE, so an allocs.* or rounds.* line missing from CURRENT passes silently, though the usage at :18 says an unmeasured strict value fails and run_state.sh bench_compare reports base keys not seen
+- Fix: in the END block, FAIL each allocs or rounds name of BASE absent from CURRENT
+- Category: pipeline
+- Added: 2026-11-22

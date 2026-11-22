@@ -17,3 +17,12 @@
 - Also: carat/plugins/explorer/plugin.rb, carat/domain/key_hints.rb
 - Category: editor
 - Added: 2026-11-15
+
+### docs currency: the Options comment lists theme and background at config/default.caratrc:11 (sprint-26 review quality, note 4)
+
+- Location: config/default.caratrc:11
+- Why: docs currency: the Options comment lists theme and background among the options read from these lines only that :set does not change, but set-options and colorscheme-command made :set theme=, :set bg=, and :colorscheme change them live (SetCommandHandler NAMES and its header comment); the generated mirror carat/domain/default_config.rb:16 and docs/compatibility.md:699 (every one of them but theme, background, ... is set by :set too) carry the same stale text
+- Fix: take theme and background out of the read-from-these-lines-only list in config/default.caratrc and out of the exception list in docs/compatibility.md:699, then run make gen-config
+- Also: carat/domain/default_config.rb, docs/compatibility.md
+- Category: editor
+- Added: 2026-11-22

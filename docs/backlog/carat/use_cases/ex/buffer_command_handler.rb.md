@@ -25,3 +25,12 @@
 - Also: carat/use_cases/ex/register_command_handler.rb, carat/use_cases/visual/put_over_selection.rb
 - Category: editor
 - Added: 2026-11-10
+
+### duplication: the ASCII digit-run predicate digits? is copied verbatim at carat/use_cases/ex/buffer_command_handler.rb:102 (sprint-26 sweep quality, note 25)
+
+- Location: carat/use_cases/ex/buffer_command_handler.rb:102
+- Why: duplication: the ASCII digit-run predicate digits? is copied verbatim in carat/use_cases/ex/tab_command_handler.rb:102 and carat/use_cases/ex/history_command_handler.rb:61 (public self.digits?, which the map lists)
+- Fix: one domain function (for example ExGrammar.digits?) called by all three handlers, the map updated
+- Also: carat/use_cases/ex/tab_command_handler.rb, carat/use_cases/ex/history_command_handler.rb
+- Category: editor
+- Added: 2026-11-22

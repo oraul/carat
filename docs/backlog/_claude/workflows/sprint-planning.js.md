@@ -110,3 +110,37 @@
 - Also: docs/queue-backlog.md
 - Category: security
 - Added: 2026-11-21
+
+### The sprint's security notes run in an unguarded general agent (pipeline-lows-a security Low (4))
+
+- Location: `.claude/workflows/sprint-planning.js`, the `sprint: notes` start running `securityNotes`.
+- Why: the security findings' texts quote reviewed code, and the low-effort runner holds Bash with no `tools/agent_guard.sh` hook, so planted text could lead it to run more than the one command; the skeptic's notes now run under the quality reviewer's guarded record mode, this start does not, since the read profile refuses a word naming `build/pipeline`, which a security finding may quote, and the planner would then never start.
+- Fix: record the notes without an agent prompt (a fixed `tools/run_state.sh` command reading the notes as JSON from a file), or a guard profile allowing only `run_state.sh note` whose word rules let a finding text through.
+- Also: tools/agent_guard.sh, tools/run_state.sh
+- Category: security
+- Added: 2026-11-22
+
+### The sprint's security notes run in an unguarded general agent (security Low (4))
+- Location: `.claude/workflows/sprint-planning.js:231` (securityNotes, the 'sprint: notes' start).
+- Why: the sprint's security notes still run in a general agent with Bash and no `tools/agent_guard.sh` hook; a merged change can plant code whose quoted text, carried into a security finding, carries instructions, and the low-effort runner may follow them instead of running only the one note command. This predates pipeline-lows-a, which moved only the skeptic's notes under the guarded quality reviewer.
+- Fix: record the notes without an agent prompt: the workflow writes the notes as JSON to a file, and a fixed `tools/run_state.sh` command reads that file; or start the runner under an agent type whose hook runs `tools/agent_guard.sh` with a profile that allows only `run_state.sh note`, and whose word rules let a finding's text through, including one that names build/pipeline.
+none
+- Also: tools/agent_guard.sh, tools/run_state.sh
+- Category: security
+- Added: 2026-11-22
+
+### dead schema field: the SKEPTIC schema still lists security_recorded at .claude/workflows/sprint-planning.js:64 (sprint-26 review quality, note 12)
+
+- Location: .claude/workflows/sprint-planning.js:64
+- Why: dead schema field: the SKEPTIC schema still lists security_recorded as a property and requires it (line 72), but the skeptic records nothing now and the workflow never reads the count
+- Fix: drop security_recorded from properties and required, and from any skeptic task text that names it
+- Category: pipeline
+- Added: 2026-11-22
+
+### duplication: the record prompt (Run this one command with at .claude/workflows/sprint-planning.js:230 (sprint-26 sweep quality, note 50)
+
+- Location: .claude/workflows/sprint-planning.js:230
+- Why: duplication: the record prompt (Run this one command with the Bash tool ... exactly as written ... Return ok true when it exited 0) is spelled at :230, :248, and :285, and again in periodic-review.js:143
+- Fix: one helper per workflow taking the command lines, the agent type, and the label
+- Category: pipeline
+- Added: 2026-11-22

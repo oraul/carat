@@ -71,3 +71,11 @@
 - Also: Makefile
 - Category: pipeline
 - Added: 2026-11-21
+
+### correctness of the report: the preview is removed and at tools/spec_validate.sh:26 (sprint-26 sweep quality, note 42)
+
+- Location: tools/spec_validate.sh:26
+- Why: correctness of the report: the preview is removed and rebuilt for every active change, so with two active changes a failed earlier preview is wiped by the next one, contrary to the header (a failed preview is kept for reading) and the message naming build/spec-preview
+- Fix: one preview directory per change (build/spec-preview/NAME), or stop at the first failure
+- Category: pipeline
+- Added: 2026-11-22

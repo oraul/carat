@@ -53,3 +53,21 @@ Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= 
 - Fix: push that end column less `from` as the length, and add a palette test reading a key cell's group.
 - Category: editor
 - Added: 2026-11-20
+
+### styles pushes the name column end, char_count(line, bytes_within(line, room at carat/use_cases/discovery/follow_palette.rb:212 (sprint-26 sweep quality, note 15)
+
+- Location: carat/use_cases/discovery/follow_palette.rb:212
+- Why: styles pushes the name column end, char_count(line, bytes_within(line, room + NAME_WIDTH)), as the token length, but SyntaxLine tokens are (start, length, group) triples, so the PmenuExtra run starts at the name column and runs room further, over the key column, against the comment that it ends at the key; test/editor_palette.rb checks only name and description cells
+- Fix: push that end minus from, and add a test that the key column keeps Pmenu or PmenuSel
+- Also: test/editor_palette.rb
+- Category: editor
+- Added: 2026-11-22
+
+### char_count re-implements the count of UTF-8 lead bytes that at carat/use_cases/discovery/follow_palette.rb:274 (sprint-26 sweep quality, note 16)
+
+- Location: carat/use_cases/discovery/follow_palette.rb:274
+- Why: char_count re-implements the count of UTF-8 lead bytes that json_rpc_language_gateway.rb:1175 and visit_target.rb:210 also hand-roll
+- Fix: one Utf8.char_count(text, bytes) in carat/domain/utf8.rb used by all three
+- Also: carat/domain/utf8.rb
+- Category: editor
+- Added: 2026-11-22

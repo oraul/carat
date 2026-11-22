@@ -180,3 +180,19 @@
 - Fix: one call whose jq prints both.
 - Category: pipeline
 - Added: 2026-11-21
+
+### PR-controlled file names are word-split and glob-expanded in for at tools/ci_scope.sh:99 (sprint-26 sweep security Low (4), note 17)
+
+- Location: tools/ci_scope.sh:99
+- Why: PR-controlled file names are word-split and glob-expanded in for path in $changed (and $since at 123), so a path with spaces or glob characters is classified by fragments or by other files' names when deciding to skip the checks
+- Fix: set -f and read the names line by line (while IFS= read -r path), or use git diff -z
+- Category: security
+- Added: 2026-11-22
+
+### duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice at tools/ci_scope.sh:80 (sprint-26 sweep quality, note 46)
+
+- Location: tools/ci_scope.sh:80
+- Why: duplication: the push path calls gh api repos/REPO/commits/SHA/pulls twice, once for the head sha and once for the number
+- Fix: one call with --jq on .[0] printing both values, split into head and number
+- Category: pipeline
+- Added: 2026-11-22

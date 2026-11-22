@@ -35,15 +35,6 @@
 - Category: pipeline
 - Added: 2026-11-03
 
-## Spinel compiles private_constant without enforcing it
-
-- Where: the pinned Spinel (`SPINEL_REF` in the `Makefile`); every `private_constant` line under `carat/use_cases/` since the `use-case-boundaries` change.
-- Why it matters: a probe on the pinned compiler compiled `private_constant :NAME` and still let another class read `Owner::NAME`, which CRuby refuses with `NameError`, so the declaration documents the intent but stops nothing. `private` on methods is enforced (a call raises `NoMethodError`). `test/lint.rb` carries the rule instead: every constant of a use case file is listed in a `private_constant`, and no file names `Owner::NAME` of a use case outside its own file.
-- Fix outline: reduce it to a minimal program (a class with a private constant read from another class), report it upstream, and when a `SPINEL_REF` bump enforces it, keep the lint rule only as a check that the list is complete. Rechecked at f34005bf: still open, the probe still reads `Owner::NAME` from another class.
-- Also: test/lint.rb
-- Category: pipeline
-- Added: 2026-11-03
-
 ## The docs of tools-test and /review lag the workflows
 
 - Where: the `tools-test` help line of the `Makefile` (line 355 at 594dd35) lists the shell tools but not the workflow helpers it now runs with node; `.claude/commands/review.md` (line 8) says the quality reviewer reviews the whole tree; the guard case of `tools/tools_test.sh` (line 1000) still uses `tmp/.review-quality` while the workflow names `tmp/.review-quality-N`. Quality advisories in `partial-results`.
@@ -305,3 +296,12 @@ none
 - Also: bench/keys.rb, bench/run.sh, CLAUDE.md
 - Category: pipeline
 - Added: 2026-11-21
+
+### toolchain-clean runs rm -rf tmp, which also deletes every at Makefile:209 (sprint-26 sweep quality, note 1)
+
+- Location: Makefile:209
+- Why: toolchain-clean runs rm -rf tmp, which also deletes every delivery lane worktree tmp/.lane-<change> (kept on a stop, with its uncommitted work), the review and merge-gate worktrees, and the scout packs, leaving stale git worktree records, while its help line, the README, CLAUDE.md, and docs/architecture.md section 2 say it removes the Spinel checkout and the toolchain; it also misses an overridden SPINEL_SRC or PREFIX
+- Fix: rm -rf "$(SPINEL_SRC)" "$(PREFIX)" only (plus any cache it owns), and keep the help line and README row saying exactly that
+- Also: CLAUDE.md, docs/architecture.md
+- Category: pipeline
+- Added: 2026-11-22

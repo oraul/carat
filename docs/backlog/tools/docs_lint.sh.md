@@ -110,3 +110,12 @@
 - Fix: a change that does not grow the lane queues passes while its base is over budget, and the commit pushing them over is the one refused; accepted when a plan that records a Red main docs-lint decision passes docs-lint at its first check without a fix round.
 - Category: pipeline
 - Added: 2026-11-21
+
+### drift: the header says a sprint holds 0 to at tools/docs_lint.sh:22 (sprint-26 sweep quality, note 40)
+
+- Location: tools/docs_lint.sh:22
+- Why: drift: the header says a sprint holds 0 to 2 items in the backlog lane, but check_queue passes a share of 3 for both lanes (docs_lint.sh:232) and its own comment at :215 says 3, and docs/codebase-map.md area 1 (the docs_lint.sh bullet) repeats 0 to 2
+- Fix: say 0 to 3 in each lane in the header and the map
+- Also: docs/codebase-map.md
+- Category: pipeline
+- Added: 2026-11-22

@@ -42,3 +42,11 @@
 - Fix outline: one private step_width(shiftwidth, tabstop), or an Options reader passed in.
 - Category: editor
 - Added: 2026-11-17
+
+### duplication: the shiftwidth fallback shiftwidth > 0 ? shiftwidth at carat/domain/operators.rb:172 (sprint-26 sweep quality, note 24)
+
+- Location: carat/domain/operators.rb:172
+- Why: duplication: the shiftwidth fallback shiftwidth > 0 ? shiftwidth : (tabstop > 0 ? tabstop : 8) is spelled in shift_block and again in shift (320), and indent_width (341) repeats the tab fallback
+- Fix: one private Operators.step_width(shiftwidth, tabstop) and the tab fallback taken from callers passing Options#tab_width
+- Category: editor
+- Added: 2026-11-22
