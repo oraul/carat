@@ -104,6 +104,12 @@ ok   Turning a flag on, off, and over: invreducedmotion
 ok   Turning a flag on, off, and over: reducedmotion!
 ok   A value for a flag: reducedmotion=1
 ok   Resetting an option: reducedmotion&
+ok   Turning a flag on, off, and over: nohid
+ok   Turning a flag on, off, and over: hid
+ok   Turning a flag on, off, and over: invhid
+ok   Turning a flag on, off, and over: hid!
+ok   A value for a flag: hid=1
+ok   Resetting an option: hid&
 ok   Setting a word: winborder=single
 ok   Setting a word: the bare winborder shows it
 ok   A word the configuration refuses: winborder=bold
@@ -151,4 +157,4 @@ ok   The number column follows set number
 ok   A tab is drawn at the new tabstop
 ok   Fewer undo levels
 ok   :set list and :set lcs draw the marks at once
-editor_set_options: 153 passed, 0 failed
+editor_set_options: 159 passed, 0 failed

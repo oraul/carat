@@ -53,9 +53,10 @@ ok   Ctrl-6 is Ctrl-^
 ok   A count goes to that buffer
 ok   No alternate buffer
 ok   A modified buffer refuses Ctrl-^
+ok   A modified buffer is left hidden by Ctrl-^
 ok   A split keeps the alternate buffer
 ok   A new tab page keeps the alternate buffer
 ok   :e # shows the alternate file
 ok   :e # without an alternate file
 ok   :e # on an alternate buffer without a name
-editor_jumps: 60 passed, 0 failed
+editor_jumps: 61 passed, 0 failed
