@@ -609,6 +609,7 @@ module Carat
       def open(path)
         options = @state.options
         @frame_presenter.plain = @terminal.no_color?
+        @frame_presenter.basic_colors = @terminal.colors == Domain::ColorDepth::COLORS_16
         if options.startscreen && (path.empty? || @files.stat(path).directory)
           @start_screen.start(@clock.now, !options.reducedmotion, Domain::StartArt.from_plain(@terminal.no_color?))
         elsif !path.empty?

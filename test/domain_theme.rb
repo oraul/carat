@@ -145,7 +145,7 @@ module DomainThemeTest
     id = 0
     receding = RECEDING.include?(theme.name)
     while id < H::COUNT
-      unless NO_TEXT.include?(id) || (receding && (GUIDES.include?(id) || id == H::FLOAT_BORDER))
+      unless NO_TEXT.include?(id) || (receding && (GUIDES.include?(id) || id == H::FLOAT_BORDER || id == H::WINDOW_SEPARATOR))
         fg = theme.fg(id + layer)
         bg = theme.bg(id + layer)
         if fg < 0 || bg < 0
@@ -581,6 +581,18 @@ module DomainThemeTest
       theme = D::Themes.find(input[0].to_s, "terminal")
       [theme.fg(H::FLOAT_BORDER), theme.bg(H::FLOAT_BORDER), theme.fg16(H::FLOAT_BORDER)]
     end
+    # Scenario: WinSeparator is the quiet border tone. Every palette draws
+    # it in its BORDER color; Carat's keep 1.5:1 on the editor's
+    # background at 24 bits and 1.4:1 at 256 colors, out of the 3:1 floor,
+    # the others stay at 3:1.
+    D::Themes::NAMES.each_with_index do |name, i|
+      theme = D::Themes.find(name, "theme")
+      border = role_row(D::Themes::PALETTES[i], D::Themes::BORDER)
+      t.assert_equal([border[0], border[2]], [theme.fg(H::WINDOW_SEPARATOR), theme.fg16(H::WINDOW_SEPARATOR)], "WinSeparator is the quiet border tone: #{name}")
+      next unless RECEDING.include?(name)
+      t.assert_true(contrast(theme.fg(H::WINDOW_SEPARATOR), theme.bg(H::NORMAL)) >= 150, "WinSeparator stays visible on the editor: #{name} at 24 bits")
+      t.assert_true(contrast(shown_256(theme.fg(H::WINDOW_SEPARATOR), theme.fg256(H::WINDOW_SEPARATOR)), shown_256(theme.bg(H::NORMAL), theme.bg256(H::NORMAL))) >= 140, "WinSeparator stays visible on the editor: #{name} at 256 colors")
+    end
     # Scenario: The border stays apart from the float. Out of the 3:1
     # floor, Carat's float border keeps 1.3:1 on the float's background,
     # on its own and on the cursor line, at 24 bits and at 256 colors.
@@ -695,9 +707,27 @@ module DomainThemeTest
       theme = D::Themes.find(name, "theme")
       t.assert_true(theme.bg16(H::NORMAL + lit) >= 0 && theme.bg16(H::COMMENT + lit) == theme.bg16(H::NORMAL), "#{name}: at 16 colors the painted cursor line keeps the background")
     end
-    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 3 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
+    t.assert_equal([H::COMMENT, H::COMMENT, H::NORMAL, 4 * H::COUNT], [H.base(H::COMMENT), H.base(H::COMMENT + lit), H.base(lit), H::LIMIT], "base strips the cursor-line layer")
     inside = H::FLOAT_LAYER
     t.assert_equal([H::MARKUP_HEADING, H::NORMAL, 2 * H::COUNT], [H.base(H::MARKUP_HEADING + inside), H.base(inside), inside], "base strips the float layer")
+    side = H::SIDEBAR_LAYER
+    t.assert_equal([H::DIRECTORY, H::NORMAL, 3 * H::COUNT], [H.base(H::DIRECTORY + side), H.base(side), side], "base strips the sidebar layer")
+
+    # Scenario: A sidebar window sits on a darker background. A group in
+    # the sidebar layer keeps its foreground and attributes over PanelNC's
+    # background at 24 bits and 256 colors unless it has a background of
+    # its own, and is the group itself at 16 colors.
+    t.assert_equal([painted.fg(H::COMMENT), painted.bg(H::STATUS_NC), painted.bg256(H::STATUS_NC), painted.attr(H::COMMENT)], [painted.fg(H::COMMENT + side), painted.bg(H::COMMENT + side), painted.bg256(H::COMMENT + side), painted.attr(H::COMMENT + side)], "a group in a sidebar keeps its color over PanelNC's background")
+    t.assert_equal([painted.bg(H::VISUAL), painted.bg256(H::VISUAL), painted.bg(H::STATUS_NC)], [painted.bg(H::VISUAL + side), painted.bg256(H::VISUAL + side), painted.bg(H::NORMAL + side)], "a group with a background of its own keeps it in a sidebar, Normal takes PanelNC's")
+    t.assert_equal([painted.fg16(H::COMMENT), painted.bg16(H::COMMENT), painted.attr16(H::COMMENT), painted.bg16(H::NORMAL)], [painted.fg16(H::COMMENT + side), painted.bg16(H::COMMENT + side), painted.attr16(H::COMMENT + side), painted.bg16(H::NORMAL + side)], "at 16 colors a sidebar group is the group itself")
+    D::Themes::NAMES.each do |name|
+      theme = D::Themes.find(name, "theme")
+      terminal = D::Themes.find(name, "terminal")
+      t.assert_equal(theme.bg(H::STATUS_NC), theme.bg(H::NORMAL + side), "#{name}: the sidebar's background is PanelNC's")
+      t.assert_true(terminal.bg(H::NORMAL + side) >= 0 && terminal.fg(H::NORMAL + side) >= 0, "#{name}: on the terminal's background the sidebar takes the palette's text color")
+      t.assert_equal([], low_contrast(theme, false, side), "#{name}: the sidebar layer meets the contrast rule at 24 bits")
+      t.assert_equal([], low_contrast(theme, true, side), "#{name}: the sidebar layer meets the contrast rule at 256 colors")
+    end
 
     # Inside a float a group keeps its foreground and attributes over
     # NormalFloat's background, at every depth, unless it has its own.

@@ -37,8 +37,12 @@ module Carat
     # in its rectangle (sign column, line number gutter, text with tabs
     # expanded and unprintable code points as markers, tilde rows), a
     # separator row under each window above another and a separator
-    # column between windows side by side, both in WinSeparator, the one
-    # status bar of the current window on the row above the last
+    # column between windows side by side, both in WinSeparator, except
+    # where a sidebar meets the editor: the sidebar is drawn on its
+    # darker background (the sidebar layer of the groups), the column
+    # between them blank in that layer, and no glyph, unless the terminal
+    # shows no background change (NO_COLOR, or 16 colors), when the glyph
+    # stays as the edge, the one status bar of the current window on the row above the last
     # (StatusBar), each file window's winbar on its first row when the
     # breadcrumbs mode shows them (Winbar), and the message or command
     # line row (a
@@ -128,6 +132,7 @@ module Carat
       attr_reader :winbar #: Winbar
       attr_reader :float_painter #: FloatPainter
       attr_reader :plain #: bool
+      attr_reader :basic_colors #: bool
 
       # @rbs @front: Domain::Frame
       # @rbs @back: Domain::Frame
@@ -156,6 +161,7 @@ module Carat
       # @rbs @current: bool
       # @rbs @number_hl: Integer
       # @rbs @floating: bool
+      # @rbs @basic_colors: bool
       # @rbs @repainted: Array[Integer]
       # @rbs @guides: IndentGuides
       # @rbs @guide_row: Integer
@@ -168,6 +174,7 @@ module Carat
         @winbar = winbar
         @float_painter = float_painter
         @plain = false
+        @basic_colors = false
         @palette = palette
         @input = input
         @plugin_ui = plugin_ui
@@ -278,7 +285,7 @@ module Carat
           i += 1
         end
         ascii = options.icons == "ascii"
-        paint_separators(back, layout, layout.root, ascii ? ASCII_SEPARATOR : SEPARATOR)
+        paint_separators(back, layout, layout.root, ascii ? ASCII_SEPARATOR : SEPARATOR, !@plain && !@basic_colors)
         paint_headers(back, tab)
         paint_winbars(back, tab, in_float, ascii)
         if bar >= tabline
@@ -337,6 +344,13 @@ module Carat
       #: (String, Integer) -> Integer
       def display_width(text, tabstop)
         display_col(text, text.length, tabstop)
+      end
+
+      # Whether the terminal has only the 16 basic colors, where a sidebar
+      # shows no background change, so the separator glyph stays at its edge.
+      #: (bool) -> void
+      def basic_colors=(value)
+        @basic_colors = value
       end
 
       # Draws the notification boxes and the status bar's progress with
@@ -583,7 +597,8 @@ module Carat
         styled = !@plain && buffer.styled? && !highlights.active?
         search = @drawn
         @current = current
-        lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : 0
+        surface = window.fixed_width ? Domain::Highlight::SIDEBAR_LAYER : 0
+        lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : surface
         count = buffer.line_count
         guided = @guides.on? && !buffer.scratch? && !folded
         marked = @marks.on? && !buffer.scratch?
@@ -605,7 +620,7 @@ module Carat
           sign = ""
           sign_group = Domain::Highlight::SIGN_COLUMN
           cur = -1
-          layer = 0
+          layer = surface
           @guide_row = guided && row < count ? i : -1
           @sel_from = -1
           @sel_to = -2
@@ -745,7 +760,7 @@ module Carat
       # LineNrFifth on every fifth relative number, LineNr otherwise.
       #: (Integer, Integer, Integer, Domain::Options) -> Integer
       def number_group(layer, cur, number, options)
-        return Domain::Highlight::CURSOR_LINE_NUMBER if layer > 0
+        return Domain::Highlight::CURSOR_LINE_NUMBER if layer == Domain::Highlight::CURSOR_LINE_LAYER
         fifth = options.relativenumber && cur < 0 && number > 0 && number % 5 == 0
         fifth ? Domain::Highlight::LINE_NUMBER_FIFTH : Domain::Highlight::LINE_NUMBER
       end
@@ -985,9 +1000,11 @@ module Carat
 
       # A separator column of glyph after every child of a row but the
       # last, over the row's whole height, then the same inside nested
-      # splits.
-      #: (Domain::Frame, Domain::Layout, Integer, String) -> void
-      def paint_separators(frame, layout, id, glyph)
+      # splits. Where one of the two children is a sidebar and by_color
+      # says its background shows the edge, the column is a blank cell of
+      # the sidebar's layer instead, no glyph.
+      #: (Domain::Frame, Domain::Layout, Integer, String, bool) -> void
+      def paint_separators(frame, layout, id, glyph, by_color)
         current = layout.node(id)
         return if current.leaf?
         children = current.children
@@ -996,13 +1013,16 @@ module Carat
           child = layout.node(children[i])
           if current.kind == :row && i < children.length - 1
             sep = child.col + child.width
+            surface = by_color && (layout.sidebar?(children[i]) || layout.sidebar?(children[i + 1]))
+            text = surface ? " " : glyph
+            group = surface ? Domain::Highlight::NORMAL + Domain::Highlight::SIDEBAR_LAYER : Domain::Highlight::WINDOW_SEPARATOR
             r = current.row
             while r < current.row + current.height
-              frame.put(r, sep, glyph, Domain::Highlight::WINDOW_SEPARATOR)
+              frame.put(r, sep, text, group)
               r += 1
             end
           end
-          paint_separators(frame, layout, children[i], glyph)
+          paint_separators(frame, layout, children[i], glyph, by_color)
           i += 1
         end
       end

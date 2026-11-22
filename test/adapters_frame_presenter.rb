@@ -822,6 +822,36 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 40)
     t.assert_equal("!item", f.row_text(0)[0, 5], "its one-cell sign column still shows")
 
+    # Scenario: A sidebar beside the editor draws no separator glyph. The
+    # sidebar's cells are in its layer, the column after it a blank cell of
+    # that layer, and no cell is in WinSeparator; two splits of the editor
+    # keep the glyph in WinSeparator, and without a background change
+    # (NO_COLOR, or 16 colors) the sidebar keeps the glyph too.
+    side_layer = D::Highlight::SIDEBAR_LAYER
+    t.assert_equal([[], " ", side_layer + D::Highlight::NORMAL, D::Highlight::LINE_NUMBER], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl, f.cell(0, 13).hl], "A sidebar beside the editor draws no separator glyph: a blank cell of the sidebar's layer, the editor's own gutter after it")
+    t.assert_equal([side_layer + D::Highlight::NORMAL, side_layer + D::Highlight::NON_TEXT, D::Highlight::NON_TEXT], [f.cell(0, 5).hl, f.cell(3, 0).hl, f.cell(3, 13).hl], "the sidebar's text and tilde rows are in its layer, the editor's tilde rows are not")
+    # The cursor row of the current sidebar keeps the cursor-line layer
+    # alone, the rows under it the sidebar's.
+    s.options.cursorline = true
+    f = draw(s, 6, 40)
+    t.assert_equal([D::Highlight::CURSOR_LINE_LAYER + D::Highlight::NORMAL, side_layer + D::Highlight::NON_TEXT], [f.cell(0, 5).hl, f.cell(3, 0).hl], "the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's")
+    s.options.cursorline = false
+    f = draw(s, 6, 40)
+    s.tab.layout.split(0, true, 0, 5)
+    f = draw(s, 6, 40)
+    t.assert_equal([["\u2502"], " ", side_layer + D::Highlight::NORMAL], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl], "two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell")
+    # Scenario: Without a background change the sidebar keeps its edge.
+    P.plain = true
+    f = draw(s, 6, 40)
+    t.assert_equal([["\u2502"], "\u2502", D::Highlight::WINDOW_SEPARATOR], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl], "NO_COLOR keeps the glyph at the sidebar's edge")
+    P.plain = false
+    P.basic_colors = true
+    f = draw(s, 6, 40)
+    t.assert_equal([["\u2502"], "\u2502", D::Highlight::WINDOW_SEPARATOR], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl], "16 colors keep the glyph at the sidebar's edge")
+    P.basic_colors = false
+    f = draw(s, 6, 40)
+    t.assert_equal(" ", f.cell(0, 12).char, "256 colors draw the blank cell again, the stale glyph gone")
+
     # A plugin's prompt takes the place of the colon, with the cursor after
     # the text.
     # Scenario: Prompt in place of the colon.

@@ -1,0 +1,5 @@
+# Brief
+
+window-surfaces: the second Sprint 29 feature item in docs/queue-feature.md at 8228032, after finder-rows (#308); run it exactly as its queue entry says, quoted below. Touch no file of the backlog lane (docs/queue-backlog.md, docs/metrics-backlog.tsv). No model name or alias anywhere in names or prose. If the change edits tools/rules.sh, stop and name it.
+
+The queue entry: `window-surfaces` (T2 user request, estimated medium, Facet wave 3): Where: `carat/adapters/frame_presenter.rb:40` (the WinSeparator column between side-by-side windows), the sidebar background in `carat/domain/themes.rb`; `docs/design.md:10`, `:16`. Why: the decided design draws no glyph where two surfaces meet (the sidebar darker than the editor), a line only between two windows of one color. Fix outline: no separator where the sidebar meets the editor, the sidebar on its darker background, same-color splits keeping `│` in BORDER. Accepted when snapshots show sidebar plus editor with no separator glyph and two splits with `│`, under 16 colors and NO_COLOR an edge still visible. Backlog: none.
