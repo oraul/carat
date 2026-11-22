@@ -61,7 +61,7 @@ See `docs/contributor-notes.md`, Closing.
 ### package
 
 1. Confirm every task is `- [x]`, archive with the `openspec-archive-change` skill (`openspec archive "<change>" -y`, `--skip-specs` without delta specs), run `make spec-validate`, and commit.
-2. Append each non-blocking finding given (format: `docs/contributor-notes.md`, Findings) to `docs/findings/<change>.md` with `>>` after `mkdir -p docs/findings`. Then, as your prompt says, run `sh tools/run_state.sh plan-apply <change>` and `history <change>`, never `groom`; commit them as `docs: record the plan and the metrics history`.
+2. Append each non-blocking finding given (format: `docs/contributor-notes.md`, Findings) to `docs/findings/<change>.md` with `>>` after `mkdir -p docs/findings`. Then, as your prompt says, run `sh tools/run_state.sh history <change>`, `groom <change>`, then `plan-apply <change>`; commit them as `docs: record the plan and the metrics history`.
 3. Write the body to `build/pipeline/<change>.body.md` as `docs/contributor-notes.md`, Body, says, then run `sh tools/open_pr.sh write <change> "<title>"`, and commit the `pr.md`. Never call a pull request create tool or API, nor edit one with them.
 4. Run `sh tools/run_state.sh reviewed-edits <change>`, as it says, then `make gates` and `make docs-lint`. Fetch origin and push with `sh tools/run_state.sh push <change>`. Return `sh tools/run_state.sh get <change> pushed`, the full sha, as `pushed`, or the merge stops.
 5. Run `sh tools/open_pr.sh wait <change>` in the foreground (Bash timeout 600000); it records the number: return it as `pr`, or `stopped` with its message.

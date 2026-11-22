@@ -1,26 +1,25 @@
 export const meta = {
   name: 'sprint-planning',
-  description: 'Close a sprint of six merged changes (five before sprint-17): the review of its combined diff (security, never skipped, quality and architecture, and the skeptic), the whole-tree sweep every second sprint, the backlog grooming, and the next sprint\'s queue of six, which its records change, sprint-N-records, applies once with the sprint\'s row',
+  description: 'Close a sprint of six merged changes (five before sprint-17): the security review of its combined diff, never skipped, the whole-tree sweep every second sprint, and the planner, which reviews the diff\'s quality and architecture, reads the security findings against the code, grooms the backlog, and writes the next sprint\'s queue of six, which the next delivery\'s package step applies with the sprint\'s row',
   whenToUse: '/sprint after a merge; it ends at once with "not due" until the sprint\'s six changes (five before sprint-17) have merged',
   phases: [
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
-    { title: 'Review', detail: 'the security and quality reviewers over the combined diff in their sprint mode, each once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
-    { title: 'Notes', detail: 'each security finding of the reviewer\'s result in the sprint\'s run state, before the skeptic' },
-    { title: 'Skeptic', detail: 'the quality reviewer reads both results against the code and returns the quality findings it keeps, each security finding it disputes, as disputed, and each one both reviewers missed; the workflow records them, each one single-quoted shell word' },
-    { title: 'Plan', detail: 'the planner in its sprint mode: the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its three backlog items from backlog-pick' },
-    { title: 'Record', detail: 'the review results in the sprint\'s run state' },
-    { title: 'Records', detail: 'the sprint\'s records change, sprint-N-records, delivered through deliver-change.js unless a blocking security finding or the plan\'s security first holds it: history and groom write the backlog fold, the lane queues, and the sprints row once' },
+    { title: 'Review', detail: 'the security reviewer over the combined diff in its sprint mode, once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
+    { title: 'Notes', detail: 'each security finding of the reviewer\'s result in the sprint\'s run state, before the planner' },
+    { title: 'Plan', detail: 'the planner in its sprint mode: the quality review of the combined diff with the security findings read against the code, the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its three backlog items from backlog-pick; the workflow records the quality findings it keeps, each security finding it disputes, as disputed, and each one the reviewer missed, each one single-quoted shell word' },
+    { title: 'Record', detail: 'the review results, and the plan\'s security-first hold, in the sprint\'s run state; the next delivery\'s package step applies the plan with groom' },
   ],
 }
 
 // args: none. The sprint is the one tools/run_state.sh review-due counts
 // (docs/sprints.tsv): due once its six changes (five before sprint-17) merged, not due while its
-// plan waits in build/plan/ for its records change, sprint-N-records, which
-// this workflow delivers last and which alone applies it with
-// tools/run_state.sh groom, never a lane's package step. The diff reviewers
+// plan waits in build/plan/ for the next delivery's package step, which
+// applies it with tools/run_state.sh groom in that delivery's own pull
+// request (planner-loop), unless a blocking sprint security finding or the
+// plan's security first holds it. The security reviewer and the planner
 // record nothing: this workflow records each security finding of the
-// reviewer's result before the skeptic, so a capped skeptic loses none, and
-// the skeptic returns the quality findings it keeps and the security
+// reviewer's result before the planner, so a capped planner loses none, and
+// the planner returns the quality findings it keeps and the security
 // findings it disputes, as disputed, which this workflow records, so a
 // quality finding it drops is never recorded. The sweep, the whole-tree periodic review, records in its own
 // run state, <sprint>-sweep; one that failed to start is recorded there as
@@ -48,41 +47,28 @@ const SECURITY = {
   },
   required: ['ran', 'head', 'findings', 'not_reviewed', 'tool_calls'],
 }
-const QUALITY = {
-  type: 'object',
-  properties: {
-    head: { type: 'string' }, blocking: { type: 'array', items: { type: 'string' } }, advisory: { type: 'array', items: { type: 'string' } },
-    not_reviewed: { type: 'array', items: { type: 'string' } }, tool_calls: CALLS,
-  },
-  required: ['head', 'blocking', 'advisory', 'not_reviewed', 'tool_calls'],
-}
-const SKEPTIC = {
-  type: 'object',
-  properties: {
-    head: { type: 'string' },
-    kept_blocking: { type: 'integer', minimum: 0 }, kept_advisory: { type: 'integer', minimum: 0 }, dropped: { type: 'integer', minimum: 0 },
-    security_recorded: { type: 'integer', minimum: 0 }, disputed: { type: 'integer', minimum: 0 }, missed: { type: 'integer', minimum: 0 },
-    security_missed: { type: 'array', items: FINDING, description: 'each security finding both reviewers missed, empty when none; the workflow records them' },
-    notes: {
-      type: 'array',
-      description: 'each note to record: a quality finding kept or missed by both (kind quality), a security finding disputed ("disputed: REASON; FINDING", kind security); the workflow records them',
-      items: { type: 'object', properties: { kind: { type: 'string', enum: ['quality', 'security'] }, text: { type: 'string' } }, required: ['kind', 'text'] },
-    },
-    tool_calls: CALLS,
-  },
-  required: ['head', 'kept_blocking', 'kept_advisory', 'dropped', 'security_recorded', 'disputed', 'missed', 'security_missed', 'notes', 'tool_calls'],
-}
 const PLAN = {
   type: 'object',
   properties: {
     decisions: { type: 'array', items: { type: 'object', properties: { decision: { type: 'string' }, evidence: { type: 'string' } }, required: ['decision', 'evidence'] } },
-    security_first: { type: 'array', items: { type: 'string' } }, paths: { type: 'array', items: { type: 'string' } }, tool_calls: CALLS,
+    security_first: { type: 'array', items: { type: 'string' } }, paths: { type: 'array', items: { type: 'string' } },
+    head: { type: 'string', description: 'the tip your quality review read, from git rev-parse --short=12' },
+    quality_blocking: { type: 'integer', minimum: 0 }, quality_advisory: { type: 'integer', minimum: 0 },
+    not_reviewed: { type: 'array', items: { type: 'string' }, description: 'the files of the combined diff your quality review did not cover, empty when none' },
+    disputed: { type: 'integer', minimum: 0 },
+    security_missed: { type: 'array', items: FINDING, description: 'each security finding the security reviewer missed, empty when none; the workflow records them' },
+    notes: {
+      type: 'array',
+      description: 'each note to record: a quality finding you keep (kind quality), a security finding you dispute ("disputed: REASON; FINDING", kind security); the workflow records them, a quality finding you drop is in none',
+      items: { type: 'object', properties: { kind: { type: 'string', enum: ['quality', 'security'] }, text: { type: 'string' } }, required: ['kind', 'text'] },
+    },
+    tool_calls: CALLS,
   },
-  required: ['decisions', 'security_first', 'paths', 'tool_calls'],
+  required: ['decisions', 'security_first', 'paths', 'head', 'quality_blocking', 'quality_advisory', 'not_reviewed', 'disputed', 'security_missed', 'notes', 'tool_calls'],
 }
-// Each start's fixed cap: the reviewers' the periodic review's
-// PERIODIC_CAP, the planner's and the skeptic's under their maxTurns.
-const CAPS = { due: 5, review: 53, skeptic: 35, plan: 30, record: 3 }
+// Each start's fixed cap: the security reviewer's the periodic review's
+// PERIODIC_CAP, the planner's, which reviews quality too, under its maxTurns.
+const CAPS = { due: 5, review: 53, plan: 80, record: 3 }
 const RAN = { type: 'object', properties: { ok: { type: 'boolean' }, output: { type: 'string' } }, required: ['ok', 'output'] }
 const capLine = (cap) => `\nTool calls: at most ${cap} in this start (a fixed cap). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
 const isCommit = (head) => /^[0-9a-f]{7,40}$/.test(head || '')
@@ -96,7 +82,7 @@ function parseDue(line) {
   if (!names.every((n) => CHANGE.test(n))) return null
   return { sprint: m[1], number: Number(m[2]), names, base: m[4], tip: m[5], sweep: m[6] === 'yes' }
 }
-// Each sprint review gets one more start over the files its first start
+// The sprint security review gets one more start over the files its first start
 // left, or over the whole diff when the first returned no result, as the
 // periodic review does; the two merge into one result whose not_reviewed
 // is what the second left, so a diff larger than one start still closes.
@@ -109,9 +95,6 @@ function parseDue(line) {
 // tools/tools_test.sh runs these helpers.
 function securityDone(r) {
   return Boolean(r && r.ran && isCommit(r.head) && Array.isArray(r.findings) && Array.isArray(r.not_reviewed))
-}
-function qualityDone(r) {
-  return Boolean(r && isCommit(r.head) && Array.isArray(r.blocking) && Array.isArray(r.advisory) && Array.isArray(r.not_reviewed))
 }
 function pathKey(p) {
   return String(p).trim().replace(/^[`'"]+|[`'"]+$/g, '').replace(/:[0-9]+(:[0-9]+)?$/, '').replace(/\/{2,}/g, '/').replace(/^(\.\/)+/, '').replace(/\/$/, '')
@@ -128,18 +111,13 @@ function mergeSecurity(first, again) {
   if (!securityDone(first)) return again
   return { ran: true, head: first.head, findings: first.findings.concat(again.findings), not_reviewed: stillLeft(first.not_reviewed, again.not_reviewed), tool_calls: first.tool_calls }
 }
-function mergeQuality(first, again) {
-  if (!qualityDone(again)) return qualityDone(first) ? first : null
-  if (!qualityDone(first)) return again
-  return { head: first.head, blocking: first.blocking.concat(again.blocking), advisory: first.advisory.concat(again.advisory), not_reviewed: stillLeft(first.not_reviewed, again.not_reviewed), tool_calls: first.tool_calls }
-}
 // A finding blocks the sprint at High or Medium and confidence 8 or above.
 function blockingOf(findings) {
   return findings.filter((f) => f.severity !== 'Low' && f.confidence >= 8)
 }
 
 // Each security finding as one note of the sprint's run state, the line
-// the skeptic reads, run through Bash by the record start: every control
+// the planner reads, run through Bash by the record start: every control
 // character a space and the text one single-quoted shell word, so no
 // finding text the reviewer returned is read by the shell.
 // tools/tools_test.sh runs these helpers.
@@ -152,23 +130,28 @@ function findingLine(f) {
 function securityNotes(change, findings, prefix = '') {
   return findings.map((f) => `sh tools/run_state.sh note ${change} security ${shellWord(prefix + findingLine(f))}`)
 }
-// The security findings both reviewers missed, which the skeptic returns
-// in security_missed (sprint-close-lows): only findings of the reviewer's
-// shape count, each recorded as a security note "missed by both: ..." and
-// blocking by blockingOf, as the reviewer's own would.
-function missedSecurity(skeptic) {
-  const xs = skeptic && Array.isArray(skeptic.security_missed) ? skeptic.security_missed : []
+// The security findings the reviewer missed, which the planner returns in
+// security_missed (sprint-close-lows): only findings of the reviewer's
+// shape count, each recorded as a security note "missed by the reviewer:
+// ..." and blocking by blockingOf, as the reviewer's own would.
+function missedSecurity(plan) {
+  const xs = plan && Array.isArray(plan.security_missed) ? plan.security_missed : []
   return xs.filter((f) => f && ['High', 'Medium', 'Low'].includes(f.severity) && Number.isInteger(f.confidence) && typeof f.file === 'string' && typeof f.title === 'string')
 }
-// The skeptic's notes (pipeline-lows-a): it records nothing itself, since
+// The planner's notes (pipeline-lows-a): it records nothing itself, since
 // a finding quoting reviewed code inside a double-quoted argument would
 // let the shell expand it; each note of kind quality or security becomes
 // one command whose text is one single-quoted shell word, any other kind
 // or an empty text dropped.
-function skepticNotes(change, notes) {
+function reviewNotes(change, notes) {
   return (Array.isArray(notes) ? notes : [])
     .filter((n) => n && (n.kind === 'quality' || n.kind === 'security') && String(n.text || '').trim())
     .map((n) => `sh tools/run_state.sh note ${change} ${n.kind} ${shellWord(n.text)}`)
+}
+// Whether the planner returned its quality review: a commit as head and
+// its counts and lists in their shapes.
+function qualityReviewed(plan) {
+  return Boolean(plan && isCommit(plan.head) && Number.isInteger(plan.quality_blocking) && Number.isInteger(plan.quality_advisory) && Array.isArray(plan.not_reviewed))
 }
 // The report's Security line: a partial review names the files it left
 // and asks for /sprint again, as one that did not run does.
@@ -180,11 +163,11 @@ function securityLine(r, blocking, disputed) {
   const left = r.not_reviewed.slice(0, 5).join(', ') + (r.not_reviewed.length > 5 ? ', ...' : '')
   return `partial, ${r.not_reviewed.length} file(s) not reviewed (${left}); ${counts}; run /sprint again`
 }
-// The report's whole Security line: securityLine, the findings both
-// reviewers missed, and, when the review ran but its findings were not
+// The report's whole Security line: securityLine, the findings the
+// reviewer missed, and, when the review ran but its findings were not
 // recorded, that suffix. tools/tools_test.sh runs this helper.
-function securityReport(r, blocking, disputed, bothMissed, noted) {
-  return `Security: ${securityLine(r, blocking, disputed)}${bothMissed ? `; ${bothMissed} missed by both reviewers` : ''}${securityDone(r) && !noted ? '; its findings were not recorded' : ''}`
+function securityReport(r, blocking, disputed, missedCount, noted) {
+  return `Security: ${securityLine(r, blocking, disputed)}${missedCount ? `; ${missedCount} missed by the reviewer` : ''}${securityDone(r) && !noted ? '; its findings were not recorded' : ''}`
 }
 // The report's sweep line from periodic-review.js's result: its counts,
 // the security and quality areas a partial sweep left, and whether its
@@ -201,48 +184,31 @@ function sweepLine(on, r) {
   return [counts].concat(left, unrecorded).join('; ')
 }
 
-// The sprint's records change: a delivery of its own, started through
-// deliver-change.js as the sweep starts periodic-review.js, whose
-// contributor runs history (every lane's rows) and groom in its implement
-// step, so the backlog fold, the sprint's lane queues, and its sprints row
-// are written once and pass the checker, the reviews, and the merge gates.
-// Every start of this workflow's own carries a label beginning "sprint:" or
-// naming a sprint, skeptic, or periodic review, so tools/run_state.sh tokens
-// keys it sprint and the records change's budget counts only its own work.
-// tools/tools_test.sh runs this helper.
-function recordsRun(sprint) {
-  const change = `${sprint.sprint}-records`
-  return {
-    change, branch: `chore/${change}`,
-    brief: `${change}: apply the plan of ${sprint.sprint} waiting in build/plan/, sprint-planning's records change (T0 records, estimated small). In your implement step run \`sh tools/run_state.sh history ${change}\`, which appends every lane's pending rows, then \`sh tools/run_state.sh groom ${change}\`, which files each findings entry into the backlog file of its first named path under docs/backlog/, copies the sprint's two lane queues, and appends the sprint's row to docs/sprints.tsv; commit them with this change's OpenSpec change (skip_specs: true), no code and no other file. When groom applies nothing (the plan waits or stands applied), stop and say so.`,
-  }
-}
-
-// The records change applies the next queue, so it waits while the sprint
-// holds a blocking security finding, the reviewer's or one both missed,
-// or the plan names security_first (sprint-close-lows): the reason, or ''
-// when nothing holds it. tools/tools_test.sh runs this helper.
-function recordsHeld(blocking, securityFirst) {
+// The next queue waits while the sprint holds a blocking security finding,
+// the reviewer's or one it missed, or the plan names security_first
+// (sprint-close-lows): the reason, or '' when nothing holds it. groom holds
+// the plan for the same reasons from the run state: the blocked review,
+// and the hold security-first the record start sets before it.
+// tools/tools_test.sh runs these helpers.
+function queueHeld(blocking, securityFirst) {
   if (blocking) return `${blocking} blocking sprint security finding(s)`
   if (securityFirst.length) return `the plan's security first: ${securityFirst.join('; ')}`
   return ''
 }
-
-// The report's line for the records change: deliver-change.js returns a
-// report whether or not it merged, so only the merged commit its run state
-// records counts as finished; anything else gets the resume hint
-// .claude/commands/sprint.md acts on. tools/tools_test.sh runs this helper.
-function recordsLine(name, merged, delivered) {
-  if (!isCommit(merged)) return `${name} did not finish; resume it with /deliver ${name}`
-  return `${name}: merged as ${merged}${delivered ? `; ${String(delivered).split('\n')[0]}` : ''}`
+// The report's line for the next queue: no records run (planner-loop); the
+// next delivery's package step carries the sprint's records.
+function queueLine(held) {
+  return held
+    ? `held by ${held}; deliver the security fix first: the first delivery planned after it merged applies the plan in its package step (groom)`
+    : 'the next delivery\'s package step applies the plan (groom), the sprint\'s records in its own pull request'
 }
 
 phase('Due')
-// The bookkeeping starts (due, record, records-merged) run as the runner
-// agent, the cheapest tier at low effort, under its guard profile
-// (cheap-tier). The notes and skeptic notes starts, whose texts quote
-// reviewed code, stay on the read profile's quality reviewer in record
-// mode, which records notes and no review or phase.
+// The bookkeeping starts (due, record) run as the runner agent, the
+// cheapest tier at low effort, under its guard profile (cheap-tier). The
+// notes and plan notes starts, whose texts quote reviewed code, run as the
+// security reviewer in record mode, under the read profile, which records
+// notes and no review or phase.
 const due = await agent(
   `Run \`sh tools/run_state.sh review-due\` with the Bash tool from the repository root and return its one line verbatim as line (exit 1 means not due, not a failure). Only when the line begins with \`due: sprint-N\`, run \`sh tools/run_state.sh init sprint-N main\`, and when it ends with \`sweep: yes\` also \`sh tools/run_state.sh init sprint-N-sweep main\`, N being its number; return initialized true when they exited 0.${capLine(CAPS.due)}`,
   { agentType: 'runner', schema: DUE, effort: 'low', label: 'sprint: due' })
@@ -255,7 +221,7 @@ const reviewTaskOf = (what, these) => `Change \`${sprint.sprint}\`. Mode: sprint
 const reviewTask = reviewTaskOf(scope, '')
 const sweepName = `${sprint.sprint}-sweep`
 const reviewStarts = []
-// Either diff reviewer, then one more start of it over what it left.
+// The security reviewer, then one more start of it over what it left.
 async function reviewContinued(kind, schema, done, merge) {
   const first = await agent(reviewTask, { agentType: `${kind}-reviewer`, schema, label: `${kind}-reviewer: sprint` })
   reviewStarts.push([kind, first])
@@ -265,9 +231,8 @@ async function reviewContinued(kind, schema, done, merge) {
   reviewStarts.push([`${kind} continued`, again])
   return merge(first, again)
 }
-const [security, quality, sweep] = await parallel([
+const [security, sweep] = await parallel([
   () => reviewContinued('security', SECURITY, securityDone, mergeSecurity),
-  () => reviewContinued('quality', QUALITY, qualityDone, mergeQuality),
   async () => {
     try {
       return sprint.sweep ? await workflow({ scriptPath: '.claude/workflows/periodic-review.js' }, { change: sweepName }) : null
@@ -281,107 +246,86 @@ const ran = securityDone(security)
 const blocking = ran ? blockingOf(security.findings) : []
 const missed = ran ? security.not_reviewed.length : 0
 
+// A record start: the one command, run by the security reviewer in its
+// record mode, whose hook runs tools/agent_guard.sh's read profile, which
+// records notes and no review or phase: text quoting reviewed code that
+// leads it astray runs no command but that profile's (cheap-tier security
+// Medium). null when there is nothing to record.
+async function recordNotes(lines, label) {
+  if (!lines.length) return null
+  return agent(
+    `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${lines.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
+    { agentType: 'security-reviewer', schema: RAN, effort: 'low', label })
+}
+
 phase('Notes')
 // Each security finding reaches the run state from the reviewer's own
-// result, before the skeptic, so a skeptic stopped at its cap leaves none
-// unrecorded; without them recorded the planner does not start. The
-// texts quote reviewed code, so the start is the quality reviewer in its
-// record mode, whose hook runs tools/agent_guard.sh's read profile, as
-// for the skeptic's notes below.
+// result, before the planner, so a planner stopped at its cap leaves none
+// unrecorded; without them recorded the planner does not start.
 const notes = ran ? securityNotes(sprint.sprint, security.findings) : []
-const notesRun = !notes.length ? null : await agent(
-  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${notes.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: notes' })
+const notesRun = await recordNotes(notes, 'sprint: notes')
 const noted = !notes.length || Boolean(notesRun && notesRun.ok)
-
-phase('Skeptic')
-const listed = (xs) => (xs.length ? xs.map((x) => `- ${x}`).join('\n') : '- none')
-const securityLines = ran ? security.findings.map(findingLine) : []
-const skeptic = await agent(
-  `Change \`${sprint.sprint}\`. Mode: skeptic. The reviewers of ${scope} found what follows. Read each against the code at origin/main as your Skeptic mode section says; record nothing: return each note you keep in notes, which the workflow records in this run state, and the counts.\nSecurity findings (each already recorded from the reviewer's result; return again only one you dispute, as disputed with its reason, never dropping one, and each security finding both reviewers missed in security_missed):\n${listed(securityLines)}\nQuality blocking:\n${listed(quality ? quality.blocking : [])}\nQuality advisory:\n${listed(quality ? quality.advisory : [])}${capLine(CAPS.skeptic)}`,
-  { agentType: 'quality-reviewer', schema: SKEPTIC, label: 'quality-reviewer: skeptic' })
-const skeptical = Boolean(skeptic && isCommit(skeptic.head))
-// The skeptic's notes reach the run state before the planner, which reads
-// them there; each text one single-quoted shell word (skepticNotes). The
-// texts quote reviewed code, so the start is the quality reviewer in its
-// record mode, whose hook runs tools/agent_guard.sh's read profile: text
-// that leads it astray runs no command but that profile's.
-const missedBoth = skeptical ? missedSecurity(skeptic) : []
-const sprintBlocking = blocking.concat(blockingOf(missedBoth))
-const kept = skeptical ? skepticNotes(sprint.sprint, skeptic.notes).concat(securityNotes(sprint.sprint, missedBoth, 'missed by both: ')) : []
-const keptRun = !kept.length ? null : await agent(
-  `Mode: record. Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${kept.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
-  { agentType: 'quality-reviewer', schema: RAN, effort: 'low', label: 'sprint: skeptic notes' })
-const skepticNoted = !kept.length || Boolean(keptRun && keptRun.ok)
 // The planner starts only after a complete security review (not partial)
-// with its findings recorded, the skeptic with its notes recorded, and in an even sprint the
-// sweep: without them no plan and no marker are written, which groom
-// would only hold, so review-due stays due and /sprint again reviews the
-// sprint anew.
+// with its findings recorded and, in an even sprint, the sweep: without
+// them no plan and no marker are written, which groom would only hold, so
+// review-due stays due and /sprint again reviews the sprint anew.
 const swept = !sprint.sweep || Boolean(sweep && sweep.ran && sweep.recorded)
-const reviewed = ran && !missed && noted && skeptical && skepticNoted && swept
+const reviewed = ran && !missed && noted && swept
 
 phase('Plan')
+const listed = (xs) => (xs.length ? xs.map((x) => `- ${x}`).join('\n') : '- none')
+const securityLines = ran ? security.findings.map(findingLine) : []
 const plan = !reviewed ? null : await agent(
-  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. Plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the sprint review's findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
+  `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. First review ${scope} for quality as your Sprint mode section says, and read each security finding below against the code at origin/main; record nothing: return each quality finding you keep and each security finding you dispute in notes, each security finding the reviewer missed in security_missed, and the counts, which the workflow records in the run state \`${sprint.sprint}\`.\nSecurity findings (each already recorded from the reviewer's result; return again only one you dispute, as disputed with its reason, never dropping one):\n${listed(securityLines)}\nThen plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the security findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the quality findings are those you keep, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
+const planned = qualityReviewed(plan)
+// The planner's notes and the security findings it found the reviewer
+// missed reach the run state through a record start of the read profile;
+// each text one single-quoted shell word (reviewNotes).
+const missedReviewer = planned ? missedSecurity(plan) : []
+const sprintBlocking = blocking.concat(blockingOf(missedReviewer))
+const kept = planned ? reviewNotes(sprint.sprint, plan.notes).concat(securityNotes(sprint.sprint, missedReviewer, 'missed by the reviewer: ')) : []
+const keptRun = await recordNotes(kept, 'sprint: plan notes')
+const planNoted = !kept.length || Boolean(keptRun && keptRun.ok)
 
 phase('Record')
 // The review lines, of fixed words and counts, as periodic-review.js
-// writes them; a partial security review outranks blocked.
+// writes them; a partial security review outranks blocked. The plan's
+// security first is set as the hold before the security review line, so
+// no package step sees the plan reviewed and not held.
 const result = (blocked, missed) => (missed ? 'partial' : blocked ? 'blocked' : 'pass')
 const lines = []
+if (plan && Array.isArray(plan.security_first) && plan.security_first.length) lines.push(`sh tools/run_state.sh set ${sprint.sprint} hold security-first`)
 const record = (kind, word, summary, head) => lines.push(`sh tools/run_state.sh review ${sprint.sprint} ${kind} ${word} "${summary}"${head ? ` ${head}` : ''}`)
 if (ran) {
-  const count = (severity) => security.findings.concat(missedBoth).filter((f) => f.severity === severity).length
-  record('periodic-security', result(sprintBlocking.length, missed), `diff high=${count('High')} medium=${count('Medium')} low=${count('Low')} blocking=${sprintBlocking.length} disputed=${skeptical ? skeptic.disputed : 0} not_reviewed=${missed}`, security.head)
+  const count = (severity) => security.findings.concat(missedReviewer).filter((f) => f.severity === severity).length
+  record('periodic-security', result(sprintBlocking.length, missed), `diff high=${count('High')} medium=${count('Medium')} low=${count('Low')} blocking=${sprintBlocking.length} disputed=${planned ? plan.disputed : 0} not_reviewed=${missed}`, security.head)
 } else record('periodic-security', 'not-run', 'no result', '')
-if (skeptical) record('periodic-quality', result(skeptic.kept_blocking, quality ? quality.not_reviewed.length : 1), `diff blocking=${skeptic.kept_blocking} advisory=${skeptic.kept_advisory} dropped=${skeptic.dropped} missed=${skeptic.missed}`, skeptic.head)
-else record('periodic-quality', 'not-run', 'no skeptic result', '')
+if (planned && planNoted) record('periodic-quality', result(plan.quality_blocking, plan.not_reviewed.length), `diff blocking=${plan.quality_blocking} advisory=${plan.quality_advisory} missed=${missedReviewer.length} not_reviewed=${plan.not_reviewed.length}`, plan.head)
+else record('periodic-quality', 'not-run', planned ? 'the planner notes were not recorded' : 'no planner review', '')
 // A sweep that failed to start leaves its run state without a record;
 // this one says why, and holds the sprint as none does.
 if (sprint.sweep && !sweep) lines.push(`sh tools/run_state.sh review ${sweepName} periodic-security not-run "the sweep failed to start"`)
-const starts = [...reviewStarts, ['skeptic', skeptic], ['plan', plan]]
+const starts = [...reviewStarts, ['plan', plan]]
 for (const [kind, r] of starts) {
-  const cap = kind === 'skeptic' ? CAPS.skeptic : kind === 'plan' ? CAPS.plan : CAPS.review
+  const cap = kind === 'plan' ? CAPS.plan : CAPS.review
   if (r && Number.isInteger(r.tool_calls) && r.tool_calls > cap) lines.push(`sh tools/run_state.sh note ${sprint.sprint} overrun "sprint ${kind} made ${r.tool_calls} tool calls in one start, over its cap of ${cap}"`)
 }
 const recorded = await agent(
   `Run this one command with the Bash tool from the repository root, exactly as written, and nothing else:\n\n${lines.join(' && ')}\n\nReturn ok true when it exited 0, and its output.${capLine(CAPS.record)}`,
   { agentType: 'runner', schema: RAN, effort: 'low', label: 'sprint: record' })
-
-phase('Records')
-// Only a plan written after a complete review, with the results recorded,
-// gets its records change; otherwise the plan does not exist or waits for
-// /sprint again. A blocking security finding or the plan's security first
-// holds it: the plan waits for /deliver once the fix merged.
-let delivered = null
-let merged = ''
-const recordsName = recordsRun(sprint).change
-const held = plan ? recordsHeld(sprintBlocking.length, plan.security_first) : ''
-if (plan && recorded && recorded.ok && !held) {
-  try {
-    delivered = await workflow({ scriptPath: '.claude/workflows/deliver-change.js' }, recordsRun(sprint))
-  } catch (e) {
-    log(`the records change failed to start: ${e.message}`)
-  }
-  // Whether it merged is read from its run state, never from its report.
-  const read = await agent(
-    `Run \`sh tools/run_state.sh get ${recordsName} merged\` with the Bash tool from the repository root, exactly as written, and nothing else. Return its output, trimmed, as merged (empty when it printed nothing or failed).${capLine(CAPS.record)}`,
-    { agentType: 'runner', schema: { type: 'object', properties: { merged: { type: 'string' } }, required: ['merged'] }, effort: 'low', label: 'sprint: records-merged' })
-  merged = read ? read.merged.trim() : ''
-}
+const held = plan ? queueHeld(sprintBlocking.length, plan.security_first || []) : ''
 
 const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
-  skeptical && !skepticNoted ? `The skeptic's notes were not recorded: ${keptRun ? keptRun.output : 'no result'}` : '',
-  securityReport(security, sprintBlocking.length, skeptical ? skeptic.disputed : null, missedBoth.length, noted),
-  `Quality: ${skeptical ? `${skeptic.kept_blocking} blocking and ${skeptic.kept_advisory} advisory kept, ${skeptic.dropped} dropped, ${skeptic.missed} missed by both` : 'the skeptic returned no result; nothing recorded'}`,
+  planned && !planNoted ? `The planner's notes were not recorded: ${keptRun ? keptRun.output : 'no result'}` : '',
+  securityReport(security, sprintBlocking.length, planned ? plan.disputed : null, missedReviewer.length, noted),
+  `Quality: ${planned ? `the planner kept ${plan.quality_blocking} blocking and ${plan.quality_advisory} advisory${plan.not_reviewed.length ? `, ${plan.not_reviewed.length} file(s) not reviewed` : ''}` : 'the planner returned no review; nothing recorded'}`,
   `Sweep: ${sweepLine(sprint.sweep, sweep)}`,
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
   recorded && recorded.ok ? '' : `The results were not recorded: ${recorded ? recorded.output : 'no result'}`,
-  plan && recorded && recorded.ok ? `Records: ${held ? `${recordsName} held by ${held}; deliver the security fix first, then resume it with /deliver ${recordsName}` : recordsLine(recordsName, merged, delivered)}` : '',
+  plan && recorded && recorded.ok ? `Next queue: ${queueLine(held)}` : '',
 ].filter(Boolean).join('\n- ')
 log(report)
 return { due: true, sprint: sprint.sprint, ran, recorded: Boolean(recorded && recorded.ok), report: `- ${report}` }

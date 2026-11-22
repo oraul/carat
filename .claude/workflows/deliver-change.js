@@ -634,7 +634,7 @@ function closeLines(looking) {
 }
 // One shell line that runs every record whatever an earlier one did: a
 // refused line prints its refusal and refused: N, its position, and costs
-// only itself (an && chain lost sprint-14-records its merge, retro, and
+// only itself (an && chain once lost a run its merge, retro, and
 // report phases and every metric field to one refused merge phase).
 function recordLine(lines) {
   return lines.map((l, i) => `${l} || echo refused: ${i + 1}`).join('; ')
@@ -1652,17 +1652,22 @@ function resumeBrief(change, line) {
 function planDir(change) {
   return `build/plan/${change}/`
 }
-// The package step's plan line: plan-apply, first, and history for the
-// change's own lane, never groom, which only a sprint's records change runs, in its
-// implement step, so the fold and the sprint row are written once.
+// The package step's plan line (planner-loop): history, then groom, then
+// plan-apply for the change's own lane. groom applies a waiting sprint plan
+// in the first delivery that packages after the sprint closed, whose
+// history then appends every lane's rows, so the sprint's records (the
+// rows, the groomed backlog, both lane queues, the sprint row) land in its
+// own pull request; it does nothing when no plan waits, another change
+// carries it, or a sprint security finding holds it. plan-apply after it
+// keeps the lane queue the delivery planner wrote.
+// tools/tools_test.sh runs this helper.
 function packagePlan(state, planned) {
-  if (/^sprint-[0-9]+-records$/.test(state.change)) return 'This is the sprint\'s records change: your implement step ran history and groom; run neither again, nor plan-apply, and copy nothing from build/plan/.'
-  const history = state.records === 'skip'
-    ? 'run no history: this change\'s run state excludes the planning records (records=skip), and history says so for it'
-    : `run \`sh tools/run_state.sh history ${state.change}\`, which appends only its lane's rows`
+  const records = state.records === 'skip'
+    ? 'run no history and no groom: this change\'s run state excludes the planning records (records=skip), and both say so for it'
+    : `run \`sh tools/run_state.sh history ${state.change}\`, which appends its lane's rows (every lane's when it carries a waiting sprint plan), then \`sh tools/run_state.sh groom ${state.change}\`, which applies a waiting sprint plan once, the groomed backlog, both lane queues, and the sprint's row committed with this change, and says when none waits, another change carries it, or a security finding holds it`
   return planned === 0
-    ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/ and run no plan-apply; ${history}; never run groom, which the sprint's records change runs; then remove this change's item from its lane queue and renumber the rest.`
-    : `Run \`sh tools/run_state.sh plan-apply ${state.change}\`, which applies ${planDir(state.change)} for this change's lane only, before any edit of a lane queue, which it overwrites, and ${history}; never run groom, which the sprint's records change runs.`
+    ? `The planner did not run: this change was taken from the head of its lane queue as written. Copy nothing from build/plan/ and run no plan-apply; first ${records}; then remove this change's item from its lane queue and renumber the rest.`
+    : `First ${records}; then run \`sh tools/run_state.sh plan-apply ${state.change}\`, which overwrites this change's lane queue with ${planDir(state.change)}, before any edit of your own.`
 }
 // Whether the Plan phase is skipped: no merge, plan, or implement record
 // yet, and plan-needed's line says not needed, whatever the brief says.

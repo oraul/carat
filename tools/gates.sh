@@ -28,8 +28,9 @@
 #              changes an expect case in tools/tools_test.sh
 #   findings   findings are append-only: every `### ` heading under
 #              docs/findings/ at BASE or at an earlier commit of the branch
-#              is still there at HEAD; only a sprint-N-records change
-#              (groom) may remove entries
+#              is still there at HEAD; only a branch appending a sprint
+#              row to docs/sprints.tsv (the delivery whose groom carried
+#              the sprint plan) may remove entries
 #   attribution  .claude/settings.json sets Claude Code's attribution to
 #              exactly the trailer on commits, no pull request text, and no
 #              session link
@@ -516,17 +517,20 @@ gate_records() {
 # Findings are append-only: each `### ` heading under docs/findings/ at
 # the fork point of BASE and HEAD, and each one a non-merge commit of BASE..HEAD added, is still
 # present at HEAD, in the same file (a merge of a moved main brings in the
-# groomed entries it removed, so the merged tree is not compared). Only the
-# records change of a sprint (sprint-N-records, whose groom folds and
-# prunes the findings) may remove one.
+# groomed entries it removed, so the merged tree is not compared). Only a
+# branch that appends rows to docs/sprints.tsv from the fork point, the
+# delivery whose package step ran groom for the sprint plan (planner-loop),
+# which folds and prunes the findings, may remove one; the row itself is
+# groom's alone (groom_row) where a gate settles across it.
 gate_findings() {
   gate=findings
   start=$failed
-  if printf '%s' "$change" | grep -qxE 'sprint-[0-9]+-records'; then
-    ok "a records change may remove entries"
+  fork=$(git merge-base "$base" HEAD 2>/dev/null) || fork=$base
+  git diff --quiet "$fork" HEAD -- docs/sprints.tsv 2>/dev/null
+  if [ $? -eq 1 ] && appended_rows "$fork" docs/sprints.tsv; then
+    ok "a branch carrying a sprint's groom may remove entries"
     return
   fi
-  fork=$(git merge-base "$base" HEAD 2>/dev/null) || fork=$base
   findings_now=$(git grep -I --no-color -e '^### ' HEAD -- docs/findings 2>/dev/null | sed 's/^[^:]*://' | sort -u)
   findings_gone=$( {
     git grep -I --no-color -e '^### ' "$fork" -- docs/findings 2>/dev/null | sed 's/^[^:]*://'
