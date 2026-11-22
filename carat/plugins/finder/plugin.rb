@@ -23,6 +23,11 @@ module Carat
       # is a line, Enter opens the file at its line and column, and a wide
       # screen previews the highlighted row's file around its line, from the
       # text Grep read when it opened.
+      # The buffer picker (plugin.finder.buffers) and the recent files
+      # picker (plugin.finder.recent) are the same picker over the host's
+      # listed file buffers and its recent files, most recent first. The
+      # resume (plugin.finder.resume) opens the last picker closed again
+      # with its typed text, its list read again, and its highlight.
       class Plugin < Carat::PluginApi::Plugin
         NAME = "finder"
         PROMPT_ID = "find"
@@ -36,6 +41,12 @@ module Carat
         OPEN = "plugin.finder.open"
         GREP = "plugin.finder.grep"
         GREP_TITLE = "Grep"
+        BUFFERS = "plugin.finder.buffers"
+        RECENT = "plugin.finder.recent"
+        RESUME = "plugin.finder.resume"
+        BUFFERS_TITLE = "Buffers"
+        RECENT_TITLE = "Recent"
+        NOTHING_TO_RESUME = "No search to resume"
         HINT = "Type to search the files' lines"
         KEYS = [
           "keymap.cmdline <C-n> plugin.finder.next",
@@ -51,7 +62,11 @@ module Carat
         # @rbs @host: Carat::PluginApi::Host?
         # @rbs @open: bool
         # @rbs @root: String
-        # @rbs @grep: bool
+        # @rbs @source: Symbol
+        # @rbs @query: String
+        # @rbs @last_source: Symbol
+        # @rbs @last_query: String
+        # @rbs @last_selected: Integer
         # @rbs @index: Grep
         # @rbs @paths: Array[String]
         # @rbs @matches: Array[Integer]
@@ -66,7 +81,11 @@ module Carat
         #: () -> void
         def initialize
           @host = nil
-          @grep = false
+          @source = :files
+          @query = ""
+          @last_source = :none
+          @last_query = ""
+          @last_selected = 0
           @index = Grep.new
           @open = false
           @root = ""
@@ -91,6 +110,9 @@ module Carat
             actions: {
               "plugin.finder.open" => "Find a file of the project by a substring or initials match of its path",
               "plugin.finder.grep" => "Find a line in the files of the project by the words of its text, and open the file there",
+              "plugin.finder.buffers" => "Find an open buffer by a substring or initials match of its path",
+              "plugin.finder.recent" => "Find a recently opened file, most recent first, by a substring or initials match of its path",
+              "plugin.finder.resume" => "Open the last finder search again with its text and highlight",
               "plugin.finder.next" => "Highlight the next file in the finder",
               "plugin.finder.previous" => "Highlight the previous file in the finder",
               "plugin.finder.open_split" => "Open the highlighted file in a horizontal split",
@@ -98,7 +120,7 @@ module Carat
               "plugin.finder.open_tab" => "Open the highlighted file as a tab: a buffer tab under option.gt buffers, a tab page under option.gt tabpages"
             },
             commands: {},
-            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <leader>fg plugin.finder.grep", "keymap.normal <C-p> plugin.finder.open"],
+            bindings: ["keymap.normal <leader>ff plugin.finder.open", "keymap.normal <leader>fg plugin.finder.grep", "keymap.normal <C-p> plugin.finder.open", "keymap.normal <leader>fb plugin.finder.buffers", "keymap.normal <leader>fr plugin.finder.recent", "keymap.normal <leader>fR plugin.finder.resume"],
             events: ["resize"],
             options: ["plugin.finder.ignore .git build tmp"],
             option_types: { "ignore" => "list" },
@@ -130,8 +152,11 @@ module Carat
         def on_action(name, context)
           host = @host
           return if host.nil?
-          return open(host, false) if name == OPEN
-          return open(host, true) if name == GREP
+          return open(host, :files, "", 0) if name == OPEN
+          return open(host, :grep, "", 0) if name == GREP
+          return open(host, :buffers, "", 0) if name == BUFFERS
+          return open(host, :recent, "", 0) if name == RECENT
+          return resume(host) if name == RESUME
           return unless @open
           case name
           when "plugin.finder.next" then move(host, 1)
@@ -169,17 +194,19 @@ module Carat
 
         private
 
-        # Lists the files and opens the prompt; a grep also reads their text.
-        #: (Carat::PluginApi::Host, bool) -> void
-        def open(host, grep)
+        # Lists the source's paths and opens the prompt on the query, the
+        # highlight on the row selected or the last match; a grep also
+        # reads the files' text.
+        #: (Carat::PluginApi::Host, Symbol, String, Integer) -> void
+        def open(host, source, query, selected)
           return if @open
           root = host.working_directory.text
-          listing = host.list_files(root, ignored(host))
+          listing = list(host, source, root)
           unless listing.ok
             host.message(listing.message, true)
             return
           end
-          opened = host.live_prompt(PROMPT_ID, PROMPT, "", KEYS)
+          opened = host.live_prompt(PROMPT_ID, PROMPT, query, KEYS)
           unless opened.ok
             host.message(opened.message, true)
             return
@@ -187,11 +214,40 @@ module Carat
           host.message(listing.message, false) unless listing.message.empty?
           @root = root
           @paths = listing.lines
-          @grep = grep
-          @index.load(host, root, @paths) if grep
+          @source = source
+          @index.load(host, root, @paths) if grep?
           @open = true
-          filter("")
+          filter(query)
+          last = @matches.length - 1
+          @selected = selected > last ? last : selected
+          @selected = 0 if @selected < 0
           refresh(host)
+        end
+
+        # Opens the last picker closed again with its text and highlight.
+        #: (Carat::PluginApi::Host) -> void
+        def resume(host)
+          return if @open
+          if @last_source == :none
+            host.message(NOTHING_TO_RESUME, false)
+            return
+          end
+          open(host, @last_source, @last_query, @last_selected)
+        end
+
+        # The source's listing: the files below the root, the listed file
+        # buffers, or the recent files.
+        #: (Carat::PluginApi::Host, Symbol, String) -> Carat::PluginApi::Response
+        def list(host, source, root)
+          return host.list_buffers if source == :buffers
+          return host.recent_files if source == :recent
+          host.list_files(root, ignored(host))
+        end
+
+        # Whether the picker searches the files' lines.
+        #: () -> bool
+        def grep?
+          @source == :grep
         end
 
         #: (Carat::PluginApi::Host) -> Array[String]
@@ -204,7 +260,8 @@ module Carat
         # listing order for an empty query or one of spaces only.
         #: (String) -> void
         def filter(query)
-          return filter_lines(query) if @grep
+          @query = query
+          return filter_lines(query) if grep?
           paths = @paths
           matches = []
           @selected = 0
@@ -274,29 +331,33 @@ module Carat
         #: () -> String
         def selected_path
           return "" if @matches.empty?
-          return @index.path_at(@matches[@selected]) if @grep
+          return @index.path_at(@matches[@selected]) if grep?
           @paths[@matches[@selected]]
         end
 
         # The line of the highlighted row to open at, 0 for a file.
         #: () -> Integer
         def selected_line
-          return 0 if !@grep || @matches.empty?
+          return 0 if !grep? || @matches.empty?
           @index.number_at(@matches[@selected])
         end
 
         # The column of the highlighted row to open at.
         #: () -> Integer
         def selected_column
-          return 0 if !@grep || @matches.empty?
+          return 0 if !grep? || @matches.empty?
           @index.column_at(@matches[@selected])
         end
 
         #: (Carat::PluginApi::Host) -> void
         def close(host)
           close_floats(host)
+          @last_source = @source
+          @last_query = @query
+          @last_selected = @selected
           @open = false
-          @grep = false
+          @source = :files
+          @query = ""
           @index = Grep.new
           @paths = Grep.no_strings
           @matches = []
@@ -337,7 +398,7 @@ module Carat
           width = room - frame
           width = (room - 2 * frame) / 2 if preview
           width = 1 if width < 1
-          title = @grep ? "#{GREP_TITLE} #{@index.counts}" : "#{TITLE} #{@matches.length}/#{@paths.length}"
+          title = grep? ? "#{GREP_TITLE} #{@index.counts}" : "#{list_title} #{@matches.length}/#{@paths.length}"
           list = float_at(margin, height, width, title)
           @list_float = show_float(host, @list_float, @list_box, list, list_lines(height))
           @list_box = box_key(list)
@@ -345,10 +406,18 @@ module Carat
             close_preview(host)
             return
           end
-          preview_title = @grep ? @index.shown_path(@matches[@selected]) : selected_path
+          preview_title = grep? ? @index.shown_path(@matches[@selected]) : selected_path
           shown = float_at(margin + width + frame, height, room - width - 2 * frame, preview_title)
           @preview_float = show_float(host, @preview_float, @preview_box, shown, preview_lines(host, height))
           @preview_box = box_key(shown)
+        end
+
+        # The list float's title word for the source.
+        #: () -> String
+        def list_title
+          return BUFFERS_TITLE if @source == :buffers
+          return RECENT_TITLE if @source == :recent
+          TITLE
         end
 
         # Refills the float with the id with the lines and the options'
@@ -376,8 +445,8 @@ module Carat
         # highlight; for a file its first rows, read from the disk.
         #: (Carat::PluginApi::Host, Integer) -> Array[String]
         def preview_lines(host, height)
-          return @index.preview(@matches[@selected], height, MARK, SPACE) if @grep
-          read = host.read_file(PluginApi::Paths.join(@root, selected_path), height)
+          return @index.preview(@matches[@selected], height, MARK, SPACE) if grep?
+          read = host.read_file(PluginApi::Paths.absolute(@root, selected_path), height)
           lines = read.ok ? read.lines : [read.message]
           lines = [""] if lines.empty?
           lines
@@ -396,7 +465,7 @@ module Carat
           lines = Grep.no_strings
           matches = @matches
           if matches.empty?
-            lines << (@grep && @index.idle? ? HINT : EMPTY)
+            lines << (grep? && @index.idle? ? HINT : EMPTY)
             return lines
           end
           top = @selected - height + 1
@@ -404,7 +473,7 @@ module Carat
           r = top
           while r < top + height && r < matches.length
             mark = r == @selected ? MARK : SPACE
-            lines << mark + (@grep ? @index.row_text(matches[r]) : @paths[matches[r]])
+            lines << mark + (grep? ? @index.row_text(matches[r]) : @paths[matches[r]])
             r += 1
           end
           lines

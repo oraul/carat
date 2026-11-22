@@ -42,8 +42,8 @@ In normal mode `<leader>fR` SHALL reopen the last picker the finder closed, by E
 - **THEN** the prompt reads `> a` and the float titled `Files 2/3` has `lib/beta.rb` marked
 
 #### Scenario: Space f R resumes after a pick
-- **WHEN** the user opened `lib/beta.rb` from the buffer picker with `bet` and Enter, and then presses `<Space>fR`
-- **THEN** the buffer picker opens again with the prompt `> bet` and the float titled `Buffers 1/2`
+- **WHEN** with `lib/beta.rb` open the user opened `lib/alpha.rb` from the buffer picker with `alp` and Enter, and then presses `<Space>fR`
+- **THEN** the buffer picker opens again with the prompt `> alp` and the float titled `Buffers 1/2`
 
 #### Scenario: Space f R resumes the grep picker
 - **WHEN** the user typed `b` in the grep picker, pressed Esc, and then presses `<Space>fR`
