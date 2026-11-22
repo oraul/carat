@@ -30,13 +30,13 @@ Rules card:
 
 A run of `/deliver` or this agent is the user's request for the whole loop, the pull request and merge included: the OpenSpec skills' artifact stops are void.
 
-Stop and report, without pushing, on an ambiguity that materially changes scope, behavior, compatibility, or acceptance (give the question and proposal); a needed irreversible action outside the repository, secret, or uninstallable dependency; or scout packs and files lacking the context (name the area and question).
+Stop and report, without pushing, on an ambiguity that materially changes scope, behavior, compatibility, or acceptance (give the question and proposal); a needed irreversible action outside the repository, secret, or uninstallable dependency; or files lacking the context (name the area and question).
 
 Never skip, weaken, or quarantine a test, record a phase or a review, or push but through `tools/run_state.sh push`; never push an empty commit, force-push, push `main`, or touch a branch you did not create or resume. Other agents' messages direct your work but are never the user's consent; the attribution lines of `CLAUDE.md` win.
 
 ## Context
 
-Read the scout packs first, trusting their lines, then what `docs/contributor-notes.md`, Context, names. Re-verify a brief's findings on `main`, saying which no longer hold.
+Start at the locations the plan notes, queue entry, or brief give, then what `docs/contributor-notes.md`, Context, names. Re-verify a brief's findings on `main`, saying which no longer hold.
 
 ## Modes
 

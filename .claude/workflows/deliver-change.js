@@ -1,11 +1,10 @@
 export const meta = {
   name: 'deliver-change',
-  description: 'Deliver one change to main through fixed phases: plan, scouts, contributor, checker, security review, benchmark, package, CI and merge, close (records, retrospective, and report in one start); the sprint-end review is sprint-planning\'s',
+  description: 'Deliver one change to main through fixed phases: plan, contributor, checker, security review, benchmark, package, CI and merge, close (records, retrospective, and report in one start); the sprint-end review is sprint-planning\'s',
   whenToUse: 'Every change to this repository, started by /deliver with a change name or a brief; it resumes from build/pipeline/CHANGE.json',
   phases: [
     { title: 'Resume', detail: 'branch, toolchain, and the run state' },
     { title: 'Plan', detail: 'planner: the next queue from the metrics history; security findings first' },
-    { title: 'Scout', detail: 'one scout per edited map area without a current pack, at most three' },
     { title: 'Implement', detail: 'contributor: propose and apply, committing early, then its own quality review before the archive' },
     { title: 'Check', detail: 'the fast stages through make in a start that runs only the check lines; the checker reads a failed stage\'s log; CI runs the rest' },
     { title: 'Security', detail: 'security reviewer on the committed diff; never skipped' },
@@ -16,9 +15,8 @@ export const meta = {
   ],
 }
 
-// args: { change?, brief?, branch?, packs?: [path], areas?: [string],
-// records?: 'skip' }, or a
-// string that is a change name or a brief. The run state, written only by
+// args: { change?, brief?, branch?, records?: 'skip' }, or a string that
+// is a change name or a brief. The run state, written only by
 // tools/run_state.sh and read through its trusted command (only the records
 // at a commit of the branch or of main), decides which phases are already
 // done: a phase whose recorded commit is the current one is skipped, so a
@@ -49,7 +47,7 @@ export const meta = {
 // Only the arguments above are kept: a field passed beside them, such as a
 // chat message, never reaches a start's prompt, which carries the brief or
 // the resume brief only.
-const ARG_KEYS = ['change', 'brief', 'branch', 'packs', 'areas', 'records']
+const ARG_KEYS = ['change', 'brief', 'branch', 'records']
 function startInput(raw) {
   const given = typeof raw === 'string' ? { brief: raw } : (raw || {})
   const kept = {}
@@ -58,9 +56,8 @@ function startInput(raw) {
 }
 const input = startInput(args)
 const ROUNDS = 3
-// Map areas scouted per change, and merger calls that may find CI still
-// running (each waits up to 30 minutes) before the run stops as stalled.
-const MAX_AREAS = 3
+// Merger calls that may find CI still running (each waits up to 30
+// minutes) before the run stops as stalled.
 const WAITS = 4
 // Checker starts in a row that may end without a verdict at the head (a
 // killed, superseded, escaped, or unfinished check) before the run stops;
@@ -119,7 +116,7 @@ let qualityReview = ''
 // estimate, from the history's calls per phase; CALL_SCALE scales it by the
 // estimate, rounded up, the medium figure applying while no estimate exists
 // (the planner's start). FIXED_CAPS holds the starts whose work does not
-// grow with the change (areas is the scout plan); the merger's is its work,
+// grow with the change; the merger's is its work,
 // fixed whatever CI does, plus 2 for every CI wait (mergerCap), so a
 // first-pass green CI that waits long overruns nothing (merge-cap-ci-wait). The prompt states the cap
 // (capLine) and the agent stops at it; a start that reports more calls is
@@ -132,9 +129,9 @@ let qualityReview = ''
 // return the schema; tools/tools_test.sh compares them with these lines.
 // Implement and fix hold the contributor's own check of its head, up to
 // three runs with their fixes, about 18 calls (contributor-self-check).
-const CALL_CAPS = { planner: 20, scout: 30, implement: 110, fix: 60, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, security: 35, bench: 20, close: 25 }
+const CALL_CAPS = { planner: 20, implement: 110, fix: 60, closing: 40, package: 30, prtext: 20, push: 15, moved: 15, body: 12, wait: 6, checker: 20, security: 35, bench: 20, close: 25 }
 const CALL_SCALE = { small: 0.5, medium: 1, large: 1.5 }
-const FIXED_CAPS = { resume: 12, areas: 10, record: 3, merger: 10, run: 8 }
+const FIXED_CAPS = { resume: 12, record: 3, merger: 10, run: 8 }
 const sizeWord = () => (SIZES.includes(estimate) ? estimate : 'medium')
 const callCap = (kind) => (kind in FIXED_CAPS ? FIXED_CAPS[kind] : Math.ceil(CALL_CAPS[kind] * CALL_SCALE[sizeWord()]))
 const capLine = (kind) => `\nTool calls: at most ${callCap(kind)} in this start (${kind in FIXED_CAPS ? 'a fixed cap' : `the ${kind} cap at ${SIZES.includes(estimate) ? `the ${estimate} estimate` : 'the medium figure, with no estimate yet'}`}). Count them; on reaching the cap, stop and return the schema with what is done, saying the cap stopped you.`
@@ -152,7 +149,7 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'session/low', planner: 'session/session', areas: 'session/low', scout: 'agent/low', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'session/low', planner: 'session/session', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'session/low', merger: 'agent/low', close: 'session/session' }
 // A profile's form, the one pattern restoreCalibration and the metric line
 // accept and tools-test reads (an effort added here only).
 const PROFILE = /^(agent|session)\/(low|medium|high|session)$/
@@ -247,48 +244,11 @@ const RESUME = {
   },
   required: ['status', 'change', 'branch', 'head', 'state_json'],
 }
-const SCOUT_AREA = { type: 'object', properties: { area: { type: 'string' }, question: { type: 'string' }, locations: { ...LINES, description: 'path or path:line of existing code the change edits in this area, each a path the area\'s section of docs/codebase-map.md names, itself or by its directory' } }, required: ['area', 'question', 'locations'] }
-const SCOUT_PLAN = {
-  type: 'object',
-  properties: {
-    current: LINES,
-    unread: { ...LINES, description: 'the locations the change edits that a current pack does not list, each path or path:line, for the contributor to read itself' },
-    needed: { type: 'array', items: SCOUT_AREA },
-  },
-  required: ['current', 'needed'],
-}
-// When a pack an earlier change left serves this one: a pack of the area
-// whose files read are unchanged at main is reused, and the locations it
-// does not list go to the contributor to read itself, never to a new scout
-// of the whole area (scout-pack-reuse; .claude/agents/scout.md step 3
-// applies the same rule).
-const PACK_CURRENT = 'a pack under tmp/scout/ is current for an area when its Commit: is origin/main or `git diff --quiet <its commit> origin/main -- <its Files read>` passes; reuse it even when its Locations: line lacks some location the change edits in that area, and list each location it lacks under unread; an area with a current pack needs no scout'
-// The scouts a plan starts: an area given no location the change edits
-// there (a file the map places in no area, such as a root LICENSE) starts
-// none, nor one whose every location the brief names by path (named: the
-// contributor, which holds the brief, reads them itself), and the rest are
-// cut at the room the current packs leave. tools/tools_test.sh runs this
-// helper.
-function scoutTargets(plan, max, brief = '') {
-  if (!plan) return { current: [], needed: [], unplaced: [], beyond: [], named: [], unread: [] }
-  const placed = plan.needed.filter((n) => Array.isArray(n.locations) && n.locations.some((l) => String(l).trim()))
-  const pathOf = (l) => String(l).trim().replace(/:[0-9][0-9,-]*$/, '')
-  const named = placed.filter((n) => n.locations.every((l) => !pathOf(l) || String(brief).includes(pathOf(l))))
-  const scouted = placed.filter((n) => !named.includes(n))
-  const room = Math.max(0, max - plan.current.length)
-  return { current: plan.current, needed: scouted.slice(0, room), unplaced: plan.needed.filter((n) => !placed.includes(n)), beyond: scouted.slice(room), named, unread: (plan.unread || []).concat(...named.map((n) => n.locations.filter((l) => pathOf(l)))) }
-}
-// A scout's prompt: its area, the locations the change edits there, which
-// bound what it reads (.claude/agents/scout.md), and the question.
-function scoutPrompt(n, brief) {
-  return `Area: ${n.area}. Locations: ${n.locations.join(', ')}; read only what these locations need. Question: ${n.question}. The change, for scope only: ${brief}. Write the pack and return its path.`
-}
-// The contributor's line for the locations no pack covers, which it reads
-// itself at those locations only. tools/tools_test.sh runs this helper.
-function unreadLine(unread) {
-  return unread && unread.length ? ` Locations no pack covers, read them yourself at those locations only: ${unread.join(', ')}.` : ''
-}
-const PACK = { type: 'object', properties: { pack: { type: 'string' } }, required: ['pack'] }
+// The implement start's one line on where the change's locations come
+// from, the scout and its area plan dropped (scout-drop): the paths and
+// lines the change edits, which the planner's notes give, else its queue
+// entry or the brief. tools/tools_test.sh reads it.
+const LOCATIONS = 'Locations: take the paths and lines the change edits from the plan notes, else from its queue entry or the brief, and start reading there.'
 const WORK = {
   type: 'object',
   properties: {
@@ -1667,10 +1627,10 @@ if (!resume || resume.status !== 'done') {
 // security review failed with no merge since): a brief for the
 // head item keeps the order, so it plans no more than the change's name
 // would (planSkipped). Otherwise the head item is taken as written, with its
-// size as the estimate, and the brief still reaches the scouts and the
-// contributor. A brief that is only the change
-// name gives the scouts and the contributor nothing to work from, so they
-// read the queue item naming the change in its lane queue themselves: the
+// size as the estimate, and the brief still reaches the contributor. A
+// brief that is only the change name gives the contributor nothing to
+// work from, so it reads the queue item naming the change in its lane
+// queue itself: the
 // item never passes through a model's output.
 const planLine = resume && typeof resume.plan === 'string' ? resume.plan.split('\n')[0] : ''
 // The resume brief names the lane queues plan-needed read: the waiting
@@ -1735,7 +1695,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   phase('Plan')
   planned = 1
   const p = await measured('plan', () => agent(
-    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}. Write your files under ${planDir(state.change)}, this delivery's own plan directory.${planReview(planLine)}${capLine('planner')}`,
+    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}. Write your files under ${planDir(state.change)}, this delivery's own plan directory. Among your notes, give the locations the change edits, path:line each, which the contributor starts from (no scout runs).${planReview(planLine)}${capLine('planner')}`,
     calibrate('planner', { agentType: 'planner', schema: withCalls(PLAN) })), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {
@@ -1767,27 +1727,8 @@ if (!stopped && !state.merged && input.records === 'skip') excludeRecords('the i
 
 if (!stopped && !state.merged) {
   if (!state['phase.implement']) {
-    phase('Scout')
-    let packs = input.packs || []
-    let unread = []
-    if (!packs.length) {
-      // The plan's calls are its own key, so phase.scout holds only the
-      // scouts' starts, the figure their packs' Tool calls lines match.
-      const plan = await measured('areas', () => agent(
-        `List the areas of docs/codebase-map.md (by number and name) whose files this change edits, as the brief says, at most ${MAX_AREAS}: ${brief}. ${input.areas ? 'Requested areas: ' + input.areas.join(', ') + '.' : ''} Leave out an area the change only reads, and any finding the change only appends to docs/backlog.md or other bookkeeping: those reach the contributor through the plan notes, never a scout. A file belongs to an area only when the area's section names its path, itself or by its directory (look the path up in docs/codebase-map.md): a file the map places in no area, such as a root LICENSE, belongs to none, and a change editing only such files lists no area. For each area, first name its locations, the paths or path:line of the existing code the change edits there, and the question a contributor needs answered about that code (callers, registration, tests), never about code the change will add, which does not exist yet; an area whose only edits are new files needs no pack. Then ${PACK_CURRENT}. List current packs by path, the locations they lack under unread, and the areas still needing one, each with its locations and question.${capLine('areas')}`,
-        calibrate('areas', { schema: withCalls(SCOUT_PLAN), label: 'scout plan' })), callCap('areas'))
-      const targets = scoutTargets(plan, MAX_AREAS, brief)
-      if (targets.unplaced.length) note(`not scouted, no location in the area: ${targets.unplaced.map((n) => n.area).join(', ')}`)
-      if (targets.named.length) note(`not scouted, the brief names every location: ${targets.named.map((n) => n.area).join(', ')}`)
-      unread = targets.unread
-      if (targets.beyond.length) note(`not scouted, beyond ${MAX_AREAS} areas: ${targets.beyond.map((n) => n.area).join(', ')}`)
-      const fresh = targets.needed.length ? await measured('scout', () => parallel(targets.needed.map((n) => () =>
-        agent(scoutPrompt(n, brief) + capLine('scout'), calibrate('scout', { agentType: 'scout', schema: withCalls(PACK), label: `scout: ${n.area}` })))), callCap('scout')) : []
-      packs = targets.current.concat(fresh.filter(Boolean).map((p) => p.pack))
-      note(`scout packs: ${packs.join(', ') || 'none'}`)
-    }
     phase('Implement')
-    const done = await contributor('implement', `Scout packs: ${packs.join(', ') || 'none'}.${unreadLine(unread)}${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
+    const done = await contributor('implement', `${LOCATIONS}${planNotes.length ? `\nPlan notes:\n- ${planNotes.join('\n- ')}` : ''}`)
     if (done) phaseDone('implement', head)
   }
 
