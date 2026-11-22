@@ -1,0 +1,20 @@
+ok   Switching to each shipped palette: carat-dark
+ok   Switching to each shipped palette: carat-light
+ok   Switching to each shipped palette: one_dark
+ok   Switching to each shipped palette: one_light
+ok   Switching to each shipped palette: dark_plus
+ok   Switching to each shipped palette: light_plus
+ok   Switching to each shipped palette: by the abbreviation
+ok   Switching to each shipped palette: the current one repaints nothing
+ok   Switching to each shipped palette: blanks around the name
+ok   An unknown palette
+ok   An unknown palette: two words are one name
+ok   No name shows the current palette
+ok   No name shows the current palette: after a switch
+ok   Set theme repaints
+ok   Set theme repaints: & gives back the shipped palette
+ok   Set background repaints
+ok   Set background repaints: back to the palette's
+ok   Set theme repaints: a refused name repaints nothing
+ok   Set background repaints: the screen cleared in the terminal's colors, nothing in carat-dark's painted Normal
+editor_colorscheme: 19 passed, 0 failed

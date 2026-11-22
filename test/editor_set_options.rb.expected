@@ -138,6 +138,20 @@ ok   A word the configuration refuses: listchars kept
 ok   Resetting an option: lcs&
 ok   A list form of a word is not implemented: lcs+=x
 ok   A flag prefix on a word: nolcs
+ok   Setting a word: theme=one_dark
+ok   Setting a word: the bare theme shows it
+ok   A word the configuration refuses: theme=solarized
+ok   A word the configuration refuses: theme kept
+ok   Resetting an option: theme&
+ok   A list form of a word is not implemented: theme+=x
+ok   A flag prefix on a word: notheme
+ok   Setting a word: bg=terminal
+ok   Setting a word: the bare bg shows it
+ok   A word the configuration refuses: bg=dark
+ok   A word the configuration refuses: background kept
+ok   Resetting an option: bg&
+ok   A list form of a word is not implemented: bg+=x
+ok   A flag prefix on a word: nobg
 ok   A blank kept by a backslash
 ok   a backslash kept by a backslash
 ok   several arguments in one command
@@ -150,6 +164,10 @@ ok   a flag prefix on filetype is E474
 ok   startscreen is read only at startup
 ok   startscreen is read only at startup: the value kept
 ok   startscreen is read only at startup: & too
+ok   Setting the theme and the background
+ok   Setting the theme and the background: & gives back the shipped ones
+ok   A theme the configuration refuses
+ok   A theme the configuration refuses: the theme kept
 ok   A bare set lists the changed options
 ok   a bare set lists the filetype and syntax once set
 ok   Set all lists every option
@@ -157,4 +175,4 @@ ok   The number column follows set number
 ok   A tab is drawn at the new tabstop
 ok   Fewer undo levels
 ok   :set list and :set lcs draw the marks at once
-editor_set_options: 159 passed, 0 failed
+editor_set_options: 177 passed, 0 failed

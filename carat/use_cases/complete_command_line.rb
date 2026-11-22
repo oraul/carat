@@ -11,6 +11,7 @@ require_relative "../domain/highlight"
 require_relative "../domain/window"
 require_relative "../domain/float_spec"
 require_relative "../domain/float_window"
+require_relative "../domain/themes"
 require_relative "../ports/file_port"
 require_relative "ex/ex_table"
 require_relative "windows/open_float"
@@ -29,7 +30,8 @@ module Carat
     # bang, from at most MAX_ENTRIES entries of its directory read through
     # the file port (relative to the working directory, as typed after
     # "/", under the home after "~/"), a directory ending in "/", a dot
-    # file only for a typed name starting with a dot. The selection
+    # file only for a typed name starting with a dot; a shipped palette
+    # name after :colorscheme, in the order of Themes::NAMES. The selection
     # replaces the word, the text after the cursor kept, and a bordered
     # popup above the command line lists the labels at the word's column
     # in Pmenu, the selection in PmenuSel, the typed characters in
@@ -131,11 +133,18 @@ module Carat
         blanks += 1 while head.getbyte(blanks).to_i == 32
         return if blanks == at
         handler = @commands.find(head[0, letters].to_s)
-        return if handler.nil? || !PATH_COMMANDS.include?(handler.name.full)
+        return if handler.nil?
+        full = handler.name.full
+        themes = full == "colorscheme"
+        return unless themes || PATH_COMMANDS.include?(full)
         typed = head[blanks, head.length - blanks].to_s
         menu.start = blanks
         menu.typed = typed
-        collect_paths(typed)
+        if themes
+          collect_themes(typed)
+        else
+          collect_paths(typed)
+        end
       end
 
       # The ASCII letters at the start of text.
@@ -155,6 +164,22 @@ module Carat
       def collect_names(typed)
         menu = @menu
         names = @commands.full_names
+        i = 0
+        while i < names.length
+          name = names[i]
+          if name.start_with?(typed)
+            menu.matches << name
+            menu.labels << name
+          end
+          i += 1
+        end
+      end
+
+      # The shipped palette names the typed text begins, in their order.
+      #: (String) -> void
+      def collect_themes(typed)
+        menu = @menu
+        names = Domain::Themes::NAMES
         i = 0
         while i < names.length
           name = names[i]

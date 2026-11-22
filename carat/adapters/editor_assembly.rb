@@ -113,6 +113,7 @@ require_relative "../use_cases/ex/join_command_handler"
 require_relative "../use_cases/ex/shift_command_handler"
 require_relative "../use_cases/ex/normal_command_handler"
 require_relative "../use_cases/ex/print_command_handler"
+require_relative "../use_cases/ex/colorscheme_command_handler"
 require_relative "../use_cases/ex/plugin_command_handler"
 require_relative "../use_cases/actions/action_table"
 require_relative "../use_cases/actions/motion_handler"
@@ -506,6 +507,7 @@ module Carat
         UseCases::RegisterCommandHandler.register(@commands, registers: @registers)
         UseCases::SyntaxCommandHandler.register(@commands)
         UseCases::SetCommandHandler.register(@commands, last_search: @last_search, last_substitute: @last_substitute, shipped: Domain::Options.shipped, feed: @buffers.feed)
+        UseCases::ColorschemeCommandHandler.register(@commands)
         UseCases::NohlsearchCommandHandler.register(@commands, last_search: @last_search)
         UseCases::SubstituteCommandHandler.register(@commands, substitute_lines: @substitute_lines)
         UseCases::GlobalCommandHandler.register(@commands, global_command: @global_command)
@@ -624,8 +626,10 @@ module Carat
       # the size goes into the state, the plugins hear of a change first so
       # what they do about it is in this frame, ArrangeView lays the
       # windows out (so a state changed outside a key is arranged too),
-      # HighlightView brings the syntax of the visible rows up to date, and
-      # the frame presenter draws what the state holds.
+      # HighlightView brings the syntax of the visible rows up to date, the
+      # frame presenter draws what the state holds, and the screen presenter
+      # writes it in the palette the options name now, so :colorscheme and
+      # :set theme or background repaint at once.
       #: (Integer, Integer) -> Domain::Frame
       def render(rows, cols)
         @state.resize(rows, cols)
@@ -633,6 +637,8 @@ module Carat
         @arrange_view.call(@state)
         @highlight_view.call(@state)
         frame = @frame_presenter.call(@state)
+        options = @state.options
+        @screen_presenter.use_theme(options.theme, options.background)
         @screen_presenter.present(frame)
         frame
       end
