@@ -4,8 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 28
 
-1. `picker-speed` (T2 user request, estimated medium, pushed back 2): Where: `bench/run.sh:69` (the default list omits `lh-float`, `palette`); `make bench-budget`. Why: council (4) asks a float, finder, and palette speed gate before window-surfaces; no budget covers them (grep 774.4 allocations in each of the last 10 backlog rows). Fix outline: those scenarios run by default with budgets. Accepted when `make bench` runs them and `bench-budget` fails on a doubled figure. Backlog: "### the default scenario list omits lh-float, lh-winbar, n, palette at bench/run.sh:69 (sprint-26 sweep quality, note 31)".
-2. `finder-switch` (T2 user request, estimated medium, pushed back 2): moving between files and grep loses the query; grepping the word under the cursor needs typing. Where: `carat/plugins/finder/plugin.rb:52` (keymap lines), `live_prompt` `carat/plugin_api.rb:899`. Fix outline: `<C-g>` switches keeping the query; `<leader>fw` greps the word under the cursor; no API change. Accepted when tests switch both ways keeping the query and `<leader>fw` on a word and a blank opens grep with it or empty, with `docs/actions.md` rows. Backlog: none.
+1. `finder-switch` (T2 user request, estimated medium, pushed back 2): moving between files and grep loses the query; grepping the word under the cursor needs typing. Where: `carat/plugins/finder/plugin.rb:52` (keymap lines), `live_prompt` `carat/plugin_api.rb:899`. Fix outline: `<C-g>` switches keeping the query; `<leader>fw` greps the word under the cursor; no API change. Accepted when tests switch both ways keeping the query and `<leader>fw` on a word and a blank opens grep with it or empty, with `docs/actions.md` rows. Backlog: none.
 
 ## Pool
 
@@ -25,8 +24,8 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-27 review High 0, Medium 0; no `review.periodic` in the 2 pending runs.
-- Delivery (T2): ui-groups, Sprint 28 item 1, council (4) of 2026-11-21, pushed back 6, removed; Sprint 28 keeps picker-speed, finder-switch.
-- Size (T2): ui-groups medium; last 5 feature rows 1,016,833 to 1,156,082 total under the 1.2M budget; last two under budget, no size up.
-- Split (T2): none; 2 testable parts (bar groups with PANEL_DIM, message row indicators) in one map area, the pill fill a constraint.
-- Findings (T1): sprint-27-records notes 4 to 6 in backlog Pool 13, 14; review-in-openspec note 10 in Pool 14, notes 9, 11 and sprint-27-records note 1 to backlog.md.
+- Security first (T0): none; the 3 pending runs (review-in-openspec, sprint-close-lows, ui-groups) hold no `review.periodic`; sprint-27 review High 0, Medium 0.
+- Delivery (T2): picker-speed, Sprint 28 item 2 after ui-groups (#300), council (4) of 2026-11-21, pushed back 2, removed; Sprint 28 keeps finder-switch; not critical (bench/run.sh, Makefile bench-budget: no rule a to e path).
+- Size (T2): medium; medium feature rows ui-groups 980,589 in 82.1 min, hidden-option 1,099,813 in 68.0; last two feature rows (float-painter 1,016,833, ui-groups 980,589) under budget, no size up.
+- Split (T2): none; 2 testable parts (default list, per-scenario budgets) in 1 map area (18).
+- Findings (T1): ui-groups retro 3, 4 and sprint-close-lows retro 2, 3 are pipeline items of the backlog lane, which this delivery may not edit: to backlog.md.
