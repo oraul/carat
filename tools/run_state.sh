@@ -91,7 +91,8 @@
 #                               but "red|green COMMIT" at the pushed head, and
 #                               a merged value but the squash commit on main
 #                               (once pr is recorded, the commit whose subject
-#                               ends with " (#PR)"), each refusal naming both
+#                               ends with " (#PR)") whose last line is exactly
+#                               the co-author trailer, each refusal naming both
 # Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
 # control character (newline, carriage return, tab, or another), so no write
 # adds a line of its own.
@@ -2290,6 +2291,13 @@ merged_at() {
   else
     [ -n "$at" ] || die "$2: refused: $1 is no commit on main"
   fi
+  # The squash message ends with exactly the co-author trailer, trailing
+  # blank lines aside: #307's squash commit ended with it and a stray
+  # double quote, and nothing in the merge phase noticed (cheap-tier).
+  # History on main is not rewritten; the merge phase reports it here.
+  last=$(git log -1 --format=%B --end-of-options "$at" -- 2>/dev/null | awk 'NF { l = $0 } END { print l }')
+  [ "$last" = "Co-Authored-By: Claude <noreply@anthropic.com>" ] ||
+    die "$2: refused: the squash commit $at ends with \"$last\", not exactly the co-author trailer"
   printf '%s\n' "$at"
 }
 

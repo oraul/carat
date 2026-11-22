@@ -2285,6 +2285,19 @@ expect "run_state: set refuses the pushed head as the merged commit" 1 "refused:
 expect "run_state: set refuses a mistyped merged commit" 1 "refused: $typo is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" set merges merged "$typo"
 expect "run_state: phase refuses a merge that is not the pull request's squash commit" 1 "refused: $later is not the squash commit of pull request #7 on main, $squash" env BASE=main sh "$here/run_state.sh" phase merges merge "$later"
 expect "run_state: a refused merged record writes nothing" 0 "^\$" state get merges merged
+# The squash commit's last line is exactly the trailer: #307's ended with
+# it and a stray double quote, which the merge phase let through
+# (cheap-tier); both set merged and the merged word of phase refuse it.
+echo quoted >> README.md
+git_q add -A
+git_q commit -q -m "fix: quoted (#9)" -m "$TRAILER\""
+quoted=$(git rev-parse --short=12 HEAD)
+state init quotes chore/quotes > /dev/null
+state set quotes pr 9 > /dev/null
+expect "run_state: set merged refuses a squash commit with a stray quote after the trailer" 1 "refused: the squash commit $quoted ends with \"Co-Authored-By: Claude [^\"]*>\"\", not exactly the co-author trailer" env BASE=main sh "$here/run_state.sh" set quotes merged "$quoted"
+expect "run_state: phase refuses a merge at a squash commit with a stray quote after the trailer" 1 "not exactly the co-author trailer" env BASE=main sh "$here/run_state.sh" phase quotes merge "$quoted"
+expect "run_state: a squash commit refused for its trailer is not recorded merged" 0 "^\$" state get quotes merged
+git_q reset -q --hard HEAD~1
 env BASE=main sh "$here/run_state.sh" set merges merged "$squash" > /dev/null
 expect "run_state: set records the pull request's squash commit as merged" 0 "^$squash\$" state get merges merged
 env BASE=main sh "$here/run_state.sh" phase merges merge "$squash" > /dev/null
@@ -3446,7 +3459,23 @@ expect "guard: merger refuses another gate of main's copy" 2 "other than merge B
 expect "guard: merger refuses another script under the worktree" 2 "the script tmp/.merge-gates/tools/run_state.sh is not one" guard merger 'sh tmp/.merge-gates/tools/run_state.sh show c'
 expect "guard: contributor refuses main's merge gates" 2 "is not a command of this profile" guard contributor 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
-expect "guard: merger deletes the branch and fast-forwards main" 0 "^$" guard merger 'git push origin --delete chore/x; git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+expect "guard: merger deletes the local branch and fast-forwards main" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+# cheap-tier: the repository deletes a merged branch, so the merger runs
+# no git push at all, the remote branch deletion included.
+expect "guard: merger refuses the remote branch deletion" 2 "git push is not a command of this profile" guard merger 'git push origin --delete chore/x'
+# The runner (cheap-tier): the resume recipe and the workflow's records,
+# nothing to write, no gates, no push.
+expect "guard: runner runs the resume steps" 0 "^$" guard runner 'git fetch -q origin && make doctor && make toolchain && sh tools/run_state.sh lane-open c chore/c && sh tools/run_state.sh init c chore/c && cd tmp/.lane-c && sh tools/run_state.sh trusted c && git -C tmp/.lane-c rev-parse --short=12 HEAD && cd tmp/.lane-c && sh tools/run_state.sh plan-needed c'
+expect "guard: runner runs the records" 0 "^$" guard runner 'sh tools/run_state.sh review c security pass \"high=0 low=1\" abc1234 || echo refused: 1; sh tools/run_state.sh phase c check abc1234 && sh tools/run_state.sh note c overrun \"over\" && sh tools/run_state.sh set c records skip && sh tools/run_state.sh ci-stages c 0123456789abcdef0123456789abcdef01234567 && sh tools/run_state.sh metric c phase.check=1/2'
+expect "guard: runner runs sprint planning's due and records-merged steps" 0 "^$" guard runner 'sh tools/run_state.sh review-due && sh tools/run_state.sh init sprint-3 main && sh tools/run_state.sh get sprint-3-records merged'
+# cheap-tier security Low: the late, held, and unpushed finding notes,
+# which seed reads back as findings, are the close profile's alone.
+for k in late-finding held-finding unpushed-finding; do
+  expect "guard: runner refuses a $k note" 2 "which only the workflow's close profile records" guard runner "sh tools/run_state.sh note c $k x"
+done
+for c in 'make test' 'make -C tmp/.lane-c doctor' 'make doctor PREFIX=x' 'sh tools/gates.sh trailer' 'sh tools/run_state.sh push c' 'sh tools/run_state.sh check c' 'sh tools/run_state.sh set c merged abc1234' 'sh tools/run_state.sh init c other' 'sh tools/run_state.sh lane-open c chore/c extra' 'git push origin chore/c' 'git commit -m x' 'echo x > f' 'mkdir d'; do
+  expect "guard: runner refuses $c" 2 "refused for the runner profile" guard runner "$c"
+done
 # The green line's fixture origin, on a reserved host, and the blob ids
 # of its https form in the order of ORIGIN_IDS, which replace the pinned
 # ones in the line under test; its ssh and scp forms are refused.
@@ -3572,9 +3601,9 @@ expect "guard: read refuses a comparison of another form" 2 "tools/metrics.sh co
 expect "guard: read measures into the project or a worktree and compares" 0 "^$" guard read 'sh tools/metrics.sh measure build/metrics/current.tsv lh dot-ciw && sh tools/metrics.sh measure /w/build/metrics/current.tsv && sh tools/metrics.sh measure /w/tmp/.base/build/metrics/current.tsv && sh tools/metrics.sh compare a.tsv b.tsv'
 expect "guard: read refuses the merge gate" 2 "tools/gates.sh with other than gate names" guard read 'sh tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: read refuses an assignment before another script" 2 "an assignment before tools/run_state.sh" guard read 'BASE=x sh tools/run_state.sh show c'
-expect "guard: merger refuses the deletion of main" 2 "git push other than" guard merger 'git push origin --delete main'
-expect "guard: merger refuses a second ref after the branch" 2 "git push other than" guard merger 'git push origin --delete chore/x main'
-expect "guard: merger refuses another push" 2 "git push other than" guard merger 'git push origin HEAD:main'
+expect "guard: merger refuses the deletion of main" 2 "git push is not a command of this profile" guard merger 'git push origin --delete main'
+expect "guard: merger refuses a second ref after the branch" 2 "git push is not a command of this profile" guard merger 'git push origin --delete chore/x main'
+expect "guard: merger refuses another push" 2 "git push is not a command of this profile" guard merger 'git push origin HEAD:main'
 expect "guard: merger refuses the deletion of main locally" 2 "git branch other than" guard merger 'git branch -D main'
 expect "guard: merger refuses another merge" 2 "git merge other than" guard merger 'git merge origin/chore/x'
 expect "guard: merger refuses a pull request record" 2 "tools/run_state.sh set of pr" guard merger 'sh tools/run_state.sh set c pr 5'
@@ -3749,7 +3778,7 @@ hook() {
 }
 agents="$here/../.claude/agents"
 expect "guard: no hook line reads the local origin/main" 1 "^$" sh -c 'grep -h "command: .*origin/main" "$1"/*.md' _ "$agents"
-expect "guard: every hook line resolves main the same way" 0 "^9 1$" \
+expect "guard: every hook line resolves main the same way" 0 "^10 1$" \
   sh -c 'l=$(sed -n "s/^ *command: '\''\\(.*show FETCH_HEAD:tools\\/agent_guard[.]sh)\\).*/\\1/p" "$1"/*.md); echo "$(printf "%s\n" "$l" | grep -c .) $(printf "%s\n" "$l" | sort -u | grep -c .)"' _ "$agents"
 fresh hooks
 hooks=$PWD
@@ -3757,7 +3786,7 @@ hosted="https:/""/host.invalid/o/carat.git"
 hosted_ssh="ssh:/""/git""@host.invalid/o/carat.git"
 hosted_scp="git""@host.invalid:o/carat.git"
 pins=$(printf %s "${hosted%.git}" | git hash-object --stdin)
-expect "guard: every hook line carries the one pinned digest" 0 "^9$" \
+expect "guard: every hook line carries the one pinned digest" 0 "^10$" \
   sh -c 'grep -h -c -E "^ *command: .* in [0-9a-f]{40}[)];;[*][)]echo origin is not hosted" "$1"/*.md | awk "{ n += \$1 } END { print n }"' _ "$agents"
 expect "guard: no hook line names an address, host, or path" 1 "^$" sh -c 'grep -h -E "^ *command: .*(://|[.]com|@[a-z])" "$1"/*.md' _ "$agents"
 fork="https:/""/host.invalid/a/fork.git"
@@ -3957,6 +3986,10 @@ expect "guard: the merge tool refuses a merge without a message" 2 "a merge with
 expect "guard: the merge tool refuses a shortened squash message" 2 'other than the body of openspec/changes/archive/2026-01-01-mtool/pr.md, a blank line, and the trailer: line 5 of the message is "Co-Authored-By: Claude [^"]*" where it should be "---"' merge_call merger "$sha" squash "${pre}${line3}${nl}${nl}$TRAILER"
 expect "guard: the merge tool refuses a changed line of the squash message" 2 'line 3 of the message is "A body line" where it should be "A body line ..' merge_call merger "$sha" squash "## Summary${nl}${nl}A body line${nl}${nl}---${nl}${nl}## Notes${nl}${nl}None$nl$nl$TRAILER"
 expect "guard: the merge tool refuses a squash message without the trailer" 2 'the message ends at line 9, before line 11, "Co-Authored-By: Claude' merge_call merger "$sha" squash "$body_json"
+# The last line is exactly the trailer: #307's squash commit ended with
+# the trailer and a stray double quote (cheap-tier).
+expect "guard: the merge tool refuses a stray quote after the trailer" 2 'line 11 of the message is "Co-Authored-By: Claude [^"]*>"" where it should be' merge_call merger "$sha" squash "$exact"'\"'
+expect "guard: the merge tool refuses a stray quote on a line after the trailer" 2 'the message goes on past the trailer at line 12' merge_call merger "$sha" squash "$exact$nl"'\"'
 expect "guard: the merge tool refuses a squash message going on past the trailer" 2 'the message goes on past the trailer at line 12 with "extra"' merge_call merger "$sha" squash "$exact${nl}extra"
 # A message past the environment's size limit is compared too, from a
 # file: the comparison prints "same" only on equality, so an awk that
@@ -5155,7 +5188,7 @@ turns() {
   shift
   for kind in "$@"; do cap_of "$kind"; done | awk -v l="$large" -v r="$margin" '{ v = $1 * l; if (v > int(v)) v = int(v) + 1; if (v > m) m = v } END { print m + r }'
 }
-for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner retrospective:close security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:implement,fix,closing,package,push,body,wait planner:planner retrospective:close runner:resume,record security-reviewer:security; do
   agent=${pair%%:*}
   want=$(turns "$agent" $(echo "${pair#*:}" | tr ',' ' '))
   expect "caps: the $agent file's maxTurns is its large cap and the margin" 0 "^maxTurns: $want$" grep -E '^maxTurns: ' "$agents/$agent.md"
@@ -5178,12 +5211,14 @@ expect "caps: the periodic task line states the periodic cap" 0 "capLine[(]PERIO
 expect "periodic: a security review without a commit head is retried" 0 "s[.]ran && isCommit[(]s[.]head[)]" grep 'if (s && s.ran' "$pwf"
 expect "periodic: a security review without a result is recorded as not run" 0 "^[}] else record[(]'periodic-security', 'not-run'" grep "record('periodic-security', 'not-run'" "$pwf"
 expect "periodic: a review with areas not reviewed is recorded as partial" 0 "missed[.]length [?] 'partial'" grep '^const result = ' "$pwf"
-# A first green: the merger file's calls of one each, the branch deletion
-# among them, stay within its work cap of at most 10, its waits counted
-# apart (merge-cap-ci-wait).
+# A first green: the merger file's calls of one each stay within its work
+# cap of at most 10, its waits counted apart (merge-cap-ci-wait).
 calls=$(grep -o '(one call)' "$agents/merger.md" | wc -l | tr -d ' ')
 expect "caps: the merger's first green fits its cap" 0 "^within$" sh -c '[ "$1" -le 10 ] && [ "$2" -ge 7 ] && [ "$2" -le "$1" ] && echo within' _ "$(cap_of merger)" "$calls"
-expect "caps: the merger counts the branch deletion" 0 "push origin --delete <branch>. [(]one call[)]" grep -o 'push origin --delete <branch>. (one call)' "$agents/merger.md"
+# cheap-tier: the repository deletes a merged branch, so the merger runs no
+# remote delete (refused on #300) and keeps the local cleanup.
+expect "caps: the merger deletes no remote branch" 0 "^0 1 1$" \
+  sh -c 'echo "$(grep -c -E "push origin --delete|ls-remote" "$1") $(grep -c "lane-close <change> && git checkout -q main && git merge -q --ff-only origin/main && git branch -D <branch>. (one call)" "$1") $(grep -c "Never delete the remote branch" "$1")"' _ "$agents/merger.md"
 
 # ------------------------------------------------------------ calibration
 # CALIBRATION: every kind of start's TIER/EFFORT, every agent start taking
@@ -5206,14 +5241,15 @@ expect "calibration: every kind of start has a profile" 0 "^none$" echo "${missi
 expect "calibration: every agent start takes its options from the table" 0 "^same$" \
   sh -c '[ "$(grep -c "agent(" "$1")" -eq "$(grep -c "calibrate(.[a-z]*., [{]" "$1")" ] && ! grep -q "effort: .low." "$1" && echo same' _ "$wf"
 wrong=""
-for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close security-reviewer:security; do
+for pair in benchmark:bench checker:checker contributor:contributor merger:merger planner:planner quality-reviewer:quality retrospective:close runner:resume runner:record security-reviewer:security; do
   if grep -q -E '^model: ' "$agents/${pair%%:*}.md"; then tier=agent; else tier=session; fi
   case "$(profile_of "${pair#*:}")" in "$tier"/*) ;; *) wrong="$wrong ${pair#*:}" ;; esac
 done
-for kind in resume record; do
-  case "$(profile_of "$kind")" in session/*) ;; *) wrong="$wrong $kind" ;; esac
-done
 expect "calibration: the agent tier is the agent files' model lines" 0 "^none$" echo "${wrong:-none}"
+# cheap-tier: the resume and record starts run as the runner, whose agent
+# file names the cheapest tier (the checker's), at low effort.
+expect "calibration: the resume and record starts run as the runner" 0 "^agent/low agent/low 1 1 same$" \
+  sh -c 'echo "$1 $(grep -c "calibrate(.resume., { agentType: .runner., " "$2") $(grep -c "calibrate(.record., { agentType: .runner., " "$2") $([ "$(grep "^model: " "$3/runner.md")" = "$(grep "^model: " "$3/checker.md")" ] && echo same)"' _ "$(profile_of resume) $(profile_of record)" "$wf" "$agents"
 expect "calibration: the security reviewer keeps the session's tier and effort" 0 "^session/session$" profile_of security
 # By the user's decision (docs/goals.md, Calibration), the contributor alone
 # runs on its agent file's tier at high effort; the planner, quality,
@@ -6073,10 +6109,21 @@ expect "sprint: the report's security line names unrecorded findings" 0 '^\["Sec
 expect "sprint: the report's security line is securityReport's" 0 "^1$" grep -c -F '  securityReport(security, sprintBlocking.length, skeptical ? skeptic.disputed : null, missedBoth.length, noted),' "$swf"
 # The security notes quote reviewed code: the quality reviewer runs them in
 # its record mode, under the guard's read profile, never a general agent
-# with Bash (merge-path-lows); the guard stores a note's text, a run-state
-# path or a parent step in it included.
+# with Bash (merge-path-lows) nor the runner, whose profile also records
+# reviews and phases (cheap-tier security Medium); the guard stores a
+# note's text, a run-state path or a parent step in it included.
 expect "sprint: the security notes run under the guarded quality reviewer in record mode" 0 "^1 1$" \
   sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: notes'"'"' })" "$1") $(grep -B1 -F "label: '"'"'sprint: notes'"'"'" "$1" | grep -c "^  .Mode: record[.] Run this one command")"' _ "$swf"
+# The read profile the notes run under records no review and no phase
+# (cheap-tier security Medium), which the runner's would.
+expect "guard: the notes' read profile refuses a review record" 2 "refused for the read profile" guard read 'sh tools/run_state.sh note sprint-3 security x && sh tools/run_state.sh review sprint-3-sweep periodic-security pass "x"'
+expect "guard: the notes' read profile refuses a phase record" 2 "refused for the read profile" guard read 'sh tools/run_state.sh note sprint-3 security x && sh tools/run_state.sh phase c check abc1234'
+expect "guard: runner records a note whose text names the run state's directory and a parent step" 0 "^$" \
+  guard runner "$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-3', [{ severity: 'Low', confidence: 4, file: 'tools/x.sh', line: 2, title: 'reads build/pipeline/c.json and ../x', fix: 'f' }]).join(' && ')" | sed 's/^"//; s/"$//')"
+# cheap-tier: sprint planning's due, record, and records-merged starts run
+# as the runner at low effort; the notes and skeptic notes starts do not.
+expect "sprint: the bookkeeping starts run as the runner at low effort" 0 "^3 3$" \
+  sh -c 'echo "$(grep -c -E "[{] agentType: .runner., schema: [^ ]+.* effort: .low., label: .sprint: (due|record|records-merged)." "$1") $(grep -c "agentType: .runner." "$1")"' _ "$swf"
 expect "guard: read records a note whose text names the run state's directory and a parent step" 0 "^$" \
   guard read "$(js "$swf" "shellWord findingLine securityNotes" "securityNotes('sprint-3', [{ severity: 'Low', confidence: 4, file: 'tools/x.sh', line: 2, title: 'reads build/pipeline/c.json and ../x', fix: 'f' }]).join(' && ')" | sed 's/^"//; s/"$//')"
 expect "guard: read still refuses a run-state path outside a note's text" 2 "a word naming the run state's directory" guard read 'sh tools/run_state.sh note build/pipeline/c security x'
@@ -6128,7 +6175,7 @@ expect "sprint: a blocking security finding or the plan's security first holds t
 expect "sprint: the records change starts only when nothing holds it" 0 "^1 1 1$" \
   sh -c 'echo "$(grep -c "^const held = plan [?] recordsHeld(sprintBlocking.length, plan.security_first) : ..$" "$1") $(grep -c "^if (plan && recorded && recorded.ok && !held) {$" "$1") $(grep -c "held by [$][{]held[}]; deliver the security fix first, then resume it with /deliver" "$1")"' _ "$swf"
 expect "sprint: not due ends before any reviewer start" 0 "^first$" \
-  sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
+  sh -c 'r=$(grep -n "if (!sprint || !due.initialized) return" "$1" | cut -d: -f1); a=$(grep -n "agentType:" "$1" | grep -v "agentType: .runner." | head -1 | cut -d: -f1); [ -n "$r" ] && [ "$r" -lt "$a" ] && echo first' _ "$swf"
 expect "sprint: the diff reviewers record nothing, the workflow records" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "record nothing, the workflow records; return the findings" "$1") $(grep -c "Mode: skeptic" "$1")"' _ "$swf"
 expect "sprint: the planner starts only after a complete security review, its notes, the skeptic and its notes, and the sweep" 0 "^1 1 1$" \
@@ -6152,8 +6199,9 @@ expect "sprint: the skeptic's notes are recorded before the planner starts" 0 "^
   sh -c 'k=$(grep -n "label: .quality-reviewer: skeptic." "$1" | cut -d: -f1); n=$(grep -n "label: .sprint: skeptic notes. })" "$1" | cut -d: -f1); p=$(grep -n "label: .planner: sprint." "$1" | cut -d: -f1); [ -n "$k" ] && [ -n "$n" ] && [ -n "$p" ] && [ "$k" -lt "$n" ] && [ "$n" -lt "$p" ] && echo first' _ "$swf"
 # pipeline-lows-a security Low (4): the notes quote reviewed code, so the
 # start running them is the quality reviewer in its record mode, whose hook
-# runs tools/agent_guard.sh, never an unguarded general agent. Two
-# record starts give the line: the skeptic's notes and the security notes.
+# runs tools/agent_guard.sh's read profile, never an unguarded general agent
+# nor the runner (cheap-tier security Medium). Two record starts give the
+# line: the skeptic's notes and the security notes.
 expect "sprint: the skeptic's notes run under the guarded quality reviewer's record mode" 0 "^1 2 1$" \
   sh -c 'echo "$(grep -c -F "{ agentType: '"'"'quality-reviewer'"'"', schema: RAN, effort: '"'"'low'"'"', label: '"'"'sprint: skeptic notes'"'"' })" "$1") $(grep -c "^  .Mode: record[.] Run this one command" "$1") $(grep -c "^- .Mode: record.: run only the one command the input gives" "$2")"' _ "$swf" "$agents/quality-reviewer.md"
 expect "agents: the skeptic records nothing and returns its notes" 0 "^1 0$" \
