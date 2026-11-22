@@ -4,7 +4,7 @@ Prose the contributor reads when a step needs it, moved out of `.claude/agents/c
 
 ## Context
 
-Read in order until you know what the change touches: the scout packs, trusting their lines (open a covered file only to edit it); the map sections of the touched areas (`docs/codebase-map.md`); the files, tests, and designs they name; the touched sections of `docs/architecture.md`. A file added, moved, or removed is placed in its map area.
+Read in order until you know what the change touches: the locations the change edits, which the plan notes give, else its queue entry or the brief (read each file at those lines first); the map sections of the touched areas (`docs/codebase-map.md`); the files, tests, and designs they name; the touched sections of `docs/architecture.md`. A file added, moved, or removed is placed in its map area.
 
 ## Conflicts with main
 
