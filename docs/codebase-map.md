@@ -465,9 +465,10 @@ Files:
 - `carat/use_cases/move_command_line_cursor.rb`: `MoveCommandLineCursor#call(state, motion)`, the prompts' cursor keys (`:left`, `:right`, `:home`, `:end`, `:word_left`, `:word_right`) over `EditorState#cmdline_position`, never past the text.
 - `carat/use_cases/delete_command_line_text.rb`: `DeleteCommandLineText#call(state, unit)`, `<Del>` (`:under`, at the end `<BS>`), `<C-w>` (`:word`), and `<C-u>` (`:line`) at the cursor, a search prompt previewing what is left.
 - `carat/use_cases/actions/command_line_edit_handler.rb`: `CommandLineEditHandler.register` (`cmdline.left`, `right`, `home`, `end`, `word_left`, `word_right`, `delete`, `delete_word`, `delete_line`), through `MoveCommandLineCursor` and `DeleteCommandLineText`.
-- `carat/use_cases/complete_command_line.rb`: `CompleteCommandLine#call(state, step)`, `<Tab>` and `<S-Tab>` at the `:` prompt: a command name from `ExTable#full_names`, a path after `:e`, `:w`, `:sp`, `:vs`, `:tabe` from at most 1000 entries of its directory (`FilePort#list_first`), cycling back to the typed text, and the bordered popup above the command line.
+- `carat/use_cases/complete_command_line.rb`: `CompleteCommandLine#call(state, step)`, `<Tab>` and `<S-Tab>` at the `:` prompt: a command name from `ExTable#full_names`, a path after `:e`, `:w`, `:sp`, `:vs`, `:tabe` from at most 1000 entries of its directory (`FilePort#list_first`), a palette name of `Themes::NAMES` after `:colorscheme`, cycling back to the typed text, and the bordered popup above the command line.
 - `carat/use_cases/close_cmdline_menu.rb`: `CloseCmdlineMenu#call`, closes the completion popup and forgets the matches; `HandleKey` runs it when a key left the line, `NormalModeHandler` on `<Esc>` before the line is discarded.
 - `carat/use_cases/actions/command_line_complete_handler.rb`: `CommandLineCompleteHandler.register` (`cmdline.complete_next`, `cmdline.complete_previous`), the step 1 or -1 of `CompleteCommandLine`.
+- `carat/use_cases/ex/colorscheme_command_handler.rb`: `ColorschemeCommandHandler` (`:colo[rscheme] [name]`: sets the theme option to a shipped palette, which the screen presenter picks up at the next frame, `E185` for another name, the current name for none), registered after `:set`.
 
 Tests: `test/domain_ex_grammar.rb`, `test/use_cases_ex.rb` (every documented ex spelling), `test/editor_cmdline.rb`, `test/domain_ex_range.rb`, `test/domain_substitute.rb`, `test/editor_substitute.rb`, `test/domain_global.rb`, `test/editor_global.rb`, `test/editor_messages.rb` (`:messages`, the notification boxes, their expiry, and `NO_COLOR`), `test/domain_messages.rb` (the history and the notices), `test/editor_line_commands.rb` (`:m`, `:co`, `:t`, `:j`, `:>`, `:<`, `:normal`, `:p`), `test/editor_cmdline_edit.rb`, `test/domain_command_line_text.rb`, `test/editor_cmdline_complete.rb`, `test/editor_set_options.rb` (every `:set` form of every number, flag, and word option, the listings, and the live effects).
 
@@ -493,7 +494,7 @@ Files:
 - `carat/adapters/painted_rows.rb`: `PaintedRows`, what every window row segment of a frame shows, its cursor-line layer included; `same?`, `store`, `invalidate`, `forget` (one row), `painted?`; each segment's indent guide key and matching bracket key.
 - `carat/adapters/indent_guides.rb`: `IndentGuides`, the indent guides of a file window: `configure` (the settings' stamp in the frame's geometry key), `measure` (the visible rows' indents, blank rows carried from their neighbors, the cursor's block), `key` (a row's repaint input), `paint` (`IblIndent`, `IblScope` in the solid `│` at the block's level).
 - `carat/adapters/whitespace_marks.rb`: `WhitespaceMarks`, the marks of `option.list` in file windows: `configure` (the mark code points read once when `listchars` or the icon set changes, a serial stamp in the frame's geometry key), `on?`, `paint` (the tab, trail, and nbsp marks in `Whitespace` over a decoded line, after the guides).
-- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave` (the terminal's own cursor shape back), `present` (`shape_sequence`: block, bar, underline); a cell code that is not a scalar value is written as U+FFFD, and one of 0x80 or more from the UTF-8 text `glyph` keeps for it (`GLYPH_LIMIT`); a theme that paints the background has Normal in effect at each clear and scroll.
+- `carat/adapters/screen_presenter.rb`: `ScreenPresenter`; `enter`, `leave` (the terminal's own cursor shape back), `present` (`shape_sequence`: block, bar, underline); a cell code that is not a scalar value is written as U+FFFD, and one of 0x80 or more from the UTF-8 text `glyph` keeps for it (`GLYPH_LIMIT`); a theme that paints the background has Normal in effect at each clear and scroll; `use_theme(name, background)`, called by `EditorAssembly#render`, builds the `SgrTable` again and drops the last frame when the options name another palette or background.
 - `carat/domain/frame.rb`: `Frame`, cells in three flat integer arrays, the layout key and the float key; `put`, `put_code`, `put_within`, `put_from`, `put_digits_within` (the bars' one digit fit), `fill`, `blank`, `set_hl`, `lift`, `same_row?`, `dirty?`, `dirty_rows`, `reset_rows`, `mark_all_dirty`, `add_scroll`, `row_text`.
 - `carat/domain/cell.rb`: `Cell`, a value view of one cell for tests.
 - `carat/domain/start_art.rb`: `StartArt`, the start screen's six frames and wordmark computed once from the gem's legend, Unicode in the theme's groups or ASCII in Normal; `from_plain`, `none`, `paint` (centred in a window, the wordmark alone when it does not fit).
@@ -531,7 +532,7 @@ Files:
 - `carat/use_cases/syntax/highlight_view.rb`: `HighlightView#call`, `tokenized` (read by the benchmark); a failing plugin's buffer dropped or taken over by the next plugin in the same frame.
 - `carat/use_cases/plugins/plugin_syntax.rb`: `PluginSyntax`; `provider`, `tokenize`, `copied_tokens`.
 - `carat/use_cases/ex/syntax_command_handler.rb`: `SyntaxCommandHandler` (`:syntax on`, `enable`, `off`).
-- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, and the global numbers, flags, and words, each value checked by `Options#problem`; `&` from `Options.shipped`; the bare and `all` listings).
+- `carat/use_cases/ex/set_command_handler.rb`: `SetCommandHandler` (`:set` for `filetype`, `syntax`, and the global numbers, flags, and words, `theme` and `background` among them, each value checked by `Options#problem`; `&` from `Options.shipped`; the bare and `all` listings).
 - `carat/adapters/sgr_table.rb`: `SgrTable`; `from_theme`, `at`, `sequence`, `index_256`.
 - `carat/plugins/ruby/plugin.rb`: `Ruby::Plugin`; `manifest`, `activate`, `tokenize`.
 - `carat/plugins/ruby/tokenizer.rb`: `Tokenizer#call`, the Ruby tokenizer.
@@ -539,11 +540,11 @@ Files:
 - `carat/plugins/ruby/keywords.rb`: `Keywords`; `find`, `lookup`, `kind`.
 - `carat/plugins/ruby/groups.rb`: `Groups`, the integer group constants the tokenizer emits (`COMMENT`, `CONSTANT`, `STRING`, and the rest).
 
-Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`.
+Tests: `test/domain_filetype.rb`, `test/domain_theme.rb`, `test/domain_syntax_cache.rb`, `test/use_cases_plugin_syntax.rb`, `test/plugins_ruby.rb`, `test/editor_syntax.rb`, `test/editor_colorscheme.rb` (`:colorscheme`, `:set theme`, and `:set background` drawing every group again in the new palette, `E185`, the current name).
 
 Designs: `syntax-highlighting` (all ten Decisions), `cursor-shapes` (The cursor line is a layer of group ids).
 
-Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, `:set theme` and `background`, user themes, and semantic highlighting are in `docs/backlog/`.
+Rules: `docs/architecture.md` section 4.2; the plugin rules of area 15. Range highlights, virtual text, other languages, user themes, and semantic highlighting are in `docs/backlog/`.
 
 Bench: `lh-ruby`, `j-ruby`, `insert-ruby`, `heredoc-ruby`, `string-ruby`, `quote-ruby`, `open-ruby`, `G-ruby`.
 
