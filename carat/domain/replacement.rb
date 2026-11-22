@@ -131,6 +131,49 @@ module Carat
         out
       end
 
+      # The bytes expand builds for the match found in line, counted
+      # without building it, so a substitute can charge a replacement
+      # before it exists; a recased character counts as it is written,
+      # which recasing may change by a few bytes. Each group named is cut
+      # from the line once, however often the text names it.
+      # Typed by parameter lines, as expand is. Returns an Integer.
+      # @rbs text: String
+      # @rbs line: String
+      def self.size(text, line, found)
+        sizes = Array.new(10, -1)
+        total = 0
+        n = text.bytesize
+        i = 0
+        while i < n
+          byte = text.getbyte(i).to_i
+          k = byte == 38 || byte == 92 ? group_at(text, i, n) : -1
+          if k >= 0
+            sizes[k] = group_text(line, found, k).bytesize if sizes[k].to_i < 0
+            total += sizes[k].to_i
+            i += byte == 38 ? 1 : 2
+          elsif byte == 92 && i + 1 < n
+            code = text.getbyte(i + 1).to_i
+            if code == 114 || code == 116 || code == 98
+              total += 1
+            elsif !(code == 117 || code == 108 || code == 85 || code == 76 || code == 101 || code == 69)
+              size = Utf8.size_at(text, i + 1, n)
+              total += size
+              i += size + 1
+              next
+            end
+            i += 2
+          elsif byte == 13
+            total += 1
+            i += 1
+          else
+            size = Utf8.size_at(text, i, n)
+            total += size
+            i += size
+          end
+        end
+        total
+      end
+
       # The group the item at byte i of text names: 0 for "&", 0 to 9 for
       # a backslash and a digit, -1 for any other item; n is text's size.
       #: (String, Integer, Integer) -> Integer

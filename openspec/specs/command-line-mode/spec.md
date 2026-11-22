@@ -342,7 +342,7 @@ Every ex command SHALL be recognized when typed as its abbreviation, its full na
 - **THEN** the file holds "ok\ncaf\xE9\n" again
 
 ### Requirement: Edit refuses what is not a regular file of bounded size
-":e path", and every other way a file is opened in a window, SHALL refuse a directory with `"path" is a directory`, a FIFO, a device, or a socket with `"path" is not a file`, and a file of more than 67108864 bytes with `E484: Can't open file path: File too large`, each as an error, leaving the current window and buffer as they were. Opening SHALL never wait for a writer or read more than the limit.
+":e path", and every other way a file is opened in a window, SHALL refuse a directory with `"path" is a directory`, a FIFO, a device, a socket, or a symbolic link whose target is missing with `"path" is not a file`, and a file of more than 67108864 bytes with `E484: Can't open file path: File too large`, each as an error, leaving the current window and buffer as they were. Opening SHALL never wait for a writer or read more than the limit.
 
 #### Scenario: Edit a directory
 - **WHEN** the user types ":e lib" and "lib" is a directory
@@ -363,6 +363,10 @@ Every ex command SHALL be recognized when typed as its abbreviation, its full na
 #### Scenario: A linked regular file opens
 - **WHEN** the user types ":e link.txt" and "link.txt" is a symbolic link to a regular file
 - **THEN** the file opens as any other file
+
+#### Scenario: A dangling link is refused
+- **WHEN** the user types ":e dangle.txt" and "dangle.txt" is a symbolic link whose target is missing
+- **THEN** the message row shows "\"dangle.txt\" is not a file" as an error and the current buffer is unchanged
 
 ### Requirement: The command line keeps a history
 Each command line run at the ":" prompt SHALL be added to the command history, the newest last, without duplicates and at most 50 entries. At the ":" prompt "<Up>" SHALL replace the text with the next older entry that starts with what was typed before the first recall, and "<Down>" with the next newer one, returning to the typed text after the newest; with no such entry the text SHALL stay.

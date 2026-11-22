@@ -164,6 +164,34 @@ module DomainSubstituteTest
     r = D::Substitution.line(compiled, "aaaa", "x" * 100, true, false, budget)
     t.assert_equal([true, "aaaa", 0], [budget.stopped, r.text, r.count], "replacement text past the budget stops it and changes nothing")
 
+    # The size of a replacement is counted without building it, item by
+    # item as expand reads them: [replacement, line, pattern].
+    t.cases([
+      ["plain characters", ["xyz", "abc", "b"], true],
+      ["the match and a group", ["<&\\1&>", "abcabc", "\\(a\\)bc"], true],
+      ["a group that did not take part", ["[\\2]", "ab", "\\(a\\)\\|\\(z\\)"], true],
+      ["the escapes and a carriage return", ["\\r\\t\\b\\x\r\\u\\e", "a", "a"], true],
+      ["multi-byte characters", ["é\\ü", "caf\u00e9", "f."], true],
+      ["a match holding a multi-byte character", ["&&", "xéy", "é"], true]
+    ]) do |input|
+      replacement = input[0].to_s
+      text = input[1].to_s
+      compiled = D::VimPattern.compile_substitute(input[2].to_s, false, false, "", false)
+      searched = D::Search.searchable(text)
+      found = D::Search.match_at(compiled, searched, searched.length, 0, D::SearchBudget.new(left: D::SearchBudget::SEARCH))
+      D::Replacement.size(replacement, text, found) == D::Replacement.expand(replacement, text, found).bytesize
+    end
+
+    # Scenario "A replacement past the budget is never built" (substitute):
+    # 131072 copies of a 128 KiB match would be 16 GiB; the size is
+    # charged first, so the command stops without building it, where the
+    # build before the charge ran out of memory.
+    long = "x" * 131_072
+    budget = D::SearchBudget.new(left: D::SearchBudget::SEARCH)
+    compiled = D::VimPattern.compile_substitute(".*", false, false, "", false)
+    r = D::Substitution.line(compiled, long, "&" * 131_072, false, false, budget)
+    t.assert_equal([true, 0, true], [budget.stopped, r.count, r.text.equal?(long)], "a replacement past the budget is never built")
+
     t.finish
   end
 end

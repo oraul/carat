@@ -13,6 +13,11 @@ ok   inside is strict
 ok   list answers the sorted entry names
 ok   putting a file makes its directories
 ok   listing a missing directory raises
+ok   a dangling link is listed and stats as a link that is not regular, yet does not exist
+ok   creating at a dangling link raises
+ok   a padded file stats and reads to the limit as its padded size
+ok   a padded file over the limit is too large to read
+ok   a write drops the padding
 ok   deleting a non-empty directory raises
 ok   making an existing directory raises
 ok   renaming a directory moves what is under it
@@ -100,4 +105,4 @@ ok   the next command line is an ex command again
 ok   its bindings went with it
 ok   close_prompt closes the plugin's prompt
 ok   close_prompt without a prompt fails
-use_cases_plugin_files: 102 passed, 0 failed
+use_cases_plugin_files: 107 passed, 0 failed

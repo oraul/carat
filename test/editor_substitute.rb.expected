@@ -73,4 +73,5 @@ ok   n searches the pattern
 ok   n after the i flag matches case by the options
 ok   N after the I flag ignores case by the options
 ok   the search register holds it
-editor_substitute: 75 passed, 0 failed
+ok   replacement text past the budget reports E363 and changes nothing
+editor_substitute: 76 passed, 0 failed
