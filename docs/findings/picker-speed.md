@@ -16,5 +16,10 @@
 
 ### The finder budget adds about 25 seconds to bench-budget
 - Location: `Makefile` (`bench-budget`, `PICKER_BUDGETS`), `bench/keys.rb` (`FINDER_FILES`, 10,000).
-- Why: the finder scenario builds a 10,000-file fixture for each run, and `--budget` runs it twice at the development flags, which is the longest part of the stage; the figure per key does not change with fewer files, since each key filters whatever the list holds only in time, not in objects.
-- Fix: run the finder budget at a smaller file count through an environment variable of `bench/keys.rb` and keep the full count for `make bench`, after checking the allocations per key at that count.
+- Why: the finder scenario builds a 10,000-file fixture for each run, and `--budget` runs it twice at the development flags, which is the longest part of the stage.
+- Fix: run the finder budget at a smaller file count through an environment variable of `bench/keys.rb` and keep the full count for `make bench`, after checking that the allocations per key at that count match the full one.
+
+### An empty PICKER_BUDGETS passes bench-budget without checking a picker
+- Location: `bench/run.sh` (`--budgets`), `Makefile` (`PICKER_BUDGETS`).
+- Why: `make bench-budget PICKER_BUDGETS=` runs `--budgets ""`, which checks no scenario and exits 0, so an override can turn the gate off without a message.
+- Fix: refuse an empty list in `--budgets` with exit 2 and a message, with a `tools/tools_test.sh` case.
