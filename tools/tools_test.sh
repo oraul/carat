@@ -4135,6 +4135,10 @@ expect "guard: the squash trailer is the gates' trailer" 0 "^same$" \
 # The settle's instruction records, kept in both scripts (review-trust-lows).
 expect "rules: the instruction records are the gates'" 0 "^same$" \
   sh -c 'l=$(grep "^INSTRUCTION_RECORDS_RE=" "$1/gates.sh"); [ -n "$l" ] && [ "$l" = "$(grep "^INSTRUCTION_RECORDS_RE=" "$1/run_state.sh")" ] && echo same' _ "$here"
+# The security mark, kept in both scripts (planner-loop): the findings gate
+# reads a carrier's removed entry as groom does.
+expect "rules: the security mark is the gates'" 0 "^same$" \
+  sh -c 'l=$(grep "^SECURITY_\(SEVERITY\|MARK\)=" "$1/gates.sh"); [ -n "$l" ] && [ "$l" = "$(grep "^SECURITY_\(SEVERITY\|MARK\)=" "$1/run_state.sh")" ] && echo same' _ "$here"
 # records_case WANT PATH: PATH matches RECORDS_RE as its readers anchor it
 # (yes) or not (no); the backlog folder's Markdown files are records
 # beside docs/backlog.md (backlog-records-rule).
@@ -5043,7 +5047,7 @@ printf 'sprint\tlast\nsprint-0\tseed\n' > docs/sprints.tsv
 mkdir -p build/plan
 echo sprint-1 > build/plan/sprint
 echo code > tools/code.sh
-mkdir -p docs/findings && printf '### Old groomed entry\n- Location: a\n' > docs/findings/other.md
+mkdir -p docs/findings && printf '### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: a\n- Why: security Low (4) b\n' > docs/findings/other.md
 commit "feat: code and the sprint log"
 groomed_base=$(git rev-parse HEAD)
 state init groomed chore/groomed > /dev/null
@@ -5072,7 +5076,24 @@ expect "gates: stages refuses a check before an instruction record changed" 1 "t
 git_q branch -q -f main "$groomed_base"
 git_q rm -q docs/findings/other.md
 commit "docs: groom folds the findings"
-expect "gates: findings lets the branch appending groom's sprint row remove entries" 0 "ok   findings: a branch carrying a sprint's groom may remove entries" gates findings
+expect "gates: findings refuses a carrier's removal that docs/backlog does not hold" 1 "FAIL findings: a branch carrying a sprint's groom removed an entry of docs/findings/ that docs/backlog/ does not hold" gates findings
+expect "gates: findings names the carrier's unproven entries" 1 "other[.]md:### Old groomed entry" gates findings
+# A plan line removes a plain entry (gone), never a security entry (gone).
+printf 'gone ### Old groomed entry -- the code moved\ngone ### Old security entry -- the code moved\n' > build/plan/groom.txt
+expect "gates: findings refuses a security entry the plan removes as gone" 1 "other[.]md:### Old security entry$" gates findings
+printf 'gone ### Old groomed entry -- the code moved\nlisted other ### Old security entry\n' > build/plan/groom.txt
+expect "gates: findings lets the plan remove a plain entry as gone and a security entry as listed" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/ or removed by its plan" gates findings
+rm build/plan/groom.txt
+mkdir -p docs/backlog
+printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: a\n- Why: security Low (4) b\n' > docs/backlog/a.md
+commit "docs: groom files the findings under the backlog"
+expect "gates: findings lets the branch appending groom's sprint row remove entries it filed in docs/backlog" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/" gates findings
+printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n- Merged: ### Old security entry\n- Why: security Low (4) b\n' > docs/backlog/a.md
+commit "docs: groom merges the security entry into another"
+expect "gates: findings lets a carrier's entry merge into another entry of the backlog" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/" gates findings
+printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n' > docs/backlog/a.md
+commit "docs: the security entry is gone from the backlog"
+expect "gates: findings refuses a carrier's security entry the backlog no longer holds" 1 "other[.]md:### Old security entry$" gates findings
 printf 'sprint-2\tb1\n' >> docs/sprints.tsv
 commit "docs: forge a second sprint row"
 expect "gates: findings refuses a removal beside a forged second sprint row" 1 "FAIL findings" gates findings
