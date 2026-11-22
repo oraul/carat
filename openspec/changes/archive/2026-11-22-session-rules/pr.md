@@ -8,7 +8,7 @@ Writes the main session's six standing rules into the repository so every sessio
 
 ## Changes
 
-- Add a Main session section to CLAUDE.md with one bullet per rule: never stop a running delivery, resume with the run id and the same args, report total and weighted tokens, keep the contributor on its agent file's tier, follow the user's instructions as written, and run the after-merge routine.
+- Add a Main session section to CLAUDE.md with five bullets covering the six rules, the first bullet holding both never stopping a running delivery and resuming with the run id and the same args, then reporting total and weighted tokens, keeping the contributor on its agent file's tier, following the user's instructions as written, and the after-merge routine.
 - Add a Main session section to docs/goals.md with each rule's reason and the resume defects it does not claim to fix.
 - Tighten existing prose in CLAUDE.md to pay for the new section, so the file stays under its docs-lint byte budget, which is not raised.
 - Apply the waiting sprint 29 plan carried by this delivery: the groomed backlog, both lane queues, the sprint's row, and the lanes' metrics history rows.
