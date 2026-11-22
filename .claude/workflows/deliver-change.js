@@ -149,7 +149,7 @@ const mergerCap = (r) => FIXED_CAPS.merger + 2 * waitsOf(r)
 // security reviewer never moves.
 // calibrate gives a start its options and records its profile, which the
 // metric line stores as calib.KIND beside the tokens, calls, and verdicts.
-const CALIBRATION = { resume: 'agent/low', planner: 'session/session', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'agent/low', merger: 'agent/low', close: 'session/session' }
+const CALIBRATION = { resume: 'agent/low', planner: 'session/session', contributor: 'agent/high', checker: 'agent/low', quality: 'session/session', security: 'session/session', bench: 'agent/low', record: 'agent/low', merger: 'agent/low', close: 'agent/high' }
 // A profile's form, the one pattern restoreCalibration and the metric line
 // accept and tools-test reads (an effort added here only).
 const PROFILE = /^(agent|session)\/(low|medium|high|session)$/
@@ -167,26 +167,23 @@ function restoreRouting(st) {
   critical = /^[a-e]$/.test(st['metric.critical'] || '') ? st['metric.critical'] : ''
   escalated = st['metric.escalated'] === '1'
 }
-// The rule letter that makes this run critical: the plan's, or e for a large
-// estimate. A critical run, and one that escalated, takes its contributor
-// starts on the session's model at the session's effort.
+// The rule letter that labels this run critical: the plan's, or e for a large
+// estimate. It is a label for the history and the calibration comparisons
+// only: by the user's decision (docs/goals.md, Calibration) no contributor
+// start runs on the session's model, whatever the rule.
 function criticalRule() { return critical || (estimate === 'large' ? 'e' : '') }
 function calibrate(kind, opts) {
-  const profile = kind === 'contributor' && (criticalRule() || escalated) ? 'session/session' : CALIBRATION[kind]
+  const profile = CALIBRATION[kind]
   calibrated[kind] = profile
   const effort = profile.split('/')[1]
-  const routed = effort === 'session' ? opts : Object.assign({}, opts, { effort })
-  // The contributor's agent file names the mid tier, so the session's model is
-  // asked for by name: inherit, the option that overrides that line.
-  return kind === 'contributor' && profile.startsWith('session/') ? Object.assign({}, routed, { model: 'inherit' }) : routed
+  return effort === 'session' ? opts : Object.assign({}, opts, { effort })
 }
-// The first start that fails its work moves the later contributor starts of
-// the run to the session's model, noted in the run state (once, and never in a
-// critical run, which is there already).
+// The first start that fails its work is noted in the run state, once, so the
+// history keeps the signal; the later contributor starts keep their profile.
 function escalate(why) {
-  if (escalated || criticalRule()) return
+  if (escalated) return
   escalated = true
-  note(`contributor escalated to the session's model: ${why}`)
+  note(`contributor start failed its work, noted as an escalation: ${why}`)
   queue(`sh tools/run_state.sh note ${state.change} escalation "${why}"`, head)
 }
 // The self-check of the last implement or fix start, { mode, said }, kept
