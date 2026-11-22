@@ -60,6 +60,27 @@ module EditorFinderTest
     out
   end
 
+  # An 80-column editor on lib/alpha.rb holding text, over the same
+  # files, the keys typed.
+  def self.word_session(text, keys)
+    files = disk
+    files.put("lib/alpha.rb", text.to_s)
+    h = editor_on(files, 80)
+    h.type(keys.to_s)
+    h
+  end
+
+  # The prompt row and the first float's title, as one string.
+  def self.prompt_and_title(h)
+    "#{h.message_row.rstrip}|#{first_title(h)}"
+  end
+
+  # The prompt row and the first word of the first float's title: Files,
+  # Grep, Buffers, or Recent.
+  def self.prompt_and_kind(h)
+    "#{h.message_row.rstrip}|#{first_title(h).split(" ")[0]}"
+  end
+
   # The mode, the command-line row, and the floats.
   def self.view(h)
     [h.mode, h.message_row.rstrip, floats(h)]
@@ -372,6 +393,52 @@ module EditorFinderTest
     # Scenario: The recent files picker's rows in ASCII.
     h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
     t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| > lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
+
+    # Scenario: Ctrl-G switches the file finder to the grep picker.
+    h = session("<Space>ffb<C-g>", 80)
+    t.assert_equal([:cmdline, "> b|Grep"], [h.mode, prompt_and_kind(h)], "Ctrl-G switches the file finder to the grep picker: the prompt keeps b and the float is the grep picker's")
+    t.assert_equal(true, floats(h)[0].to_s.include?("lib/beta.rb"), "and the grep rows list the line of lib/beta.rb that holds b")
+    # Scenario: Ctrl-G switches the grep picker to the file finder.
+    h = session("<Space>fgb<C-g>", 80)
+    t.assert_equal([:cmdline, "> b|Files 2/3"], [h.mode, prompt_and_title(h)], "Ctrl-G switches the grep picker to the file finder: the prompt keeps b and the files matching it are listed")
+    # Scenario: Ctrl-G switches back and forth keeping the query.
+    h = session("<Space>ffbet<C-g><C-g>", 80)
+    t.assert_equal([:cmdline, "> bet|Files 1/3"], [h.mode, prompt_and_title(h)], "Ctrl-G switches back and forth keeping the query: two switches return to the file finder on bet")
+    t.assert_equal(1, h.state.tab.floats.count, "and one float is open, the switch leaving no float behind")
+    # Scenario: Ctrl-G with the empty prompt keeps it empty.
+    h = session("<Space>ff<C-g>", 80)
+    t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Ctrl-G with the empty prompt opens the grep picker on the empty prompt")
+    # Scenario: Ctrl-G from the buffer picker opens the grep picker.
+    h = session("<Space>fbbet<C-g>", 80)
+    t.assert_equal([:cmdline, "> bet|Grep"], [h.mode, prompt_and_kind(h)], "Ctrl-G from the buffer picker opens the grep picker on its text")
+    # Scenario: The switched picker is picked from as any other.
+    h = session("<Space>ffbet<C-g><C-g><CR>", 80)
+    t.assert_equal([:normal, "lib/beta.rb"], [h.mode, h.buffer.path.to_s], "A switched picker is picked from as any other: Enter opens lib/beta.rb")
+    # Scenario: Ctrl-G resumes as the picker last shown.
+    h = session("<Space>ffbet<C-g><Esc><Space>fR", 80)
+    t.assert_equal([:cmdline, "> bet|Grep"], [h.mode, prompt_and_kind(h)], "Space f R resumes the grep picker the switch ended on, with its text")
+
+    # Scenario: Space f w greps the word under the cursor.
+    h = word_session("hello world\n", "w<Space>fw")
+    t.assert_equal([:cmdline, "> world|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on a word opens the grep picker with the word on the prompt")
+    t.assert_equal(true, floats(h)[0].to_s.include?("lib/alpha.rb"), "and the grep rows list the line of the word")
+    h = word_session("hello world\n", "<Space>fw")
+    t.assert_equal("> hello", prompt_and_title(h).split("|")[0].to_s, "Space f w on the first character of a word takes the whole word")
+    h = word_session("caf\u00e9 x\n", "3l<Space>fw")
+    t.assert_equal("> caf\u00e9", prompt_and_title(h).split("|")[0].to_s, "Space f w on a multi-byte character takes the word by code point columns")
+    h = word_session("foo_bar baz\n", "<Space>fw")
+    t.assert_equal("> foo_bar", prompt_and_title(h).split("|")[0].to_s, "Space f w takes the underscore as part of the word")
+    # Scenario: Space f w on no word opens the grep picker empty.
+    h = word_session("hello world\n", "5l<Space>fw")
+    t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on a blank opens the grep picker on the empty prompt")
+    h = word_session("", "<Space>fw")
+    t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w in an empty buffer opens the grep picker on the empty prompt")
+    h = word_session("hello\n\nworld\n", "j<Space>fw")
+    t.assert_equal([:cmdline, ">|Grep"], [h.mode, prompt_and_kind(h)], "Space f w on an empty line opens the grep picker on the empty prompt")
+    h = word_session("hello world\n", "$<Space>fw")
+    t.assert_equal("> world", prompt_and_title(h).split("|")[0].to_s, "Space f w on the last character of the last line takes the word")
+    h = word_session("hello world\n", "<Space>fw<C-g>")
+    t.assert_equal([:cmdline, "> hello|Files 0/3"], [h.mode, prompt_and_title(h)], "Ctrl-G after Space f w switches to the file finder on the word")
     t.finish
   end
 end

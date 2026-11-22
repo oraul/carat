@@ -20,7 +20,8 @@ module Carat
       # matches best first, a shorter path first among equal scores, then
       # by listing. find, word_start?, and word_end? serve the grep
       # picker's substring search (word_byte? and camel? are theirs, and
-      # boundary?'s, to share).
+      # boundary?'s, to share). word_at reads the word under the cursor for
+      # the grep picker's word action; it allocates its one result.
       module Matcher
         # A run match scores MAX_RUNS + 1 - runs: MAX_RUNS - 1 at two runs, 1 at
         # MAX_RUNS. Every substring score, from ELSEWHERE up, is above it
@@ -219,6 +220,40 @@ module Carat
           here = text.getbyte(e).to_i
           return true unless word_byte?(here)
           camel?(text.getbyte(e - 1).to_i, here)
+        end
+
+        # The word of the line at the code point column col: the run of
+        # bytes keyword_byte? accepts around it, "" when the column is past the
+        # line, on no word byte, or the run is not valid UTF-8.
+        #: (String, Integer) -> String
+        def self.word_at(line, col)
+          size = line.bytesize
+          i = 0
+          c = 0
+          while i < size && c < col
+            i += 1
+            while i < size && (line.getbyte(i).to_i & 0xC0) == 0x80
+              i += 1
+            end
+            c += 1
+          end
+          return "" if i >= size || !keyword_byte?(line.getbyte(i).to_i)
+          first = i
+          while first > 0 && keyword_byte?(line.getbyte(first - 1).to_i)
+            first -= 1
+          end
+          last = i
+          while last < size && keyword_byte?(line.getbyte(last).to_i)
+            last += 1
+          end
+          word = line.byteslice(first, last - first).to_s
+          word.valid_encoding? ? word : ""
+        end
+
+        # Whether b is part of a keyword: word_byte? or an underscore.
+        #: (Integer) -> bool
+        def self.keyword_byte?(b)
+          b == 0x5F || word_byte?(b)
         end
 
         # Whether b is part of a word: an ASCII letter or digit, or a byte of
