@@ -2501,9 +2501,14 @@ lane_of() {
 }
 
 # True when the queue on stdin holds an item naming the change
-# ("N. `CHANGE`" and anything after), as estimate_of reads it.
+# ("N. `CHANGE`" and anything after), as estimate_of reads it, or a
+# paragraph "The user-approved exception ..." (to its blank line) naming it
+# in backticks, a change the user put first in that lane and no item names.
 item_named() {
   C="$change" awk '
+    /^$/ { para = 0 }
+    /^The user-approved exception/ { para = 1 }
+    para && index($0, "`" ENVIRON["C"] "`") { f = 1 }
     { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "`") == 1) f = 1 }
     END { exit !f }'
 }

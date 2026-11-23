@@ -3564,6 +3564,15 @@ expect "run_state: history refuses outside the change's lane worktree" 1 "histor
 expect "run_state: plan-apply from the lane worktree itself is not refused" 0 "^plan-apply: " sh -c "cd tmp/.lane-stale && sh '$here/run_state.sh' plan-apply stale"
 rm -rf tmp/.lane-stale
 
+# A change named only in a queue's exception line takes that queue's lane
+# (lane-of-exception), so its history step writes that lane's file.
+fresh exline
+printf '# Queue\n\n1. `other` (T4, estimated small): one.\n' > docs/queue-backlog.md
+printf '# Queue\n\nThe user-approved exception of 2026-11-21: `facet-doc` runs first in this\nlane, outside the 3.\n\n1. `f1` (T3, estimated small): one.\n' > docs/queue-feature.md
+commit "docs: the queues"
+state init facet-doc chore/facet-doc > /dev/null
+expect "run_state: a change named only in a queue's exception line takes that queue's lane" 0 "^feature$" state lane facet-doc
+
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
 # proposal or finding to place.
