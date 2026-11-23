@@ -9,3 +9,8 @@
 ## 2. Docs
 
 - [x] 2.1 Update README.md and the tools area of `docs/codebase-map.md`
+
+## Quality review
+
+- [x] 3.1 `check_brief` held an unused awk function; removed, fixed
+- [x] 3.2 The out-of-order field and the missing run state refusals had no case; added to `tools/tools_test.sh`, fixed
