@@ -586,3 +586,27 @@
 - Location: tools/run_state.sh main_scan
 - Why: closed as fixed by run-state-backlog: As the entry above: build/NAME.log of the main checkout is left out of the scan.
 - Fix: tools-test: a log written in the main checkout's build/ by another lane leaves a lane's check passing
+
+### Groom's listed check matches any archive name suffix (`sprint-planning` quality advisory)
+
+- Location: tools/run_state.sh groom's listed check
+- Why: closed as gone by run-state-backlog: The archive glob of the listed check is gone: groom's listed proof is item_lists over the sprint's own changes (sprint_change), which reads a queue item, no archive name.
+- Fix: a search of tools/run_state.sh for archive/
+
+### Usage header splits review-due's description (`ci-time` quality advisory)
+
+- Location: tools/run_state.sh, the usage header
+- Why: closed as already fixed by run-state-backlog: The ci-stages and tokens entries stand before review-due's description, which is whole.
+- Fix: the usage header
+
+### ci-stages may drop every step on fractional seconds (`ci-time` quality advisory)
+
+- Location: tools/run_state.sh ci_stages
+- Why: closed as already fixed by run-state-backlog: The jq computes each timestamp to the second through fromdateiso8601 and adds the fraction its capture reads, so a fractional step is kept, not dropped.
+- Fix: tools-test: ci-stages records a fractional step, rounded to a tenth
+
+### reviewed-edits fails open when git diff fails (pipeline-diet quality)
+
+- Location: tools/run_state.sh reviewed_edits
+- Why: closed as fixed by run-state-backlog: A failing git diff or ls-files returns 1 with a message; no empty list reads as none since the review.
+- Fix: tools-test: reviewed-edits fails when git cannot list the changed files

@@ -3679,6 +3679,7 @@ echo advisory >> tools/base.sh && echo new > tools/new.sh
 expect "run_state: reviewed-edits refuses an edit of a reviewed file" 1 "^reviewed-edits: files changed since the security review at [0-9a-f]*: tools/base[.]sh tools/new[.]sh; restore each" state reviewed-edits rev
 commit "fix: an advisory"
 expect "run_state: reviewed-edits refuses a committed edit of a reviewed file" 1 ": tools/base[.]sh tools/new[.]sh; restore each" state reviewed-edits rev
+expect "run_state: reviewed-edits fails when git cannot list the changed files" 1 "git failed listing the files changed since the security review" env GIT_INDEX_FILE=/tmp sh "$here/run_state.sh" reviewed-edits rev
 
 # forge CHANGE LINE: append LINE to the run state as a hand edit would.
 forge() {

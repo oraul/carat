@@ -2803,7 +2803,11 @@ reviewed_edits() {
   at=${at%% *}
   valid '[0-9a-f]{7,40}' "$at" && git rev-parse --verify -q --end-of-options "$at^{commit}" > /dev/null 2>&1 ||
     { echo "reviewed-edits: the security review's commit $at names no commit"; return 1; }
-  changed=$({ git diff --no-renames --name-only --end-of-options "$at" -- && git ls-files --others --exclude-standard; } 2>/dev/null)
+  # A git that fails here lists no edit, so it is no pass: each read is checked.
+  changed_diff=$(git diff --no-renames --name-only --end-of-options "$at" -- 2>/dev/null) &&
+    changed_new=$(git ls-files --others --exclude-standard 2>/dev/null) ||
+    { echo "reviewed-edits: git failed listing the files changed since the security review at $at, so no edit can be ruled out"; return 1; }
+  changed=$(printf '%s\n%s\n' "$changed_diff" "$changed_new")
   edited=$(printf '%s\n' "$changed" | outside_records | sort -u | tr '\n' ' ')
   if [ -n "$edited" ]; then
     echo "reviewed-edits: files changed since the security review at $at: ${edited% }; restore each with git restore --source=$at -- FILE and record the finding in docs/findings/$change.md instead"
