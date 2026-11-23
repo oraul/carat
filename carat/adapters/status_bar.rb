@@ -1,4 +1,3 @@
-require_relative "../plugin_api"
 require_relative "../domain/editor_state"
 require_relative "../domain/frame"
 require_relative "../domain/highlight"
@@ -66,7 +65,7 @@ module Carat
       # @rbs @widths: Array[Integer]
       # @rbs @priorities: Array[Integer]
       # @rbs @shown: Array[Integer]
-      # @rbs @owners: Array[Integer]
+      # @rbs @plugin_index: Array[Integer]
 
       #: (plugin_ui: Domain::PluginUi, slots: Domain::StatusSlots) -> void
       def initialize(plugin_ui:, slots:)
@@ -77,7 +76,7 @@ module Carat
         @widths = []
         @priorities = []
         @shown = []
-        @owners = []
+        @plugin_index = []
       end
 
       # Paints the bar on row of a frame cols wide for the state's current
@@ -143,10 +142,10 @@ module Carat
       # one, a crash is an error, and a stopped server or one waiting in an
       # untrusted directory is quiet.
       #: (Symbol) -> Integer
-      def self.lsp_group(state)
-        return Domain::Highlight::STATUS_LSP_STARTING if state == :starting || state == :indexing
-        return Domain::Highlight::STATUS_LSP_READY if state == :ready
-        return Domain::Highlight::STATUS_LSP_ERROR if state == :crashed
+      def self.lsp_group(lsp_state)
+        return Domain::Highlight::STATUS_LSP_STARTING if lsp_state == :starting || lsp_state == :indexing
+        return Domain::Highlight::STATUS_LSP_READY if lsp_state == :ready
+        return Domain::Highlight::STATUS_LSP_ERROR if lsp_state == :crashed
         Domain::Highlight::STATUS_DIM
       end
 
@@ -160,7 +159,7 @@ module Carat
         @widths.clear
         @priorities.clear
         @shown.clear
-        @owners.clear
+        @plugin_index.clear
         window = state.window
         buffer = window.buffer
         set = state.options.icons
@@ -188,12 +187,12 @@ module Carat
       end
 
       #: (Integer, Integer, Integer) -> void
-      def add(kind, width, owner)
+      def add(kind, width, plugin)
         @kinds << kind
         @widths << (gap?(kind) ? width + GAP : width)
-        @priorities << (owner >= 0 ? @plugin_ui.priorities[owner] : PRIORITIES[kind])
+        @priorities << (plugin >= 0 ? @plugin_ui.priorities[plugin] : PRIORITIES[kind])
         @shown << 1
-        @owners << owner
+        @plugin_index << plugin
       end
 
       # Whether a segment of the kind starts an independent group, so a
@@ -266,7 +265,7 @@ module Carat
           hl = last_count_group
         elsif kind == PLUGIN
           x = frame.put_within(row, x, " ", hl, limit)
-          x = frame.put_within(row, x, @plugin_ui.text_at(@owners[i]), hl, limit)
+          x = frame.put_within(row, x, @plugin_ui.text_at(@plugin_index[i]), hl, limit)
         elsif kind == PROGRESS
           x = frame.put_within(row, x, " ", hl, limit)
           x = frame.put_within(row, x, slots.progress_label, hl, limit)

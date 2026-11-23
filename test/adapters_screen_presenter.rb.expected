@@ -1,5 +1,5 @@
 ok   enter reaches the terminal
-ok   enter switches to the alternate screen and clears it
+ok   enter switches to the alternate screen, turns bracketed paste on, and clears it
 ok   first frame clears the screen
 ok   first frame writes row 1 with the normal highlight
 ok   line number highlight is emitted before the text
@@ -28,6 +28,7 @@ ok   no raw OSC introducer is written
 ok   leave reaches the terminal
 ok   leave restores the terminal's own cursor shape, shows it, and restores the main screen last
 ok   output begins with the alternate screen
+ok   leave turns bracketed paste off before restoring the terminal
 ok   inactive status lines have the theme's StatusLineNC
 ok   tab line labels have TabLine
 ok   the selected label has TabLineSel
@@ -100,4 +101,4 @@ ok   Switching at 256 colors: every group in the new palette, the frame drawn in
 ok   Switching at 256 colors: the terminal's background clears the screen with no palette color
 ok   Switching at 16777216 colors: every group in the new palette, the frame drawn in full
 ok   Switching at 16777216 colors: the terminal's background clears the screen with no palette color
-adapters_screen_presenter: 102 passed, 0 failed
+adapters_screen_presenter: 103 passed, 0 failed

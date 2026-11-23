@@ -214,6 +214,8 @@ ok   a hidden highlight is not drawn
 ok   nohlsearch draws nothing
 ok   an empty match is not drawn, a longer one is
 ok   the previewed match is in the IncSearch group
+ok   the pattern is large enough to stop the budget within the window
+ok   a row painted after the budget stopped is painted again, one before it is not
 ok   a backward search prompt shows a question mark
 ok   The cursor line of the current window: the cursor's row of the current window is lit
 ok   the blanks after the text are lit to the window's edge
@@ -257,4 +259,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 259 passed, 0 failed
+adapters_frame_presenter: 261 passed, 0 failed

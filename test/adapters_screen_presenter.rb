@@ -71,7 +71,7 @@ module AdaptersScreenPresenterTest
 
     screen.enter
     t.assert_equal(1, terminal.entered, "enter reaches the terminal")
-    t.assert_equal("\e[?1049h\e[H\e[2J", terminal.last_write, "enter switches to the alternate screen and clears it")
+    t.assert_equal("\e[?1049h\e[?2004h\e[H\e[2J", terminal.last_write, "enter switches to the alternate screen, turns bracketed paste on, and clears it")
 
     frame = D::Frame.new(rows: 3, cols: 6)
     frame.put(0, 0, "hello", D::Highlight::NORMAL)
@@ -166,6 +166,8 @@ module AdaptersScreenPresenterTest
     t.assert_equal(1, terminal.left, "leave reaches the terminal")
     t.assert_true(terminal.output.end_with?("\e[0m\e[0 q\e[?25h\e[?1049l"), "leave restores the terminal's own cursor shape, shows it, and restores the main screen last")
     t.assert_true(terminal.output.start_with?("\e[?1049h"), "output begins with the alternate screen")
+    # Scenario: Bracketed paste sequences.
+    t.assert_true(terminal.output.include?("\e[?2004l\e[0m\e[0 q"), "leave turns bracketed paste off before restoring the terminal")
 
     # The window and tab line highlights have their own sequences.
     colored = D::Frame.new(rows: 4, cols: 8)
