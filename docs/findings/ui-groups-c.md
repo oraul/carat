@@ -12,3 +12,10 @@
 - Location: `carat/domain/color_depth.rb` (`BASIC_TERMS`)
 - Why: the brief and `docs/design.md` speak of 16 colors under xterm's default colors, but only `xterm-color` and the other listed names reach 16 colors, so a plain `xterm` gets 256-color sequences; the smoke case checks `xterm-color` for 16 colors and `xterm` for 256
 - Fix: keep the list (a real xterm shows 256 colors) and say so in `docs/design.md`, or list `xterm` when its `COLORTERM` is empty
+# Backlog entries from the ui-groups-c plan
+
+### A Low restating a recorded user decision starts a fix round (merge-git-unpin retro 4)
+
+- Location: `.claude/workflows/deliver-change.js`, the round start on a non-blocking security finding and the close-advisories start.
+- Why: merge-git-unpin's security Low (6) only restated the user's decision of 2026-11-23 ("Remove the pinned git only"), already in `docs/findings/merge-git-unpin.md`, yet started a fix round and a close-advisories start (rework 1); 5 of the last 10 backlog rows had rework 1 or more.
+- Fix: a finding whose only fix reverses a recorded user decision already in the change's findings file starts neither; accepted when a tools-test case of such a finding ends with rework 0 and no extra contributor start, failing before.
