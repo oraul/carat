@@ -11,4 +11,4 @@
 
 ## 3. Docs
 
-- [x] 3.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, and the `messages` delta spec
+- [x] 3.1 Update README.md, `docs/compatibility.md`, `docs/codebase-map.md`, and the `messages` delta spec
