@@ -20,3 +20,8 @@
 - [x] 4.2 Stored figures trust the saving lane's measuring script; recorded in `docs/findings/cache-reuse.md`, recorded
 - [x] 4.3 The check round's carry has no end-to-end workflow test; recorded in `docs/findings/cache-reuse.md`, recorded
 - [x] 4.4 The release timing of the benchmark runs only for a brief with a time target; recorded in `docs/findings/cache-reuse.md`, recorded
+
+## Fix round
+
+- [x] 5.1 Security Low: `carried` ran make in the lane working tree, where a planted untracked makefile is read first; it now reads the stage list as text (`main_stages`, then the FAST_STAGES line of `HEAD:Makefile`) and refuses while an untracked makefile stands; proved by the carried cases in `tools/tools_test.sh`, fixed
+- [x] 5.2 Security Low: `base-figures save` copied an untracked file any read-profile agent could write; it now measures `tmp/.base` itself with main's tracked `tools/metrics.sh`, refusing a changed tracked file, and `.claude/agents/benchmark.md` no longer measures by hand; proved by the planted-figures cases in `tools/tools_test.sh`, fixed

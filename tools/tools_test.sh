@@ -2274,10 +2274,26 @@ store_figures() {
 }
 expect "run_state: base-figures says none are stored for main's commit" 1 "none stored for main $(git rev-parse --short=12 main)" store_figures
 expect "run_state: bench without stored figures compares with the recorded ones and names the difference" 1 "^allocs[.]lh 27 -> 28[.]0$" store_bench
+# Main's own measuring script, a tracked file of main: base-figures save runs
+# it in tmp/.base, so the figures are never a file anyone could have written.
+git_q worktree add -q --detach tmp/.mk main
+printf '#!/bin/sh\nprintf "rounds.carat\\t2\\nallocs.lh\\t28.0\\nus.lh\\t55.0\\nus.j\\t?\\n" > "$2"\n' > tmp/.mk/tools/metrics.sh
+git -C tmp/.mk add tools/metrics.sh
+git -C tmp/.mk -c user.name=Claude -c user.email=noreply@anthropic.com commit -q -m "chore: measure" -m "$TRAILER"
+git_q update-ref refs/heads/main "$(git -C tmp/.mk rev-parse HEAD)"
+git_q worktree remove --force tmp/.mk
 git_q worktree add -q --detach tmp/.base main
 mkdir -p tmp/.base/build/metrics
-printf 'rounds.carat\t2\nallocs.lh\t28.0\nus.lh\t55.0\nus.j\t?\n' > tmp/.base/build/metrics/current.tsv
-expect "run_state: base-figures save stores the measurement of the base worktree at main" 0 "stored the figures of main $(git rev-parse --short=12 main)" store_figures save
+# A planted measurement that would hide a regression (cache-reuse, the stored
+# figures' trust): save never copies it, and refuses a changed script.
+printf 'rounds.carat\t2\nallocs.lh\t999.0\nus.lh\t1.0\n' > tmp/.base/build/metrics/current.tsv
+printf '#!/bin/sh\nprintf "rounds.carat\\t2\\nallocs.lh\\t999.0\\n" > "$2"\n' > tmp/.base/tools/metrics.sh
+expect "run_state: base-figures save refuses a base whose measuring script was changed" 1 "tracked files of tmp/.base differ" store_figures save
+git -C tmp/.base checkout -q -- tools/metrics.sh
+rm -f tmp/.base/tools/metrics.sh
+expect "run_state: base-figures save refuses a base whose measuring script was removed" 1 "tracked files of tmp/.base differ" store_figures save
+git -C tmp/.base checkout -q -- tools/metrics.sh
+expect "run_state: base-figures save stores main's own measurement of the base worktree, not the planted file" 0 "stored the figures of main $(git rev-parse --short=12 main)" store_figures save
 expect "run_state: base-figures stores the commit and the figures, dropping an unmeasured one" 0 "^main $(git rev-parse main) allocs[.]lh 28[.]0 rounds[.]carat 2 us[.]lh 55[.]0$" \
   sh -c "{ sed -n 1p build/pipeline/main-figures.tsv | tr '\n' ' '; sed '1d' build/pipeline/main-figures.tsv | sort | tr '\t\n' '  '; } | sed 's/ \$//'"
 expect "run_state: base-figures says the figures are stored and nothing is built" 0 "are stored; build nothing" store_figures
@@ -2330,6 +2346,34 @@ expect "run_state: carried is not carried when diagnose ran, since check runs it
 rm -f build/pipeline/carried.json
 state init carried chore/carried > /dev/null
 expect "run_state: carried is not carried when a stage has no pass record" 1 "^carried: no: stage docs-lint has no pass record$" carried_cmd "$(git rev-parse --short=12 HEAD)"
+# The stage list is read as text, never by running make in the working tree:
+# the committed Makefile's FAST_STAGES line, and a planted untracked makefile
+# is neither read nor run, the carry refusing while one stands.
+fresh carriedmk
+git_q checkout -q main
+printf '## build: compile\nbuild:\n\ttrue\nFAST_STAGES := %s\n' "$carried_stages" > Makefile
+commit "chore: stages"
+git_q checkout -q -B chore/carriedmk
+state init carriedmk chore/carriedmk > /dev/null
+echo notes > docs/notes.md
+commit "docs: notes"
+carried_run_mk() {
+  env BASE=main STAGES="$carried_stages" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check carriedmk
+}
+carried_text() {
+  env BASE=main METRICS_PREFIX="$work/carried-history" MAKE="$work/bin/make-must-not-run" sh "$here/run_state.sh" carried carriedmk "$@"
+}
+printf '#!/bin/sh\necho "make ran: $*" >&2\nexit 9\n' > "$work/bin/make-must-not-run"
+chmod +x "$work/bin/make-must-not-run"
+carried_run_mk > /dev/null
+carriedmk_head=$(git rev-parse --short=12 HEAD)
+expect "run_state: carried reads the stage list from the committed Makefile as text, running no make" 0 "^carried: every stage passed at $carriedmk_head; no stage ran$" carried_text "$carriedmk_head"
+printf 'stages:\n\t@echo docs-lint\n' > GNUmakefile
+expect "run_state: carried refuses while an untracked GNUmakefile stands" 1 "^carried: no: an untracked makefile stands: GNUmakefile$" carried_text "$carriedmk_head"
+rm -f GNUmakefile
+printf 'stages:\n\t@echo docs-lint\n' > makefile
+expect "run_state: carried refuses while an untracked makefile stands" 1 "^carried: no: an untracked makefile stands: makefile$" carried_text "$carriedmk_head"
+rm -f makefile
 # A recorded CI head is the pushed head, and a merged commit the pull
 # request's squash commit on main, resolved with git; an agent's swapped or
 # mistyped value is refused naming both (merge-record-check).

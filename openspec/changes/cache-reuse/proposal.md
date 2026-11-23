@@ -6,7 +6,7 @@ Two starts of a delivery repeat work the run state already holds. The benchmark 
 
 ## What Changes
 
-- Add `run_state.sh base-figures CHANGE [save]` and the stored figures of main (`build/pipeline/main-figures.tsv`, the commit of main and its measured figures): the benchmark agent builds and measures main only when none are stored for main's current commit, then saves them, so one measurement serves every run until main moves.
+- Add `run_state.sh base-figures CHANGE [save]` and the stored figures of main (`build/pipeline/main-figures.tsv`, the commit of main and its measured figures): the benchmark agent builds and measures main only when none are stored for main's current commit, then saves them (`save` takes the measurement itself with main's own script), so one measurement serves every run until main moves.
 - Change `run_state.sh bench` to compare with the stored figures first: no more allocations or rounds than main exits 0 (no benchmark agent), more exits 1 as a regression; without stored figures it compares with the recorded ones as before.
 - Change `.claude/agents/benchmark.md` to read the stored figures and build the base only when none are stored (and for the release timing, only when the brief states a time target).
 - Add `run_state.sh carried CHANGE COMMIT`: when COMMIT is HEAD and every stage of `make stages` holds a pass record at HEAD (`diagnose` only when scoped out), it prints that every stage passed with the spent line and the benchmark comparison the checker would have returned; otherwise it says why not and exits 1.

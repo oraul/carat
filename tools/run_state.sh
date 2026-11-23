@@ -230,7 +230,8 @@
 #                               or rounds, which exit 1 with no base to build
 #   base-figures CHANGE [save]  exit 0 when main's measured figures for its
 #                               current commit are stored, else say so and
-#                               exit 1; save stores tmp/.base's measurement,
+#                               exit 1; save measures tmp/.base with its own
+#                               tools/metrics.sh and stores that,
 #                               refused unless that worktree is at main
 #   carried CHANGE COMMIT       exit 0 and print "carried: every stage passed
 #                               at HEAD" when COMMIT is HEAD and every stage
@@ -1104,6 +1105,17 @@ main_stages() {
   file=$(git show "${BASE:-origin/main}:Makefile" 2> /dev/null) || return 0
   ! printf '%s\n' "$file" | grep -q '^FAST_STAGES := ' || return 0
   printf '%s\n' "$file" | sed -n 's/^CHECK_STAGES := //p'
+}
+
+# head_fast_stages: the FAST_STAGES line of the committed Makefile at HEAD,
+# read as text; empty when the line is missing or names anything but words
+# (a variable, a continuation), so the carry then asks the checker.
+head_fast_stages() {
+  line=$(git show HEAD:Makefile 2> /dev/null | sed -n 's/^FAST_STAGES := //p')
+  case "$line" in
+    *[!a-z0-9\ -]*) return 0 ;;
+  esac
+  printf '%s\n' "$line"
 }
 
 check_stages() {
@@ -2014,7 +2026,8 @@ stored_figures() {
 
 # base-figures [save]: without an argument, say whether figures measured at
 # main's current commit are stored (exit 0) or the base must be measured
-# (exit 1); save stores the measurement the benchmark agent made in tmp/.base,
+# (exit 1); save measures tmp/.base with main's own script from the builds the
+# benchmark agent made there (no file is copied) and stores it,
 # refused unless that worktree is at main's current commit.
 base_figures() {
   at=$(main_ref_commit) || die "base-figures: no ${BASE:-origin/main} to measure"
@@ -2033,12 +2046,22 @@ base_figures() {
     save)
       [ "$(git -C tmp/.base rev-parse --verify -q HEAD 2>/dev/null)" = "$at" ] ||
         die "base-figures: refused: tmp/.base is not at ${BASE:-origin/main}, $short"
-      measured=tmp/.base/build/metrics/current.tsv
-      [ -f "$measured" ] && grep -q -E '^(allocs|rounds)[.]' "$measured" ||
-        die "base-figures: refused: no measurement with allocations or rounds in $measured"
+      # The measurement is taken here, by main's own script in tmp/.base from
+      # the builds it holds, never copied from a file anyone could have
+      # written; the tracked files of tmp/.base must be main's.
+      [ -z "$(GIT_OPTIONAL_LOCKS=0 git -C tmp/.base status --porcelain --untracked-files=no)" ] ||
+        die "base-figures: refused: tracked files of tmp/.base differ from ${BASE:-origin/main}"
+      [ -f tmp/.base/tools/metrics.sh ] || die "base-figures: refused: tmp/.base has no tools/metrics.sh"
+      measured=$(mktemp) || die "base-figures: no temporary file"
+      mkdir -p tmp/.base/build/metrics
+      (cd tmp/.base && sh tools/metrics.sh measure "$measured") > /dev/null ||
+        { rm -f "$measured"; die "base-figures: refused: main's measurement failed in tmp/.base"; }
+      grep -q -E '^(allocs|rounds)[.]' "$measured" ||
+        { rm -f "$measured"; die "base-figures: refused: no measurement with allocations or rounds"; }
       mkdir -p "$state_dir"
       { echo "main $at"; grep -v "$TAB[?]$" "$measured"; } > "$(main_figures_file).part"
       mv "$(main_figures_file).part" "$(main_figures_file)"
+      rm -f "$measured"
       echo "base-figures: stored the figures of main $short" ;;
     *) usage ;;
   esac
@@ -2054,14 +2077,17 @@ base_figures() {
 # but what spent and bench write.
 carried_check() {
   head=$(head_commit)
+  untracked=$(git ls-files --others --exclude-standard -- GNUmakefile makefile '*/GNUmakefile' '*/makefile' 2>/dev/null)
+  [ -z "$untracked" ] || { echo "carried: no: an untracked makefile stands: $untracked"; return 1; }
   want=$(commit_at "$1") || exit 1
   [ "$want" = "$head" ] || { echo "carried: no: $want is not HEAD $head"; return 1; }
   dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
   [ -z "$dirty" ] || { echo "carried: no: tracked files differ from HEAD"; return 1; }
-  # The stage list is the lane's own Makefile's, read outside the clone: the
-  # workflow asks only on the contributor's claim, which needs the check's
-  # machinery (the Makefile included) untouched.
-  stages=${STAGES:-$("$make_cmd" -s --no-print-directory stages)}
+  # The stage list is read as check_stages and gates.sh read it, as text and
+  # never by running make in the working tree: a planted untracked GNUmakefile
+  # or makefile is read before the committed Makefile and could drop a stage.
+  stages=${STAGES:-$(main_stages)}
+  [ -n "$stages" ] || stages=$(head_fast_stages)
   [ -n "$stages" ] || { echo "carried: no: no stages"; return 1; }
   paths=$(scope_paths)
   for s in $stages; do
