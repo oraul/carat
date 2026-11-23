@@ -10,7 +10,7 @@
 ## 2. Tidies
 
 - [x] 2.1 Let go of a hidden slot's view when its plugin is disabled and in `close_scratch` (`TabList#drop_kept`); proved by `test/editor_plugins.rb`
-- [x] 2.2 Rename the locals `e` of the plugin host files and share one option lookup (`PluginRegistry#option`)
+- [x] 2.2 Rename the locals `e` of the plugin host files and share one option lookup (`PluginRegistry#option_value`)
 
 ## 3. Docs
 

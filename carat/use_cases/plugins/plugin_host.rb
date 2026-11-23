@@ -184,7 +184,7 @@ module Carat
       # option.
       #: (String, String) -> String
       def option(name, key)
-        value = @registry.option(name, key)
+        value = @registry.option_value(name, key)
         value.nil? ? "" : value
       end
 

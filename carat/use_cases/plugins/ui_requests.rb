@@ -131,7 +131,7 @@ module Carat
 
       #: (String, String) -> PluginApi::TextResponse
       def option(name, key)
-        value = @registry.option(name, key)
+        value = @registry.option_value(name, key)
         return PluginApi::TextResponse.failure("No option named #{key}") if value.nil?
         PluginApi::TextResponse.success(value.dup)
       end

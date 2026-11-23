@@ -74,7 +74,7 @@ module Carat
 
       # A plugin's option value, nil for an unknown plugin or option.
       #: (String, String) -> String?
-      def option(name, key)
+      def option_value(name, key)
         found = find(name)
         found.nil? ? nil : found.options[key]
       end

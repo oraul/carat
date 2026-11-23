@@ -11,7 +11,7 @@ Four Low security findings from an untrusted repository sit in the plugin host a
 - Add `Finder::SafeText`, the one sanitizer (moved out of `Grep`), and use it for the file finder's rows and the preview title.
 - Change `style_float` to refuse a span starting past `SyntaxLine::LONGEST_SPAN`, and `PluginSyntax#copied_tokens` to drop a token starting past it and cut a length to it; the constant moves to `Domain::SyntaxLine`.
 - Fix a hidden slot keeping a plugin's view: `TabList#drop_kept` lets go of the slot windows over a buffer; the registry calls it before removing a disabled plugin's buffer, and `close_scratch` calls it when no leaf shows the view.
-- Refactor: the locals `e` of the plugin host files become `entry`, `found`, `registered`, and `edit`; `PluginRegistry#option` is the one option lookup of `PluginHost` and `UiRequests`.
+- Refactor: the locals `e` of the plugin host files become `entry`, `found`, `registered`, and `edit`; `PluginRegistry#option_value` is the one option lookup of `PluginHost` and `UiRequests`.
 
 Assumptions: with `PATH` unset a bare name starts nothing; the language-server spawn takes the same resolution (a configured command that is a bare name); the read budget of 16 MiB is about the 400,000-line cap at 40 bytes a line; the two findings the brief names only by location (`plugin_router.rb:44`, `manifest_check.rb:32`) are recorded in the findings file, not changed.
 
