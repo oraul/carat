@@ -15,3 +15,7 @@
 - [x] 3.1 Self-review of the diff by the quality reviewer's checklist, each finding fixed or recorded
 
 - [x] 3.2 Review finding (Low): the escape scan's changed-path list also prints unfiltered; it is outside the brief's outcome, so it is recorded in docs/findings/check-jobs-lows.md
+
+## Review round
+
+- [x] 4.1 Security finding (Low): `visible_text` also replaces the C1 controls, the UTF-8 pair C2 80 to C2 9F and a raw byte 80 to 9F; tools-test cases for a log line holding a UTF-8 C2 9B and one holding a raw 9B

@@ -906,6 +906,7 @@ case "$s" in
     done
     sleep 3 ;;
   esc) printf 'before\033[31mred\033[0m\tafter\r\n'; exit 6 ;;
+  c1) printf 'one\302\233[31mred\ntwo\233[0m\n'; exit 7 ;;
 esac
 exit 0
 EOF
@@ -918,6 +919,10 @@ expect "run_state: a forged job file leaves the sibling's record at its own stat
 # A failing stage's log excerpt shows a control byte as text, not to the terminal.
 expect "run_state: a failing stage's excerpt shows control bytes as visible text" 1 "^[|] before[?][[]31mred[?][[]0m after[?]$" forge_check "esc"
 expect "run_state: a failing stage's excerpt holds no escape byte" 1 "^0$" sh -c "grep -c \"\$(printf '\\033')\" build/stages/isolated/check.log"
+# A C1 control, as the UTF-8 pair C2 9B or a raw 9B byte, is shown as text too.
+expect "run_state: a failing stage's excerpt shows a UTF-8 C1 control as visible text" 1 "^[|] one[?][[]31mred$" forge_check "c1"
+expect "run_state: a failing stage's excerpt shows a raw C1 byte as visible text" 0 "^[|] two[?][[]0m$" sed '$d' build/stages/isolated/check.log
+expect "run_state: a failing stage's excerpt holds no C1 byte" 1 "^0$" sh -c "LC_ALL=C grep -c \"\$(printf '\\233')\" build/stages/isolated/check.log"
 cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at

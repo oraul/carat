@@ -1015,9 +1015,17 @@ job_ended() {
 }
 
 # visible_text: stdin with a tab or NUL as a space and every other control
-# byte as "?", so a log's escape sequence never reaches the terminal.
+# byte as "?", so a log's escape sequence never reaches the terminal. The
+# C1 controls go too, as the UTF-8 pair C2 80 to C2 9F and as a raw byte
+# 80 to 9F, which a terminal acting on 8-bit controls runs as a CSI; the
+# raw-byte pass also turns a UTF-8 continuation byte in that range into "?".
 visible_text() {
-  tr '\t\000' '  ' | LC_ALL=C sed 's/[[:cntrl:]]/?/g'
+  c1_lead=$(printf '\302')
+  c1_low=$(printf '\200')
+  c1_high=$(printf '\237')
+  tr '\t\000' '  ' | LC_ALL=C sed -e 's/[[:cntrl:]]/?/g' \
+    -e "s/${c1_lead}[${c1_low}-${c1_high}]/?/g" \
+    -e "s/[${c1_low}-${c1_high}]/?/g"
 }
 
 # Starts the queued stages that are ready, in queue order, while fewer

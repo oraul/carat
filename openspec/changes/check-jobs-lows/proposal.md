@@ -8,7 +8,7 @@
 
 - The runner takes a stage's result from its own child: the job subshell exits with the stage's status and the runner reads it with `wait`. The jobs directory, `NAME.status`, and `NAME.start` are removed; each job's pid, start second, and commit live in a runner variable. An ended job is seen by the process table (gone or a zombie), never by a file.
 - `stages_reap` and `stages_stop` use that, keeping every record and log line they wrote.
-- The failing stage's log excerpt prints control bytes (ESC, CR, NUL, tab) as `?`, so no escape sequence reaches the terminal.
+- The failing stage's log excerpt prints control bytes (ESC, CR, NUL, tab) and C1 controls (the UTF-8 pair C2 80 to C2 9F, a raw byte 80 to 9F) as `?`, so no escape sequence reaches the terminal.
 - `tools/tools_test.sh`: a stage that writes a sibling stage's job files cannot change that stage's record, and a failing stage whose log holds an ESC sequence prints it without the ESC byte.
 
 Out of scope: the changed-file path list of the escape scan prints unfiltered too (recorded in the findings file).

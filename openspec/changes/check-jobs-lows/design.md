@@ -17,4 +17,4 @@ The runner started each stage in a background subshell that wrote its status int
 
 - The job subshell is the runner's child, so `wait PID` returns its exit status, and the subshell ends with the stage's status. No file carries a result. The pid, start, and commit are runner variables (`job_table`), unreachable from a stage.
 - A job ended is seen with `ps -o stat= -p PID` (empty or `Z`), because `kill -0` still succeeds on an unreaped child. `wait` is only called on an ended job, so the runner never blocks on a running stage.
-- The excerpt goes through `visible_text`: tab and NUL become a space, every other control byte `?`, in the C locale so UTF-8 text is kept.
+- The excerpt goes through `visible_text`: tab and NUL become a space, every other control byte `?`, in the C locale so UTF-8 text is kept; the C1 controls go too, as the pair C2 80 to C2 9F and as a raw byte 80 to 9F (a UTF-8 continuation byte in that range shows as `?` too).
