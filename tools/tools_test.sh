@@ -3535,6 +3535,13 @@ printf '[commit]\n\tgpgsign = true\n[gpg]\n\tprogram = false\n' > "$work/hostile
 expect "run_state: merge-main keeps the branch's own lane queue and main's other under a global configuration that signs commits" 0 "^merge-main: merged main into chore/mq at [0-9a-f]{12}, the backlog lane queue kept from chore/mq and the other from main the branch plan[.] the sprint plan[.] 3$" \
   sh -c "out=\$(GIT_CONFIG_GLOBAL='$work/hostile.gitconfig' BASE=main sh '$here/run_state.sh' merge-main qb) && echo \"\$out \$(sed -n 3p docs/queue-backlog.md | sed 's/.*: //') \$(sed -n 3p docs/queue-feature.md | sed 's/.*: //') \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')\""
 
+# A metrics prefix holding a space (metrics-prefix-space): the lane files
+# are read by lane name, never split as one word list.
+fresh spaced
+mkdir -p "$work/sp ace"
+printf '%s\nabc\tcol\t0123456789ab\n' "$HISTORY_HEADER" > "$work/sp ace/m-feature.tsv"
+expect "run_state: status reads the history rows of a metrics prefix holding a space" 0 "^abc[[:space:]]col" env METRICS_PREFIX="$work/sp ace/m" sh "$here/run_state.sh" status
+
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
 # proposal or finding to place.

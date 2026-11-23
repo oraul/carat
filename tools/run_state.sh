@@ -2423,7 +2423,8 @@ has_row() {
 # it is set (sprint-row's committed form), where the branch's later edits
 # of the files are the only ones counted.
 lane_rows() {
-  for f in $metrics_files; do
+  for lane_name in feature backlog; do
+    f="$metrics_prefix-$lane_name.tsv"
     if [ -n "${history_at:-}" ]; then
       git show "$history_at:$f" 2>/dev/null | awk 'NR > 1 && NF'
     else
@@ -3140,7 +3141,8 @@ append_history() {
   done
   names=$(pending_list)
   [ -n "$names" ] || { echo "history: nothing pending"; return 0; }
-  for lane_file in $metrics_files; do
+  for lane_name in feature backlog; do
+    lane_file="$metrics_prefix-$lane_name.tsv"
     [ -s "$lane_file" ] || continue
     [ "$(sed -n 1p "$lane_file")" = "$HEADER" ] ||
       die "history: $lane_file's line 1 differs from HEADER; rewrite it to HEADER and pad each older row with - for the columns it lacks; nothing appended"
@@ -3152,7 +3154,7 @@ append_history() {
   if [ -n "${1:-}" ] && ! (carries "$1"); then only=$(change=$1; lane_of); fi
   # Each lane file's rows at BASE, its header stripped, so the second
   # file's header is never read as a row.
-  base_history=$(for f in $metrics_files; do git show "${BASE:-origin/main}:$f" 2>/dev/null | awk 'NR > 1 && NF'; done)
+  base_history=$(for lane_name in feature backlog; do git show "${BASE:-origin/main}:$metrics_prefix-$lane_name.tsv" 2>/dev/null | awk 'NR > 1 && NF'; done)
   branch_now=$(git rev-parse --abbrev-ref HEAD 2>/dev/null) || branch_now=HEAD
   case "$branch_now" in ""|*[[:cntrl:]]*) branch_now=HEAD ;; esac
   for change in $names; do
