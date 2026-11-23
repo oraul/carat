@@ -224,6 +224,23 @@
 #                               without a history row, else the last row;
 #                               exit 0 when allocations and rounds equal
 #                               them, 1 otherwise
+#                               when figures of main measured at its current
+#                               commit are stored (base-figures), they are the
+#                               base instead: exit 0 unless more allocations
+#                               or rounds, which exit 1 with no base to build
+#   base-figures CHANGE [save]  exit 0 when main's measured figures for its
+#                               current commit are stored, else say so and
+#                               exit 1; save builds tmp/.base (outputs cleared first,
+#                               an untracked makefile refused), measures it with its own
+#                               tools/metrics.sh and stores that,
+#                               refused unless that worktree is at main
+#   carried CHANGE COMMIT       exit 0 and print "carried: every stage passed
+#                               at HEAD" when COMMIT is HEAD and every stage
+#                               holds a pass record at HEAD (diagnose only
+#                               scoped out), then print the spent line and the
+#                               bench result as the checker would; else print
+#                               "carried: no: why" and exit 1, so the workflow
+#                               starts no checker
 #   push CHANGE [--ci-fix|--review-fix|--main-moved|--pr-text]
 #                               run the pre-push gates, refuse a push beyond one
 #                               plus one per CI fix (a CI fix needs ci red) plus
@@ -1089,6 +1106,17 @@ main_stages() {
   file=$(git show "${BASE:-origin/main}:Makefile" 2> /dev/null) || return 0
   ! printf '%s\n' "$file" | grep -q '^FAST_STAGES := ' || return 0
   printf '%s\n' "$file" | sed -n 's/^CHECK_STAGES := //p'
+}
+
+# head_fast_stages: the FAST_STAGES line of the committed Makefile at HEAD,
+# read as text; empty when the line is missing or names anything but words
+# (a variable, a continuation), so the carry then asks the checker.
+head_fast_stages() {
+  line=$(git show HEAD:Makefile 2> /dev/null | sed -n 's/^FAST_STAGES := //p')
+  case "$line" in
+    *[!a-z0-9\ -]*) return 0 ;;
+  esac
+  printf '%s\n' "$line"
 }
 
 check_stages() {
@@ -1968,6 +1996,130 @@ newest_pending() {
   done | sort -n -k1,1 | tail -1 | cut -d' ' -f2
 }
 
+# Main's measured figures, stored once per main commit (cache-reuse): a
+# first line "main FULLSHA", then "name<TAB>value" lines, in the shared run
+# state directory, which no lane's check scans for writes. Only
+# base_figures save writes it, from the base worktree tmp/.base when that is
+# at main, so a later bench compares with figures measured at main's
+# current commit and builds nothing.
+main_figures_file() {
+  echo "$state_dir/main-figures.tsv"
+}
+main_ref_commit() {
+  git rev-parse --verify -q --end-of-options "${BASE:-origin/main}^{commit}" 2>/dev/null
+}
+
+# stored_figures OUT: write the stored figures to OUT and succeed only when
+# they were measured at main's current commit and hold allocations or rounds.
+stored_figures() {
+  file=$(main_figures_file)
+  [ -f "$file" ] || return 1
+  at=$(main_ref_commit) || return 1
+  [ "$(sed -n 1p "$file")" = "main $at" ] || return 1
+  sed '1d' "$file" > "$1.part"
+  if grep -q -E '^(allocs|rounds)[.]' "$1.part"; then
+    mv "$1.part" "$1"
+    return 0
+  fi
+  rm -f "$1.part"
+  return 1
+}
+
+# base-figures [save]: without an argument, say whether figures measured at
+# main's current commit are stored (exit 0) or the base must be measured
+# (exit 1); save builds tmp/.base, measures it with main's own script and
+# stores it (no file is copied),
+# refused unless that worktree is at main's current commit.
+base_figures() {
+  at=$(main_ref_commit) || die "base-figures: no ${BASE:-origin/main} to measure"
+  short=$(printf '%s' "$at" | cut -c1-12)
+  case "${1:-}" in
+    "")
+      probe=$(mktemp)
+      if stored_figures "$probe"; then
+        rm -f "$probe" "$probe.part"
+        echo "base-figures: the figures of main $short are stored; build nothing"
+        return 0
+      fi
+      rm -f "$probe" "$probe.part"
+      echo "base-figures: none stored for main $short; build tmp/.base, measure it, then save"
+      return 1 ;;
+    save)
+      [ "$(git -C tmp/.base rev-parse --verify -q HEAD 2>/dev/null)" = "$at" ] ||
+        die "base-figures: refused: tmp/.base is not at ${BASE:-origin/main}, $short"
+      # The measurement is taken here, by main's own script in tmp/.base from
+      # builds made here from main's tracked tree, never copied from a file
+      # anyone could have written; the tracked files of tmp/.base must be
+      # main's, no makefile of its own may stand there (make reads
+      # GNUmakefile and makefile before Makefile), and the outputs the
+      # script reads are removed before the build, so a planted one is
+      # never measured.
+      [ -z "$(GIT_OPTIONAL_LOCKS=0 git -C tmp/.base status --porcelain --untracked-files=no)" ] ||
+        die "base-figures: refused: tracked files of tmp/.base differ from ${BASE:-origin/main}"
+      for planted in GNUmakefile makefile; do
+        if [ -e "tmp/.base/$planted" ] || [ -L "tmp/.base/$planted" ]; then
+          [ -n "$(git -C tmp/.base ls-files -- "$planted")" ] ||
+            die "base-figures: refused: tmp/.base holds an untracked $planted, which make would read first"
+        fi
+      done
+      [ -f tmp/.base/tools/metrics.sh ] || die "base-figures: refused: tmp/.base has no tools/metrics.sh"
+      measured=$(mktemp) || die "base-figures: no temporary file"
+      rm -rf tmp/.base/build/dev/carat.timing tmp/.base/build/test/run_all.timing tmp/.base/build/bench/keys-budget tmp/.base/build/metrics
+      lane_top=$(pwd -P)
+      "$make_cmd" -C tmp/.base dev-build test-build bench-budget "PREFIX=$lane_top/tmp/.toolchain" "SPINEL_CACHE_DIR=$lane_top/build/spinel-cache" > /dev/null ||
+        { rm -f "$measured"; die "base-figures: refused: main's build failed in tmp/.base"; }
+      mkdir -p tmp/.base/build/metrics
+      (cd tmp/.base && sh tools/metrics.sh measure "$measured") > /dev/null ||
+        { rm -f "$measured"; die "base-figures: refused: main's measurement failed in tmp/.base"; }
+      grep -q -E '^(allocs|rounds)[.]' "$measured" ||
+        { rm -f "$measured"; die "base-figures: refused: no measurement with allocations or rounds"; }
+      mkdir -p "$state_dir"
+      { echo "main $at"; grep -v "$TAB[?]$" "$measured"; } > "$(main_figures_file).part"
+      mv "$(main_figures_file).part" "$(main_figures_file)"
+      rm -f "$measured"
+      echo "base-figures: stored the figures of main $short" ;;
+    *) usage ;;
+  esac
+}
+
+# The carried check (cache-reuse): when the commit the workflow backs is
+# HEAD and every stage of make stages holds a pass record at HEAD (the
+# contributor's own check, which the backing trusts as check does), the
+# stages a check would run are none, so say so and give the figures the
+# checker would have: the spent line and bench's report. A stage of
+# RERUN_STAGES counts only when scoped out of the change, as check
+# re-runs it otherwise. Exit 0 carried, 1 not; runs and writes nothing
+# but what spent and bench write.
+carried_check() {
+  head=$(head_commit)
+  untracked=$(git ls-files --others --exclude-standard -- GNUmakefile makefile '*/GNUmakefile' '*/makefile' 2>/dev/null)
+  [ -z "$untracked" ] || { echo "carried: no: an untracked makefile stands: $untracked"; return 1; }
+  want=$(commit_at "$1") || exit 1
+  [ "$want" = "$head" ] || { echo "carried: no: $want is not HEAD $head"; return 1; }
+  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  [ -z "$dirty" ] || { echo "carried: no: tracked files differ from HEAD"; return 1; }
+  # The stage list is read as check_stages and gates.sh read it, as text and
+  # never by running make in the working tree: a planted untracked GNUmakefile
+  # or makefile is read before the committed Makefile and could drop a stage.
+  stages=${STAGES:-$(main_stages)}
+  [ -n "$stages" ] || stages=$(head_fast_stages)
+  [ -n "$stages" ] || { echo "carried: no: no stages"; return 1; }
+  paths=$(scope_paths)
+  for s in $stages; do
+    record=$(read_key "stage.$s")
+    case "$record" in "0 "*) ;; *) echo "carried: no: stage $s has no pass record"; return 1 ;; esac
+    [ "$(echo "$record" | cut -d' ' -f3)" = "$head" ] || { echo "carried: no: stage $s passed at another commit"; return 1; }
+    if one_of "$s" "$RERUN_STAGES"; then
+      case "$record" in *" scoped") ;; *) echo "carried: no: stage $s runs again"; return 1 ;; esac
+      out_of_scope "$s" "$paths" || { echo "carried: no: stage $s is in scope"; return 1; }
+    fi
+  done
+  echo "carried: every stage passed at $head; no stage ran"
+  echo "spent: $(spent_line)"
+  if bench_compare; then echo "carried: bench same"; else echo "carried: bench differs"; fi
+  return 0
+}
+
 # The bench command: the metrics stage's measurement against main's. The
 # history row of a merged change is appended in the next change's package
 # step, after this one, so main's figures are those of the newest merged
@@ -1986,8 +2138,18 @@ bench_compare() {
   scoped=no
   case "$record" in *" scoped") scoped=yes ;; *) import_metrics "$metrics_out" ;; esac
   last=$(dirname "$metrics_out")/last.tsv
-  base=$(newest_pending)
-  if [ -n "$base" ]; then
+  mkdir -p "$(dirname "$last")"
+  stored=no
+  base=''
+  if stored_figures "$last"; then
+    stored=yes
+    source="the figures of main stored at $(main_ref_commit | cut -c1-12)"
+  else
+    base=$(newest_pending)
+  fi
+  if [ "$stored" = yes ]; then
+    :
+  elif [ -n "$base" ]; then
     (change=$base; keys_under metric.) | awk '
       /^(rounds|allocs|us)[.][^=]*=/ { name = $0; sub(/=.*/, "", name); sub(/^[^=]*=/, ""); print name "\t" $0 }' > "$last"
     if ! grep -q -E '^(allocs|rounds)[.]' "$last"; then
@@ -2018,6 +2180,18 @@ bench_compare() {
   fi
   echo "bench: comparing with $source"
   "$make_cmd" --no-print-directory metrics-compare "BASE_METRICS=$last" "METRICS_OUT=$metrics_out"
+  compared=$?
+  # Figures measured at main itself settle the comparison: a regression
+  # (more allocations or rounds) is the only difference that needs the
+  # benchmark agent, which then builds nothing; fewer or equal pass.
+  if [ "$stored" = yes ]; then
+    if [ "$compared" -eq 0 ]; then
+      echo "bench: no regression against $source"
+      return 0
+    fi
+    echo "bench: regression against $source"
+    return 1
+  fi
   differ=$(awk -F'\t' '
     NR == FNR { if ($1 ~ /^(allocs|rounds)[.]/) base[$1] = $2; next }
     $1 ~ /^(allocs|rounds)[.]/ {
@@ -4379,6 +4553,12 @@ case "$command" in
   bench)
     [ $# -eq 0 ] || usage
     bench_compare ;;
+  base-figures)
+    [ $# -le 1 ] || usage
+    base_figures "${1:-}" ;;
+  carried)
+    [ $# -eq 1 ] || usage
+    carried_check "$1" ;;
   gated)
     [ $# -eq 1 ] || usage
     case "$1" in
