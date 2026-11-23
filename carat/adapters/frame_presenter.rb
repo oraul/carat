@@ -1186,11 +1186,11 @@ module Carat
         elsif !state.message.empty?
           paint_message_text(frame, frame_row, state)
         elsif state.mode == Domain::Mode::VISUAL
-          frame.put(frame_row, 0, "-- VISUAL --", Domain::Highlight::MESSAGE_DIM)
+          frame.put(frame_row, 0, "-- VISUAL --", Domain::Highlight::MESSAGE_MODE)
         elsif state.mode == Domain::Mode::VISUAL_LINE
-          frame.put(frame_row, 0, "-- VISUAL LINE --", Domain::Highlight::MESSAGE_DIM)
+          frame.put(frame_row, 0, "-- VISUAL LINE --", Domain::Highlight::MESSAGE_MODE)
         elsif state.mode == Domain::Mode::VISUAL_BLOCK
-          frame.put(frame_row, 0, "-- VISUAL BLOCK --", Domain::Highlight::MESSAGE_DIM)
+          frame.put(frame_row, 0, "-- VISUAL BLOCK --", Domain::Highlight::MESSAGE_MODE)
         elsif state.mode == Domain::Mode::NORMAL
           paint_diagnostic(frame, frame_row, state.window)
         end

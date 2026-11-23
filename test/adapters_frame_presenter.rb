@@ -968,13 +968,13 @@ module AdaptersFramePresenterTest
     t.assert_equal([NOR, VIS, VIS, NOR, NOR], highlights(f, 1, 5), "a tab is selected only in the block's columns")
     t.assert_equal([NOR, VIS, NOR, NOR], highlights(f, 2, 4), "the cursor's cell keeps its highlight")
     t.assert_equal("-- VISUAL BLOCK --", f.row_text(5), "the blockwise mode line")
-    # Scenario: The visual indicators are dim. Each of the three
-    # indicators is drawn in MsgDim, from its first cell to its last.
-    t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.cell(5, 0).hl, f.cell(5, 5).hl, f.cell(5, 17).hl], "the blockwise indicator is in MsgDim")
+    # Scenario: The visual indicators are in ModeMsg. Each of the three
+    # indicators is drawn in ModeMsg, from its first cell to its last.
+    t.assert_equal([D::Highlight::MESSAGE_MODE, D::Highlight::MESSAGE_MODE, D::Highlight::MESSAGE_MODE], [f.cell(5, 0).hl, f.cell(5, 5).hl, f.cell(5, 17).hl], "the blockwise indicator is in ModeMsg")
     f = visual_frame(["abc"], D::Mode::VISUAL, [0, 0], [0, 1])
-    t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.cell(5, 0).hl, f.cell(5, 11).hl], "the charwise indicator is in MsgDim")
+    t.assert_equal([D::Highlight::MESSAGE_MODE, D::Highlight::MESSAGE_MODE], [f.cell(5, 0).hl, f.cell(5, 11).hl], "the charwise indicator is in ModeMsg")
     f = visual_frame(["ab", "cd"], D::Mode::VISUAL_LINE, [0, 0], [0, 0])
-    t.assert_equal([D::Highlight::MESSAGE_DIM, D::Highlight::MESSAGE_DIM], [f.cell(5, 0).hl, f.cell(5, 16).hl], "the linewise indicator is in MsgDim")
+    t.assert_equal([D::Highlight::MESSAGE_MODE, D::Highlight::MESSAGE_MODE], [f.cell(5, 0).hl, f.cell(5, 16).hl], "the linewise indicator is in ModeMsg")
     f = visual_frame(["a中b", "abcd"], D::Mode::VISUAL_BLOCK, [0, 1], [1, 1])
     t.assert_equal([NOR, VIS, VIS, NOR], highlights(f, 0, 4), "a wide character fills the block's two columns")
     t.assert_equal([NOR, NOR, VIS, NOR], highlights(f, 1, 4), "the same columns on the next row")

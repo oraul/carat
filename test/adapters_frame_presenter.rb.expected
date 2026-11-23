@@ -203,9 +203,9 @@ ok   blockwise: the block's columns on the first row
 ok   a tab is selected only in the block's columns
 ok   the cursor's cell keeps its highlight
 ok   the blockwise mode line
-ok   the blockwise indicator is in MsgDim
-ok   the charwise indicator is in MsgDim
-ok   the linewise indicator is in MsgDim
+ok   the blockwise indicator is in ModeMsg
+ok   the charwise indicator is in ModeMsg
+ok   the linewise indicator is in ModeMsg
 ok   a wide character fills the block's two columns
 ok   the same columns on the next row
 ok   after $ the block reaches every row's end

@@ -133,7 +133,6 @@ module Carat
         Highlight::TITLE, BLUE, NONE, BOLD, BOLD,
         Highlight::MESSAGE_WARNING, YELLOW, NONE, 0, 0,
         Highlight::MESSAGE_MODE, FG, NONE, BOLD, BOLD,
-        Highlight::MESSAGE_MORE, BLUE, NONE, BOLD, BOLD,
         Highlight::QUESTION, GREEN, NONE, 0, 0,
         Highlight::MATCH_PAREN, NONE, SELECTION, BOLD, BOLD | UNDERLINE,
         Highlight::POPUP_MENU, FG, FLOAT, 0, 0,
