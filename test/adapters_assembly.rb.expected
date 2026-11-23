@@ -87,7 +87,7 @@ ok   the command line editor
 ok   the line cache
 ok   the start screen
 ok   the notifications
-ok   the notifications keep the state's history
+ok   the notifications and the state keep the one message history
 ok   the arrange view use case
 ok   the plugins as tokenizers
 ok   the one documentation formatter

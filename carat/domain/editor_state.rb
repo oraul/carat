@@ -10,7 +10,7 @@ module Carat
     # The current view the use cases and the presenter share: the tab
     # list, through which the current tab page, window, buffer, cursor, and
     # visual selection are reached, the mode, the options, the command
-    # line with its cursor (cmdline_after, read as cmdline_position), the message and the history of those shown, the quit flag, and the repetition a blockwise
+    # line with its cursor (cmdline_after, read as cmdline_position), the message and the message history of those shown, which the editor assembly builds, the quit flag, and the repetition a blockwise
     # insert owes when insert mode is left, and the size of the screen
     # in rows and columns, 0 before the first render, and how many :normal
     # commands are running keys (normal_depth), 0 outside them. The rest of the editor's state
@@ -18,7 +18,7 @@ module Carat
     # that need them: the buffer list, the input state, the registers, the
     # last find, and the plugins' segments and prompt. A Struct record:
     # mutable, with a reader and a writer per member.
-    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :cmdline_after, :message, :message_error, :history, :quit, :block_insert, :screen_rows, :screen_cols, :normal_depth, keyword_init: true)
+    class EditorState < Struct.new(:tabs, :mode, :options, :cmdline, :cmdline_after, :message, :message_error, :message_history, :quit, :block_insert, :screen_rows, :screen_cols, :normal_depth, keyword_init: true)
       # @rbs @tabs: TabList
       # @rbs @mode: Symbol
       # @rbs @options: Options
@@ -26,15 +26,15 @@ module Carat
       # @rbs @cmdline_after: Integer
       # @rbs @message: String
       # @rbs @message_error: bool
-      # @rbs @history: MessageHistory
+      # @rbs @message_history: MessageHistory
       # @rbs @quit: bool
       # @rbs @block_insert: BlockInsert
       # @rbs @screen_rows: Integer
       # @rbs @screen_cols: Integer
       # @rbs @normal_depth: Integer
 
-      #: (tabs: TabList, options: Options) -> void
-      def initialize(tabs:, options:)
+      #: (tabs: TabList, options: Options, message_history: MessageHistory) -> void
+      def initialize(tabs:, options:, message_history:)
         super()
         self.tabs = tabs
         self.mode = Mode::NORMAL
@@ -43,7 +43,7 @@ module Carat
         self.cmdline_after = 0
         self.message = ""
         self.message_error = false
-        self.history = MessageHistory.new
+        self.message_history = message_history
         self.quit = false
         self.block_insert = BlockInsert.new
         self.screen_rows = 0
@@ -158,12 +158,13 @@ module Carat
       # ----------------------------------------------------------- messages
 
       # Shows a message, an error when error, and keeps it in the history
-      # when it is one line.
+      # when it is one line or an error, which is kept whole: a text of
+      # several lines that is not an error is a listing.
       #: (String, bool) -> void
       def show(text, error)
         self.message = text
         self.message_error = error
-        history.add(text, error ? MessageHistory::ERROR : MessageHistory::INFO)
+        message_history.add(text) if error || !text.include?("\n")
       end
 
       # Shows command output the history does not keep, as :messages.

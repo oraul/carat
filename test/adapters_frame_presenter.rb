@@ -14,7 +14,7 @@ module AdaptersFramePresenterTest
   ARRANGE = Carat::UseCases::ArrangeView.new(cache: CACHE, buffers: LISTED)
   LAST = Carat::Domain::LastSearch.new
   PROMPT = Carat::Domain::SearchPrompt.new
-  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: SLOTS), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: CACHE, notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new)))
+  P = Carat::Adapters::FramePresenter.new(input: INPUT, plugin_ui: UI, cache: CACHE, last_search: LAST, search_prompt: PROMPT, palette: Carat::Domain::Palette.new, start_screen: Carat::Domain::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: UI, slots: SLOTS), tab_bar: Carat::Adapters::TabBar.new(buffers: LISTED), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: CACHE, notices: Carat::Domain::Notices.new(message_history: Carat::Domain::MessageHistory.new)))
 
   # Draws the state at a size as the editor does: the size goes into the
   # state, ArrangeView lays the windows out, and the presenter reads it.
@@ -38,7 +38,7 @@ module AdaptersFramePresenterTest
     UI.owners.clear
     UI.priorities.clear
     UI.close_prompt
-    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
+    Carat::Domain::EditorState.new(message_history: Carat::Domain::MessageHistory.new, tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: buffer)), options: options)
   end
 
   # Rows 0 and 1, joined by a bar, of a frame of one buffer "one" in

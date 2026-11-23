@@ -45,7 +45,7 @@ module AdaptersTabBarTest
     names.each_with_index { |name, i| buffers[i].listed = false if name.start_with?("~") }
     options = D::Options.new
     options.icons = "unicode"
-    Setup.new(state: D::EditorState.new(tabs: tabs, options: options), list: list)
+    Setup.new(state: D::EditorState.new(message_history: D::MessageHistory.new, tabs: tabs, options: options), list: list)
   end
 
   # The row the tab bar paints for a setup, cols wide.

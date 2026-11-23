@@ -417,7 +417,7 @@ module AdaptersLanguageGatewayTest
     notify(h, "window/showMessage", { "type" => 2, "message" => "slow \e]0;title\a disk\nnow" })
     notify(h, "window/showMessage", { "type" => 9, "message" => "x" * 300 })
     t.assert_equal([3, "Bundle failed", 2, "slow  disk now", 1, 200, 0], [notices.count, notices.text_at(0), notices.level_at(0), notices.text_at(1), notices.level_at(1), notices.text_at(2).length, notices.level_at(2)], "type 1 an error, 2 a warning, another info, on one line without sequences, cut at 200")
-    t.assert_true(h.state.history.to_s.include?("Bundle failed"), "a server message is kept in the history")
+    t.assert_true(h.state.message_history.to_s.include?("Bundle failed"), "a server message is kept in the history")
     notify(h, "window/showMessage", { "type" => 1, "message" => 7 })
     notify(h, "window/showMessage", { "type" => 1, "message" => "  " })
     t.assert_equal([3, "Bundle failed"], [notices.count, notices.text_at(0)], "a message that is not text, or blank, shows nothing")

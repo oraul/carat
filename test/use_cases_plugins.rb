@@ -135,7 +135,7 @@ module UseCasesPluginsTest
     tabs = Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: first))
     buffers = Carat::Domain::BufferList.new(tabs: tabs)
     buffers.add(first)
-    state = Carat::Domain::EditorState.new(tabs: tabs, options: Carat::Domain::Options.new)
+    state = Carat::Domain::EditorState.new(message_history: Carat::Domain::MessageHistory.new, tabs: tabs, options: Carat::Domain::Options.new)
     keymap = Carat::Domain::Keymap.new
     commands = Carat::UseCases::ExTable.new
     ex = Carat::UseCases::ExecuteEx.new(commands: commands)

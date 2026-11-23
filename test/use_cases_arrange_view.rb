@@ -23,7 +23,7 @@ module UseCasesArrangeViewTest
     options = Carat::Domain::Options.new
     options.number = false
     options.scrolloff = 0
-    Carat::Domain::EditorState.new(tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
+    Carat::Domain::EditorState.new(message_history: Carat::Domain::MessageHistory.new, tabs: Carat::Domain::TabList.new(window: Carat::Domain::Window.new(buffer: Carat::Domain::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
   end
 
   #: (Carat::Domain::Window) -> Array[Integer]
