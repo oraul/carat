@@ -10,7 +10,7 @@
 
 ## 3. Docs
 
-- [x] 3.1 Update `docs/architecture.md`, `docs/codebase-map.md`, `docs/compatibility.md`, and the delta spec
+- [x] 3.1 Update README.md, `docs/architecture.md`, `docs/codebase-map.md`, `docs/compatibility.md`, and the delta spec
 
 ## Quality review
 

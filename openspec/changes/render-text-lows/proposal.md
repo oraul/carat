@@ -9,7 +9,7 @@ A file holding U+202E (right-to-left override) makes the terminal reorder the ce
 - `DisplayWidth.format_char?` names the code points a terminal draws in no cell or reorders: U+061C, U+200B to U+200F, U+2028 to U+202E, U+2060 to U+206F, and U+FEFF (Vim's unprintable format set plus the bidirectional and separator code points the file finder already hides). `code_cells` gives each six cells, so the cursor, the columns, and the horizontal scroll agree with the frame.
 - `LinePainter` paints such a code point as `<` and four lowercase hexadecimal digits and `>` in Normal, as it does for the C1 controls with two digits.
 - `code_of` moves from `DisplayWidth` to `Utf8.code_of`, the one decoder; `DisplayWidth.cell` calls it.
-- `docs/architecture.md`, the code map, and the compatibility differences name the new marker.
+- README.md, `docs/architecture.md`, the code map, and the compatibility differences name the new marker.
 - Closed by evidence, with no code: `NO_NAME` has one copy (`carat/domain/messages.rb`), `DisplayWidth.of_char` and `TabBar#icon_group` are gone, so their three backlog entries close as listed.
 
 Out of scope, recorded in the findings file: names painted through `Frame#put` and `text_width` (bars, floats, markdown) still draw a format code point raw.
@@ -29,5 +29,4 @@ Assumptions: the marker follows Vim's `<xxxx>` form; U+00AD and U+180E stay as t
 
 - Code: `carat/domain/display_width.rb`, `carat/domain/utf8.rb`, `carat/adapters/line_painter.rb`.
 - Tests: `test/adapters_frame_presenter.rb`, `test/domain_utf8.rb`, `test/domain_display_width.rb`.
-- Docs: `docs/architecture.md`, `docs/codebase-map.md`, `docs/compatibility.md`.
-- README.md: unchanged, it describes no rendering marker.
+- Docs: README.md, `docs/architecture.md`, `docs/codebase-map.md`, `docs/compatibility.md`.
