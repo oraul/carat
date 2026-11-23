@@ -4,9 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 31
 
-1. `surface-edges-fix` (T2 user request, estimated medium): Where: `carat/adapters/tab_bar.rb:26` to `:30` (SEPARATOR, FRAME_CELLS), `:49`, `:50`, `:82`, `:147` (the separator write); `carat/adapters/frame_presenter.rb:261` (TabBar#paint gets only cols), `:616` (PaintedRows::TILDE), `:741` to `:757` (paint_header). Why: the user's photos of 2026-11-23: a `│` after every tab, the tab row painted from column 0, not the editor's first column, a separate explorer head row, and `~` rows in the sidebar; the design draws no separator glyph. Fix outline: no tab separator; tabs start at the sidebar's col + width + 1 (column 0 with no sidebar); row 0 over the sidebar reads `carat · main` (project bright, `·` faint, branch dim), a head row only while the slot holds two views; blank sidebar rows. The dashed line at the sidebar edge is the terminal's padding: no carat fix (user). Accepted when a frame snapshot at 80 columns with the sidebar and two tabs, at truecolor, 16 colors, and NO_COLOR, shows no `│`, the first tab at the editor's first column, and no `~` in the sidebar, failing before.
-2. `one-accent-tabs` (T2 user request, estimated medium): Where: `carat/domain/themes.rb:116` (TabLineSel), `carat/adapters/winbar.rb:39`, `:55`, `carat/adapters/tab_bar.rb:122` (page numbers), `:136` (tab icon), `carat/adapters/frame_presenter.rb:751`. Why: sapphire fills mark the current tab, the winbar name, the page numbers, and the view names, against one accent per surface. Fix outline: TabLineSel FG on BG bold; one new bold no-fill group for the winbar name, the page numbers (current bold, others dim), and the view names; no tab icon; under 16 colors and NO_COLOR the active tab bold, inactive names the normal foreground; a `docs/compatibility.md` line: gt moves between buffer tabs, tab pages are the numbers at the right. Accepted when tab row snapshots at 24-bit, 256, 16 colors, and NO_COLOR fail on today's fill.
-3. `tab-focus-mark` (T2 user request, estimated small): Where: `carat/adapters/tab_bar.rb:53`, `:92`. Why: with the explorer focused no tab is marked. Fix outline: the file window's tab stays marked while a sidebar has focus. Accepted when a test focusing the explorer shows the file's tab selected, failing before.
+All three features delivered: `surface-edges-fix` (0773c27, #322), `one-accent-tabs` (38642f0, #325), `tab-focus-mark` (this delivery); the sprint closes at its review.
 
 ## Pool
 
@@ -27,9 +25,10 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Decisions
 
-- Security first (T0): none; sprint-30 review High 0, Medium 0, Low 1 (`tools/gates.sh:662`, Low (6)); sweep High 0, Medium 0, Low 4; none at confidence 8.
-- Sprint 31 (T2 user request): the user's request of 2026-11-23 (plugin-host-lows notes 6, 7) names its three features in order; 3 features, 3 backlog.
-- Not split (T2): surface-edges-fix is the user's one change, one snapshot over 2 files of area 13.
-- Estimated (T2): prompt-in-float 895,682, recent-files-persist 927,740, ui-groups-b 545,902 total tokens, none over 1.2M: medium; tab-focus-mark small, 2 lines of one file.
-- Not critical (T2): no path of rules a to d.
-- Placed (T2): `design-drift-sync` in the backlog lane (user); sweep Low (3) and notes 34, 45 into `bidi-controls`.
+- Security first (T0): none; sprint-30 review High 0, Medium 0, Low 1 (`tools/gates.sh:662`, Low (6)); the 3 pending runs carry no periodic finding.
+- Delivered (T2 user request): `tab-focus-mark`, Sprint 31's third feature; with the explorer focused the current window is the sidebar's, whose buffer has no tab (`tab_bar.rb:73`, `:91`), so 0 tabs are marked.
+- Removed (T2): `surface-edges-fix` merged at 0773c27 (567,768 total, medium, under 1.2M) and `one-accent-tabs` at 38642f0 (867,943 total, small, over 500k).
+- Estimated small, not split (T2): one code file and one test, no shared table (one-accent-tabs retro note 7: size by files touched); the last two feature runs not both over (567,768 under medium).
+- Not critical (T2): `carat/adapters/tab_bar.rb` is under no rule a to d.
+- Kept (T2): Pool order unchanged; `explorer-rows` stays Sprint 32's first feature (user); `tab-name-parent` now follows the delivered tab changes.
+- Placed (T1): one-accent-tabs retro note 8 (package 45,250 output in 10 calls, 18 percent) into `backlog.md`, near the backlog lane's `package-one-start`; review-in-openspec notes 9 to 11 already in that lane's Pool 12; head-form and overrun notes dropped: heads read from git, overruns cited above.

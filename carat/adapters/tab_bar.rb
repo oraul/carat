@@ -11,10 +11,11 @@ module Carat
     # Paints the top row of buffer tabs: one tab per listed file buffer in
     # list order, two spaces, the last segment of its path or [No Name],
     # a space, the modified icon or a space (one cell either way), and a
-    # space, with no file icon, the tab of the current window's buffer
-    # selected in TabLineSel, bold on the editor's background, so the
-    # bold and the background carry the selection and no glyph or accent
-    # fill separates two tabs; scratch and unlisted buffers get none.
+    # space, with no file icon, the tab of the current window's buffer (the
+    # file window's while a sidebar has focus) selected in TabLineSel,
+    # bold on the editor's background, so the bold and the background
+    # carry the selection and no glyph or accent fill separates two
+    # tabs; scratch and unlisted buffers get none.
     # The row starts at the editor's first column, after a left sidebar,
     # whose width above it holds the project and branch (paint_head).
     # From two tab pages their numbers stand at the right end, " 1  2 ",
@@ -70,7 +71,7 @@ module Carat
         right = paint_pages(frame, state, start, cols)
         room_width = right - start
         set = state.options.icons
-        current = state.window.buffer
+        current = selected_buffer(state)
         list = @buffers
         count = list.count
         last = count - 1
@@ -194,6 +195,22 @@ module Carat
       def mark(set)
         glyph = Domain::Icons.glyph("modified", set)
         Domain::DisplayWidth.text_width(glyph, 0) == 1 ? glyph : Domain::Icons.glyph("modified", "ascii")
+      end
+
+      # The buffer whose tab is selected: the current window's, or, while
+      # a sidebar has focus, the one of the window it opens files in, so
+      # the file's tab stays marked; the sidebar's own buffer when no
+      # such window exists, which has no tab. A focused float is the
+      # current window. Nothing is allocated unless the sidebar's
+      # previous window is lost.
+      #: (Domain::EditorState) -> Domain::Buffer
+      def selected_buffer(state)
+        buffer = state.window.buffer
+        return buffer unless buffer.tabless?
+        page = state.tab
+        return buffer if page.floats.focused? || !page.side_window?(page.current)
+        leaf = page.editing_leaf
+        leaf < 0 ? buffer : page.layout.window_at(leaf).buffer
       end
 
       # The group of an unselected name: TabLine, or Normal when bare.
