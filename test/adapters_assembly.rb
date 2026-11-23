@@ -39,7 +39,7 @@ module AdaptersAssemblyTest
     # Each shared object is one instance, held by every collaborator that
     # needs it.
     t.assert_equal([], strangers(a.buffers, [
-      ["open_file", a.open_file.buffers], ["save_all", a.save_all.buffers], ["quit", a.quit.buffers], ["quit_all", a.quit_all.buffers],
+      ["open_file", a.open_file.buffers], ["load_recent_files", a.load_recent_files.buffers], ["save_recent_files", a.save_recent_files.buffers], ["save_all", a.save_all.buffers], ["quit", a.quit.buffers], ["quit_all", a.quit_all.buffers],
       ["close_window", w.held("close_window", "buffers")], ["close_other_windows", w.held("close_other_windows", "buffers")], ["split_window", w.held("split_window", "buffers")],
       ["open_side_window", w.held("open_side_window", "buffers")], ["toggle_slot", w.held("toggle_slot", "buffers")], ["open_tab", w.held("open_tab", "buffers")], ["close_tab", w.held("close_tab", "buffers")],
       ["close_other_tabs", w.held("close_other_tabs", "buffers")], ["rename_path", host.rename_path.buffers], ["delete_path", host.delete_path.buffers],
@@ -205,7 +205,7 @@ module AdaptersAssemblyTest
     # Each port is one instance too.
     t.assert_equal([], strangers(h.terminal, [["assembly", a.terminal], ["controller", a.controller.terminal], ["screen_presenter", a.screen_presenter.terminal]]), "the terminal port")
     t.assert_equal([], strangers(h.clock, [["assembly", a.clock], ["controller", a.controller.clock], ["dispatcher", a.dispatcher.clock], ["walk_history", a.walk_history.clock], ["list_undo", a.list_undo.clock], ["services", a.services.clock]]), "the clock port")
-    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["complete_command_line", a.complete_command_line.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
+    t.assert_equal([], strangers(h.files, [["assembly", a.files], ["open_file", a.open_file.files], ["load_recent_files", a.load_recent_files.files], ["save_recent_files", a.save_recent_files.files], ["complete_command_line", a.complete_command_line.files], ["save_file", a.save_file.files], ["probe_path", a.probe_path.files], ["make_path", host.make_path.files],
       ["resolve_inside", host.make_path.resolve_inside.files], ["rename_path", host.rename_path.files], ["delete_path", host.delete_path.files], ["file_requests", host.file_requests.files],
       ["ui_requests", host.ui_requests.files], ["window_requests", host.window_requests.files]]), "the file port")
     t.assert_equal([], strangers(h.processes, [["assembly", a.processes], ["services", a.services.processes], ["plugin file requests", a.plugins.file_requests.processes]]), "the process port, in the services and the plugin file requests")

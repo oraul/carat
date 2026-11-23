@@ -55,6 +55,8 @@ require_relative "../use_cases/history/restore_line"
 require_relative "../use_cases/history/list_undo"
 require_relative "../use_cases/repeat_last"
 require_relative "../use_cases/files/open_file"
+require_relative "../use_cases/files/load_recent_files"
+require_relative "../use_cases/files/save_recent_files"
 require_relative "../use_cases/files/save_file"
 require_relative "../use_cases/files/save_all"
 require_relative "../use_cases/files/quit"
@@ -269,6 +271,8 @@ module Carat
       attr_reader :recase_selection #: UseCases::RecaseSelection
       attr_reader :probe_path #: UseCases::ProbePath
       attr_reader :open_file #: UseCases::OpenFile
+      attr_reader :load_recent_files #: UseCases::LoadRecentFiles
+      attr_reader :save_recent_files #: UseCases::SaveRecentFiles
       attr_reader :save_file #: UseCases::SaveFile
       attr_reader :save_all #: UseCases::SaveAll
       attr_reader :quit #: UseCases::Quit
@@ -352,6 +356,7 @@ module Carat
         first = Domain::Buffer.from_text("", nil)
         @tabs = Domain::TabList.new(window: Domain::Window.new(buffer: first))
         @buffers = Domain::BufferList.new(tabs: @tabs)
+        @buffers.base = files.cwd
         @buffers.add(first)
         @state = Domain::EditorState.new(tabs: @tabs, options: Domain::Options.from_config(value))
         @keymap = Domain::Keymap.new
@@ -413,6 +418,8 @@ module Carat
         @recase_selection = UseCases::RecaseSelection.new
         @probe_path = UseCases::ProbePath.new(files: files)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
+        @load_recent_files = UseCases::LoadRecentFiles.new(files: files, buffers: @buffers)
+        @save_recent_files = UseCases::SaveRecentFiles.new(files: files, buffers: @buffers)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
         @wiring.record("close_window", "buffers", @buffers)
         @wiring.record("close_window", "tabs", @tabs)
@@ -604,9 +611,11 @@ module Carat
       # an empty path otherwise opens nothing. Then lets the plugins see
       # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
-      # others.
+      # others. The files an earlier run kept join the recent files first
+      # (LoadRecentFiles), the one opened here going above them.
       #: (String) -> void
       def open(path)
+        @load_recent_files.call
         options = @state.options
         @frame_presenter.plain = @terminal.no_color?
         @frame_presenter.basic_colors = @terminal.colors == Domain::ColorDepth::COLORS_16
@@ -621,6 +630,14 @@ module Carat
         more = @config_errors.length - 1
         first = @config_errors[0]
         report(@state, UseCases::Outcome.failure(more > 0 ? "#{first} (and #{more} more)" : first))
+      end
+
+      # Ends the session's records: writes the recent files for the next
+      # run (SaveRecentFiles), which never fails. The entry point calls it
+      # on every way out of the loop.
+      #: () -> void
+      def close
+        @save_recent_files.call
       end
 
       # Renders the state at the given size and writes it to the terminal:

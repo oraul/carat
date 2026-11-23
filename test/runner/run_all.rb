@@ -97,6 +97,7 @@ require_relative "../editor_normal"
 require_relative "../editor_operators"
 require_relative "../editor_palette"
 require_relative "../editor_plugins"
+require_relative "../editor_recent_files"
 require_relative "../editor_registers"
 require_relative "../editor_repeat"
 require_relative "../editor_screen"
@@ -225,6 +226,7 @@ when "editor_normal" then EditorNormalTest.main
 when "editor_operators" then EditorOperatorsTest.main
 when "editor_palette" then EditorPaletteTest.main
 when "editor_plugins" then EditorPluginsTest.main
+when "editor_recent_files" then EditorRecentFilesTest.main
 when "editor_registers" then EditorRegistersTest.main
 when "editor_repeat" then EditorRepeatTest.main
 when "editor_screen" then EditorScreenTest.main
