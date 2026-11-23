@@ -84,3 +84,20 @@
 - Fix: in END fail each strict base name not seen, or reword the header if a subset must pass.
 - Category: pipeline
 - Added: 2026-11-22
+
+### allocs.grep measured 685.3 once on identical sources
+- Location: tools/metrics.sh measure, the grep scenario of bench/keys.rb
+- Why: the metrics stage of the first check of this change read allocs.grep 685.3 against main's 685.0 though carat/, bench/, and the Makefile equal main's; three reruns of the same binary read 685.0 and the rerun check passed, so the allocation count of the grep scenario varies with load, which would block an unrelated change at random.
+- Fix: find what in the grep picker's setup varies (a reader thread's timing, or the stages running beside the metrics stage), make the count exact or have measure take the lowest of a few runs for grep.
+none
+- Also: bench/keys.rb, Makefile
+- Category: pipeline
+- Added: 2026-11-23
+
+### compare walks only the current file, so an allocs.* at tools/metrics.sh:105 (sprint-30 sweep quality, note 57)
+
+- Location: tools/metrics.sh:105
+- Why: gap against its usage: compare walks only the current file, so an allocs.* or rounds.* name the base holds but the current measurement lacks passes silently, though the usage says such a value fails when not measured
+- Fix: mark names seen and, in END, fail each strict base name the current file did not hold
+- Category: pipeline
+- Added: 2026-11-23

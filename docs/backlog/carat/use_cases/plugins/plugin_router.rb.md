@@ -1,14 +1,5 @@
 # Backlog: carat/use_cases/plugins/plugin_router.rb
 
-## Plugin, grammar, and generator findings at df4654c
-
-- Where: `carat/use_cases/plugins/plugin_router.rb` line 44 (the register string passed uncopied), `carat/domain/manifest_check.rb` line 32 (shapes checked twice, a dead guard at line 145), `carat/use_cases/plugins/plugin_registry.rb` line 175 (`leave` repeats `cause`), `carat/plugins/hello/plugin.rb` line 11 (stale comment, the action spelled beside `GREET`), `carat/plugins/registry.rb` line 2 and the `default_config.rb` header (generator names `spin run`), `test/lint.rb` line 845 (plugins exempt from keyword constructors, unstated in CLAUDE.md), comment wraps at `carat/plugin_api.rb` line 480 and 732, `window_requests.rb` lines 28 and 67, `ui_requests.rb` line 15, `carat/domain/plugin_ui.rb` line 7; `carat/domain/command_grammar.rb` line 138 (`accept` and `accept_visual` repeat a prefix), `carat/adapters/input_controller.rb` line 137 (`next_timeout` ignores `state`). Periodic quality advisories. Queue item 39 (backlog items by domain). Raised again at ce6abdb (periodic quality): `accept_visual` (`command_grammar.rb:163`), queue item `editing-counts`: one shared grammar opening.
-- Why it matters: the router breaks the strings-copied plugin rule; the rest are copies, dead code, and drift.
-- Fix outline: `command.register.dup`; one shapes result; pop then set from `cause`; reword and key by `GREET`; generator writes `make gen-config`; state the exemption or give `Tree` keywords; rewrap; one shared grammar step; drop the parameter.
-- Also: carat/domain/manifest_check.rb, carat/use_cases/plugins/plugin_registry.rb, carat/plugins/hello/plugin.rb, carat/plugins/registry.rb, test/lint.rb, CLAUDE.md, carat/plugin_api.rb, carat/domain/plugin_ui.rb, carat/domain/command_grammar.rb, carat/adapters/input_controller.rb
-- Category: plugins
-- Added: 2026-11-09
-
 ### Plugin host strings, focus, and parameters
 
 - Location: carat/use_cases/plugins/plugin_router.rb:77, window_requests.rb:303, plugin_host.rb:189 (sprint-4 sweep, quality).
@@ -40,3 +31,11 @@
 - Fix: return `Outcome.failure(@registry.refusal(plugin_name))` when it is not empty.
 - Category: plugins
 - Added: 2026-11-21
+
+### Plugin on_action is guarded after activate, and manifest_check shapes
+- Location: carat/use_cases/plugins/plugin_router.rb:44 (the guarded on_action after activate) and carat/domain/manifest_check.rb:32 (check_shapes, shapes_ok?)
+- Why: the brief named only these two locations of the "Plugin, grammar, and generator findings at df4654c" entry, without the finding's text, and the delivery may not read the backlog; this change did not alter either, so the entry stays open.
+- Fix: read the entry's text in a later sprint's planning, then fix each location as it says, with a test per branch.
+- Also: carat/domain/manifest_check.rb
+- Category: plugins
+- Added: 2026-11-23

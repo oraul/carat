@@ -15,3 +15,11 @@
 - Fix outline: start = start_of(row).
 - Category: editor
 - Added: 2026-11-17
+
+### lookup repeats start_of's expression at carat/domain/syntax_cache.rb:159 (sprint-30 sweep quality, note 78)
+
+- Location: carat/domain/syntax_cache.rb:159
+- Why: lookup repeats start_of's expression
+- Fix: call start_of(row)
+- Category: editor
+- Added: 2026-11-23

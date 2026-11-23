@@ -71,3 +71,42 @@
 - Fix: csi_key handles 126 and delegates every other final to ss3_key.
 - Category: editor
 - Added: 2026-11-21
+
+### A paste that never ends keeps the decoder in the paste
+- Location: carat/adapters/key_decoder.rb, decode_paste and flush.
+- Why: a terminal that sends the start mark and loses the end mark leaves every later byte read as pasted text, in which Escape and Ctrl-C are dropped, so the user cannot leave insert mode; ending the paste on an idle timeout would instead let a slow paste's remainder run as commands. A pasted end mark inside the text, which terminals strip, would end the paste early.
+- Fix: end a paste after a long idle timeout (several seconds) with a message, or accept a key chord such as the quit chord inside a paste.
+- Category: editor
+- Added: 2026-11-23
+
+### A paste ended early by an end mark in its text is not defended in depth
+- Location: carat/adapters/key_decoder.rb decode_paste
+- Why: on a terminal that does not filter ESC [ 201 ~ out of the clipboard text, the paste ends there and the bytes after it decode as typed keys (security Low (4)); the decoder now documents the reliance and a decoder row shows it.
+- Fix: after a paste ends, flag or drop the keys read in the same feed straight after the mark, changing the "a key after the paste is a key again" and "keys before and after" rows and their scenarios.
+- Category: security
+- Added: 2026-11-23
+
+### A paste can end itself early on a terminal that passes the end mark through (security Low (4))
+- Location: carat/adapters/key_decoder.rb:186 (decode_paste)
+- Why: If the clipboard text contains a literal ESC [ 201 ~ and the terminal does not strip it, decode_paste leaves paste mode there and decodes every byte after it as typed keys (for example Esc, then :w!, then Enter). Modern terminals filter this mark, so it only matters on terminals that do not. This change documents the reliance and adds a decoder test row showing it, which satisfies the fallback outline but does not remove the behavior.
+- Fix: As defense in depth, drop or flag keys that arrive in the same read straight after the end mark.
+
+none
+- Category: security
+- Added: 2026-11-23
+
+### the class comment says every control byte of a at carat/adapters/key_decoder.rb:213 (sprint-30 sweep quality, note 10)
+
+- Location: carat/adapters/key_decoder.rb:213
+- Why: the class comment says every control byte of a paste is dropped, but the C1 controls U+0080 to U+009F (0xC2 0x80 to 0x9F) pass into the buffer as pasted characters; line 176 is also left unwrapped
+- Fix: drop code points 0x80 to 0x9F in decode_paste as RecentFilesText.usable? does, with a decoder row, and rewrap the comment
+- Category: editor
+- Added: 2026-11-23
+
+### a paste whose end mark never arrives keeps @pasting at carat/adapters/key_decoder.rb:163 (sprint-30 sweep quality, note 11)
+
+- Location: carat/adapters/key_decoder.rb:163
+- Why: a paste whose end mark never arrives keeps @pasting set for the rest of the session, so every later key, Escape included, becomes pasted text and the editor cannot leave insert mode or quit
+- Fix: end the paste on the escape timeout flush after an idle gap, with a test
+- Category: editor
+- Added: 2026-11-23

@@ -16,15 +16,6 @@
 - Category: plugins
 - Added: 2026-11-07
 
-## close_scratch misses a view its hidden slot keeps
-
-- Where: `close_scratch` in `carat/use_cases/plugins/window_requests.rb` line 115 at edaf2c2. Quality advisory in `layout-slots`.
-- Why it matters: it looks only at the layout, so a plugin closing a view that its hidden slot keeps gets `No window shows` and the next toggle brings the view back.
-- Fix outline: when a hidden slot keeps the buffer, clear the slot and release the buffer, with a row in `test/editor_plugins.rb`.
-- Also: test/editor_plugins.rb
-- Category: plugins
-- Added: 2026-11-09
-
 ## The side string is mapped by a nested ternary and dispatched in four places
 
 - Where: `carat/use_cases/plugins/window_requests.rb` lines 319 to 321, and the side dispatch in `TabPage#slot`, `TabPage#slot_at`, `Options#slot_size`, and `ToggleSlot#name_of`, at edaf2c2. Quality advisories in `layout-slots`, raised twice.
@@ -97,14 +88,6 @@
 - Also: docs/plugins.md
 - Category: plugins
 - Added: 2026-11-18
-
-### style_float checks a span's start column only from below (sprint-23 review security Low (3), disputed)
-- Location: carat/use_cases/plugins/window_requests.rb:397 (`style_refusal`) and carat/use_cases/plugins/plugin_syntax.rb `copied_tokens`; the painter at carat/adapters/frame_presenter.rb:790 and :1141.
-- Why: a plugin may pass a span start column near the integer maximum, which the reviewer feared the painter adds to a length and overflows in compiled code; the skeptic disputed it at 8769f46 (paint_tokens at frame_presenter.rb:1139 sums only under from < size, token_group at :790 only after col >= from), so it is kept as a disputed security Low.
-- Fix: refuse a start column above LONGEST_SPAN in style_refusal and in PluginSyntax#copied_tokens, so both span paths check the same bounds, with a test of a start column of 1 << 40.
-- Also: carat/use_cases/plugins/plugin_syntax.rb, carat/adapters/frame_presenter.rb
-- Category: security
-- Added: 2026-11-20
 
 ### Each float request resolves the same float three times (sprint-23 review quality)
 - Location: carat/use_cases/plugins/window_requests.rb:370 (`unlisted_float_tab`), :281 (`set_float_lines`), :308 (`style_float`).

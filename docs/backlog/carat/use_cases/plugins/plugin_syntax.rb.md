@@ -15,3 +15,12 @@
 - Also: carat/adapters/frame_presenter.rb
 - Category: plugins
 - Added: 2026-11-20
+
+### The span bound and clamp are written twice at carat/use_cases/plugins/plugin_syntax.rb:82 (sprint-30 review quality)
+
+- Location: carat/use_cases/plugins/plugin_syntax.rb:82, :84; carat/use_cases/plugins/window_requests.rb:422, :460
+- Why: plugin-host-lows bounded a span's start by Domain::SyntaxLine::LONGEST_SPAN and cut its length to it in both request paths by copying the same two expressions, so a change to the bound must land in four places.
+- Fix: one SyntaxLine helper (a start test and a cut length) both files call; accepted when the existing plugin syntax and style_float rows pass unchanged.
+- Also: carat/use_cases/plugins/window_requests.rb
+- Category: plugins
+- Added: 2026-11-23

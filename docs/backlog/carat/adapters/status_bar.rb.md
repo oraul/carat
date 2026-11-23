@@ -1,21 +1,5 @@
 # Backlog: carat/adapters/status_bar.rb
 
-## StatusBar requires the plugin API it does not use
-
-- Where: `require_relative "../plugin_api"` on line 1 of `carat/adapters/status_bar.rb`. Quality advisory of `bars`.
-- Why it matters: `StatusBar` names no `PluginApi` constant, so the require is dead and suggests a dependency the adapter does not have.
-- Fix outline: drop the require and rebuild with `make dev-build`.
-- Category: editor
-- Added: 2026-11-05
-
-## StatusBar names a Symbol state and plugin indexes owners
-
-- Where: the `state` parameter of `lsp_group` in `carat/adapters/status_bar.rb` (line 122 at `bars`), beside methods whose `state` is the `EditorState`, and `@owners` (line 55), which holds plugin indexes while `PluginUi#owners` holds names. Quality advisory of `bars`.
-- Why it matters: one name for two kinds of value in one file misleads the reader.
-- Fix outline: rename them `lsp_state` and `@plugin_indexes`.
-- Category: editor
-- Added: 2026-11-05
-
 ## Bar and frame findings of the periodic review at 186ddfb
 
 - Where: `carat/adapters/status_bar.rb` line 1 requires `../plugin_api` and names none of it; `carat/adapters/frame_presenter.rb` line 299 `display_col` and `display_width` are public but used only inside; `NO_NAME` is defined in `status_bar.rb` line 47, `tab_bar.rb` line 23, and `winbar.rb` line 214. Periodic quality at 186ddfb, queued in `bars-tidy`, the `NO_NAME` triplicate in `top-rows` (the notice border folded into `float-frame`, which drew both boxes through one painter).
@@ -58,21 +42,6 @@
 - Category: editor
 - Added: 2026-11-18
 
-### Status bar has no folder segment and shows the server state as text
-- Location: `carat/adapters/status_bar.rb` (`collect`, `paint_entry`, the `LSP` kind), `docs/design.md` section 8 (Status bar)
-- Why: the design lists folder among the quiet segments and says the server state is one dot; the bar has no folder segment and the `lsp` slot is its name and state text, so those two parts of the design are not drawn.
-- Fix: add a folder segment (a `StatusSlots` field a plugin or the project root fills) in `StatusLineDim`, and draw the server as one dot in its state group with the name in `StatusLineDim`; keep the `lsp` width table and `docs/compatibility.md` in step.
-- Also: docs/design.md, docs/compatibility.md
-- Category: editor
-- Added: 2026-11-22
-
-### The progress bar and the percent keep StatusLine
-- Location: `carat/adapters/status_bar.rb` (`paint_bar`, the PERCENT and PROGRESS kinds)
-- Why: the undone cells of the progress bar and the percent are drawn in the bold `StatusLine` beside quiet neighbours, while the design's hierarchy names only the file and the position as leading; the brief named the design's groups, so these were left as they were.
-- Fix: draw the undone cells and the percent in `StatusLineDim` once the design says which; update the progress and percent scenarios and snapshots.
-- Category: editor
-- Added: 2026-11-22
-
 ### Comments break their wrap width at carat/adapters/status_bar.rb:17 (sprint-28 review quality note 5, sweep notes 39, 58)
 
 - Location: carat/adapters/status_bar.rb:8, :17, :25; .github/workflows/ci.yml:26, :161; .claude/workflows/deliver-change.js:124, :130; tools/gates.sh:517
@@ -81,3 +50,32 @@
 - Also: .github/workflows/ci.yml, .claude/workflows/deliver-change.js, tools/gates.sh
 - Category: editor
 - Added: 2026-11-22
+
+### Server states differ only by the dot's color
+- Location: `carat/adapters/status_bar.rb` (`paint_lsp`, `lsp_group`)
+- Why: starting, indexing, ready, and stopped are the same dot, so at 16 colors and under NO_COLOR, where the group colors collapse, they read alike; the crash and untrusted hints still name themselves.
+- Fix: in the terminal-byte proof of NO_COLOR and 16 colors (`ui-groups-c`), decide whether the dot needs a second glyph for stopped.
+- Category: editor
+- Added: 2026-11-23
+
+### The folder cannot be dropped on a narrow bar
+- Location: `carat/adapters/status_bar.rb` (`paint_file_name`, `fit`)
+- Why: the folder is part of the file entry, which is never dropped, so a long path takes the width a narrow bar's other segments need before the file is cut.
+- Fix: draw only the last segment of the path when the bar is narrow, or give the folder its own entry of low priority.
+- Category: editor
+- Added: 2026-11-23
+
+### The lsp group is computed twice per paint
+- Location: `carat/adapters/status_bar.rb` (`paint_entry`, `paint_lsp`)
+- Why: `paint_lsp` and the closing space in `paint_entry` each call `lsp_group`, a small duplication kept because returning the column and the group together would allocate each frame.
+- Fix: keep the group in an integer instance variable that `paint_lsp` sets and `paint_entry` reads.
+- Category: editor
+- Added: 2026-11-23
+
+### The server state dot is the modified icon at carat/adapters/status_bar.rb:346 (sprint-30 review quality)
+
+- Location: carat/adapters/status_bar.rb:346 (paint_lsp), :360 (lsp_width), beside :255 (the modified file mark)
+- Why: since #321 the bar draws the language server state with Icons.glyph("modified"), whose ASCII form is `*`, the same glyph the bar puts after a modified file name, so under the ascii icon set `ruby-lsp *` reads as a modified marker; the icon is named for another meaning.
+- Fix: add a named icon for the state dot to Domain::Icons with its nerd, unicode, and ascii forms and use it in paint_lsp and lsp_width; accepted when an ascii status bar snapshot shows the state glyph apart from the modified mark.
+- Category: editor
+- Added: 2026-11-23

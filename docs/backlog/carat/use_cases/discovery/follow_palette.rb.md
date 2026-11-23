@@ -67,3 +67,11 @@ Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= 
 - Location: `carat/use_cases/discovery/follow_palette.rb:274`
 - Why: duplication: char_count re-implements the UTF-8 character count of a byte prefix that Domain::Utf8 should own (also open-coded in json_rpc_language_gateway.rb:1175 and visit_target.rb:210)
 - Fix: a Utf8 module function used by all three
+
+### A query wider than its float is cut, not scrolled
+- Location: carat/use_cases/discovery/follow_palette.rb (query_row), carat/plugins/finder/plugin.rb (refresh), carat/adapters/frame_presenter.rb (place_cursor)
+- Why: the query row shows the start of the text and the cursor stays on the float's last cell, so the tail of a long query is not visible; the command line scrolled nothing either, but it was a screen wide.
+- Fix: show the tail of the text that fits before the cursor, with the leading cut marked, in the palette and the finder, and place the cursor at the cut text's end.
+- Also: carat/plugins/finder/plugin.rb, carat/adapters/frame_presenter.rb
+- Category: editor
+- Added: 2026-11-23

@@ -37,3 +37,12 @@
 - Fix: wrap the handler call and the insert replay in begin/ensure last.replaying = false
 - Category: editor
 - Added: 2026-11-22
+
+### the private clamp (and the same clamp in carat/use_cases/repeat_last.rb:117) at carat/use_cases/operate.rb:262 (sprint-30 sweep quality, note 24)
+
+- Location: carat/use_cases/operate.rb:262
+- Why: the private clamp (and the same clamp in carat/use_cases/repeat_last.rb:117) duplicates EditorState#clamp_col (editor_state.rb:128), which WalkHistory already calls
+- Fix: call state.clamp_col(row, col) and delete both copies
+- Also: carat/use_cases/operate.rb
+- Category: editor
+- Added: 2026-11-23

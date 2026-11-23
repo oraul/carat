@@ -1458,3 +1458,26 @@ none
 none
 - Category: pipeline
 - Added: 2026-11-22
+
+### The ruby fact is relayed through a record start
+- Location: `.claude/workflows/deliver-change.js` (`laneHead`, `noRubyAt`)
+- Why: the workflow has no shell, so a runner start relays `tools/lane_facts.sh`, as for `machinery`; a forged `ruby no` would record the bench review passed. The parse is strict (`yes` or `no`, else `unknown`) and the lane must be clean at the check's head, but the relay itself is trusted.
+- Fix: have `tools/run_state.sh` record the fact itself (a `ruby-scope` command the runner calls and the review gate reads) so no model output carries the decision.
+- Also: tools/lane_facts.sh, tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-23
+
+### A post-review prose edit in the package step refuses the push (lsp-container-b retro note 12)
+- Location: .claude/workflows/deliver-change.js package step, tools/run_state.sh reviewed_edits
+- Why: not fixed here; the delivery cannot read the backlog entry, and the heading alone does not say whether prose files may settle across the security pass or the review reruns.
+- Fix: state the rule in the entry (which prose paths settle), then add the path to the settle rule with a tools-test case.
+- Also: tools/run_state.sh
+- Category: pipeline
+- Added: 2026-11-23
+
+### A Low security finding in the change's own new code costs a full fix round (recent-files-persist retro note 7)
+- Location: .claude/workflows/deliver-change.js
+- Why: recent-files-persist spent 77,403 output tokens (504,196 minus 426,793, 14% of the run) plus a second check (tools-test 354s, test-build 292s, diagnose 355s) and a second security review finding 0, while no finding blocked. Near the backlog-lane item `nonblocking-round` (review-in-openspec note 10).
+- Fix: fix a non-blocking finding in place only at a cost bounded in the brief, else append it to the findings file; accepted when over three deliveries metric.rework counts only rounds a blocking finding or a red CI started.
+- Category: security
+- Added: 2026-11-23

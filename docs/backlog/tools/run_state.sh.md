@@ -1594,3 +1594,35 @@ none
 - Fix: one function returning the proof's failure reason, which groom prints and groom_proof only tests; accepted when tools-test runs both callers over one forged line.
 - Category: security
 - Added: 2026-11-22
+
+### Stored figures of main trust the saving lane's measuring script
+- Location: `tools/run_state.sh` (`base_figures save`), `.claude/agents/benchmark.md` step 1
+- Why: the benchmark agent measures the base with the change's own `tools/metrics.sh`, so a change that edits that script could store figures that let a later change's regression pass in another lane; the figures are a performance guard, not a merge gate, so the harm is a missed warning, not a bypass of the gates
+- Fix: have `save` run main's own copy of the script from `tmp/.base` (or record which script measured) and refuse a measurement taken by a changed one, or store the figures only from a CI measurement of main
+- Also: .claude/agents/benchmark.md, tools/metrics.sh
+- Category: pipeline
+- Added: 2026-11-23
+
+### The in-run budget line prices total tokens at 6 per output token (lsp-container-b retro note 13, sprint-security retro note 8)
+- Location: tools/run_state.sh OUTPUT_SHARE and spent_line, .claude/workflows/deliver-change.js SPENT_LINE
+- Why: not fixed here; history rows run from 3.5 to 59 total tokens per output token, and the entry's fix (a measured share, a range, or the total as the figure) is not stated in the heading.
+- Fix: derive the share from the history rows' median or print the total-token figure, keep SPENT_LINE and the tools-test regex in step.
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-23
+
+### groom_row's untracked sprint marker (sprint-14 review security Low (3) and quality)
+- Location: tools/run_state.sh sprint_row_at, build/plan/sprint
+- Why: the marker lives in the ignored build/plan, so it cannot be committed; sprint-row checks the sprint it names against the committed sprint log and uses it for no other value, so a forged marker can only name the sprint in progress. Rows are now read from committed content and compared byte for byte; a branch's own appended history rows stay trusted since the package step appends the change's row after the review.
+- Fix: none needed unless the marker gains another value; then derive it from docs/sprints.tsv alone.
+- Also: docs/sprints.tsv
+- Category: security
+- Added: 2026-11-23
+
+### base-figures save checks only tracked files and untracked makefiles at tools/run_state.sh:2069 (sprint-30 sweep security Low (3), note 2)
+
+- Location: tools/run_state.sh:2069
+- Why: base-figures save checks only tracked files and untracked makefiles in tmp/.base, so an untracked source or bench file left there by an earlier agent is built and measured as main's stored figures, and the read profile may set BASE so a non-main commit is measured
+- Fix: build in a fresh git worktree add of origin/main (or git clean -ffdx first) and refuse a BASE other than origin/main for save
+- Category: security
+- Added: 2026-11-23

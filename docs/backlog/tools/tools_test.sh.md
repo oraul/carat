@@ -355,3 +355,11 @@
 - Fix: drop them, or write `docs/backlog/_general.md` where a fixture needs a backlog file.
 - Category: pipeline
 - Added: 2026-11-21
+
+### The check round's carry has no end-to-end workflow test
+- Location: `tools/tools_test.sh` (the carried cases), `.claude/workflows/deliver-change.js` (`rounds`)
+- Why: the tests prove `carryWanted`, `carriedRun`, the command, and the source order of the carry before the checker start, but `rounds` has no harness, so the wiring (the check record, budget note, and bench phase taking the carried result) is read, not run
+- Fix: add a harness for `rounds` with a stub agent and `recordStart`, and assert no checker start and `phase.check` queued at the head when `carried` answers
+- Also: .claude/workflows/deliver-change.js
+- Category: pipeline
+- Added: 2026-11-23

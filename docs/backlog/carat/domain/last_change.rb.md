@@ -31,3 +31,12 @@
 - Fix: split it into a command that resumes after an arrow key and a plain predicate, or rename it to a command listed in BOOL_COMMANDS
 - Category: editor
 - Added: 2026-11-19
+
+### requires display_width, which it never names; also unused: carat/domain/last_change.rb:2 at carat/use_cases/visual/extend_visual.rb:6 (sprint-30 sweep quality, note 30)
+
+- Location: carat/use_cases/visual/extend_visual.rb:6
+- Why: requires display_width, which it never names; also unused: carat/domain/last_change.rb:2 position and :5 display_width, carat/use_cases/history/walk_history.rb:3 undo_tree, carat/use_cases/completion/show_completion.rb:4 completion_request, carat/use_cases/visual/reselect_visual.rb:4 selection, carat/use_cases/windows/toggle_slot.rb:2 slot, carat/use_cases/actions/completion_handler.rb:3 outcome; and carat/domain/operators.rb requires registers and selection only to reach RegisterEntry and Block
+- Fix: drop the unused requires and require register_entry and block directly
+- Also: carat/use_cases/visual/extend_visual.rb, carat/use_cases/history/walk_history.rb, carat/use_cases/completion/show_completion.rb, carat/use_cases/visual/reselect_visual.rb, carat/use_cases/windows/toggle_slot.rb, carat/use_cases/actions/completion_handler.rb, carat/domain/operators.rb
+- Category: editor
+- Added: 2026-11-23

@@ -159,14 +159,6 @@
 - Category: pipeline
 - Added: 2026-11-11
 
-### Merger's lane-close and contributor's merge-main accept any change name
-- Location: tools/agent_guard.sh:600-601
-- Why: security Low (4): the merger profile admits run_state.sh lane-close with any arguments, unlike push and set beside it, so a misled or prompt-injected merger could force-remove another running delivery's worktree and lose its uncommitted work; merge-main is admitted the same way.
-- Fix: require [ $# -eq 2 ] and matches "$2" "$CHANGE_NAME" for both, as contributor:push does, with one refusing guard case each in tools/tools_test.sh.
-- Also: tools/tools_test.sh
-- Category: security
-- Added: 2026-11-17
-
 ### RISKY_CONFIG omits pager keys (sprint-14 sweep security Low (3))
 
 - Location: tools/agent_guard.sh:884.
@@ -269,3 +261,52 @@ none
 - Fix: one `read:note|runner:note` branch; accepted when the existing guard cases pass for both profiles.
 - Category: pipeline
 - Added: 2026-11-22
+
+### base-figures save is allowed to every read-profile agent
+- Location: tools/agent_guard.sh, the read profile's `base-figures` form
+- Why: the form is shared by every agent of the read profile, though only the benchmark agent saves; save now builds and measures main's tracked tree itself, so a planted output no longer reaches the stored figures, but any read-profile agent can still trigger the build and the store.
+- Fix: give the benchmark its own guard profile (or an `only_profiles` check on `save`) and add the guard cases for the other profiles refusing it.
+none
+- Category: pipeline
+- Added: 2026-11-23
+
+### RISKY_CONFIG omits pager keys (sprint-14 sweep security Low (3))
+- Location: tools/agent_guard.sh RISKY_CONFIG, tools/rules.sh:60
+- Why: the line must change in tools/rules.sh with the guard's copy (tools/tools_test.sh requires them equal), and the brief stops a change that edits tools/rules.sh; moved to risky-config-pager (Pool 1), not fixed here.
+- Fix: add the pager keys to both lines in the one change that may edit tools/rules.sh.
+- Also: tools/rules.sh, tools/tools_test.sh
+- Category: security
+- Added: 2026-11-23
+
+### the runner profile admits run_state.sh review and phase with at tools/agent_guard.sh:707 (sprint-30 sweep security Low (4), note 1)
+
+- Location: tools/agent_guard.sh:707
+- Why: the runner profile admits run_state.sh review and phase with any arguments, and the delivery flush runs review records and note lines carrying up to 400 characters of reviewer text in one runner start on the smallest model, so text planted in reviewed code and quoted into a finding could steer the runner to record a security pass the merge gate reads
+- Fix: restrict runner review and phase in the guard to a result, kind, and commit form the workflow fixes (or a per-run nonce), and run note lines in a start separate from review records
+- Category: security
+- Added: 2026-11-23
+
+### and 100 the profile header lines run past the at tools/agent_guard.sh:77 (sprint-30 sweep quality, note 19)
+
+- Location: tools/agent_guard.sh:77
+- Why: and 100 the profile header lines run past the header wrap width the rest of the block keeps
+- Fix: rewrap them
+- Category: pipeline
+- Added: 2026-11-23
+
+### header comment lines of 102 to 119 columns (also at tools/agent_guard.sh:77 (sprint-30 sweep quality, note 60)
+
+- Location: tools/agent_guard.sh:77
+- Why: style: header comment lines of 102 to 119 columns (also tools/agent_guard.sh:48 and tools/ci_scope.sh:38) break the wrapping the rest of each header keeps
+- Fix: rewrap them
+- Also: tools/ci_scope.sh
+- Category: pipeline
+- Added: 2026-11-23
+
+### merger:lane-close reads pushed from the run state with sed at tools/agent_guard.sh:690 (sprint-30 sweep quality, note 61)
+
+- Location: tools/agent_guard.sh:690
+- Why: order: merger:lane-close reads pushed from the run state with sed before it checks the file exists and is not a link
+- Fix: test -f and ! -L first, then read the head (a possible security point, unexamined here)
+- Category: pipeline
+- Added: 2026-11-23

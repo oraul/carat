@@ -54,3 +54,12 @@
 - Location: carat/domain/operators.rb:172
 - Why: duplication: the shiftwidth fallback shiftwidth > 0 ? shiftwidth : (tabstop > 0 ? tabstop : 8) is spelled in shift_block and again in shift (320), and indent_width (341) repeats the tab fallback
 - Fix: one private Operators.step_width(shiftwidth, tabstop) and the tab fallback taken from callers passing Options#tab_width
+
+### ascii_recase, indent_width (340), make_indent (353), recase_row (254), unindent (199) at carat/domain/operators.rb:308 (sprint-30 sweep quality, note 31)
+
+- Location: carat/domain/operators.rb:308
+- Why: ascii_recase, indent_width (340), make_indent (353), recase_row (254), unindent (199), ExGrammar.range_end, address_char?, letter? (ex_grammar.rb:36-59), RegisterCount.writable? (register_count.rb:79), Registers#numbered_at (registers.rb:70), UndoTree#note_line (undo_tree.rb:328), and Window#scroll_folded are public but called only inside their own file
+- Fix: make them private (private_class_method for the module functions) and drop them from the method lists of docs/codebase-map.md areas 7, 9, 11, and 12
+- Also: docs/codebase-map.md
+- Category: editor
+- Added: 2026-11-23

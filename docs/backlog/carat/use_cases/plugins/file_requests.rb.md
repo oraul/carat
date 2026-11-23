@@ -73,14 +73,6 @@ Match the existing style: the domain require is wedged between the `../files` us
 - Category: plugins
 - Added: 2026-11-21
 
-### run_program refuses a slash in argv[0] but Process.spawn resolves at carat/use_cases/plugins/file_requests.rb:160 (sprint-26 sweep security Low (4), note 18)
-
-- Location: carat/use_cases/plugins/file_requests.rb:160
-- Why: run_program refuses a slash in argv[0] but Process.spawn resolves the name through PATH, so an empty or relative PATH entry (such as . or ::) makes a trusted-root project's own ./git run, against the comment's promise
-- Fix: resolve argv[0] against absolute PATH entries only and spawn the absolute path, refusing when none matches
-- Category: security
-- Added: 2026-11-22
-
 ### the timeout message 'ran past 2 seconds' is spelled at carat/use_cases/plugins/file_requests.rb:144 (sprint-26 sweep quality, note 30)
 
 - Location: carat/use_cases/plugins/file_requests.rb:144

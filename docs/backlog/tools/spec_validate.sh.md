@@ -75,3 +75,11 @@
 - Location: `tools/spec_validate.sh:26`
 - Why: rm -rf of build/spec-preview for every active change removes the preview of an earlier failed change, so the message the preview is in build/spec-preview (line 37) and the header claim a failed preview is kept are wrong with two active changes
 - Fix: one preview directory per change (build/spec-preview/NAME), or stop after the first failure
+
+### tools/spec_validate.sh runs the command of OPENSPEC_CMD, and path_of (security Lows of the periodic review at 186ddfb)
+- Location: tools/spec_validate.sh:20, carat/adapters/json_rpc_language_gateway.rb path_of
+- Why: not fixed here; the queue entry names the two locations only, and the delivery cannot open the backlog heading that states each Low. path_of already refuses NUL, dot segments, overlong and surrogate escapes, and a path over its limit; control characters below 0x20 in a decoded path are the one open case seen.
+- Fix: read the heading's text, then refuse the case with a test per heading (a carat/ edit also runs the benchmark phase).
+- Also: carat/adapters/json_rpc_language_gateway.rb
+- Category: security
+- Added: 2026-11-23

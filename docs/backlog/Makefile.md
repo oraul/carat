@@ -351,3 +351,11 @@ none
 - Fix: list them; one ONE_BIN variable; rename to SCENARIO_BUDGETS with the help, ci.yml comment, and tools case.
 - Category: pipeline
 - Added: 2026-11-22
+
+### A Spinel bump or Makefile build flag change skips the benchmark agent
+- Location: `.claude/workflows/deliver-change.js` (`benchWithoutRuby`) and `tools/lane_facts.sh` (the `ruby` fact)
+- Why: the brief names only `carat/`, `bin/`, `bench/`, `config/`, and `carat.rb` as Ruby code, so a diff of the `Makefile` (`SPINEL_REF`, build flags) or `tools/spinel/` alone reads `ruby no` and records the bench review with no agent, though a new compiler or flag can change allocations and rounds; CI's metrics stage still compares them on the pull request.
+- Fix: add `Makefile`, `tools/spinel/`, and `tools/metrics.sh` to the pattern of the `ruby` fact (and its tools-test cases), or keep the gate when the `Makefile` diff touches `SPINEL_REF`.
+- Also: .claude/workflows/deliver-change.js, tools/lane_facts.sh, carat.rb, tools/metrics.sh
+- Category: pipeline
+- Added: 2026-11-23

@@ -1,46 +1,5 @@
 # Backlog: carat/adapters/frame_presenter.rb
 
-## Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped
-
-- Where: `FramePresenter#paint_matches` in `carat/adapters/frame_presenter.rb` (line 569) and the back-row store of `paint_row`'s caller (line 382). Quality advisory of `buffer-search` at 2b54295641e0 and again at a36858a2bc88.
-- Why it matters: every match is walked from code point 0, also those left of a horizontal scroll, and a row painted after the frame budget stopped is stored with the search stamp, so it stays unhighlighted until the stamp changes.
-- Fix outline: store 0 as the stamp of a row painted under a stopped budget so the next frame retries it, and start the walk from the first match that can reach the left column, with an `adapters_frame_presenter` row for each. Queued in `search-structure`.
-- Category: editor
-- Added: 2026-11-04
-
-## FramePresenter passes the painted row through instance variables
-
-- Where: `@row_of` and `@current` in `carat/adapters/frame_presenter.rb`, set at lines 758 and 788 and read at 1064 by `paint_matches` (at 8d8832f). Periodic quality at 0b17324.
-- Why it matters: the row and the window's currency reach `paint_matches` through a side channel, as the entry "Operate passes the search outcome through an instance variable" records for `Operate`, so a call order change paints with a stale row.
-- Fix outline: pass the row and the currency to `paint_row` and on to `paint_matches` as arguments and drop the two instance variables. Queued in `search-structure`, with the entry "Match highlighting walks matches left of the scroll and keeps rows painted after the budget stopped".
-- Category: editor
-- Added: 2026-11-04
-
-## FramePresenter clears the layout twice for the hit-enter prompt and the start screen
-
-- Where: the `if start` block of `carat/adapters/frame_presenter.rb` (line 201 at `start-screen`), which repeats the `if listed` block's `back.layout.clear` and `@back_rows.invalidate` line for line. Quality review of `start-screen`.
-- Why it matters: two copies of the full-repaint step must change together, and a fix to one misses the other.
-- Fix outline: clear the layout and invalidate the rows once under `if listed || start`, and keep only the two cursor lines under `if listed`.
-- Category: editor
-- Added: 2026-11-05
-
-## The presenter passes the number's group to paint_row through an instance variable
-
-- Where: `@number_hl` in `carat/adapters/frame_presenter.rb` (line 420 at `cursor-shapes`), set just before the call to `paint_row`, although it is derivable from the layer. Quality advisory of `cursor-shapes`.
-- Why it matters: a hidden coupling: any other caller of `paint_row` inherits a stale group.
-- Fix outline: pass the group, or the layer, to `paint_row` as a parameter and drop the instance variable and its RBS line. Queued in `search-structure`.
-- Category: editor
-- Added: 2026-11-05
-
-## FramePresenter reaches through TabBar to ask whether the tab row shows
-
-- Where: `@tab_bar.buffers.tab_row?(state.tabs.tab_count)` in `carat/adapters/frame_presenter.rb` (line 157 at `bars`), while `ArrangeView` (`carat/use_cases/arrange_view.rb`, line 37) asks `BufferList#tab_row?` directly. Quality advisory of `bars`, raised twice.
-- Why it matters: the presenter reaches through a collaborator, and two routes to one rule can drift apart.
-- Fix outline: give `TabBar` a `showing?(tab_count)` predicate and call it once in the presenter, or hand the presenter the buffer list, with the presenter test rows unchanged.
-- Also: carat/use_cases/arrange_view.rb
-- Category: editor
-- Added: 2026-11-05
-
 ## Slot headers mark the shown view by title
 
 - Where: `carat/adapters/frame_presenter.rb` line 717 and `Slot#add_view` in `carat/domain/slot.rb` line 84, at b76b722. Periodic quality. Queue item `slots-tidy`.
@@ -170,15 +129,6 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Why: hover, the finder, the palette, and the key-hint menu share a rounded `#6c7286` border with a bold title; the completion popup has neither, and no rule says when a float is borderless (ux-pass review finding 8). Reproduction: start on a Ruby file with a language server, `8G`, `o`, `gre`, `openspec/changes/archive/*-ux-pass/screens/float-completion-lsp.txt` against `float-hover.txt`.
 - Fix: decide the rule (every float bordered, or inline lists near the cursor borderless), record it in `docs/architecture.md` with the float style, and make the completion popup follow it.
 - Also: docs/architecture.md
-- Category: editor
-- Added: 2026-11-15
-
-### The palette and the finder frame their prompt and title differently
-
-- Location: `carat/adapters/frame_presenter.rb:107` (`PALETTE_PROMPT = ">"`), `carat/use_cases/discovery/follow_palette.rb:36` (`TITLE`), `carat/plugins/finder/plugin.rb:22` (`PROMPT = "> "`).
-- Why: the finder's prompt is `> ` and its title counts (`Files 0/5`), the palette's prompt is `>` with no space and its title `Commands` has no count, two floats of one kind a few keys apart (ux-pass review finding 9). Reproduction: start on a file, `<Space>p`, `wri`, `openspec/changes/archive/*-ux-pass/screens/float-palette-filter.txt` against `empty-finder-nomatch.txt`.
-- Fix: one prompt and one title form, `> ` and `Name shown/total`, for both.
-- Also: carat/use_cases/discovery/follow_palette.rb, carat/plugins/finder/plugin.rb
 - Category: editor
 - Added: 2026-11-15
 
@@ -356,3 +306,18 @@ none
 - Also: carat/adapters/float_painter.rb
 - Category: editor
 - Added: 2026-11-22
+
+### Match highlighting still walks the matches left of the horizontal scroll
+- Location: carat/adapters/frame_presenter.rb, paint_matches (the walk starts at code point 0 of the row).
+- Why: each match left of the scroll is an engine call charged to the frame's budget, so a long line scrolled far right spends the budget on matches nobody sees. Starting the walk at the scroll column instead changes which matches are found when matches overlap (the pattern aa on aaa), so the highlight would differ from Neovim's, which walks from the line start; the delivery fixed only the stale stamp of rows painted after the stop.
+- Fix: keep the walk from 0 but skip the engine call chain left of the scroll when the pattern cannot match twice at overlapping offsets (a literal with no repeated prefix), or cache the match starts per decoded line in LineCache and read them per frame.
+- Category: editor
+- Added: 2026-11-23
+
+### paint_row takes 17 positional parameters (paint_window at 571 takes at carat/adapters/frame_presenter.rb:817 (sprint-30 sweep quality, note 41)
+
+- Location: carat/adapters/frame_presenter.rb:817
+- Why: paint_row takes 17 positional parameters (paint_window at 571 takes 10), grown by #318 when three instance variables became arguments, so a call site is read by counting
+- Fix: group the per-row inputs (row, current, number_hl, number, sign, sign_group) in a small reused record or keep them as presenter state set once per window
+- Category: editor
+- Added: 2026-11-23

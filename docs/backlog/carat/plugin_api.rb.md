@@ -66,3 +66,11 @@ Location: `carat/plugin_api.rb` (888 lines): request and response values, the `H
 - Also: test/use_cases_plugins.rb
 - Category: plugins
 - Added: 2026-11-17
+
+### The Host#recent_files comment still says since the editor started
+- Location: `carat/plugin_api.rb` (`Host#recent_files`, from 2.14)
+- Why: the comment says the list holds the files shown since the editor started; it now also holds the files earlier runs kept and shows each path relative to the working directory below it and absolute elsewhere. Editing the plugin API file is a plugin API change, which this change does not make.
+- Fix: reword the comment (the files shown since the editor started and those an earlier run kept, each path relative below the working directory, absolute elsewhere) in a change that may touch `carat/plugin_api.rb`, with the `docs/plugins.md` line if any.
+- Also: docs/plugins.md
+- Category: plugins
+- Added: 2026-11-23

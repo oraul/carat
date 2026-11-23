@@ -117,3 +117,52 @@
 - Also: CLAUDE.md
 - Category: editor
 - Added: 2026-11-22
+
+### start_quiet and start (line 219) repeat the same program_path at carat/drivers/process_runner.rb:136 (sprint-30 sweep quality, note 38)
+
+- Location: carat/drivers/process_runner.rb:136
+- Why: start_quiet and start (line 219) repeat the same program_path lookup, empty check, Process.spawn of [program, program], and SystemCallError rescue, differing only in the environment and the in: stream
+- Fix: one private spawn_program(environment, argv, input, output) both call
+- Category: editor
+- Added: 2026-11-23
+
+### the class comment and the map's area 17 entry at carat/drivers/process_runner.rb:10 (sprint-30 sweep quality, note 39)
+
+- Location: carat/drivers/process_runner.rb:10
+- Why: the class comment and the map's area 17 entry say the reader and writer threads per child are the only threads Carat starts, but stop (line 99) and capture (line 121) each start a waiter thread through Process.detach, a capture per git command
+- Fix: say the reader, the writer, and the detach waiters are the only threads, in the comment, the map, and CLAUDE.md Stack if it is meant to hold
+- Also: CLAUDE.md
+- Category: editor
+- Added: 2026-11-23
+
+### program_path uses a name holding a slash as given at carat/drivers/process_runner.rb:151 (sprint-30 sweep quality, note 44)
+
+- Location: carat/drivers/process_runner.rb:151
+- Why: security, unexamined: program_path uses a name holding a slash as given, so a relative configured program such as bin/ruby-lsp resolves against the project's working directory; for the security reviewer
+- Fix: judge the point named in Why against the code; fix it with a test or record why it holds
+- Category: editor
+- Added: 2026-11-23
+
+### start_quiet and start (219) repeat the program_path lookup, the at carat/drivers/process_runner.rb:136 (sprint-30 sweep quality, note 74)
+
+- Location: carat/drivers/process_runner.rb:136
+- Why: start_quiet and start (219) repeat the program_path lookup, the empty check, the spawn, and the rescue, differing only in environment and streams
+- Fix: one private spawn helper taking the environment and the in/out streams
+- Category: editor
+- Added: 2026-11-23
+
+### the class comment has one overlong line and broken at carat/drivers/process_runner.rb:23 (sprint-30 sweep quality, note 75)
+
+- Location: carat/drivers/process_runner.rb:23
+- Why: the class comment has one overlong line and broken wrapping (A handler, unlike IGNORE, resets to the default in), and line 8 still says it starts language servers though capture runs git and other programs
+- Fix: rewrap and say child processes
+- Category: editor
+- Added: 2026-11-23
+
+### a program name with a slash is used as at carat/drivers/process_runner.rb:151 (sprint-30 sweep quality, note 82)
+
+- Location: carat/drivers/process_runner.rb:151
+- Why: possible security point, unexamined: a program name with a slash is used as given, so a relative one resolves against the project's working directory
+- Fix: for the security reviewer to judge
+- Category: editor
+- Added: 2026-11-23

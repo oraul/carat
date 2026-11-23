@@ -116,10 +116,27 @@
 - Category: editor
 - Added: 2026-11-19
 
-### The recent files are kept for one run only
-- Location: carat/domain/buffer_list.rb (`recent`, `RECENT_LIMIT`), carat/plugins/finder/plugin.rb (`<leader>fr`)
-- Why: Neovim's `oldfiles` survives a restart through shada, so `<leader>fr` in a fresh session lists only what was opened since; a relative path recorded before a `:cd` also names another file after it, as `:ls` does.
-- Fix: write the recent list, as absolute paths, to a state file under the user's state directory on quit and read it at startup through the file port, bounded as now, a missing or unreadable file read as empty; a proposal decides the file's place and format.
-- Also: carat/plugins/finder/plugin.rb
+### A buffer opened before a working directory change resolves against a later base
+- Location: `carat/domain/buffer_list.rb` (`note_recent`, `base`), `carat/use_cases/files/open_file.rb`
+- Why: `base` is the working directory of the last `OpenFile`, so a buffer opened under one directory and shown again after a later open under another is recorded against the newer base. The editor has no `:cd`, so the directory does not change in a real run; the file double's `move_to` is the only way.
+- Fix: let a buffer carry its absolute path (or the directory it was opened in) so `note_recent` needs no base, when a `:cd` or `:lcd` command is added.
+- Also: carat/use_cases/files/open_file.rb
 - Category: editor
-- Added: 2026-11-22
+- Added: 2026-11-23
+
+### close_window, when it removes a tab page with its at carat/domain/buffer_list.rb:402 (sprint-30 sweep quality, note 21)
+
+- Location: carat/domain/buffer_list.rb:402
+- Why: close_window, when it removes a tab page with its last window, drops the kept slots folds but never releases the kept slots buffers, unlike close_tab (lines 441-453), so after :q closes a tab page whose sidebar is hidden the plugin view scratch buffer stays in the list unshown
+- Fix: release each kept slot view buffer in that branch through one helper shared with close_tab, with a test in test/editor_slots.rb
+- Also: test/editor_slots.rb
+- Category: editor
+- Added: 2026-11-23
+
+### drop_slot_folds is public but used only inside BufferList, and at carat/domain/buffer_list.rb:416 (sprint-30 sweep quality, note 23)
+
+- Location: carat/domain/buffer_list.rb:416
+- Why: drop_slot_folds is public but used only inside BufferList, and its per-slot loop repeats in close_tab (line 442) and TabList#drop_kept (tab_list.rb:187)
+- Fix: move it below private and walk the kept slots in one place
+- Category: editor
+- Added: 2026-11-23

@@ -49,3 +49,11 @@
 - Fix: stop awaiting at the first empty timeout or a deadline, with a missing-answer test.
 - Category: editor
 - Added: 2026-11-22
+
+### the read_key comment says a timed-out read ends the at carat/drivers/ansi_terminal.rb:76 (sprint-30 sweep quality, note 77)
+
+- Location: carat/drivers/ansi_terminal.rb:76
+- Why: the read_key comment says a timed-out read ends the awaiting, but the code ends it only when a start of an answer is held, so a terminal that never answers keeps the reads scanning for OSC 11 forever
+- Fix: state that in the comment, or end the awaiting after a bounded number of empty timeouts with a test
+- Category: editor
+- Added: 2026-11-23

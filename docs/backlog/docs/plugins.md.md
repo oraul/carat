@@ -15,3 +15,19 @@
 - Fix: name both messages.
 - Category: plugins
 - Added: 2026-11-16
+
+### the api_version history stops at 2.15 while Carat::PluginApi::VERSION is at docs/plugins.md:23 (sprint-30 sweep quality, note 35)
+
+- Location: docs/plugins.md:23
+- Why: the api_version history stops at 2.15 while Carat::PluginApi::VERSION is 2.16 (float_prompt, #314), so the one place a plugin author reads what each minor added misses the newest
+- Fix: append Version 2.16 adds float_prompt, which attaches the open prompt to one of the plugin's floats
+- Category: plugins
+- Added: 2026-11-23
+
+### the grep picker paragraph says each preview line and at docs/plugins.md:134 (sprint-30 sweep quality, note 36)
+
+- Location: docs/plugins.md:134
+- Why: the grep picker paragraph says each preview line and the title go through safe and the matched line carries the list's '> ' prefix, but the sanitizer is now Finder::SafeText.of and the finder's MARK is the bar '▎ ' (plugin.rb:46; PROMPT is '> ')
+- Fix: name SafeText.of and the bar mark
+- Category: plugins
+- Added: 2026-11-23

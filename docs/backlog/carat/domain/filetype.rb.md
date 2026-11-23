@@ -14,3 +14,11 @@ Location: `carat/domain/filetype.rb:8-11` (`EXTENSIONS`, `NAMES`) and `carat/plu
 - Also: carat/plugin_api.rb
 - Category: editor
 - Added: 2026-11-15
+
+### config.ru in NAMES is dead, since the ru extension at carat/domain/filetype.rb:13 (sprint-30 sweep quality, note 81)
+
+- Location: carat/domain/filetype.rb:13
+- Why: config.ru in NAMES is dead, since the ru extension already maps to ruby; and the core table hard-codes Ruby extensions, names, and shebang programs while plugins declare filetypes, so a language plugin needs a core edit
+- Fix: drop config.ru, and record a backlog item to let a manifest declare its extensions
+- Category: editor
+- Added: 2026-11-23

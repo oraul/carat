@@ -38,3 +38,12 @@
 - Why: the comment says every file is pulled in here once, but carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, and carat/use_cases/concerns/undo_syncing.rb are reached only through other files require_relative lines
 - Fix: add them to carat.rb in layer order, or reword the comment
 - Also: carat/adapters/indent_guides.rb, carat/domain/border_style.rb, carat/domain/folds.rb, carat/use_cases/actions/search_handler.rb, carat/use_cases/concerns/undo_syncing.rb
+
+### methods_sent calls Json.parse without requiring carat/domain/json, relying on carat.rb's at carat/doubles/fake_processes.rb:140 (sprint-30 sweep quality, note 73)
+
+- Location: carat/doubles/fake_processes.rb:140
+- Why: methods_sent calls Json.parse without requiring carat/domain/json, relying on carat.rb's load order
+- Fix: add require_relative ../domain/json
+- Also: carat/doubles/fake_processes.rb
+- Category: editor
+- Added: 2026-11-23

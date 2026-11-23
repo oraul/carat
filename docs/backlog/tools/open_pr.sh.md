@@ -149,3 +149,20 @@
 - Fix: refuse in message too, or share one helper.
 - Category: pipeline
 - Added: 2026-11-22
+
+### WAIT_STEP=0 passes the [0-9]{1,3} check, and the loop then at tools/open_pr.sh:137 (sprint-30 sweep quality, note 58)
+
+- Location: tools/open_pr.sh:137
+- Why: wait loop: WAIT_STEP=0 passes the [0-9]{1,3} check, and the loop then never advances waited, so wait spins until a pull request appears instead of ending after its seconds
+- Fix: require [1-9][0-9]{0,2}
+- Category: pipeline
+- Added: 2026-11-23
+
+### open_pr.sh matches is a whole-line match (grep -x) while at tools/open_pr.sh:77 (sprint-30 sweep quality, note 59)
+
+- Location: tools/open_pr.sh:77
+- Why: one clear way: open_pr.sh matches is a whole-line match (grep -x) while tools/agent_guard.sh:337 matches is unanchored, the same name with two meanings, and CHANGE_RE is copied in both files
+- Fix: name the whole-line helper apart (whole_match) or give both one meaning
+- Also: tools/agent_guard.sh
+- Category: pipeline
+- Added: 2026-11-23

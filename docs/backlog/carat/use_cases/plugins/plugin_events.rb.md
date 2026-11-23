@@ -9,15 +9,6 @@
 - Category: plugins
 - Added: 2026-11-09
 
-## Plugin entries and edits are named e
-
-- Where: `carat/use_cases/plugins/plugin_events.rb` lines 213 and 227, `plugin_host.rb` lines 95 and 141, `buffer_requests.rb` line 61 at 847851d, beside the queued `ui_requests.rb` line 92. Periodic quality. Queue item: backlog items, plugin host classes.
-- Why it matters: CLAUDE.md naming forbids unclear abbreviations.
-- Fix outline: rename them `entry` and `edit` with the `ui_requests` fix.
-- Also: CLAUDE.md
-- Category: plugins
-- Added: 2026-11-09
-
 ## A feed notice builds an event no plugin subscribes to
 
 - Where: `carat/use_cases/plugins/plugin_events.rb:188` (`enqueue`).

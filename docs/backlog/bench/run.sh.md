@@ -111,3 +111,28 @@
 - Fix: a trap removing it on EXIT, drop the rm in per_key; refuse a missing or empty list with exit 2 and a usage line.
 - Category: code-quality
 - Added: 2026-11-22
+
+### REPORT is made by mktemp at start but removed at bench/run.sh:5 (sprint-30 sweep quality, note 46)
+
+- Location: bench/run.sh:5
+- Why: REPORT is made by mktemp at start but removed only inside per_key, so the missing-binary exit, a failing --budget, and every --budgets run (whose parent never calls per_key and whose children each make their own) leave a carat-bench-alloc file in the temporary directory
+- Fix: trap 'rm -f "$REPORT"' EXIT after the mktemp, or make the file inside per_key
+- Category: code-quality
+- Added: 2026-11-23
+
+### the usage says every scenario runs when none is at bench/run.sh:13 (sprint-30 sweep quality, note 69)
+
+- Location: bench/run.sh:13
+- Why: the usage says every scenario runs when none is named, but the default list at line 88 is a hard-coded subset that leaves out lh-winbar, n, cmdline-tab, and grep of SCENARIOS in bench/keys.rb, and drifts as scenarios are added
+- Fix: correct the usage text or ask the binary for its scenario names (keys.rb accepts all) instead of repeating them
+- Also: bench/keys.rb
+- Category: code-quality
+- Added: 2026-11-23
+
+### the mktemp report file is made before the missing-binary at bench/run.sh:25 (sprint-30 sweep quality, note 70)
+
+- Location: bench/run.sh:25
+- Why: the mktemp report file is made before the missing-binary check and never removed by a trap, so an early exit, a failing run under set -e, and every --budgets parent (which only re-invokes itself) leave a carat-bench-alloc file in TMPDIR
+- Fix: trap 'rm -f "$REPORT"' EXIT after the mktemp, or make it inside per_key
+- Category: code-quality
+- Added: 2026-11-23

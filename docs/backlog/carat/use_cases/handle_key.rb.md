@@ -240,3 +240,51 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Location: carat/use_cases/handle_key.rb:407
 - Why: the signature triggers are the bare code points 40 and 44, and options.rb:234, :495, :504 scan listchars for bare 44 and 58, where Key names CR and SPACE and RcParser names NEWLINE
 - Fix: name the bytes (OPEN_PAREN, COMMA, COLON) beside the existing constants
+
+### Pasted text in normal and the other modes does nothing
+- Location: carat/use_cases/handle_key.rb, paste.
+- Why: Neovim puts pasted text in at the cursor in normal mode, and in the visual modes replaces the selection; here the paste is ignored outside insert mode and the command line, which is safe but a missing feature.
+- Fix: add a paste use case that puts the text as a charwise put after the cursor in normal mode and replaces the selection in the visual modes, called from paste for those modes.
+- Category: editor
+- Added: 2026-11-23
+
+### a pasted newline in insert mode goes through call(state at carat/use_cases/handle_key.rb:186 (sprint-30 sweep quality, blocking, note 5)
+
+- Location: carat/use_cases/handle_key.rb:186
+- Why: blocking quality finding of the sprint-30 whole-tree review: a pasted newline in insert mode goes through call(state, Key::CR), so it is looked up in the keymaps: with the completion popup showing, step (line 281) runs the completion layer binding (default keymap.completion <CR> completion.insert) and inserts the selected candidate instead of breaking the line, and a user keymap.insert <CR> remap applies too, against the key-input spec (a pasted code is never looked up in a keymap); no test pastes with the popup open
+- Fix: break the line through the insert.newline handler or BreakLine directly (closing the popup first) and add an editor_insert row pasting x, a newline, and y with the popup shown
+- Category: editor
+- Added: 2026-11-23
+
+### paste drops the Outcome of InsertText, which insert_literal reports at carat/use_cases/handle_key.rb:187 (sprint-30 sweep quality, note 6)
+
+- Location: carat/use_cases/handle_key.rb:187
+- Why: paste drops the Outcome of InsertText, which insert_literal reports, so a refused paste (a buffer that cannot be modified) shows no message
+- Fix: report(state, @insert_text.call(...)) as insert_literal does, or share one helper with insert_literal
+- Category: editor
+- Added: 2026-11-23
+
+### a pasted code skips the pending keys: a typed at carat/use_cases/handle_key.rb:160 (sprint-30 sweep quality, note 7)
+
+- Location: carat/use_cases/handle_key.rb:160
+- Why: a pasted code skips the pending keys: a typed prefix of a multi-key insert or cmdline binding (a user jk) stays pending and is inserted by the timeout after the pasted text, reversing the order
+- Fix: resolve the pending keys (timeout) before the first pasted code, with a test
+- Category: editor
+- Added: 2026-11-23
+
+### paste does nothing in replace mode, where Neovim overwrites at carat/use_cases/handle_key.rb:182 (sprint-30 sweep quality, note 8)
+
+- Location: carat/use_cases/handle_key.rb:182
+- Why: paste does nothing in replace mode, where Neovim overwrites with the pasted text, and docs/compatibility.md does not say so
+- Fix: paste through the replace path in Mode::REPLACE or record the gap in the compatibility row
+- Also: docs/compatibility.md
+- Category: editor
+- Added: 2026-11-23
+
+### step clears the message twice (inside the list_message? branch at carat/use_cases/handle_key.rb:276 (sprint-30 sweep quality, note 9)
+
+- Location: carat/use_cases/handle_key.rb:276
+- Why: step clears the message twice (inside the list_message? branch and again at line 279)
+- Fix: one state.clear_message before the CR and Space check
+- Category: editor
+- Added: 2026-11-23

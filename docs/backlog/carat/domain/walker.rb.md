@@ -51,3 +51,19 @@
 - Also: carat/domain/text_objects.rb, carat/domain/runs.rb, carat/use_cases/search/find_match.rb, CLAUDE.md
 - Category: editor
 - Added: 2026-11-18
+
+### Walker#char_class calls Motions.code_class without requiring motions.rb, while motions.rb requires at carat/domain/walker.rb:62 (sprint-30 sweep quality, note 48)
+
+- Location: carat/domain/walker.rb:62
+- Why: hidden dependency cycle: Walker#char_class calls Motions.code_class without requiring motions.rb, while motions.rb requires walker.rb, and TextObjects and FindMatch reach into Motions for the same rule
+- Fix: move code_class and blank? into one small domain module that walker.rb, motions.rb, text_objects.rb, and find_match.rb require
+- Category: editor
+- Added: 2026-11-23
+
+### the class comment says it is used only while at carat/domain/walker.rb:12 (sprint-30 sweep quality, note 52)
+
+- Location: carat/domain/walker.rb:12
+- Why: doc drift: the class comment says it is used only while a word motion runs, but TextObjects.find_opener and find_closer walk with it too
+- Fix: say it serves the word motions and the bracket text objects
+- Category: editor
+- Added: 2026-11-23

@@ -47,3 +47,11 @@
 - Also: carat/use_cases/windows/toggle_slot.rb, test/editor_slots.rb
 - Category: editor
 - Added: 2026-11-18
+
+### clamp_cursors walks the layout leaves and the floats but at carat/domain/tab_list.rb:275 (sprint-30 sweep quality, note 22)
+
+- Location: carat/domain/tab_list.rb:275
+- Why: clamp_cursors walks the layout leaves and the floats but not the kept (hidden) slot windows, which shown? (line 178) counts as showing the buffer, so a view buffer rewritten while its sidebar is hidden keeps a cursor past its end until ToggleSlot shows it again
+- Fix: also clamp_if_shown each kept slot view_window, with a test
+- Category: editor
+- Added: 2026-11-23

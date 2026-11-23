@@ -40,3 +40,11 @@
 - Also: carat/domain/buffer_list.rb
 - Category: editor
 - Added: 2026-11-19
+
+### beside_side_windows? re-walks the leaves for the rule BufferList#lone_file_window? and at carat/use_cases/files/quit.rb:87 (sprint-30 sweep quality, note 29)
+
+- Location: carat/use_cases/files/quit.rb:87
+- Why: beside_side_windows? re-walks the leaves for the rule BufferList#lone_file_window? and TabPage#file_window_count already state (one non-scratch window among several leaves)
+- Fix: return !state.buffer.scratch? && @buffers.lone_file_window?(state.tab) and delete the loop
+- Category: editor
+- Added: 2026-11-23

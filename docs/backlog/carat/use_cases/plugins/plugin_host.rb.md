@@ -1,14 +1,5 @@
 # Backlog: carat/use_cases/plugins/plugin_host.rb
 
-## Two plugin host classes look up an option the same way
-
-- Where: `PluginHost#option` in `carat/use_cases/plugins/plugin_host.rb` line 140 and `UiRequests#option` in `carat/use_cases/plugins/ui_requests.rb` line 91 at 847851d. Periodic quality. Queue item: backlog items, plugin host classes.
-- Why it matters: duplication, two places to change.
-- Fix outline: one `PluginRegistry` method answering the value or nil, called by both.
-- Also: carat/use_cases/plugins/ui_requests.rb
-- Category: plugins
-- Added: 2026-11-09
-
 ### PluginHost builds what EditorAssembly should share
 
 - Location: carat/use_cases/plugins/plugin_host.rb:73 and :78, carat/adapters/editor_assembly.rb:431 (sprint-8 sweep, quality, found twice); queued in `plugin-host-tidy`.

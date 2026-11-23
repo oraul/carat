@@ -487,3 +487,70 @@ Docs currency: the Tests line still describes test/editor_palette.rb as opening,
 - Also: tools/docs_lint.sh
 - Category: design
 - Added: 2026-11-22
+
+### the KeyDecoder entry says a CSI modifier is read at docs/codebase-map.md:148 (sprint-30 sweep quality, note 13)
+
+- Location: docs/codebase-map.md:148
+- Why: area 5 drift: the KeyDecoder entry says a CSI modifier is read only for Ctrl on the page keys, but arrow_key reads Shift and Ctrl on Left and Right; the Key entry omits PASTED, pasted?, and unmodified; the HandleKey entry omits the paste path
+- Fix: update the three entries
+- Category: design
+- Added: 2026-11-23
+
+### the EditorState entry omits replace_cmdline and cmdline_position and its at docs/codebase-map.md:126 (sprint-30 sweep quality, note 14)
+
+- Location: docs/codebase-map.md:126
+- Why: area 4 drift: the EditorState entry omits replace_cmdline and cmdline_position and its writer, the Messages entry omits E16, E444, E477, E490, REPORT, unsaved_buffer, and invalid_argument; carat/domain/editor_state.rb:13 and 16 are unwrapped comment lines
+- Fix: update the entries and rewrap
+- Also: carat/domain/editor_state.rb
+- Category: design
+- Added: 2026-11-23
+
+### the Options entry omits slot_size, guide_code, scope_guide_code, and guide_char? at docs/codebase-map.md:102 (sprint-30 sweep quality, note 15)
+
+- Location: docs/codebase-map.md:102
+- Why: area 3 drift: the Options entry omits slot_size, guide_code, scope_guide_code, and guide_char?
+- Fix: name them in the entry
+- Category: design
+- Added: 2026-11-23
+
+### says ProbePath is the one call of FilePort#stat, but at docs/codebase-map.md:449 (sprint-30 sweep quality, note 28)
+
+- Location: docs/codebase-map.md:449
+- Why: says ProbePath is the one call of FilePort#stat, but carat/use_cases/files/list_tree.rb:69 and carat/use_cases/complete_command_line.rb:213 call @files.stat directly
+- Fix: reword the map line to name ProbePath as the one stat of OpenFile and the plugin file operations, or route the other two through it
+- Also: carat/use_cases/files/list_tree.rb, carat/use_cases/complete_command_line.rb
+- Category: design
+- Added: 2026-11-23
+
+### area 13's flow says the presenter paints the buffer at docs/codebase-map.md:485 (sprint-30 sweep quality, note 37)
+
+- Location: docs/codebase-map.md:485
+- Why: area 13's flow says the presenter paints the buffer tabs row when BufferList#tab_row?, but FramePresenter now asks TabBar#showing? (frame_presenter.rb:232, since #318), and the tab_bar.rb entry at line 494 does not list showing?
+- Fix: name TabBar#showing? in the flow and add showing? to the tab_bar.rb entry
+- Category: design
+- Added: 2026-11-23
+
+### the header (and docs/codebase-map.md:56) says a sprint holds 0 at tools/docs_lint.sh:23 (sprint-30 sweep quality, note 54)
+
+- Location: tools/docs_lint.sh:23
+- Why: doc drift: the header (and docs/codebase-map.md:56) says a sprint holds 0 to 2 items in the backlog lane, but check_queue (tools/docs_lint.sh:235) allows 3 in each lane, the 3 + 3 decision
+- Fix: say 0 to 3 in each lane in both places
+- Also: tools/docs_lint.sh
+- Category: design
+- Added: 2026-11-23
+
+### the MemoryFiles line omits its public directory? and unwritable at docs/codebase-map.md:708 (sprint-30 sweep quality, note 68)
+
+- Location: docs/codebase-map.md:708
+- Why: the MemoryFiles line omits its public directory? and unwritable, and the FakeProcesses line (664) omits script
+- Fix: list them
+- Category: design
+- Added: 2026-11-23
+
+### the AnsiTerminal line says the environment reads but HOME at docs/codebase-map.md:636 (sprint-30 sweep quality, note 76)
+
+- Location: docs/codebase-map.md:636
+- Why: the AnsiTerminal line says the environment reads but HOME of DiskFiles#home are its own, but ProcessRunner#program_path now reads PATH
+- Fix: name PATH in ProcessRunner beside HOME
+- Category: design
+- Added: 2026-11-23
