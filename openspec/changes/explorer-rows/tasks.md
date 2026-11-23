@@ -17,3 +17,6 @@
 
 ## Quality review
 
+- [x] 4.1 The branch of `a`, `r`, and `d` with no entry under the cursor (an empty tree) had no test; assert it in `test/editor_explorer.rb`, fixed
+- [x] 4.2 The marked row's NO_COLOR and clearing paths had no presenter test; assert them in `test/adapters_frame_presenter.rb`, fixed
+- [x] 4.3 The nerd `current` glyph, the lost icon color, and the missing bold label are recorded in `docs/findings/explorer-rows.md`

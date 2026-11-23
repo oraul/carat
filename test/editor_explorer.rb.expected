@@ -114,6 +114,9 @@ ok   an empty name creates nothing
 ok   an existing name is refused
 ok   a name leaving the root is refused
 ok   the prompt names the directory
+ok   an empty tree lists no line and marks no row
+ok   r and d with no entry under the cursor do nothing
+ok   a with no entry under the cursor creates in the root
 ok   the directory exists on disk and no file was made
 ok   a refusal is an error
 ok   a name below a link leading out of the root is refused
@@ -158,4 +161,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 160 passed, 0 failed
+editor_explorer: 163 passed, 0 failed

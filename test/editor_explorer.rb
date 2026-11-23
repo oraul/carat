@@ -345,6 +345,14 @@ module EditorExplorerTest
     end
     h = session(" ea")
     t.assert_equal("Create in proj/: ", h.message_row.rstrip + " ", "the prompt names the directory")
+    # A tree with no entry has no row under the cursor: a creates in the root.
+    h = editor_on("a.md", config_with("ascii", "plugin.explorer.ignore a.md b.rb docs lib\n"))
+    h.type(" e")
+    t.assert_equal([[], -1], [tree_lines(h).reject { |line| line.empty? }, h.buffer.marked_row], "an empty tree lists no line and marks no row")
+    h.type("rd")
+    t.assert_equal([:normal, ""], [h.mode, h.message], "r and d with no entry under the cursor do nothing")
+    h.type("a" + "x.rb<CR>")
+    t.assert_equal([true, "Created x.rb"], [h.files.exist?("x.rb"), h.message], "a with no entry under the cursor creates in the root")
     h = session(" ea" + "pkg/<CR>")
     t.assert_equal([true, nil], [h.files.directory?("pkg"), h.files.get("pkg")], "the directory exists on disk and no file was made")
     h = session(" ea" + "b.rb<CR>")
