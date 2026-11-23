@@ -21,9 +21,9 @@ module Carat
     # the current one bold in TabLineName and the others in TabLine, and
     # the tabs use the columns before them. Under 16 colors and NO_COLOR
     # (bare=) the row has no fill: the selected tab and page number stay
-    # bold and every other name is in Normal. Tabs that do not fit are counted, " <N " before the run shown and " N> " after
-    # it; the run starts as early as keeping the current tab in it
-    # allows. Names are written from the byte after the path's last slash
+    # bold and every other name is in Normal. Tabs that do not fit are
+    # counted, " <N " before the run shown and " N> " after it; the run
+    # starts as early as keeping the current tab in it allows. Names are written from the byte after the path's last slash
     # and every width is counted, so a row costs no object per frame.
     class TabBar
       MARK_CELLS = 1

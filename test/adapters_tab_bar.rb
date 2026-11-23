@@ -116,6 +116,16 @@ module AdaptersTabBarTest
     plain = paint(setup(["a.txt", "b.txt"], 0, 2), 40)
     t.assert_equal([H::TAB_LINE_FILL, H::TAB_LINE_NAME], [plain.cell(0, 25).hl, plain.cell(0, 35).hl], "not bare, the fill and the TabLineName page number are back")
 
+    # Scenario "The tab row at 16 colors and NO_COLOR", the overflow counts: bare, both counts are in Normal and the
+    # current tab keeps its bold TabLineSel.
+    cut = setup(ten, 5, 1)
+    cut_frame = D::Frame.new(rows: 1, cols: 40)
+    cut_bar = Carat::Adapters::TabBar.new(buffers: cut.list)
+    cut_bar.bare = true
+    cut_bar.paint(cut_frame, cut.state, 0, 40)
+    cut_text = cut_frame.row_text(0)
+    t.assert_equal([" <4   f4.txt     f5.txt    4>", H::NORMAL, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED], [cut_text.rstrip, cut_frame.cell(0, 1).hl, cut_frame.cell(0, 2).hl, cut_frame.cell(0, cut_text.rstrip.length - 2).hl, cut_frame.cell(0, cut_text.index("f5.txt")).hl], "bare: the counts before and after the run are in Normal, the current tab in TabLineSel")
+
     # The modified mark keeps the tab's width: the second tab starts at
     # the same column whether the first is modified, in every icon set.
     t.table([
