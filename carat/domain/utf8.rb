@@ -83,6 +83,14 @@ module Carat
         ((b & 0x07) << 18) | ((text.getbyte(i + 1).to_i & 0x3F) << 12) | ((text.getbyte(i + 2).to_i & 0x3F) << 6) | (text.getbyte(i + 3).to_i & 0x3F)
       end
 
+      # The code point of the first character of ch, decoded as the screen
+      # decodes it: U+FFFD for a byte outside a well-formed sequence, where
+      # String#ord would answer the byte.
+      #: (String) -> Integer
+      def self.code_of(ch)
+        code_at(ch, 0, size_at(ch, 0, ch.bytesize))
+      end
+
       # The code points of text, exactly text.length of them.
       #: (String) -> Array[Integer]
       def self.codes(text)

@@ -35,19 +35,11 @@ module Carat
 
       # The cells one character takes when it starts at display column
       # dcol: a tab reaches the next tabstop, a C0 control takes two as ^X,
-      # delete and the C1 controls take four as <xx>, and every other code
-      # point its display width.
+      # delete and the C1 controls take four as <xx>, a format code point
+      # six as <xxxx>, and every other code point its display width.
       #: (String, Integer, Integer) -> Integer
       def self.cell(ch, dcol, tabstop)
-        code_cells(code_of(ch), dcol, tabstop)
-      end
-
-      # The code point of the first character of ch, decoded as the screen
-      # decodes it: U+FFFD for a byte outside a well-formed sequence, where
-      # String#ord would answer the byte.
-      #: (String) -> Integer
-      def self.code_of(ch)
-        Utf8.code_at(ch, 0, Utf8.size_at(ch, 0, ch.bytesize))
+        code_cells(Utf8.code_of(ch), dcol, tabstop)
       end
 
       # cell for a code point rather than a one-character string.
@@ -59,6 +51,7 @@ module Carat
         end
         return 2 if code < 32
         return 4 if control?(code)
+        return 6 if format_char?(code)
         of(code)
       end
 
@@ -186,6 +179,20 @@ module Carat
       def self.control?(code)
         return true if code < 32
         code >= 0x7F && code <= 0x9F
+      end
+
+      # True for the code points a terminal draws in no cell or uses to
+      # reorder a row, which the line painter shows as <xxxx>: U+061C,
+      # U+200B to U+200F (zero-width and directional marks), U+2028 to
+      # U+202E (separators, embeddings, and overrides), U+2060 to U+206F
+      # (word joiner, isolates, invisible operators), and U+FEFF.
+      #: (Integer) -> bool
+      def self.format_char?(code)
+        return false if code < 0x061C
+        return true if code == 0x061C || code == 0xFEFF
+        return true if code >= 0x200B && code <= 0x200F
+        return true if code >= 0x2028 && code <= 0x202E
+        code >= 0x2060 && code <= 0x206F
       end
     end
   end
