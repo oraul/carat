@@ -8,7 +8,7 @@
 ## 2. The state file
 
 - [x] 2.1 Add `Domain::RecentFilesText` (`carat/domain/recent_files_text.rb`); proved by the text rows of `test/editor_recent_files.rb`
-- [x] 2.2 Add `LoadRecentFiles` and `SaveRecentFiles` (`carat/use_cases/files/`), wire them in `EditorAssembly` with `open` and `close`, and call `close` in `bin/carat.rb`; proved by `test/editor_recent_files.rb` (restart, missing, directory, hostile, no home, unwritable, bound) and `test/adapters_assembly.rb`
+- [x] 2.2 Add `restore_recent_files` and `save_recent_files` to `EditorAssembly`, run by `open` and `close`, and call `close` in `bin/carat.rb`; proved by `test/editor_recent_files.rb` (restart, missing, directory, hostile, no home, unwritable, bound) and `test/adapters_assembly.rb`
 
 ## 3. The picker
 
@@ -20,7 +20,7 @@
 
 ## Quality review
 
-- [x] 5.1 `LoadRecentFiles` asked the port to `stat` the path before the `read`, which already raises for a missing file; drop the extra port call (`carat/use_cases/files/load_recent_files.rb`), fixed, proved by the missing-file rows of `test/editor_recent_files.rb`
+- [x] 5.1 `restore_recent_files` asked the port to `stat` the path before the `read`, which already raises for a missing file; drop the extra port call (`carat/adapters/editor_assembly.rb`), fixed, proved by the missing-file rows of `test/editor_recent_files.rb`
 - [x] 5.2 The `Host#recent_files` comment in `carat/plugin_api.rb` still says since the editor started; a plugin API edit is outside this change, recorded in `docs/findings/recent-files-persist.md`
 - [x] 5.3 A buffer opened before a working directory change resolves against a later base; the editor has no `:cd`, recorded in `docs/findings/recent-files-persist.md`
 - [x] 5.4 The state file is written through a link and without a lock; a convenience list in the user's own home, recorded in `docs/findings/recent-files-persist.md`

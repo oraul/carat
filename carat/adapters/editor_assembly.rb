@@ -54,9 +54,8 @@ require_relative "../use_cases/history/travel_history"
 require_relative "../use_cases/history/restore_line"
 require_relative "../use_cases/history/list_undo"
 require_relative "../use_cases/repeat_last"
+require_relative "../domain/recent_files_text"
 require_relative "../use_cases/files/open_file"
-require_relative "../use_cases/files/load_recent_files"
-require_relative "../use_cases/files/save_recent_files"
 require_relative "../use_cases/files/save_file"
 require_relative "../use_cases/files/save_all"
 require_relative "../use_cases/files/quit"
@@ -271,8 +270,6 @@ module Carat
       attr_reader :recase_selection #: UseCases::RecaseSelection
       attr_reader :probe_path #: UseCases::ProbePath
       attr_reader :open_file #: UseCases::OpenFile
-      attr_reader :load_recent_files #: UseCases::LoadRecentFiles
-      attr_reader :save_recent_files #: UseCases::SaveRecentFiles
       attr_reader :save_file #: UseCases::SaveFile
       attr_reader :save_all #: UseCases::SaveAll
       attr_reader :quit #: UseCases::Quit
@@ -418,8 +415,6 @@ module Carat
         @recase_selection = UseCases::RecaseSelection.new
         @probe_path = UseCases::ProbePath.new(files: files)
         @open_file = UseCases::OpenFile.new(files: files, buffers: @buffers, probe_path: @probe_path)
-        @load_recent_files = UseCases::LoadRecentFiles.new(files: files, buffers: @buffers)
-        @save_recent_files = UseCases::SaveRecentFiles.new(files: files, buffers: @buffers)
         @close_window = UseCases::CloseWindow.new(buffers: @buffers, tabs: @tabs)
         @wiring.record("close_window", "buffers", @buffers)
         @wiring.record("close_window", "tabs", @tabs)
@@ -612,10 +607,10 @@ module Carat
       # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
       # others. The files an earlier run kept join the recent files first
-      # (LoadRecentFiles), the one opened here going above them.
+      # (restore_recent_files), the one opened here going above them.
       #: (String) -> void
       def open(path)
-        @load_recent_files.call
+        restore_recent_files
         options = @state.options
         @frame_presenter.plain = @terminal.no_color?
         @frame_presenter.basic_colors = @terminal.colors == Domain::ColorDepth::COLORS_16
@@ -633,11 +628,11 @@ module Carat
       end
 
       # Ends the session's records: writes the recent files for the next
-      # run (SaveRecentFiles), which never fails. The entry point calls it
+      # run (save_recent_files), which never fails. The entry point calls it
       # on every way out of the loop.
       #: () -> void
       def close
-        @save_recent_files.call
+        save_recent_files
       end
 
       # Renders the state at the given size and writes it to the terminal:
@@ -662,6 +657,59 @@ module Carat
       end
 
       private
+
+      # Adds the files an earlier run kept to the recent files: reads the
+      # state file under the home directory (RecentFilesText), at most
+      # RecentFilesText::LIMIT bytes, and gives the paths it holds to
+      # BufferList#restore_recent. It never fails: no home directory, a
+      # missing file, one that is a directory or a FIFO or cannot be read,
+      # and a line that is not a usable path all read as no paths.
+      #: () -> void
+      def restore_recent_files
+        path = Domain::RecentFilesText.location(@files.home)
+        return if path.empty?
+        text = +""
+        begin
+          text = @files.read(path, Domain::RecentFilesText::LIMIT)
+        rescue StandardError
+          return
+        end
+        @buffers.restore_recent(Domain::RecentFilesText.parse(text, Domain::BufferList::RECENT_LIMIT))
+      end
+
+      # Writes the recent files to the state file under the home directory,
+      # creating the directories above it, so the next run lists them
+      # again. Nothing is written with no home directory or no recent file.
+      # It never fails: a directory or file that cannot be made or written,
+      # a read-only home included, is skipped, since the editor is ending
+      # and the list is a convenience.
+      #: () -> void
+      def save_recent_files
+        home = @files.home
+        path = Domain::RecentFilesText.location(home)
+        text = Domain::RecentFilesText.render(@buffers.recent)
+        return if path.empty? || text.empty?
+        begin
+          make_state_directories(home)
+          @files.write(path, text)
+        rescue StandardError
+          return
+        end
+      end
+
+      # Makes the directories of the state file below home that are not
+      # there yet, one at a time, the port having no recursive make.
+      #: (String) -> void
+      def make_state_directories(home)
+        names = Domain::RecentFilesText::DIRECTORY.split("/")
+        dir = home
+        i = 0
+        while i < names.length
+          dir = "#{dir}/#{names[i]}"
+          @files.mkdir(dir) unless @files.exist?(dir)
+          i += 1
+        end
+      end
 
       # The action names a binding may use: every name the action table
       # registered and every action a registered plugin declares.
