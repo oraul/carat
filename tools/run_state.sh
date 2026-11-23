@@ -2014,6 +2014,11 @@ push_branch() {
   fi
   branch=$(git rev-parse --abbrev-ref HEAD)
   [ "$branch" != "main" ] || die "push: refused: never push main"
+  # A file no ignore rule covers (outside build/, dist/, and tmp/) that is
+  # not tracked, an agent's scratch output, could be staged by a later
+  # git add and reach the pull request.
+  loose=$(git ls-files --others --exclude-standard | head -n 3 | tr '\n' ' ')
+  [ -z "$loose" ] || die "push: refused: untracked file(s) outside the ignored paths: ${loose% }; remove them or keep scratch output under build/ or tmp/"
   over=$(queue_over)
   [ -z "$over" ] || die "push: refused: $over"
   if ! CHANGE=$change sh "$here/gates.sh" pre-push; then
@@ -2736,8 +2741,13 @@ merged_at() {
     [ -n "$at" ] && [ "$at" = "$squash" ] || die "$2: refused: $1 is not the squash commit of pull request #$pr on main, $squash"
   else
     # No pull request recorded: an ancestor of main itself, never of HEAD,
-    # where a lane's pushed head is.
-    [ -n "$at" ] && git merge-base --is-ancestor "$at" "${BASE:-origin/main}" 2>/dev/null || die "$2: refused: $1 is no commit on main"
+    # where a lane's pushed head is; HEAD only where BASE names no commit
+    # (a repository with no main to compare).
+    if git rev-parse --verify -q --end-of-options "${BASE:-origin/main}^{commit}" > /dev/null 2>&1; then
+      [ -n "$at" ] && git merge-base --is-ancestor "$at" "${BASE:-origin/main}" 2>/dev/null || die "$2: refused: $1 is no commit on main"
+    else
+      [ -n "$at" ] && merged_on_main "$at" || die "$2: refused: $1 is no commit on main"
+    fi
   fi
   # The squash message ends with exactly the co-author trailer, trailing
   # blank lines aside: #307's squash commit ended with it and a stray
@@ -3454,27 +3464,11 @@ today_date() {
   printf '%s\n' "${TODAY:-$(date -u +%Y-%m-%d)}"
 }
 
-# Files every entry of standard input (a "## " or deeper heading to the
-# next heading; a "# " title and the text before the first entry left out)
-# into the backlog file of the first file it names, BACKLOG_DIR/PATH.md
-# with a leading dot of each part of PATH written as "_" (.claude/x as
-# _claude/x), else BACKLOG_DIR/_general.md, a new file starting with a
-# "# Backlog:" title; it fails, writing nothing more, when BACKLOG_DIR, a
-# directory under it on the way to that file, or the file is a symbolic
-# link. A file it names is a token of its text, the heading first, that
-# git ls-files lists, the backlog and findings files left out. The entry's
-# lines go unchanged, its trailing blank lines cut, followed by "- Also:"
-# (the other files it names, left out when none), "- Category:", and
-# "- Added:" lines, unless it already holds a "- Category:" line. The
-# category is security when the joined entry matches SECURITY_MARK, else
-# by its first file, else by words of its text (design when none); the
-# date is the one the file DATES ($1, "LINE DATE" lines, LINE the heading's
-# line of the input) gives, else today_date. Prints "filed N".
-file_entries() {
-  listed=$(mktemp) || die "no temporary file"
-  git ls-files > "$listed" 2>/dev/null
-  mkdir -p "$backlog_dir" 2>/dev/null || { rm -f "$listed"; echo "run_state: no directory $backlog_dir" >&2; return 1; }
-  BD="$backlog_dir" LISTED="$listed" DATES="${1:-}" DAY="$(today_date)" S="$SECURITY_MARK" awk '
+# entries_awk: the filing of file_entries over the entries on stdin, in
+# the environment BD, LISTED, DATES, DAY, S, and DRY, which only checks
+# every target (a link, a directory it cannot make) and writes no entry.
+entries_awk() {
+  awk '
     BEGIN {
       while ((getline l < ENVIRON["LISTED"]) > 0) if (l !~ /^docs\/(backlog\/|backlog[.]md$|findings\/)/) known[l] = 1
       if (ENVIRON["DATES"] != "") while ((getline l < ENVIRON["DATES"]) > 0) { split(l, p, " "); dated[p[1]] = p[2] }
@@ -3535,8 +3529,9 @@ file_entries() {
         d = file; sub(/\/[^\/]*$/, "", d)
         if (system("mkdir -p " quoted(d)) != 0) { print "no directory " d > "/dev/stderr"; bad = 1; exit 1 }
         seen[file] = (system("test -s " quoted(file)) == 0)
-        if (!seen[file]) print "# Backlog: " (np ? path[1] : "entries naming no file") > file
+        if (!seen[file] && ENVIRON["DRY"] == "") print "# Backlog: " (np ? path[1] : "entries naming no file") > file
       }
+      if (ENVIRON["DRY"] != "") { seen[file] = 1; count++; return }
       print "" >> file
       print head >> file
       for (i = 1; i <= nl; i++) print line[i] >> file
@@ -3550,8 +3545,39 @@ file_entries() {
     /^#+ / { flush(); if (/^##+ /) { inside = 1; head = $0; at = NR; nl = 0 }; next }
     inside { line[++nl] = $0 }
     END { if (bad) exit 1; flush(); print "filed " count + 0 }'
+
+}
+
+# Files every entry of standard input (a "## " or deeper heading to the
+# next heading; a "# " title and the text before the first entry left out)
+# into the backlog file of the first file it names, BACKLOG_DIR/PATH.md
+# with a leading dot of each part of PATH written as "_" (.claude/x as
+# _claude/x), else BACKLOG_DIR/_general.md, a new file starting with a
+# "# Backlog:" title; it fails, writing nothing more, when BACKLOG_DIR, a
+# directory under it on the way to that file, or the file is a symbolic
+# link. A file it names is a token of its text, the heading first, that
+# git ls-files lists, the backlog and findings files left out. The entry's
+# lines go unchanged, its trailing blank lines cut, followed by "- Also:"
+# (the other files it names, left out when none), "- Category:", and
+# "- Added:" lines, unless it already holds a "- Category:" line. The
+# category is security when the joined entry matches SECURITY_MARK, else
+# by its first file, else by words of its text (design when none); the
+# date is the one the file DATES ($1, "LINE DATE" lines, LINE the heading's
+# line of the input) gives, else today_date. Prints "filed N".
+# A first pass over the entries (entries_awk with DRY) checks every target
+# and writes none, so a refused filing leaves the entries before the
+# refusal out of the folder, and filing again once the refusal is removed
+# files none of them twice.
+file_entries() {
+  listed=$(mktemp) || die "no temporary file"
+  entries=$(mktemp) || die "no temporary file"
+  cat > "$entries"
+  git ls-files > "$listed" 2>/dev/null
+  mkdir -p "$backlog_dir" 2>/dev/null || { rm -f "$listed" "$entries"; echo "run_state: no directory $backlog_dir" >&2; return 1; }
+  BD="$backlog_dir" LISTED="$listed" DATES="${1:-}" DAY="$(today_date)" S="$SECURITY_MARK" DRY=1 entries_awk < "$entries" > /dev/null || { rm -f "$listed" "$entries"; return 1; }
+  BD="$backlog_dir" LISTED="$listed" DATES="${1:-}" DAY="$(today_date)" S="$SECURITY_MARK" DRY= entries_awk < "$entries"
   status=$?
-  rm -f "$listed"
+  rm -f "$listed" "$entries"
   return $status
 }
 
@@ -4681,7 +4707,9 @@ moved_change() {
   # changed as one the merge moved, though a conflict kept the change's own
   # text there and left it out of moved_names: the main fix is gone from HEAD.
   files=$(printf '%s\n%s\n' "$reviewed" "$current" | outside_records | sort -u)
-  changed=$( [ -z "$files" ] || printf '%s\n%s\n' "$moved_names" "$(printf '%s\n' "$base_names" | outside_records)" | grep -F -x -e "$files" | sort -u | tr '\n' ' ')
+  held=$(printf '%s\n' "$reviewed" | outside_records | sort -u)
+  changed=$({ [ -z "$files" ] || printf '%s\n' "$moved_names" | grep -F -x -e "$files"
+    [ -z "$held" ] || printf '%s\n' "$base_names" | grep -F -x -e "$held"; } | sort -u | tr '\n' ' ')
   if [ -n "$changed" ]; then
     echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
     exit 1

@@ -1336,6 +1336,10 @@ expect "run_state: push refuses a lane queue over its budget at HEAD" 1 "push: r
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 rm docs/queue-backlog.md
 commit "docs: no backlog queue"
+echo scratch > scratch.err
+expect "run_state: push refuses an untracked file outside the ignored paths" 1 "push: refused: untracked file[(]s[)] outside the ignored paths: scratch[.]err" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
+rm scratch.err
 expect "run_state: push refuses before the checks and the review" 1 "pre-push gates failed" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing
 expect "run_state: a refused push counts a gate failure" 0 "^1$" state get pushing gates_failed
@@ -1612,6 +1616,19 @@ mkdir -p docs/backlog/carat
 ln -s ../../../elsewhere/t.json docs/backlog/carat/b.rb.md
 expect "run_state: backlog-move refuses a backlog file that is a symbolic link" 1 "symbolic link on the way to docs/backlog/carat/b[.]rb[.]md" state backlog-move docs/backlog.md
 expect "run_state: a refused linked file leaves its target unchanged" 0 "^target$" cat elsewhere/t.json
+# A refusal on a later entry leaves the entries before it unfiled, so
+# filing again once the link is gone files none of them twice.
+echo a > tools/a.sh 2>/dev/null || { mkdir -p tools && echo a > tools/a.sh; }
+git_q add tools/a.sh
+rm docs/backlog/carat/b.rb.md
+rmdir docs/backlog/carat
+printf '# Backlog\n\n## a entry\n\n- Location: tools/a.sh\n\n## b entry\n\n- Location: carat/b.rb\n' > docs/backlog.md
+ln -s ../../elsewhere docs/backlog/carat
+expect "run_state: backlog-move refuses a link met by a later entry" 1 "symbolic link on the way to docs/backlog/carat/b[.]rb[.]md" state backlog-move docs/backlog.md
+expect "run_state: a refused later entry leaves the earlier entry out of the folder" 1 "" test -e docs/backlog/tools/a.sh.md
+rm docs/backlog/carat
+state backlog-move docs/backlog.md > /dev/null
+expect "run_state: filing again after the refusal files the earlier entry once" 0 "^1$" grep -c '^## a entry' docs/backlog/tools/a.sh.md
 
 # The backlog pick over a fixture map, queue, and backlogs: area 3 holds 3
 # entries, area 1 eleven unqueued with the newest naming security, area 2
