@@ -549,21 +549,6 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### Lane worktree trusts a branch-controlled build/pipeline
-- Location: tools/run_state.sh:2347 (lane_open), the green line of .claude/workflows/deliver-change.js
-- Why: security Medium (5): a branch that force-adds build/pipeline, as a directory or a symlink, stops lane-open from linking the lane to the main checkout's run state, so the merge gates running inside the lane read branch-controlled stage records, push counts, and body file instead of the workflow's own records.
-- Fix: in lane_open refuse when git -C "$dir" ls-files lists anything under a LANE_LINKS path, or when "$dir/$l" exists but is not a symlink to "$top/$l"; pass gates.sh merge an absolute RUN_STATE_DIR and STAGE_DIR of the main checkout and read the body file from its absolute path.
-- Also: .claude/workflows/deliver-change.js
-- Category: security
-- Added: 2026-11-17
-
-### merge_main runs git merge with global configuration and hooks
-- Location: tools/run_state.sh:2391 (merge_main)
-- Why: security Low (3): a plain git merge reads global and system configuration and runs hooks, both writable by branch code the checks run, which is why the fetches and the merge-gates worktree use pinned git.
-- Fix: run the merge through pinned_git (GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1, -c core.hooksPath=/dev/null), keeping the core.attributesFile and identity -c options.
-- Category: security
-- Added: 2026-11-17
-
 ### merge_main hides a merge failure that is not a conflict
 - Location: tools/run_state.sh:2397 (merge_main)
 - Why: correctness: git merge's output goes to /dev/null, so a failure that is not a conflict (an untracked file it would overwrite, a missing ref) reports conflicts with no file named, and the silent git merge --abort then fails.
@@ -606,20 +591,17 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### Lane-open follows a committed tmp or build symlink out of the repository (sprint-10 security Low (5))
-- Location: tools/run_state.sh:2350 (lane_open, parallel-lanes-b)
-- Why: .gitignore ignores tmp/ and build/ only as directories, so a branch may commit a symlink named tmp or build, and lane-open's mkdir -p and ln -s then create the toolchain, cache, pipeline, stages, and plan links in any directory it names, outside the repository root. Queued in lane-guards.
-- Fix: refuse a lane whose tmp or build path, or any parent of a link target, is a symlink, or a branch that tracks anything under tmp/ or build/.
-- Also: .gitignore
-- Category: security
-- Added: 2026-11-17
-
 ### Two lanes share one writable toolchain and compile cache (sprint-10 security Low (3), disputed)
 - Location: tools/run_state.sh:2312 (LANE_LINKS, parallel-lanes-b)
 - Why: branch code run by one lane's checks can tamper with the binary or cache entries the other lane builds and benchmarks with. Disputed by the skeptic: the checks already run as the same user with write access to those paths by absolute path, and serial deliveries shared them; running at once adds timing, not capability.
 - Fix: link the toolchain read-only for the lanes or check its hash before each check; give each lane its own compile cache or key entries by a content hash checked on read.
 - Category: security
 - Added: 2026-11-17
+- Merged: ### Two lanes share one writable toolchain and compile cache (closed with a reason)
+- Location: tools/run_state.sh LANE_LINKS (tmp/.spinel, tmp/.toolchain, build/spinel-cache)
+- Why: a lane's check can write the one toolchain the other lane builds with; disputed, because one shared toolchain and cache is the design of the lanes (parallel-lanes-b) and only lane-open makes the links; the part that was steerable by the branch (a tracked or committed link at those paths) is refused in this change.
+- Fix: none now; a per-lane toolchain copy would double the install and the compile cache, so the sharing stays unless a lane's write to it is ever shown.
+none
 
 ### history writes late findings to a findings file the records change folded
 - Location: tools/run_state.sh:1708 (history), groom at tools/run_state.sh:2072
@@ -641,13 +623,6 @@
 - Fix: valid "$BRANCH_RE" "$branch" with BRANCH_RE defined once in tools/rules.sh, in its own small change first since rules.sh holds merge-gate rules.
 - Also: tools/open_pr.sh, tools/agent_guard.sh, tools/rules.sh
 - Category: pipeline
-- Added: 2026-11-17
-
-### checks-and-pr-lows security Low (4): run_state set still writes any note key
-- Location: tools/run_state.sh:1675
-- Why: the late-finding stamp is public once the run merges and `set` still writes any note.N key, so code running after the merge with write access to build/pipeline (for example the next change's branch code run by a check, if the run-state directory is reachable from there) can forge `set CHANGE note.N "late-finding MERGED text"`, which passes late_findings and lands in docs/findings and then the backlog the planner reads; LATE_TEXT_RE keeps the text to plain characters, 400 at most.
-- Fix: make `set` refuse note.* keys so only add_note writes notes, as it already refuses review.*, phase.* and stage.*; optionally record which start wrote each note or check that note keys are numbered in sequence.
-- Category: security
 - Added: 2026-11-17
 
 ### The package step appends the planner's findings twice
@@ -1625,4 +1600,12 @@ none
 - Why: base-figures save checks only tracked files and untracked makefiles in tmp/.base, so an untracked source or bench file left there by an earlier agent is built and measured as main's stored figures, and the read profile may set BASE so a non-main commit is measured
 - Fix: build in a fresh git worktree add of origin/main (or git clean -ffdx first) and refuse a BASE other than origin/main for save
 - Category: security
+- Added: 2026-11-23
+
+
+### merge_main pins only some of its git calls at tools/run_state.sh:4370 (sprint-31 review quality)
+- Location: tools/run_state.sh:4370, :4375, :4378 (plain `git diff --name-only --diff-filter=U`) and the `git rev-parse` of its messages
+- Why: lane-guard-lows moved the merge, checkout, add, commit, and abort to pinned_git, but the conflict reads still run plain git with the global and system configuration, so the function is half pinned and the next edit cannot tell which form is required.
+- Fix: run every git call of merge_main through pinned_git, with the tools-test case that sets a global configuration covering a conflicted merge.
+- Category: pipeline
 - Added: 2026-11-23

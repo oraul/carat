@@ -321,3 +321,18 @@ none
 - Fix: group the per-row inputs (row, current, number_hl, number, sign, sign_group) in a small reused record or keep them as presenter state set once per window
 - Category: editor
 - Added: 2026-11-23
+
+### FramePresenter repeats Slot#headed?'s left-sidebar rule at carat/adapters/frame_presenter.rb:765 (sprint-31 review quality)
+- Location: carat/adapters/frame_presenter.rb:765, carat/domain/slot.rb:78
+- Why: paint_header tests `slot.side == :left && slot.views.length < 2` itself while ArrangeView reserves the row by Slot#headed?, so the rule lives in two places and a change to one (the right sidebar's head, surface-edges-fix's finding) leaves a header row painted that was never reserved, or the reverse.
+- Fix: one Slot predicate for "headed by the project" that both read, with the slot test holding its cases.
+- Also: carat/domain/slot.rb
+- Category: editor
+- Added: 2026-11-23
+
+### FramePresenter reads the branch through the status bar at carat/adapters/frame_presenter.rb:715 (sprint-31 review quality)
+- Location: carat/adapters/frame_presenter.rb:715 and :766 (`@status_bar.slots.branch`)
+- Why: the tab row's head takes the branch from another adapter's internals, so the head depends on StatusBar keeping its slots public and on the status bar being built first.
+- Fix: give the presenter the StatusSlots it shares, or pass the branch in, so neither bar reaches into the other.
+- Category: editor
+- Added: 2026-11-23

@@ -58,13 +58,6 @@
 - Category: pipeline
 - Added: 2026-11-14
 
-### checks-and-pr-lows security Low (3): open_pr wait records a lone matching pull request of unknown origin
-- Location: tools/open_pr.sh:135
-- Why: if a fork opens a pull request on the pushed commit before open-pr opens ours (a race the attacker has to automate), that fork's number is recorded with nothing earlier to compare it against, and the merger would read and squash-merge a pull request whose title the attacker controls.
-- Fix: have open-pr publish the number it opened where wait can read it (the workflow log, a commit status, or an artifact), or have the merger check that the pull request's head repository is this repository before merging.
-- Category: security
-- Added: 2026-11-17
-
 ### checks-and-pr-lows correctness: open_pr wait can replace a recorded pull request number
 - Location: tools/open_pr.sh:135
 - Why: a single number on the pushed head is taken even when the run state already records a different pr, so a later push can overwrite the branch's pull request number with another one, a fork's included.
@@ -165,4 +158,30 @@
 - Fix: name the whole-line helper apart (whole_match) or give both one meaning
 - Also: tools/agent_guard.sh
 - Category: pipeline
+- Added: 2026-11-23
+
+## security Low: a fork's lone pull request can be recorded by wait
+
+- Location: `tools/open_pr.sh`, the `wait` case, the recorded-number preference when several pull requests share the pushed head.
+- Why it matters: with the read-back gone, `wait` can record a fork's lone pull request on the pushed head. The merger's step 1 returns `stale` for it, but the recorded-number preference then keeps the fork's number even after this repository's own pull request appears, so the run stalls until `pr` is cleared.
+- Fix outline: drop the recorded preference when the merger returns `stale`, or clear `pr` on a stale result.
+- Category: security
+- Added: 2026-11-23
+
+## security Low (6): wait records a lone pull request without a scripted head-repository check (package, first)
+
+- Location: tools/open_pr.sh:164 (wait records a lone pull request on the pushed head); tools/agent_guard.sh merge_tool.
+- Why it matters: someone pushes the public branch commit to a fork and opens a pull request on it before open-pr opens ours, so wait records the fork's number. If the merger skips or misreads its step 1, it squash-merges that pull request with the fork's own title as commit_title. The tree is the same as ours (same sha), but the subject on main is controlled by the attacker. The merge hook checks expectedHeadSha, gated, and commit_message, not pullNumber or commit_title.
+- Fix outline: add a check in tools/agent_guard.sh merge_tool that needs no gh. Refuse a merge whose pullNumber is not the run state's pr, and one whose commit_title is not the archived pr.md title followed by ' (#pr)'. Separately, clear pr in the run state when the merger returns stale, so a fork's recorded number does not stall the run.
+- Also: tools/agent_guard.sh
+- Category: security
+- Added: 2026-11-23
+
+## security Low (6): the merge hook does not check pullNumber or commit_title (package, second)
+
+- Location: tools/open_pr.sh:164 (wait); tools/agent_guard.sh merge_tool, line 1121.
+- Why it matters: the same attack as the entry above; wait records a lone pull request on the pushed head without a scripted check of its head repository, and the merge hook still checks only expectedHeadSha, gated, and commit_message, so a merger that skips its step 1 would squash-merge with a fork's title as the subject on main.
+- Fix outline: in tools/agent_guard.sh merge_tool, with no gh needed, refuse a merge whose pullNumber is not the run state's pr, and one whose commit_title is not the archived pr.md title followed by ' (#pr)'. Add a tools-test case for each. Separately, clear pr in the run state when the merger returns stale.
+- Also: tools/agent_guard.sh
+- Category: security
 - Added: 2026-11-23

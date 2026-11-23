@@ -293,20 +293,24 @@ none
 - Fix: rewrap them
 - Category: pipeline
 - Added: 2026-11-23
-
-### header comment lines of 102 to 119 columns (also at tools/agent_guard.sh:77 (sprint-30 sweep quality, note 60)
-
+- Merged: ### header comment lines of 102 to 119 columns (also at tools/agent_guard.sh:77 (sprint-30 sweep quality, note 60)
 - Location: tools/agent_guard.sh:77
 - Why: style: header comment lines of 102 to 119 columns (also tools/agent_guard.sh:48 and tools/ci_scope.sh:38) break the wrapping the rest of each header keeps
 - Fix: rewrap them
 - Also: tools/ci_scope.sh
-- Category: pipeline
-- Added: 2026-11-23
 
 ### merger:lane-close reads pushed from the run state with sed at tools/agent_guard.sh:690 (sprint-30 sweep quality, note 61)
 
 - Location: tools/agent_guard.sh:690
 - Why: order: merger:lane-close reads pushed from the run state with sed before it checks the file exists and is not a link
 - Fix: test -f and ! -L first, then read the head (a possible security point, unexamined here)
+- Category: pipeline
+- Added: 2026-11-23
+
+### The merge hook does not check the pull request number or the commit title
+- Location: tools/agent_guard.sh merge_tool (the merge hook), beside tools/open_pr.sh wait
+- Why: wait records a lone pull request on the pushed head without a scripted check of its head repository, so a fork's pull request on the same commit could be recorded and, if the merger skipped its step 1, squash-merged with the fork's own title as the commit subject; merge_tool checks expectedHeadSha, gated, and commit_message but not pullNumber or commit_title.
+- Fix: in merge_tool, which needs no gh, refuse a merge whose pullNumber is not the run state's pr and one whose commit_title is not the archived pr.md title followed by a space and the number in parentheses, with a tools-test case each; separately clear pr in the run state when the merger returns stale.
+- Also: tools/open_pr.sh
 - Category: pipeline
 - Added: 2026-11-23
