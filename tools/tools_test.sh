@@ -5675,6 +5675,32 @@ work_js() {
 calib_js() {
   js "$wf" "SIZES CHANGE CALIBRATION PROFILE calibrated criticalOf restoreRouting criticalRule calibrate escalate restoreCalibration usage firstPass closingFigures metricLine" "(globalThis.critical = '', globalThis.escalated = false, globalThis.qualityReview = '', globalThis.selfFix = 0, $1)"
 }
+# The resume start's run state (resume-state-object, 2026-11-23): the result
+# carries it as an object, so the result check rejects a malformed answer; a
+# string left over (a replayed result) keeps its leading object, and a state
+# still unreadable restarts the start once, then stops with its error.
+resume_js() {
+  js "$wf" "leadingObject readResumed resumeState" "$1"
+}
+resume_bad='{\"change\": \"c\", \"branch\": \"bugfix/c\"}\n</state_json>\n<parameter name=\"reason\">x'
+expect "resume: the state object of a result is read as it is" 0 '^\{"state":\{"change":"c","branch":"bugfix/c"\},"error":""\}$' \
+  resume_js "readResumed({ status: 'done', state: { change: 'c', branch: 'bugfix/c' } })"
+expect "resume: the 2026-11-23 output, the run state then a closing tag and a parameter fragment, reads as the same state" 0 '^\{"state":\{"change":"c","branch":"bugfix/c"\},"error":""\}$' \
+  resume_js "readResumed({ status: 'done', state_json: \"$resume_bad\" })"
+expect "resume: a state whose strings hold braces and quotes keeps its whole object" 0 '^\{"state":\{"change":"c","note":"a } \\"b\\" \{"\},"error":""\}$' \
+  resume_js "readResumed({ state_json: '{\"change\": \"c\", \"note\": \"a } \\\\\"b\\\\\" {\"} trailing' })"
+expect "resume: unreadable results give an error, never a throw" 0 '^\[true,true,true,true\]$' \
+  resume_js "[readResumed({ state_json: 'no object' }).error !== '', readResumed({ state: [1] }).error !== '', readResumed({ state: { branch: 'b' } }).error !== '', readResumed({ state_json: '{\"change\": ' }).error !== '']"
+expect "resume: a malformed first answer is read, the start running once" 0 '^\[1,"c",""\]$' \
+  resume_js "(async () => { let n = 0; const r = await resumeState(async (extra) => { n++; return { status: 'done', head: 'h', state_json: \"$resume_bad\" } }); return [n, r.state.change, r.error] })()"
+expect "resume: an unreadable first answer starts the resume once more with a note and goes on with the second" 0 '^\[2,"c","",true\]$' \
+  resume_js "(async () => { const extras = []; const r = await resumeState(async (extra) => { extras.push(extra); return extras.length === 1 ? { status: 'done', state_json: 'garbage' } : { status: 'done', state: { change: 'c' } } }); return [extras.length, r.state.change, r.error, extras[1].includes('could not be read')] })()"
+expect "resume: two unreadable answers stop with the error after exactly two starts" 0 '^\[2,null,true\]$' \
+  resume_js "(async () => { let n = 0; const r = await resumeState(async (extra) => { n++; return { status: 'done', state_json: 'garbage' } }); return [n, r.state, r.error.includes('not JSON')] })()"
+expect "resume: a stopped first result is returned at once, no second start" 0 '^\[1,"no repo",""\]$' \
+  resume_js "(async () => { let n = 0; const r = await resumeState(async (extra) => { n++; return { status: 'stopped', reason: 'no repo' } }); return [n, r.resume.reason, r.error] })()"
+expect "resume: the schema carries the state as an object the result check validates, and the phase reads it through resumeState, parsing no string itself" 0 '^1 0 1 1$' \
+  sh -c 'echo "$(grep -c "^    state: { type: .object., additionalProperties" "$1") $(grep -c "state_json: { type" "$1") $(grep -c "await resumeState(" "$1") $(grep -c "^  state = resumed.state$" "$1")"' _ "$wf"
 expect "workflow: calibrate passes a low effort and records the profile" 0 '^\[[{]"schema":1,"effort":"low"[}],[{]"schema":1[}],[{]"checker":"agent/low","planner":"session/session"[}]\]$' \
   calib_js "[calibrate('checker', { schema: 1 }), calibrate('planner', { schema: 1 }), calibrated]"
 expect "workflow: the metric line carries the profiles" 0 ' calib[.]checker=agent/low calib[.]contributor=agent/high calib[.]security=session/session"$' \

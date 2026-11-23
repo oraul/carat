@@ -235,11 +235,11 @@ const RESUME = {
   type: 'object',
   properties: {
     status: STATUS, change: { type: 'string' }, branch: { type: 'string' }, head: HEAD,
-    state_json: { type: 'string', description: 'the output of tools/run_state.sh trusted, verbatim' },
+    state: { type: 'object', additionalProperties: { type: 'string' }, description: 'the JSON object tools/run_state.sh trusted printed, as an object: its keys and string values, nothing else' },
     plan: { type: 'string', description: 'the output of tools/run_state.sh plan-needed, verbatim: its one line' },
     reason: { type: 'string' },
   },
-  required: ['status', 'change', 'branch', 'head', 'state_json'],
+  required: ['status', 'change', 'branch', 'head', 'state'],
 }
 // The implement start's one line on where the change's locations come
 // from, the scout and its area plan dropped (scout-drop): the paths and
@@ -1653,19 +1653,65 @@ async function rounds(fixes = true) {
   }
 }
 
+// The run state of a resume result, { state, error }: the schema's `state`
+// object, else the `state_json` string of an older or replayed result, whose
+// leading JSON object is taken so text an agent appended (the 2026-11-23
+// `</state_json>` and parameter fragment) is dropped. The state is flat and
+// holds a change name; anything else is an error, never a throw.
+function leadingObject(text) {
+  const s = text.trimStart()
+  if (s[0] !== '{') return s
+  let depth = 0
+  let quoted = false
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i]
+    if (quoted) {
+      if (c === '\\') i++
+      else if (c === '"') quoted = false
+    } else if (c === '"') quoted = true
+    else if (c === '{') depth++
+    else if (c === '}' && --depth === 0) return s.slice(0, i + 1)
+  }
+  return s
+}
+function readResumed(result) {
+  let raw = result && result.state !== undefined ? result.state : result ? result.state_json : undefined
+  if (typeof raw === 'string') {
+    try { raw = JSON.parse(leadingObject(raw)) } catch (e) { return { state: null, error: `the run state is not JSON: ${e.message}` } }
+  }
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return { state: null, error: 'the run state is not a JSON object' }
+  if (typeof raw.change !== 'string' || raw.change === '') return { state: null, error: 'the run state names no change' }
+  return { state: raw, error: '' }
+}
+// The resume start, once more with a note when its state cannot be read (a
+// stopped result needs no state): { resume, state, error }, the error that of
+// the second reading when both fail. start(extra) runs the agent.
+async function resumeState(start) {
+  let resume = await start('')
+  let read = resume && resume.status === 'done' ? readResumed(resume) : { state: null, error: '' }
+  if (read.error) {
+    resume = await start(`\nThe run state of your last answer could not be read (${read.error}). Answer again: state is the JSON object of the trusted command as an object, with no text after it.`)
+    read = resume && resume.status === 'done' ? readResumed(resume) : { state: null, error: read.error }
+  }
+  return { resume, state: read.state, error: read.error }
+}
+
 phase('Resume')
-const resume = await agent(
+const resumed = await resumeState((extra) => agent(
   `Prepare the delivery of one change. Input: ${JSON.stringify(input)}.
 1. \`git fetch -q origin\`. The change name is input.change, or an existing change under openspec/changes/ that the brief names, or a kebab-case name of 2 to 5 words derived from the brief.
 2. In the main checkout, before any worktree links the toolchain, \`make doctor\`; run \`make toolchain\` when it fails and stop when that fails too.
 3. The branch is input.branch, or the one in build/pipeline/<change>.json, or <type>/<change> with the type from CLAUDE.md's Branch naming. Run \`sh tools/run_state.sh lane-open <change> <branch>\` in the main checkout, which stays on main: it makes the change's worktree tmp/.lane-<change> on the branch (local, else origin's, else new from origin/main), keeps it on a resume, and links the shared toolchain, compile cache, and run states; stop with its message when it fails.
-4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`cd tmp/.lane-<change> && sh tools/run_state.sh trusted <change>\`, and return the second command's output verbatim as state_json, with \`git -C tmp/.lane-<change> rev-parse --short=12 HEAD\` as head.
-5. Run \`cd tmp/.lane-<change> && sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}`,
-  calibrate('resume', { agentType: 'runner', schema: RESUME, label: 'resume' }))
+4. Run \`sh tools/run_state.sh init <change> <branch>\`; when it refuses (a merged change name), stop with its message as reason. Then \`cd tmp/.lane-<change> && sh tools/run_state.sh trusted <change>\`, and return the JSON object it printed as the object state (each key with its string value, no text outside the object), with \`git -C tmp/.lane-<change> rev-parse --short=12 HEAD\` as head.
+5. Run \`cd tmp/.lane-<change> && sh tools/run_state.sh plan-needed <change>\` and return its one line verbatim as plan; its exit 1 means not needed, not a failure.${capLine('resume')}${extra}`,
+  calibrate('resume', { agentType: 'runner', schema: RESUME, label: extra ? 'resume again' : 'resume' })))
+const resume = resumed.resume
 if (!resume || resume.status !== 'done') {
   stopped = `resume stopped: ${resume ? resume.reason : 'no result'}`
+} else if (resumed.error) {
+  stopped = `resume stopped: ${resumed.error}`
 } else {
-  state = JSON.parse(resume.state_json)
+  state = resumed.state
   head = resume.head
   seed()
   note(`resumed ${state.change} on ${state.branch} at ${head}`)
