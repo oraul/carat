@@ -13,3 +13,8 @@
 
 - [x] 3.1 Update README.md, `docs/compatibility.md`, and `docs/codebase-map.md`
 - [x] 3.2 Append the findings to `docs/findings/ui-groups-c.md`
+
+## Quality review
+
+- [x] 4.1 `design.md` said NO_COLOR writes no color, which the bytes contradict; corrected, the behavior recorded in `docs/findings/ui-groups-c.md`, fixed
+- [x] 4.2 The smoke case checks the sequences of the indicator only at the first `V`; the pending-keys group stays `MsgDim` and is proven by the presenter tests, recorded as no change
