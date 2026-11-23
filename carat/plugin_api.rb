@@ -419,8 +419,7 @@ module Carat
     # The file-icon table, for plugins and the host alike: the icon name
     # of a file by its whole name, then by the text after its last dot,
     # "default" otherwise, and the file-icon highlight group each icon is
-    # drawn in. The explorer draws its tree with it and the buffer tabs
-    # their icons. The dot is found by bytes, so a name that is not UTF-8
+    # drawn in. The explorer draws its tree with it. The dot is found by bytes, so a name that is not UTF-8
     # finds its extension.
     module FileIcons
       NAMES = {

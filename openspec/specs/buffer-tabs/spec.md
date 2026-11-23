@@ -1,7 +1,7 @@
 # buffer-tabs Specification
 
 ## Purpose
-The buffer tabs are the top row that lists the listed file buffers with their icons and modified dots, counts the ones that do not fit, and numbers the tab pages at its right end.
+The buffer tabs are the top row that lists the listed file buffers with their modified marks, counts the ones that do not fit, and numbers the tab pages at its right end.
 
 ## Requirements
 

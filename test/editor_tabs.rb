@@ -277,18 +277,18 @@ module EditorTabsTest
     # selected, and the tab-page numbers at its right end.
     h = session(":tabe b.txt<CR>")
     row = h.row(0)
-    t.assert_equal(["  a.txt     b.txt       ", " 1  2"], [row[0, 24], row[-5, 5]], "the tabs row lists the files and numbers the tab pages at its right end")
+    t.assert_equal(["  a.txt    b.txt        ", " 1  2"], [row[0, 24], row[-5, 5]], "the tabs row lists the files and numbers the tab pages at its right end")
     t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_FILL, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_NAME], [h.frame.cell(0, 0).hl, h.frame.cell(0, 12).hl, h.frame.cell(0, 30).hl, h.frame.cell(0, 75).hl, h.frame.cell(0, 78).hl], "the current file and tab page selected, the page number in TabLineName, the rest plain or filled")
     t.assert_equal([1, 0, 21, 80], h.windows[0][0, 4], "the window starts under the tabs row with one row less")
     t.assert_equal("b.txt", h.row(22)[9, 5], "the status bar is above the message row")
     t.assert_equal([1, 4], [h.frame.cursor_row, h.frame.cursor_col], "the cursor is under the tabs row")
     h.type("<C-PageDown>x")
-    t.assert_equal("  a.txt ●   b.txt       ", h.row(0)[0, 24], "a modified buffer is marked in its tab")
+    t.assert_equal("  a.txt ●  b.txt        ", h.row(0)[0, 24], "a modified buffer is marked in its tab")
     t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_NAME], [h.frame.cell(0, 0).hl, h.frame.cell(0, 12).hl, h.frame.cell(0, 75).hl], "the first file and tab page are now selected")
     h = session(":tabnew<CR>")
-    t.assert_equal(["  [No Name]", " 1  2"], [h.row(0)[10, 11], h.row(0)[-5, 5]], "an unnamed buffer shows as [No Name]")
+    t.assert_equal(["  [No Name]", " 1  2"], [h.row(0)[9, 11], h.row(0)[-5, 5]], "an unnamed buffer shows as [No Name]")
     h.type(":tabclose<CR>")
-    t.assert_equal(["  [No Name]", "]"], [h.row(0)[10, 11], h.row(0)[-1, 1]], "the listed empty buffer keeps the row, without tab-page numbers")
+    t.assert_equal(["  [No Name]", "]"], [h.row(0)[9, 11], h.row(0)[-1, 1]], "the listed empty buffer keeps the row, without tab-page numbers")
     h = session("")
     t.assert_equal(["  1 one", [0, 0, 22, 80]], [h.row(0), h.windows[0][0, 4]], "one file in one tab page has no tabs row")
     # option.showtabline through the editor ("One file has the row under 2"
@@ -308,7 +308,7 @@ module EditorTabsTest
     h = Carat::Doubles::EditorHarness.default(files, 24, 80)
     h.open("dir/sub/deep.txt")
     h.type(":tabnew<CR>")
-    t.assert_equal("  deep.txt     ", h.row(0)[0, 15], "a tab shows the file name without its directory")
+    t.assert_equal("  deep.txt    ", h.row(0)[0, 14], "a tab shows the file name without its directory")
     t.assert_equal("dir/sub/deep.txt", h.assembly.tabs.tab_at(0).window.buffer.path, "the path is untouched")
 
     # The startup buffer leaves once a file opens in another window or tab

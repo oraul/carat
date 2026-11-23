@@ -1,4 +1,3 @@
-require_relative "../plugin_api"
 require_relative "position"
 require_relative "range"
 require_relative "line_splice"
@@ -50,8 +49,7 @@ module Carat
     # said, and every splice moves it with the rows, as it moves
     # global_marks, the lines a running :global marked. last_cursor is
     # where the cursor was when a window last stopped showing the buffer,
-    # where the next window to show it puts its cursor. icon is the icon
-    # name of its file, found with the filetype. diagnostics is the list a
+    # where the next window to show it puts its cursor. diagnostics is the list a
     # language server last published for the file, drawn as the signs of
     # the DIAGNOSTIC_OWNER layer, and diagnostic_marks holds one mark per
     # line (none while the list is empty), 0 or the 1-based index of the
@@ -69,7 +67,7 @@ module Carat
     # row of a plugin scratch buffer drawn as the current entry (-1 for
     # none), cleared whenever the plugin replaces the lines. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, :marked_row, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, :marked_row, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -90,7 +88,6 @@ module Carat
       # @rbs @syntax_cache: SyntaxCache
       # @rbs @global_marks: GlobalMarks
       # @rbs @last_cursor: Position
-      # @rbs @icon: String
       # @rbs @diagnostics: DiagnosticList
       # @rbs @diagnostic_marks: Array[Integer]
       # @rbs @styles: Array[untyped]
@@ -130,7 +127,6 @@ module Carat
         self.syntax_cache = SyntaxCache.new
         self.global_marks = GlobalMarks.new
         self.last_cursor = Position.new(row: 0, col: 0)
-        self.icon = Buffer.icon_of(path)
         self.diagnostics = DiagnosticList.new
         self.diagnostic_marks = []
         self.styles = Array.new(0, nil)
@@ -260,16 +256,6 @@ module Carat
         type = Filetype.detect(path, line(0))
         self.filetype = type
         self.syntax = type
-        self.icon = Buffer.icon_of(path)
-      end
-
-      # The icon name of a path's last segment from the plugin API's
-      # file-icon table, "default" without a path. Kept in icon so the
-      # buffer tabs draw it without cutting the path every frame.
-      #: (String?) -> String
-      def self.icon_of(path)
-        return "default" if path.nil?
-        PluginApi::FileIcons.file_type(PluginApi::Paths.basename(path))
       end
 
       # The byte where the last segment of the path starts, where
@@ -282,6 +268,22 @@ module Carat
         return 0 if current.nil? || current == "/"
         slash = current.byterindex("/")
         slash.nil? ? 0 : slash + 1
+      end
+
+      # The byte where the folder holding the file starts, as the buffer
+      # tabs name it before a name another tab shares: the segment before
+      # the last slash, its own slash at name_start - 1; the root's slash
+      # alone for a file in the root. name_start when there is no folder
+      # (no path, no slash, or the root itself), so an empty span. An
+      # index, not the name, so the tabs allocate nothing for it.
+      #: () -> Integer
+      def parent_start
+        current = path
+        start = name_start
+        return start if current.nil? || start == 0
+        i = start - 2
+        i -= 1 while i >= 0 && current.getbyte(i) != 47
+        i + 1
       end
 
       # Sets the filetype and the syntax with it, as :set filetype does.
