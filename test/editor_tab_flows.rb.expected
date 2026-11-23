@@ -1,111 +1,111 @@
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 1: <Space>e
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 2: 3Gl
-FAIL l from the explorer onto the startup buffer, then a new and a listed file, step 3: <Space>e4Gl: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL l from the explorer onto the startup buffer, then a new and a listed file, step 4: <Space>e3Gl: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
+ok   l from the explorer onto the startup buffer, then a new and a listed file, step 3: <Space>e4Gl
+ok   l from the explorer onto the startup buffer, then a new and a listed file, step 4: <Space>e3Gl
 ok   l from the explorer onto the startup buffer, then a new and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Enter from the explorer onto the startup buffer and a listed file, step 1: <Space>e3G<CR>
-FAIL Enter from the explorer onto the startup buffer and a listed file, step 2: <Space>e4G<CR>: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL Enter from the explorer onto the startup buffer and a listed file, step 3: <Space>e3G<CR>: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
+ok   Enter from the explorer onto the startup buffer and a listed file, step 2: <Space>e4G<CR>
+ok   Enter from the explorer onto the startup buffer and a listed file, step 3: <Space>e3G<CR>
 ok   Enter from the explorer onto the startup buffer and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   s and v from the explorer, each split closed with Ctrl-W q, step 1: <Space>e3Gl
-FAIL s and v from the explorer, each split closed with Ctrl-W q, step 2: <Space>e4Gs: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL s and v from the explorer, each split closed with Ctrl-W q, step 3: <C-w>q: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL s and v from the explorer, each split closed with Ctrl-W q, step 4: <Space>e4Gv: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL s and v from the explorer, each split closed with Ctrl-W q, step 5: <C-w>q: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 2: <Space>e4Gs
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 3: <C-w>q
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 4: <Space>e4Gv
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 5: <C-w>q
 ok   s and v from the explorer, each split closed with Ctrl-W q: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 1: <Space>e3Gt
-FAIL t from the explorer onto the startup buffer, a new file, and a listed file, step 2: <Space>e4Gt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL t from the explorer onto the startup buffer, a new file, and a listed file, step 3: <Space>e3Gt: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
-FAIL t from the explorer onto the startup buffer, a new file, and a listed file, step 4: gT: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 2: <Space>e4Gt
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 3: <Space>e3Gt
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 4: gT
 ok   t from the explorer onto the startup buffer, a new file, and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   t from the explorer into a directory's file, step 1: <Space>e2Gl3Gt
-FAIL t from the explorer into a directory's file, step 2: <Space>e5Gt: expected ["proj r gamma.rb . beta.txt", "beta.txt", "lib/gamma.rb,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj gamma.rb beta.txt", "beta.txt", "lib/gamma.rb,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+ok   t from the explorer into a directory's file, step 2: <Space>e5Gt
 ok   t from the explorer into a directory's file: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   :e, :sp, and :vs from the file window, step 1: :e alpha.txt<CR>
-FAIL :e, :sp, and :vs from the file window, step 2: :e beta.txt<CR>: expected [". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL :e, :sp, and :vs from the file window, step 3: :sp lib/gamma.rb<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "2", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "2", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"]
-FAIL :e, :sp, and :vs from the file window, step 4: <C-w>q: expected [". alpha.txt . beta.txt r gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL :e, :sp, and :vs from the file window, step 5: :vs alpha.txt<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "2", "1", "false", "\"alpha.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "2", "1", "false", "\"alpha.txt\" 1L, 3B", "false"]
-FAIL :e, :sp, and :vs from the file window, step 6: <C-w>q: expected [". alpha.txt . beta.txt r gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
+ok   :e, :sp, and :vs from the file window, step 2: :e beta.txt<CR>
+ok   :e, :sp, and :vs from the file window, step 3: :sp lib/gamma.rb<CR>
+ok   :e, :sp, and :vs from the file window, step 4: <C-w>q
+ok   :e, :sp, and :vs from the file window, step 5: :vs alpha.txt<CR>
+ok   :e, :sp, and :vs from the file window, step 6: <C-w>q
 ok   :e, :sp, and :vs from the file window: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   :tabe of a new file, a listed file, and no name, step 1: :e alpha.txt<CR>
-FAIL :tabe of a new file, a listed file, and no name, step 2: :tabe beta.txt<CR>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 3: :tabe alpha.txt<CR>: expected [". alpha.txt . beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "\"alpha.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "\"alpha.txt\" 1L, 3B", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 4: :tabc<CR>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 5: :tabc<CR>: expected [". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 6: :tabe<CR>: expected [". alpha.txt . beta.txt . [No Name] 1 2", "[No Name]", "alpha.txt,beta.txt,[No Name]", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt [No Name] 1 2", "[No Name]", "alpha.txt,beta.txt,[No Name]", "1", "2", "false", "", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 7: :tabc<CR>: expected [". alpha.txt . beta.txt . [No Name]", "alpha.txt", "alpha.txt,beta.txt,[No Name]", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt [No Name]", "alpha.txt", "alpha.txt,beta.txt,[No Name]", "1", "1", "false", "", "false"]
-FAIL :tabe of a new file, a listed file, and no name, step 8: :bd 3<CR>: expected [". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+ok   :tabe of a new file, a listed file, and no name, step 2: :tabe beta.txt<CR>
+ok   :tabe of a new file, a listed file, and no name, step 3: :tabe alpha.txt<CR>
+ok   :tabe of a new file, a listed file, and no name, step 4: :tabc<CR>
+ok   :tabe of a new file, a listed file, and no name, step 5: :tabc<CR>
+ok   :tabe of a new file, a listed file, and no name, step 6: :tabe<CR>
+ok   :tabe of a new file, a listed file, and no name, step 7: :tabc<CR>
+ok   :tabe of a new file, a listed file, and no name, step 8: :bd 3<CR>
 ok   :tabe of a new file, a listed file, and no name: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 2: gt: expected [". alpha.txt . beta.txt r gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 3: gT: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 4: :bn<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 5: :bp<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 6: :b 2<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 7: <C-PageDown>: expected [". alpha.txt . beta.txt r gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 8: :tabe alpha.txt<CR>: expected [". alpha.txt . beta.txt r gamma.rb 1 2", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb 1 2", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 9: <C-PageUp>: expected [". alpha.txt . beta.txt r gamma.rb 1 2", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb 1 2", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 10: g<Tab>: expected [". alpha.txt . beta.txt r gamma.rb 1 2", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb 1 2", "alpha.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 11: <C-PageDown>: expected [". alpha.txt . beta.txt r gamma.rb 1 2", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt gamma.rb 1 2", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"]
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 2: gt
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 3: gT
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 4: :bn<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 5: :bp<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 6: :b 2<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 7: <C-PageDown>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 8: :tabe alpha.txt<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 9: <C-PageUp>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 10: g<Tab>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window, step 11: <C-PageDown>
 ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from a file window: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 1: :e alpha.txt<CR>:e beta.txt<CR><Space>e: expected ["proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 2: gt: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 3: <Space>egT: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 4: <Space>e:bn<CR>: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 5: <Space>e:bp<CR>: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 6: <Space>e:b 1<CR>: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 7: <Space>e<Space>bn: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 8: <Space>e<C-PageDown>: expected ["proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 1: :e alpha.txt<CR>:e beta.txt<CR><Space>e
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 2: gt
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 3: <Space>egT
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 4: <Space>e:bn<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 5: <Space>e:bp<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 6: <Space>e:b 1<CR>
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 7: <Space>e<Space>bn
+ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer, step 8: <Space>e<C-PageDown>
 ok   gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e notes.md<CR><Space>dr: expected [". alpha.txt . beta.txt m notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>: expected [". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: :e notes.md<CR><Space>dr:bp<CR>: expected [". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: :e notes.md<CR><Space>dr:b 2<CR>: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: :e notes.md<CR><Space>dr<C-^>: expected [". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
-FAIL Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <Space>drgt: expected [". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "1", "1", "false", "", "false"]
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e notes.md<CR><Space>dr
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: :e notes.md<CR><Space>dr:bp<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: :e notes.md<CR><Space>dr:b 2<CR>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: :e notes.md<CR><Space>dr<C-^>
+ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <Space>drgt
 ok   Buffer switches from a lone reading view act on its window: :bn, :bp, :b N, Ctrl-^, and gt: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:sp notes.md<CR><Space>dr: expected [". alpha.txt . beta.txt m notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "[reading] notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>: expected [". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: <C-w>w: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: <C-w>w:e notes.md<CR><Space>dr:bp<CR>: expected [". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: <C-w>w: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <C-w>w:e notes.md<CR><Space>dr:b 1<CR>: expected [". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 7: <C-w>w: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 8: <C-w>w:e notes.md<CR><Space>dr<C-^>: expected [". alpha.txt . beta.txt m notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "notes.md", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 9: <C-w>w: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 10: <C-w>w<Space>drgt: expected [". alpha.txt . beta.txt m notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "alpha.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 11: <C-w>w: expected [". alpha.txt . beta.txt m notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt beta.txt notes.md", "beta.txt", "alpha.txt,beta.txt,notes.md", "2", "1", "false", "", "false"]
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 1: :e alpha.txt<CR>:e beta.txt<CR>:sp notes.md<CR><Space>dr
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 2: :bn<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 3: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 4: <C-w>w:e notes.md<CR><Space>dr:bp<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 5: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 6: <C-w>w:e notes.md<CR><Space>dr:b 1<CR>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 7: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 8: <C-w>w:e notes.md<CR><Space>dr<C-^>
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 9: <C-w>w
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 10: <C-w>w<Space>drgt
+ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt, step 11: <C-w>w
 ok   Buffer switches from a reading view in a split act on the focused window: :bn, :bp, :b N, Ctrl-^, and gt: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 1: :e alpha.txt<CR>:sp notes.md<CR><Space>dr: expected [". alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "2", "1", "false", "", "false"], got ["alpha.txt notes.md", "[reading] notes.md", "alpha.txt,notes.md", "2", "1", "false", "", "false"]
-FAIL A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 2: <Space>e: expected ["proj . alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "", "false"], got ["proj alpha.txt notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
-FAIL A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 3: :b 99<CR>: expected ["proj . alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "E86: Buffer 99 does not exist", "false"], got ["proj alpha.txt notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "E86: Buffer 99 does not exist", "false"]
-FAIL A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 4: <C-w>p: expected ["proj . alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"], got ["proj alpha.txt notes.md", "[reading] notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
-FAIL A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 5: <Space>e:bn<CR>: expected ["proj . alpha.txt m notes.md", "notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"], got ["proj alpha.txt notes.md", "notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 1: :e alpha.txt<CR>:sp notes.md<CR><Space>dr
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 2: <Space>e
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 3: :b 99<CR>
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 4: <C-w>p
+ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p, step 5: <Space>e:bn<CR>
 ok   A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL :q, :q! on a modified buffer, and :wq down to the editor quitting, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"]
-FAIL :q, :q! on a modified buffer, and :wq down to the editor quitting, step 2: x:q<CR>: expected [". alpha.txt . beta.txt r gamma.rb *", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "E37: No write since last change (add ! to override)", "false"], got ["alpha.txt beta.txt gamma.rb *", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "E37: No write since last change (add ! to override)", "false"]
-FAIL :q, :q! on a modified buffer, and :wq down to the editor quitting, step 3: :q!<CR>: expected [". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>
+ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 2: x:q<CR>
+ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 3: :q!<CR>
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 4: x:wq<CR>
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting, step 5: :q<CR>
 ok   :q, :q! on a modified buffer, and :wq down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL :bd, :bd N, and the leader delete down to the editor quitting, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>: expected [". alpha.txt . beta.txt r gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"], got ["alpha.txt beta.txt gamma.rb", "lib/gamma.rb", "alpha.txt,beta.txt,lib/gamma.rb", "1", "1", "false", "\"lib/gamma.rb\" 1L, 3B", "false"]
-FAIL :bd, :bd N, and the leader delete down to the editor quitting, step 2: :bd<CR>: expected [". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+ok   :bd, :bd N, and the leader delete down to the editor quitting, step 1: :e alpha.txt<CR>:e beta.txt<CR>:e lib/gamma.rb<CR>
+ok   :bd, :bd N, and the leader delete down to the editor quitting, step 2: :bd<CR>
 ok   :bd, :bd N, and the leader delete down to the editor quitting, step 3: :bd 1<CR>
 ok   :bd, :bd N, and the leader delete down to the editor quitting, step 4: <Space>bd
 ok   :bd, :bd N, and the leader delete down to the editor quitting, step 5: :q<CR>
 ok   :bd, :bd N, and the leader delete down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL :tabc and Ctrl-W q in a split down to the editor quitting, step 1: :e alpha.txt<CR>:tabe beta.txt<CR>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL :tabc and Ctrl-W q in a split down to the editor quitting, step 2: :tabc<CR>: expected [". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
-FAIL :tabc and Ctrl-W q in a split down to the editor quitting, step 3: :sp beta.txt<CR>: expected [". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL :tabc and Ctrl-W q in a split down to the editor quitting, step 4: <C-w>q: expected [". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 1: :e alpha.txt<CR>:tabe beta.txt<CR>
+ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 2: :tabc<CR>
+ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 3: :sp beta.txt<CR>
+ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 4: <C-w>q
 ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 5: :q<CR>
 ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 6: :q<CR>
 ok   :tabc and Ctrl-W q in a split down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   closing beside the explorer and toggling it down to the editor quitting, step 1: <Space>e3Gt
-FAIL closing beside the explorer and toggling it down to the editor quitting, step 2: <Space>e4Gt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+ok   closing beside the explorer and toggling it down to the editor quitting, step 2: <Space>e4Gt
 ok   closing beside the explorer and toggling it down to the editor quitting, step 3: :q<CR>
-FAIL closing beside the explorer and toggling it down to the editor quitting, step 4: <Space>e4Gt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+ok   closing beside the explorer and toggling it down to the editor quitting, step 4: <Space>e4Gt
 ok   closing beside the explorer and toggling it down to the editor quitting, step 5: :bd<CR>
 ok   closing beside the explorer and toggling it down to the editor quitting, step 6: <Space>e
 ok   closing beside the explorer and toggling it down to the editor quitting, step 7: <Space>e
@@ -121,60 +121,60 @@ ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 
 ok   the user's case D: gT from the explorer after :bd keeps the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 1: <Space>e
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 2: jjt
-FAIL the user's case A: t opens buffer tabs that gt and gT move between, step 3: <Space>ejt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL the user's case A: t opens buffer tabs that gt and gT move between, step 4: gt: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL the user's case A: t opens buffer tabs that gt and gT move between, step 5: gT: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL the user's case A: t opens buffer tabs that gt and gT move between, step 6: <Space>egt: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+ok   the user's case A: t opens buffer tabs that gt and gT move between, step 3: <Space>ejt
+ok   the user's case A: t opens buffer tabs that gt and gT move between, step 4: gt
+ok   the user's case A: t opens buffer tabs that gt and gT move between, step 5: gT
+ok   the user's case A: t opens buffer tabs that gt and gT move between, step 6: <Space>egt
 ok   the user's case A: t opens buffer tabs that gt and gT move between: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   t from a lone tree opens a file window, step 1: <Space>e<C-w>l<C-w>c
 ok   t from a lone tree opens a file window, step 2: 3Gt
-FAIL t from a lone tree opens a file window, step 3: <Space>e4Gt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+ok   t from a lone tree opens a file window, step 3: <Space>e4Gt
 ok   t from a lone tree opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   t from a lone tree under tab pages opens a file window, step 1: <Space>e3Gl<C-w>c
-FAIL t from a lone tree under tab pages opens a file window, step 2: 4Gt: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL t from a lone tree under tab pages opens a file window, step 3: <Space>e3Gt: expected [". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"]
+ok   t from a lone tree under tab pages opens a file window, step 2: 4Gt
+ok   t from a lone tree under tab pages opens a file window, step 3: <Space>e3Gt
 ok   t from a lone tree under tab pages opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Ctrl-T from a lone tree, step 1: <Space>e<C-w>l<C-w>c
 ok   Ctrl-T from a lone tree, step 2: <C-p>beta<C-t>
 ok   Ctrl-T from a lone tree: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Ctrl-T from a lone tree under tab pages, step 1: <Space>e3Gl<C-w>c
-FAIL Ctrl-T from a lone tree under tab pages, step 2: <C-p>beta<C-t>: expected [". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"], got ["alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
+ok   Ctrl-T from a lone tree under tab pages, step 2: <C-p>beta<C-t>
 ok   Ctrl-T from a lone tree under tab pages: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Ctrl-T opens a buffer tab beside the explorer, step 1: <Space>e3Gl
-FAIL Ctrl-T opens a buffer tab beside the explorer, step 2: <C-p>beta<C-t>: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+ok   Ctrl-T opens a buffer tab beside the explorer, step 2: <C-p>beta<C-t>
 ok   Ctrl-T opens a buffer tab beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Ctrl-T opens it in a tab page beside the explorer, step 1: <Space>e3Gl
-FAIL Ctrl-T opens it in a tab page beside the explorer, step 2: <C-p>beta<C-t>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
+ok   Ctrl-T opens it in a tab page beside the explorer, step 2: <C-p>beta<C-t>
 ok   Ctrl-T opens it in a tab page beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   tab pages: opening with l, s, v, and t, step 1: <Space>e3Gl
-FAIL tab pages: opening with l, s, v, and t, step 2: <Space>e4Gs: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 3: <C-w>q: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 4: <Space>e4Gv: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 5: <C-w>q: expected ["proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 6: <Space>e4Gt: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 7: :tabe alpha.txt<CR>: expected [". alpha.txt . beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "\"alpha.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "\"alpha.txt\" 1L, 3B", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 8: :tabe<CR>: expected [". alpha.txt . beta.txt . [No Name] 1 2 3 4", "[No Name]", "alpha.txt,beta.txt,[No Name]", "1", "4", "false", "", "false"], got ["alpha.txt beta.txt [No Name] 1 2 3 4", "[No Name]", "alpha.txt,beta.txt,[No Name]", "1", "4", "false", "", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 9: :tabc<CR>: expected [". alpha.txt . beta.txt . [No Name] 1 2 3", "alpha.txt", "alpha.txt,beta.txt,[No Name]", "1", "3", "false", "", "false"], got ["alpha.txt beta.txt [No Name] 1 2 3", "alpha.txt", "alpha.txt,beta.txt,[No Name]", "1", "3", "false", "", "false"]
-FAIL tab pages: opening with l, s, v, and t, step 10: :bd 4<CR>: expected [". alpha.txt . beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "", "false"], got ["alpha.txt beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "", "false"]
+ok   tab pages: opening with l, s, v, and t, step 2: <Space>e4Gs
+ok   tab pages: opening with l, s, v, and t, step 3: <C-w>q
+ok   tab pages: opening with l, s, v, and t, step 4: <Space>e4Gv
+ok   tab pages: opening with l, s, v, and t, step 5: <C-w>q
+ok   tab pages: opening with l, s, v, and t, step 6: <Space>e4Gt
+ok   tab pages: opening with l, s, v, and t, step 7: :tabe alpha.txt<CR>
+ok   tab pages: opening with l, s, v, and t, step 8: :tabe<CR>
+ok   tab pages: opening with l, s, v, and t, step 9: :tabc<CR>
+ok   tab pages: opening with l, s, v, and t, step 10: :bd 4<CR>
 ok   tab pages: opening with l, s, v, and t: ends with no [No Name] beside a file and no tab page of only the explorer
-FAIL tab pages: moving from a file window and from the explorer, step 1: :e alpha.txt<CR>:tabe beta.txt<CR>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 2: gt: expected [". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 3: gT: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 4: <C-PageDown>: expected [". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 5: <C-PageUp>: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 6: g<Tab>: expected [". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 7: 1gt<Space>e: expected ["proj . alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"], got ["proj alpha.txt beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 8: gt: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 9: 1gt: expected ["proj . alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"], got ["proj alpha.txt beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 10: :bn<CR>: expected ["proj . alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"], got ["proj alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
-FAIL tab pages: moving from a file window and from the explorer, step 11: <Space>e:bp<CR>: expected ["proj . alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"], got ["proj alpha.txt beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
+ok   tab pages: moving from a file window and from the explorer, step 1: :e alpha.txt<CR>:tabe beta.txt<CR>
+ok   tab pages: moving from a file window and from the explorer, step 2: gt
+ok   tab pages: moving from a file window and from the explorer, step 3: gT
+ok   tab pages: moving from a file window and from the explorer, step 4: <C-PageDown>
+ok   tab pages: moving from a file window and from the explorer, step 5: <C-PageUp>
+ok   tab pages: moving from a file window and from the explorer, step 6: g<Tab>
+ok   tab pages: moving from a file window and from the explorer, step 7: 1gt<Space>e
+ok   tab pages: moving from a file window and from the explorer, step 8: gt
+ok   tab pages: moving from a file window and from the explorer, step 9: 1gt
+ok   tab pages: moving from a file window and from the explorer, step 10: :bn<CR>
+ok   tab pages: moving from a file window and from the explorer, step 11: <Space>e:bp<CR>
 ok   tab pages: moving from a file window and from the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   tab pages: closing down to the editor quitting, step 1: <Space>e3Gl
-FAIL tab pages: closing down to the editor quitting, step 2: <Space>e4Gt: expected [". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"], got ["alpha.txt beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"]
-FAIL tab pages: closing down to the editor quitting, step 3: :tabc<CR>: expected ["proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"], got ["proj alpha.txt beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
-FAIL tab pages: closing down to the editor quitting, step 4: <C-w>l:e beta.txt<CR>: expected ["proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"], got ["proj alpha.txt beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+ok   tab pages: closing down to the editor quitting, step 2: <Space>e4Gt
+ok   tab pages: closing down to the editor quitting, step 3: :tabc<CR>
+ok   tab pages: closing down to the editor quitting, step 4: <C-w>l:e beta.txt<CR>
 ok   tab pages: closing down to the editor quitting, step 5: :bd<CR>
 ok   tab pages: closing down to the editor quitting, step 6: x:q<CR>
 ok   tab pages: closing down to the editor quitting, step 7: :q!<CR>
 ok   tab pages: closing down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-editor_tab_flows: 70 passed, 109 failed
+editor_tab_flows: 179 passed, 0 failed

@@ -9,9 +9,9 @@ ok   the explorer on the right toggles with <leader>lr
 ok   the configured width wins over plugin.explorer.width
 ok   the explorer alone cannot be hidden
 ok   the head reads the project, a dot, and the branch in the sidebar's layer (a hyphen under the ascii icons)
-FAIL a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it: expected [" proj", "  m a.md", " - proj", 1, 21], got [" proj", "  a.md", " - proj", 1, 21]
+ok   a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it
 ok   the right sidebar's one view keeps its title row in the selected tab highlight, the text under it
 ok   the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it
 ok   hidden, the file takes the row and the tree's buffer stays listed
 ok   closing the tab page lets go of the hidden explorer
-editor_slots: 15 passed, 1 failed
+editor_slots: 16 passed, 0 failed
