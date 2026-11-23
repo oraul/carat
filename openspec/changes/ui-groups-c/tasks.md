@@ -11,5 +11,5 @@
 
 ## 3. Docs
 
-- [x] 3.1 Update `docs/compatibility.md` and `docs/codebase-map.md`
+- [x] 3.1 Update README.md, `docs/compatibility.md`, and `docs/codebase-map.md`
 - [x] 3.2 Append the findings to `docs/findings/ui-groups-c.md`

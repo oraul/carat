@@ -27,7 +27,6 @@ Assumptions: `TERM=xterm` alone is detected as 256 colors (`Domain::ColorDepth` 
 
 - Code: `carat/domain/highlight.rb`, `carat/domain/themes.rb`, `carat/adapters/frame_presenter.rb`.
 - Tests: `test/smoke_editor.rb` and its snapshot, `test/adapters_frame_presenter.rb`, `test/domain_theme.rb`.
-- Docs: `docs/compatibility.md` (the message row and the UI group paragraph) and `docs/codebase-map.md` (the message row and the smoke test).
-- README.md: unchanged, it names no message-row group and no group count.
+- Docs: README.md (the palette paragraph's messages), `docs/compatibility.md` (the message row and the UI group paragraph) and `docs/codebase-map.md` (the message row and the smoke test).
 - docs/architecture.md: unchanged, its count of 69 UI groups is the count after the removal.
 - CLAUDE.md: unchanged, no agent, workflow, Makefile, or gate changes.

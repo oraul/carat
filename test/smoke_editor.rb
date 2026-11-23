@@ -382,8 +382,8 @@ module SmokeEditorTest
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after the color check")
 
-    # Scenario: The bar's bytes at 16 colors, 256 colors, and under
-    # NO_COLOR (status-bar). The status bar and the visual indicator at 16
+    # Scenario: The bar's bytes at 16 colors, 256 colors, and under NO_COLOR
+    # (status-bar). The status bar and the visual indicator at 16
     # colors (TERM=xterm-color, the terminals ColorDepth lists as basic),
     # at 256 colors (TERM=xterm), and under NO_COLOR, whose group ids the
     # presenter tests prove: the file name's sequence (StatusLine) and the
