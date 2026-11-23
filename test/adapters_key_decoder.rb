@@ -80,10 +80,9 @@ module AdaptersKeyDecoderTest
 
     # Bracketed paste: rows are [label, bytes, expected codes]. The text
     # between the marks is flagged as pasted and never decoded as keys.
-    # They prove the key-input scenarios "Escape and colon in a paste are
-    # text" (the escape and colon rows), "Newlines in a paste" (the LF, CR,
-    # and CRLF rows), and, with the split reads below, "A paste split
-    # across reads".
+    # They prove the key-input scenarios "Escape and colon in a paste are text"
+    # (the escape and colon rows), "Newlines in a paste" (the LF, CR, and CRLF rows),
+    # and "A paste split across reads" (with the split reads below).
     pa = K::PASTED
     t.table([
       ["paste: plain text", "\e[200~ab\e[201~", [97 | pa, 98 | pa]],

@@ -32,7 +32,7 @@ Assumptions: pasted text in normal and the other modes does nothing, where Neovi
 - Code: `carat/adapters/screen_presenter.rb`, `key_decoder.rb`, `frame_presenter.rb`, `tab_bar.rb`, `status_bar.rb`, `carat/domain/key.rb`, `carat/use_cases/handle_key.rb`.
 - Tests: `test/adapters_key_decoder.rb`, `editor_insert.rb`, `adapters_screen_presenter.rb`, `adapters_frame_presenter.rb`, `adapters_tab_bar.rb`, and their snapshots.
 - Docs: `docs/compatibility.md`, `docs/codebase-map.md`.
-- README.md: unchanged, the README lists no key or terminal sequence this alters.
+- README.md: the paragraph after Ctrl-S names the paste.
 - docs/architecture.md: unchanged, its ScreenPresenter entry already names bracketed paste and the file is at its size budget.
 - CLAUDE.md: unchanged, no process or rule changed.
 - No edit of `tools/rules.sh`.
