@@ -82,14 +82,10 @@
 - Fix: Motions.code_class(code, false) == 0, keyword? beside it already reads code_class
 - Category: editor
 - Added: 2026-11-20
-
-### the private blank? and keyword? restate Motions.code_class (class 0 at carat/use_cases/search/find_match.rb:140 (sprint-30 sweep quality, note 49)
-
+- Merged: ### the private blank? and keyword? restate Motions.code_class (class 0 at carat/use_cases/search/find_match.rb:140 (sprint-30 sweep quality, note 49)
 - Location: carat/use_cases/search/find_match.rb:140
 - Why: duplication: the private blank? and keyword? restate Motions.code_class (class 0 and class 2)
 - Fix: compare Motions.code_class(code, false) directly, or use the shared module of the walker.rb:62 note
-- Category: editor
-- Added: 2026-11-23
 
 ### the E486 not-found message is built inline while every at carat/use_cases/search/find_match.rb:169 (sprint-30 sweep quality, note 53)
 

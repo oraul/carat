@@ -84,6 +84,10 @@
 - Fix: pass only on value == true and rerun the snapshots.
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### assert_true passes any truthy value, so a non-nil string at carat/testing.rb:30 (sprint-30 sweep quality, note 72)
+- Location: carat/testing.rb:30
+- Why: assert_true passes any truthy value, so a non-nil string or 0 passes as true while the failure text says expected true
+- Fix: compare value == true, or rename it to assert_truthy if truthiness is meant
 
 ### the header says spin diffs the output against the at carat/testing.rb:4 (sprint-30 sweep quality, note 71)
 
@@ -94,10 +98,3 @@
 - Category: editor
 - Added: 2026-11-23
 
-### assert_true passes any truthy value, so a non-nil string at carat/testing.rb:30 (sprint-30 sweep quality, note 72)
-
-- Location: carat/testing.rb:30
-- Why: assert_true passes any truthy value, so a non-nil string or 0 passes as true while the failure text says expected true
-- Fix: compare value == true, or rename it to assert_truthy if truthiness is meant
-- Category: editor
-- Added: 2026-11-23

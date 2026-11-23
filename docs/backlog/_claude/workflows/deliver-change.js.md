@@ -1481,3 +1481,18 @@ none
 - Fix: fix a non-blocking finding in place only at a cost bounded in the brief, else append it to the findings file; accepted when over three deliveries metric.rework counts only rounds a blocking finding or a red CI started.
 - Category: security
 - Added: 2026-11-23
+
+### Benchmark skip decided from a relayed fact (security Low, confidence 3)
+- Location: .claude/workflows/deliver-change.js:949
+- Why: benchWithoutRuby decides from the lane_facts output relayed by a record start (an agent), so a forged "ruby no" line would record the bench review as passed without a benchmark. The parse is strict, the lane must be clean at the head where the check passed, and the machinery fact already trusts the same relay. Raised in three review rounds; the comment and note were updated to list every path the ruby fact reads, the relay itself is unchanged.
+- Fix: have tools/run_state.sh compute and record the ruby fact itself, through a command the review gate reads, so no model output carries the skip decision.
+- Also: tools/run_state.sh
+- Category: security
+- Added: 2026-11-23
+
+### The package phase cost 45,250 output tokens in 10 calls with no CI fix (one-accent-tabs retro note 8)
+- Location: `.claude/workflows/deliver-change.js` package step
+- Why: committing the pull request text and pushing took 18 percent of the one-accent-tabs run's output, against 10,185 in 26 calls for bench-skip-nonruby; near the backlog lane's `package-one-start` item.
+- Fix: with no CI fix the package phase stays under 15,000 output tokens, or the run notes name the cause (a resume past the push rerunning the check and reviews); merge into `package-one-start` when a sprint draws it.
+- Category: pipeline
+- Added: 2026-11-23

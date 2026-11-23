@@ -433,6 +433,14 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Fix: move each request kind into its own adapter collaborator sharing request, cancel_request, and running_server through a small session object built in EditorAssembly
 - Category: ide
 - Added: 2026-11-22
+- Merged: ### the gateway is 1536 lines with 91 methods, one at carat/adapters/json_rpc_language_gateway.rb:1 (sprint-30 sweep quality, note 42)
+- Location: carat/adapters/json_rpc_language_gateway.rb:1
+- Why: the gateway is 1536 lines with 91 methods, one class serving the lifecycle, sync, diagnostics, progress, completion, resolve, hover, signature help, document symbols, and definitions; each new request kind grows it
+- Fix: move each request kind's send, answer, and cancel into its own adapter collaborator over the shared request and running_server helpers
+- Merged: ### one 1536-line class holds lifecycle, document sync, diagnostics, and at carat/adapters/json_rpc_language_gateway.rb:1 (sprint-30 sweep quality, note 64)
+- Location: carat/adapters/json_rpc_language_gateway.rb:1
+- Why: one 1536-line class holds lifecycle, document sync, diagnostics, and five request kinds (completion, resolve, hover, definition, signature, symbols) plus URI encoding and decoding (817-874, 1487-1507)
+- Fix: extract the file URI codec into a domain module and the per-request send/answer pairs into collaborators like SymbolOutline, one at a time
 
 ### Two blank lines in a row after the completion item method at carat/adapters/json_rpc_language_gateway.rb:1175 (sprint-27 review quality, note 7)
 
@@ -459,27 +467,11 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Category: ide
 - Added: 2026-11-22
 
-### the gateway is 1536 lines with 91 methods, one at carat/adapters/json_rpc_language_gateway.rb:1 (sprint-30 sweep quality, note 42)
-
-- Location: carat/adapters/json_rpc_language_gateway.rb:1
-- Why: the gateway is 1536 lines with 91 methods, one class serving the lifecycle, sync, diagnostics, progress, completion, resolve, hover, signature help, document symbols, and definitions; each new request kind grows it
-- Fix: move each request kind's send, answer, and cancel into its own adapter collaborator over the shared request and running_server helpers
-- Category: ide
-- Added: 2026-11-23
-
 ### uri_of joins a relative buffer path to cwd without at carat/adapters/json_rpc_language_gateway.rb:1488 (sprint-30 sweep quality, note 62)
 
 - Location: carat/adapters/json_rpc_language_gateway.rb:1488
 - Why: uri_of joins a relative buffer path to cwd without resolving . and .. segments, while inside_root? (1362) uses PluginApi::Paths.absolute and path_of refuses dot segments; a buffer opened as ./x.rb is announced as a file URI with a ./ segment, so a server echoing a normalized URI or that URI itself may not match it; it also reads @files.cwd per buffer per idle tick, against sync's comment (1310) that the working directory is read at most once a sync
 - Fix: build the URI from PluginApi::Paths.absolute(@root or a once-read cwd, path) and add a gateway test with a ./ path
-- Category: ide
-- Added: 2026-11-23
-
-### one 1536-line class holds lifecycle, document sync, diagnostics, and at carat/adapters/json_rpc_language_gateway.rb:1 (sprint-30 sweep quality, note 64)
-
-- Location: carat/adapters/json_rpc_language_gateway.rb:1
-- Why: one 1536-line class holds lifecycle, document sync, diagnostics, and five request kinds (completion, resolve, hover, definition, signature, symbols) plus URI encoding and decoding (817-874, 1487-1507)
-- Fix: extract the file URI codec into a domain module and the per-request send/answer pairs into collaborators like SymbolOutline, one at a time
 - Category: ide
 - Added: 2026-11-23
 
