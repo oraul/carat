@@ -14,3 +14,12 @@
 - Location: `carat/adapters/status_bar.rb` (`paint_entry`, `paint_lsp`)
 - Why: `paint_lsp` and the closing space in `paint_entry` each call `lsp_group`, a small duplication kept because returning the column and the group together would allocate each frame.
 - Fix: keep the group in an integer instance variable that `paint_lsp` sets and `paint_entry` reads.
+### A feature is sized by its testable parts only, not by its map areas and code files (recent-files-persist retro note 6)
+- Location: .claude/agents/planner.md
+- Why: recent-files-persist touched 11 code files in 4 areas (ports, drivers, doubles, adapters) and was estimated medium; implement took 469,082 of 542,318 output tokens (86%) and 249 of 337 tool calls (74%), reached its cap once, 2.7x over the 200,000 medium output budget. Near the backlog-lane item `split-at-placement`.
+- Fix: count map areas and code files in the size check at placement; accepted when the next three features estimated medium stay under their output budget or are split at placement.
+
+### A Low security finding in the change's own new code costs a full fix round (recent-files-persist retro note 7)
+- Location: .claude/workflows/deliver-change.js
+- Why: recent-files-persist spent 77,403 output tokens (504,196 minus 426,793, 14% of the run) plus a second check (tools-test 354s, test-build 292s, diagnose 355s) and a second security review finding 0, while no finding blocked. Near the backlog-lane item `nonblocking-round` (review-in-openspec note 10).
+- Fix: fix a non-blocking finding in place only at a cost bounded in the brief, else append it to the findings file; accepted when over three deliveries metric.rework counts only rounds a blocking finding or a red CI started.
