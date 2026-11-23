@@ -10,3 +10,8 @@
 - Location: .claude/workflows/sprint-planning.js (the reviewTaskOf call for the quality continuation)
 - Why: the files the planner returned in not_reviewed are joined into the continued start's prompt unfiltered, as the security continuation's are; a file name carrying instructions would reach a reviewer that holds the read guard but can still read the repository.
 - Fix: pass each file through pathKey and keep only names matching a path pattern (no spaces or control characters) in both continuations.
+
+### allocs.grep measured 685.3 once on identical sources
+- Location: tools/metrics.sh measure, the grep scenario of bench/keys.rb
+- Why: the metrics stage of the first check of this change read allocs.grep 685.3 against main's 685.0 though carat/, bench/, and the Makefile equal main's; three reruns of the same binary read 685.0 and the rerun check passed, so the allocation count of the grep scenario varies with load, which would block an unrelated change at random.
+- Fix: find what in the grep picker's setup varies (a reader thread's timing, or the stages running beside the metrics stage), make the count exact or have measure take the lowest of a few runs for grep.
