@@ -23,3 +23,4 @@
 - [x] 4.3 A paste whose end mark never arrives keeps the decoder in the paste: recorded in `docs/findings/render-tidy.md`, recorded
 - [x] 4.4 A large paste was copied once per byte by `consume`: `decode_paste` reads with a local index and consumes once
 - [x] 4.5 A lead byte before the end mark swallowed it: an illegal sequence reads one byte, proved by the lead byte row of `test/adapters_key_decoder.rb`
+- [x] 4.6 A paste can end itself early on a terminal that passes an end mark in the pasted text through: documented in the decoder and `docs/compatibility.md`, shown by the end mark row of `test/adapters_key_decoder.rb`; dropping the keys read after the mark is recorded in `docs/findings/render-tidy.md`

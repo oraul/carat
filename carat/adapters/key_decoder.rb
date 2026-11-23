@@ -170,7 +170,10 @@ module Carat
       end
 
       # Reads pasted text up to the end mark, leaving the paste when the
-      # mark is read. Returns false when the bytes so far stop inside the
+      # mark is read. This relies on the terminal filtering an end mark out
+      # of the pasted text, as the terminals that bracket a paste do: one
+      # that passes it through ends the paste there and the bytes after it
+      # are keys (a decoder row shows it). Returns false when the bytes so far stop inside the
       # mark or a character, and more are needed.
       #: (Array[Integer]) -> bool
       def decode_paste(codes)

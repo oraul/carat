@@ -12,3 +12,8 @@
 - Location: carat/adapters/key_decoder.rb, decode_paste and flush.
 - Why: a terminal that sends the start mark and loses the end mark leaves every later byte read as pasted text, in which Escape and Ctrl-C are dropped, so the user cannot leave insert mode; ending the paste on an idle timeout would instead let a slow paste's remainder run as commands. A pasted end mark inside the text, which terminals strip, would end the paste early.
 - Fix: end a paste after a long idle timeout (several seconds) with a message, or accept a key chord such as the quit chord inside a paste.
+
+### A paste ended early by an end mark in its text is not defended in depth
+- Location: carat/adapters/key_decoder.rb decode_paste
+- Why: on a terminal that does not filter ESC [ 201 ~ out of the clipboard text, the paste ends there and the bytes after it decode as typed keys (security Low (4)); the decoder now documents the reliance and a decoder row shows it.
+- Fix: after a paste ends, flag or drop the keys read in the same feed straight after the mark, changing the "a key after the paste is a key again" and "keys before and after" rows and their scenarios.

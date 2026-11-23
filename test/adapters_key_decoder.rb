@@ -103,7 +103,8 @@ module AdaptersKeyDecoderTest
       ["paste: an illegal byte is U+FFFD", "\e[200~\xff\e[201~", [0xFFFD | pa]],
       ["paste: a lead byte does not swallow the end mark", "\e[200~\xc3\e[201~z", [0xFFFD | pa, 122]],
       ["paste: trailing blanks are kept", "\e[200~a  \e[201~", [97 | pa, 32 | pa, 32 | pa]],
-      ["paste: the end mark outside a paste is an unknown key", "\e[201~", [K::UNKNOWN]]
+      ["paste: the end mark outside a paste is an unknown key", "\e[201~", [K::UNKNOWN]],
+      ["paste: an end mark inside the text ends the paste early, so the rest is keys (a terminal that passes the mark through)", "\e[200~a\e[201~:w!\e[201~", [97 | pa, 0x3A, 119, 0x21, K::UNKNOWN]]
     ]) { |bytes| Decoder.new.feed(bytes) }
 
     # A paste split across reads, at the start mark, inside a character,

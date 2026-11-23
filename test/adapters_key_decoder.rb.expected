@@ -61,6 +61,7 @@ ok   paste: an illegal byte is U+FFFD
 ok   paste: a lead byte does not swallow the end mark
 ok   paste: trailing blanks are kept
 ok   paste: the end mark outside a paste is an unknown key
+ok   paste: an end mark inside the text ends the paste early, so the rest is keys (a terminal that passes the mark through)
 ok   paste: a paste split inside the mark and a character, flushed mid-mark, keeps its text
 ok   paste: the end mark finished in the next read ends the paste
 ok   paste: nothing pending after the paste
@@ -83,4 +84,4 @@ ok   alt x
 ok   unicode
 ok   pasted letter
 ok   every key round-trips through encode and feed
-adapters_key_decoder: 85 passed, 0 failed
+adapters_key_decoder: 86 passed, 0 failed
