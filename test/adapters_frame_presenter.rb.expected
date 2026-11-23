@@ -127,16 +127,16 @@ ok   an ascii frame with tabs, splits, a modified buffer, and progress holds no 
 ok   the same frame in the unicode set holds code points above 127
 ok   each window shows what fits before its edge
 ok   the tab-page numbers stand at the right end
-ok   fill, selected, and plain highlights
+ok   fill, the current number in TabLineName, and the other in TabLine
 ok   the first text row is row 1
 ok   the status bar is on row 5
 ok   the message row stays last
 ok   the cursor is under the tabs row
-ok   the second number is selected now
+ok   the second number is the current one now
 ok   the second tab page's window is drawn
 ok   with one tab page and no files listed there is no tabs row
 ok   two listed files show their tabs, the current one selected
-ok   the selected tab's icon is in the selected group, TabLineSel
+ok   the selected tab's cells are in the selected group, TabLineSel, and the tab has no icon
 ok   0 shows no row with one file
 ok   0 shows no row with two files
 ok   1 shows no row with one file
@@ -170,13 +170,13 @@ ok   two editor splits keep the glyph in WinSeparator, the sidebar's edge stays 
 ok   NO_COLOR keeps the glyph at the sidebar's edge
 ok   16 colors keep the glyph at the sidebar's edge
 ok   256 colors draw the blank cell again, the stale glyph gone
-ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: 24 bits
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column, no fill and Normal names under 16 colors and NO_COLOR: 24 bits
 ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: 24 bits
 ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: 24 bits
-ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: 16 colors
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column, no fill and Normal names under 16 colors and NO_COLOR: 16 colors
 ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: 16 colors
 ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: 16 colors
-ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: NO_COLOR
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column, no fill and Normal names under 16 colors and NO_COLOR: NO_COLOR
 ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: NO_COLOR
 ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: NO_COLOR
 ok   the prompt row and the cursor after it

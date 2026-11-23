@@ -1,6 +1,6 @@
 ok   every id has a name
 ok   FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups
-ok   69 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
+ok   70 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups
 ok   the markup groups after the file-icon groups
 ok   the status bar's groups follow Neovim's
 ok   the status bar's count groups follow its lsp groups

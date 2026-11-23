@@ -273,7 +273,7 @@ module EditorPluginsTest
     h = session(" to ls tz")
     t.assert_equal([true, false], [h.assembly.buffers.scratch_for("side", "list").nil?, h.state.tab.slot(:left).occupied?], "a plugin that raised leaves no hidden slot holding its view")
     h = session(" to tv")
-    t.assert_equal([" list  other", Carat::Domain::Highlight::TAB_LINE, Carat::Domain::Highlight::TAB_LINE_SELECTED], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 7)], "the header lists both views, the shown one selected")
+    t.assert_equal([" list  other", Carat::Domain::Highlight::TAB_LINE, Carat::Domain::Highlight::TAB_LINE_NAME], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 7)], "the header lists both views, the shown one selected")
     t.assert_equal(true, h.assembly.buffers.scratch_for("side", "list").nil?, "the view let go leaves the buffer list")
     # Scenarios "A one-view left sidebar reads the head" and "The head over the header of two views", under a tab row: the project heads the tab row, the views' header
     # stands under it, and the window starts below both; with one view the window starts under the tab row.

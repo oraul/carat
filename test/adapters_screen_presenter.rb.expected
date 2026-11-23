@@ -33,7 +33,13 @@ ok   inactive status lines have the theme's StatusLineNC
 ok   tab line labels have TabLine
 ok   the selected label has TabLineSel
 ok   the tab line fill has TabLineFill
-ok   the tab line sequences at 256 colors, the selected one bold on the accent
+ok   the tab line sequences at 256 colors, the selected one bold with no fill
+ok   the tab row's selected, name, and quiet groups: 24 bits
+ok   the selected tab is Normal's colors in bold: 24 bits
+ok   the tab row's selected, name, and quiet groups: 256 colors
+ok   the selected tab is Normal's colors in bold: 256 colors
+ok   the tab row's selected, name, and quiet groups: 16 colors
+ok   the selected tab is Normal's colors in bold: 16 colors
 ok   the selection has the Visual background
 ok   only the changed part of a row is written, from its column
 ok   the unchanged part of the row is not written
@@ -101,4 +107,4 @@ ok   Switching at 256 colors: every group in the new palette, the frame drawn in
 ok   Switching at 256 colors: the terminal's background clears the screen with no palette color
 ok   Switching at 16777216 colors: every group in the new palette, the frame drawn in full
 ok   Switching at 16777216 colors: the terminal's background clears the screen with no palette color
-adapters_screen_presenter: 103 passed, 0 failed
+adapters_screen_presenter: 109 passed, 0 failed

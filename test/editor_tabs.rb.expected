@@ -124,7 +124,7 @@ ok   the new tab page has one window
 ok   the first tab page still has two
 ok   the first tab page remembers its current window
 ok   the tabs row lists the files and numbers the tab pages at its right end
-ok   the current file and tab page selected, the rest plain or filled
+ok   the current file and tab page selected, the page number in TabLineName, the rest plain or filled
 ok   the window starts under the tabs row with one row less
 ok   the status bar is above the message row
 ok   the cursor is under the tabs row

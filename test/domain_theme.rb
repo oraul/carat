@@ -300,24 +300,20 @@ module DomainThemeTest
     [H::SEARCH, H::INC_SEARCH, H::CURRENT_SEARCH].all? { |id| theme.bg(id) >= 0 && theme.bg16(id) >= 0 }
   end
 
-  # What keeps a theme's selected tab from reading at a glance: its
-  # background below 3:1 from TabLine's or TabLineFill's at 24 bits or at
-  # 256 colors, the same basic background as theirs, or bold missing on
-  # TabLineSel or present on TabLine at either depth.
+  # What keeps a theme's selected tab from reading at a glance: TabLineSel
+  # not bold or not Normal's own colors (the editor's background, no
+  # accent fill) at either depth of attributes, TabLineName not bold, or
+  # TabLine bold at either depth.
   #: (Carat::Domain::Theme) -> Array[String]
   def self.tab_glance(theme)
     out = []
     sel = H::TAB_LINE_SELECTED
-    [H::TAB_LINE, H::TAB_LINE_FILL].each do |id|
-      ratio = contrast(theme.bg(sel), theme.bg(id))
-      out << "#{H::NAMES[id]} #{ratio}" if ratio < 300
-      ratio = contrast(shown_256(theme.bg(sel), theme.bg256(sel)), shown_256(theme.bg(id), theme.bg256(id)))
-      out << "#{H::NAMES[id]} at 256 #{ratio}" if ratio < 300
-      out << "#{H::NAMES[id]} at 16" if theme.bg16(sel) == theme.bg16(id)
-    end
     bold = D::Theme::BOLD
     out << "TabLineSel not bold" if (theme.attr(sel) & bold) == 0 || (theme.attr16(sel) & bold) == 0
+    out << "TabLineName not bold" if (theme.attr(H::TAB_LINE_NAME) & bold) == 0 || (theme.attr16(H::TAB_LINE_NAME) & bold) == 0
     out << "TabLine bold" if (theme.attr(H::TAB_LINE) & bold) != 0 || (theme.attr16(H::TAB_LINE) & bold) != 0
+    out << "TabLineSel background" if theme.bg(sel) != theme.bg(H::NORMAL) || theme.bg256(sel) != theme.bg256(H::NORMAL) || theme.bg16(sel) != theme.bg16(H::NORMAL)
+    out << "TabLineSel foreground" if theme.fg(sel) != theme.fg(H::NORMAL) || theme.fg16(sel) != theme.fg16(H::NORMAL)
     out
   end
 
@@ -340,8 +336,8 @@ module DomainThemeTest
     # groups, then the thirteen file-icon groups, then the six markup
     # groups.
     t.assert_equal(H::COUNT, H::NAMES.length, "every id has a name")
-    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "StatusLineDim", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::STATUS_DIM], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups")
-    t.assert_equal([69, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "69 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
+    t.assert_equal(["IblScope", "FloatTitle", "PmenuMatch", "PmenuMatchSel", "PmenuExtra", "PmenuExtraSel", "Added", "Changed", "Removed", "LineNrFifth", "MsgDim", "Folded", "StatusLineDim", "TabLineName", "Comment"], [H::NAMES[H::INDENT_GUIDE_SCOPE], H::NAMES[H::FLOAT_TITLE], H::NAMES[H::POPUP_MENU_MATCH], H::NAMES[H::POPUP_MENU_MATCH_SELECTED], H::NAMES[H::POPUP_MENU_EXTRA], H::NAMES[H::POPUP_MENU_EXTRA_SELECTED], H::NAMES[H::ADDED], H::NAMES[H::CHANGED], H::NAMES[H::REMOVED], H::NAMES[H::LINE_NUMBER_FIFTH], H::NAMES[H::MESSAGE_DIM], H::NAMES[H::FOLDED], H::NAMES[H::STATUS_DIM], H::NAMES[H::TAB_LINE_NAME], H::NAMES[H::SYNTAX_FIRST]], "FloatTitle follows the indent guides, then the popup menu's match and extra groups, and Added, Changed, Removed, LineNrFifth, MsgDim, Folded, and StatusLineDim are the last UI groups")
+    t.assert_equal([70, 30, 13, 6], [H::SYNTAX_FIRST, H::ICON_FIRST - H::SYNTAX_FIRST, H::MARKUP_FIRST - H::ICON_FIRST, H::COUNT - H::MARKUP_FIRST], "70 UI groups, thirty syntax groups, thirteen file-icon groups, six markup groups")
     t.assert_equal(["@markup.heading", "@markup.strong", "@markup.italic", "@markup.raw", "@markup.link.label", "@markup.raw.block"], [H::NAMES[H::MARKUP_HEADING], H::NAMES[H::MARKUP_STRONG], H::NAMES[H::MARKUP_ITALIC], H::NAMES[H::MARKUP_RAW], H::NAMES[H::MARKUP_LINK], H::NAMES[H::MARKUP_RAW_BLOCK]], "the markup groups after the file-icon groups")
     t.assert_equal(["StatusLineModeNormal", "StatusLineLspError"], [H.name_of(H::STATUS_MODE_NORMAL), H.name_of(H::STATUS_LSP_ERROR)], "the status bar's groups follow Neovim's")
     # Scenario: The UI groups. The status bar's count groups follow the lsp groups.
@@ -502,9 +498,8 @@ module DomainThemeTest
     t.assert_equal([0xa4aabd, 0x5c6173], carat, "the carat themes' PANEL_DIM are the design's values")
     t.assert_equal(["StatusLineDim", false], [H.name_of(H::STATUS_DIM), H.token?(H::STATUS_DIM)], "the bar's quiet group is named StatusLineDim and is a UI group")
 
-    # Every palette's selected tab stands out: TabLineSel on its accent
-    # at 3:1 from the tab row, another basic color, and bold, on either
-    # background.
+    # Scenario "The selected tab is bold on the editor's background": every palette's selected tab is
+    # bold in Normal's own colors, with no accent fill, on either background.
     D::Themes::NAMES.each do |name|
       ["theme", "terminal"].each do |background|
         t.assert_equal([], tab_glance(D::Themes.find(name, background)), "#{name} on the #{background} background: the selected tab reads at a glance")

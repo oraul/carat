@@ -196,12 +196,12 @@ module EditorBreadcrumbsTest
     r = rig("", {})
     r.type(":vsplit b.txt<CR>")
     t.assert_equal([" b.txt              | a.rb", "bee                 |class Foo"], [r.row(1).rstrip, r.row(2).rstrip], "windows on different files name their own, under the buffer tabs")
-    # Scenario "Windows on different files named": the path is the accent in the current window and quiet in the other.
+    # Scenario "Windows on different files named": the path is bold in the current window and quiet in the other.
     r = rig("", {})
     r.type("<C-w>v")
-    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, H::TAB_LINE, H::TAB_LINE_FILL], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1), r.frame.hl_at(0, 10), r.frame.hl_at(0, 22), r.frame.hl_at(0, 30)], "the current window's path with no symbol is the accent in TabLineSel, the other's in TabLine, the pad TabLine, the rest TabLineFill")
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_NAME, H::TAB_LINE_FILL, H::TAB_LINE, H::TAB_LINE_FILL], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1), r.frame.hl_at(0, 10), r.frame.hl_at(0, 22), r.frame.hl_at(0, 30)], "the current window's path with no symbol is bold in TabLineName, the other's in TabLine, the pad TabLine, the rest TabLineFill")
     r.type("<C-w>l")
-    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [r.frame.hl_at(0, 1), r.frame.hl_at(0, 22)], "the selected winbar follows the current window")
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_NAME], [r.frame.hl_at(0, 1), r.frame.hl_at(0, 22)], "the bold winbar name follows the current window")
     r = rig("", {})
     r.type("<C-w>v:set breadcrumbs=never<CR>")
     t.assert_equal(["", true, 0], [r.assembly.state.message, r.row(0).start_with?("class Foo"), r.assembly.state.window.row], ":set breadcrumbs=never hides the winbars at once, the text taking their row")
@@ -242,12 +242,12 @@ module EditorBreadcrumbsTest
     r.type("j")
     t.assert_equal([" a.rb > Foo > bar", " a.rb > Foo"], [cut(r, 0, 0, 20), cut(r, 0, 21, 19)], "inside the method the current window shows the class and the method, the other its own cursor's")
     # Scenario "Only the innermost symbol is in the accent": " a.rb > Foo > bar", the path and the class quiet, only the innermost symbol in the accent, and the other window quiet throughout.
-    t.assert_equal([H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE],
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_NAME, H::TAB_LINE_NAME, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE],
       [r.frame.hl_at(0, 1), r.frame.hl_at(0, 7), r.frame.hl_at(0, 8), r.frame.hl_at(0, 11), r.frame.hl_at(0, 14), r.frame.hl_at(0, 16), r.frame.hl_at(0, 17), r.frame.hl_at(0, 22), r.frame.hl_at(0, 27)], "only the innermost symbol of the current window's winbar is in the accent, the path and the outer symbols stay quiet")
     r.type("4j")
     r.wait
     t.assert_equal([" a.rb", 1], [cut(r, 0, 0, 20), r.symbols_sent], "outside every symbol the path only, with no new request")
-    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1)], "with symbols held but none spanning the cursor row the path is in the accent, the pad quiet")
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_NAME], [r.frame.hl_at(0, 0), r.frame.hl_at(0, 1)], "with symbols held but none spanning the cursor row the path is in the accent, the pad quiet")
     r.type(":e b.txt<CR>")
     t.assert_equal([" b.txt", " a.rb > Foo"], [cut(r, 1, 0, 20), cut(r, 1, 21, 19)], "a window on another buffer shows its path only, under the buffer tabs")
 

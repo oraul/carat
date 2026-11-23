@@ -716,14 +716,14 @@ module AdaptersFramePresenterTest
     s.tabs.tab_index = 0
     f = draw(s, 7, 30)
     t.assert_equal("                         1  2", f.row_text(0), "the tab-page numbers stand at the right end")
-    t.assert_equal([D::Highlight::TAB_LINE_FILL, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 25).hl, f.cell(0, 28).hl], "fill, selected, and plain highlights")
+    t.assert_equal([D::Highlight::TAB_LINE_FILL, D::Highlight::TAB_LINE_NAME, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 25).hl, f.cell(0, 28).hl], "fill, the current number in TabLineName, and the other in TabLine")
     t.assert_equal("  1 one", f.row_text(1), "the first text row is row 1")
     t.assert_equal(" NORMAL  a.txt", f.row_text(5)[0, 14], "the status bar is on row 5")
     t.assert_equal("", f.row_text(6), "the message row stays last")
     t.assert_equal([1, 4], [f.cursor_row, f.cursor_col], "the cursor is under the tabs row")
     s.tabs.tab_index = 1
     f = draw(s, 7, 30)
-    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_SELECTED], [f.cell(0, 25).hl, f.cell(0, 28).hl], "the second number is selected now")
+    t.assert_equal([D::Highlight::TAB_LINE, D::Highlight::TAB_LINE_NAME], [f.cell(0, 25).hl, f.cell(0, 28).hl], "the second number is the current one now")
     t.assert_equal("  1 zz", f.row_text(1), "the second tab page's window is drawn")
     s.tabs.remove_tab(1)
     f = draw(s, 7, 30)
@@ -732,8 +732,8 @@ module AdaptersFramePresenterTest
     LISTED.add(other)
     s.options.icons = "unicode"
     f = draw(s, 7, 30)
-    t.assert_equal("  • a.txt     • b.txt", f.row_text(0), "two listed files show their tabs, the current one selected")
-    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 2).hl, f.cell(0, 13).hl], "the selected tab's icon is in the selected group, TabLineSel")
+    t.assert_equal("  a.txt     b.txt", f.row_text(0), "two listed files show their tabs, the current one selected")
+    t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 8).hl, f.cell(0, 13).hl], "the selected tab's cells are in the selected group, TabLineSel, and the tab has no icon")
     LISTED.remove(other)
     LISTED.remove(s.buffer)
 
@@ -749,10 +749,10 @@ module AdaptersFramePresenterTest
       ["0 shows no row with one file", [0, 1, 0], "  1 one|~"],
       ["0 shows no row with two files", [0, 2, 0], "  1 one|~"],
       ["1 shows no row with one file", [1, 1, 0], "  1 one|~"],
-      ["1 shows the row with two files, the current tab first", [1, 2, 0], "  • a.txt     • b.txt|  1 one"],
-      ["2 shows the row with one file", [2, 1, 0], "  • a.txt|  1 one"],
-      ["2 shows the row with two files", [2, 2, 0], "  • a.txt     • b.txt|  1 one"],
-      ["2 shows the modified mark after the name of the one file", [2, 1, 1], "  • a.txt ●|  1 one"],
+      ["1 shows the row with two files, the current tab first", [1, 2, 0], "  a.txt     b.txt|  1 one"],
+      ["2 shows the row with one file", [2, 1, 0], "  a.txt|  1 one"],
+      ["2 shows the row with two files", [2, 2, 0], "  a.txt     b.txt|  1 one"],
+      ["2 shows the modified mark after the name of the one file", [2, 1, 1], "  a.txt ●|  1 one"],
       ["2 shows the row with no file listed", [2, 0, 0], "|  1 one"]
     ]) { |input| tabline_rows(input[0].to_i, input[1].to_i, input[2].to_i) }
 
@@ -876,7 +876,8 @@ module AdaptersFramePresenterTest
       P.basic_colors = mode[2]
       f = draw(s, 8, 80)
       label = mode[0]
-      t.assert_equal([false, " carat · main", "  • a.txt     • b.txt", D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_FILL], [f.row_text(0).include?("\u2502"), f.row_text(0)[0, 13], f.row_text(0)[31, 21], f.cell(0, 31).hl, f.cell(0, 79).hl], "the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: #{label}")
+      bare = mode[1] || mode[2]
+      t.assert_equal([false, " carat · main", "  a.txt     b.txt", D::Highlight::TAB_LINE_SELECTED, bare ? D::Highlight::NORMAL : D::Highlight::TAB_LINE_FILL, bare ? D::Highlight::NORMAL : D::Highlight::TAB_LINE], [f.row_text(0).include?("\u2502"), f.row_text(0)[0, 13], f.row_text(0)[31, 17], f.cell(0, 31).hl, f.cell(0, 79).hl, f.cell(0, 43).hl], "the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column, no fill and Normal names under 16 colors and NO_COLOR: #{label}")
       t.assert_equal([" ", D::Highlight::SIDEBAR_LAYER + D::Highlight::NORMAL, D::Highlight::SIDEBAR_LAYER + D::Highlight::NON_TEXT, D::Highlight::SIDEBAR_LAYER + D::Highlight::MESSAGE_DIM], [f.cell(0, 30).char, f.cell(0, 0).hl, f.cell(0, 7).hl, f.cell(0, 9).hl], "the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: #{label}")
       sidebar_tildes = 0
       r = 1

@@ -79,12 +79,12 @@ module EditorSlotsTest
     # Scenario "A one-view left sidebar reads the head": with a tab row the head stands on it, the tabs start at the editor's first column, and the tree under it.
     h = editor("")
     h.type(":e b.rb<CR> e")
-    t.assert_equal([" proj", "  m a.md", " - proj", 1, 21], [h.row(0)[0, 5], h.row(0)[31, 8].rstrip, h.row(1)[0, 7].rstrip, h.state.tab.slot(:left).view_window.row, h.state.tab.slot(:left).view_window.height], "a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it")
+    t.assert_equal([" proj", "  a.md", " - proj", 1, 21], [h.row(0)[0, 5], h.row(0)[31, 8].rstrip, h.row(1)[0, 7].rstrip, h.state.tab.slot(:left).view_window.row, h.state.tab.slot(:left).view_window.height], "a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it")
     # Scenario "Header of one view": the right sidebar keeps its title row, the view's text under it.
     h = editor("plugin.explorer.side right")
     h.type(" e")
     right = h.state.tab.slot(:right).view_window
-    t.assert_equal([" explorer", H::TAB_LINE_SELECTED, right.row], [h.row(0)[right.col, 30].rstrip, h.frame.hl_at(0, right.col + 1), 1], "the right sidebar's one view keeps its title row in the selected tab highlight, the text under it")
+    t.assert_equal([" explorer", H::TAB_LINE_NAME, right.row], [h.row(0)[right.col, 30].rstrip, h.frame.hl_at(0, right.col + 1), 1], "the right sidebar's one view keeps its title row in the selected tab highlight, the text under it")
     # The header row and the tree under it.
     h = editor("")
     h.type(" e")

@@ -64,7 +64,7 @@ module Carat
       SPECIAL = 34
       IDENTIFIER = 35
       ESCAPE = 36
-      # Text on a strong accent, the mode pills' and the selected tab's:
+      # Text on a strong accent (the mode pills):
       # the palette's background color, kept when the terminal paints its
       # own background.
       ON_STRONG = 37
@@ -94,7 +94,11 @@ module Carat
       # blue, or a lighter one where the blue reads below 3:1 on its
       # selection (dark_plus).
       MARK = 48
-      ROLES = 49
+      # The text of TabLineName, bold on PANEL_NC: the palette's text
+      # color, black at 16 colors where PANEL_NC is the basic light gray
+      # and the text color would not read on it.
+      TAB_NAME = 49
+      ROLES = 50
       NONE = -1
 
       BOLD = Theme::BOLD
@@ -113,7 +117,7 @@ module Carat
         Highlight::NON_TEXT, FAINT, NONE, 0, 0,
         Highlight::STATUS_NC, DIM, PANEL_NC, 0, 0,
         Highlight::TAB_LINE, DIM, PANEL_NC, 0, 0,
-        Highlight::TAB_LINE_SELECTED, ON_STRONG, BLUE, BOLD, BOLD,
+        Highlight::TAB_LINE_SELECTED, FG, BG, BOLD, BOLD,
         Highlight::TAB_LINE_FILL, NONE, PANEL_NC, 0, 0,
         Highlight::VISUAL, NONE, SELECTION, 0, REVERSE,
         Highlight::SIGN_COLUMN, YELLOW, NONE, 0, 0,
@@ -175,6 +179,7 @@ module Carat
         Highlight::POPUP_MENU_MARK_SELECTED, MARK, SELECTION, BOLD, REVERSE | BOLD,
         Highlight::POPUP_MENU_LABEL_SELECTED, FG, SELECTION, BOLD, REVERSE | BOLD,
         Highlight::STATUS_DIM, PANEL_DIM, PANEL, 0, 0,
+        Highlight::TAB_LINE_NAME, TAB_NAME, PANEL_NC, BOLD, BOLD,
         Highlight::COMMENT, COMMENT, NONE, ITALIC, ITALIC,
         Highlight::CONSTANT, CONSTANT, NONE, 0, 0,
         Highlight::STRING, STRING, NONE, 0, 0,
@@ -231,6 +236,7 @@ module Carat
       CARAT_DARK = [
         BG, 0x1b1d26, -1, 0,
         FG, 0xc8ccd8, -1, 7,
+        TAB_NAME, 0xc8ccd8, -1, 0,
         DIM, 0x9298ab, -1, 8,
         FAINT, 0x6c7286, -1, 8,
         GUIDE, 0x30364b, -1, 8,
@@ -285,6 +291,7 @@ module Carat
       CARAT_LIGHT = [
         BG, 0xfbfbfd, -1, 15,
         FG, 0x2f3340, -1, 0,
+        TAB_NAME, 0x2f3340, -1, 0,
         DIM, 0x5c6173, -1, 8,
         FAINT, 0x7a8094, -1, 8,
         GUIDE, 0xd8dce8, -1, 8,
@@ -339,6 +346,7 @@ module Carat
       ONE_DARK = [
         BG, 0x282c34, -1, 0,
         FG, 0xabb2bf, -1, 7,
+        TAB_NAME, 0xabb2bf, -1, 0,
         DIM, 0x959ca8, -1, 8,
         FAINT, 0x737a8a, -1, 8,
         GUIDE, 0x737a8a, -1, 8,
@@ -393,6 +401,7 @@ module Carat
       ONE_LIGHT = [
         BG, 0xfafafa, -1, 15,
         FG, 0x383a42, -1, 0,
+        TAB_NAME, 0x383a42, -1, 0,
         DIM, 0x696c77, -1, 8,
         FAINT, 0x84868e, -1, 8,
         GUIDE, 0x84868e, -1, 8,
@@ -447,6 +456,7 @@ module Carat
       DARK_PLUS = [
         BG, 0x1e1e1e, -1, 0,
         FG, 0xd4d4d4, -1, 7,
+        TAB_NAME, 0xd4d4d4, -1, 0,
         DIM, 0x8f8f8f, -1, 8,
         FAINT, 0x737373, -1, 8,
         GUIDE, 0x737373, -1, 8,
@@ -502,6 +512,7 @@ module Carat
       LIGHT_PLUS = [
         BG, 0xffffff, -1, 15,
         FG, 0x000000, -1, 0,
+        TAB_NAME, 0x000000, -1, 0,
         DIM, 0x1f6b82, -1, 8,
         FAINT, 0x858585, -1, 8,
         GUIDE, 0x858585, -1, 8,

@@ -114,13 +114,8 @@ Where the shipped code differs from this file at `6bb8f2a`, and the item that cl
 
 | Gap | Where | Closing item |
 | --- | --- | --- |
-| The active tab is a sapphire fill | `carat/adapters/tab_bar.rb:126`, the TabLineSel row `carat/domain/themes.rb:109` | `one-accent` |
-| The tab-page number is a sapphire fill | `carat/adapters/tab_bar.rb:115` | `one-accent` |
 | The sidebar header is a sapphire fill | `carat/adapters/frame_presenter.rb:992` | `one-accent` |
-| The focused winbar name is a sapphire fill | `carat/adapters/winbar.rb:39` | `one-accent` |
-| The tab carries a type icon | `carat/adapters/tab_bar.rb:129` | `one-accent` |
 | Four selection marks: the palette band (PmenuSel) | `carat/adapters/frame_presenter.rb:714` | `one-accent` |
-| Four selection marks: the tab fill | `carat/adapters/tab_bar.rb:126` | `one-accent` |
 | Four selection marks: the explorer's `›` | `carat/plugins/explorer/tree.rb:167`, the icon `current` at `carat/domain/icons.rb:63` | `explorer-rows` |
 | Float titles are centered | `carat/adapters/frame_presenter.rb:737`, `:744` | `float-polish` |
 | Notice titles are centered | `carat/adapters/frame_presenter.rb:550` | `float-polish` |
@@ -132,7 +127,6 @@ Where the shipped code differs from this file at `6bb8f2a`, and the item that cl
 | The git signs ship `┃` added and `┇` changed, while `┃` is the scrollbar thumb only | `carat/domain/icons.rb:93`, `:94` | `glyph-audit` |
 | The deleted git sign ships `▁` alone, where the table decides `▁▔` | `carat/domain/icons.rb:95` | `glyph-audit` |
 | `+` is the closed folder, ahead, and added in ascii | `carat/domain/icons.rb:99`, `:132`, `:134` | `glyph-audit` |
-| TabLine and TabLineSel fall below the contrast target at 16 colors | `carat/domain/themes.rb:108`, `:109` | `one-accent` |
 
 ## 8. Elements
 

@@ -13,7 +13,7 @@ module Carat
     # name of each symbol spanning the window's cursor row in the order
     # held, outermost first, then a space; all in the quiet TabLine except
     # the last name of the current window's, the innermost symbol or else
-    # the path, in the accent of TabLineSel, the rest of the row in
+    # the path, bold in TabLineName, no accent fill, the rest of the row in
     # TabLineFill, cut at the window's right edge. Every string written is
     # already stored, so a winbar costs no object per frame.
     class Winbar
@@ -36,7 +36,7 @@ module Carat
         frame.blank(row, x, limit)
         frame.fill(row, x, limit, Domain::Highlight::TAB_LINE_FILL)
         quiet = Domain::Highlight::TAB_LINE
-        accent = Domain::Highlight::TAB_LINE_SELECTED
+        accent = Domain::Highlight::TAB_LINE_NAME
         buffer = window.buffer
         name = buffer.display_name
         ask = @symbols

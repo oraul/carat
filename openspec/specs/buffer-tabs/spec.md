@@ -32,21 +32,6 @@ Under `option.showtabline` 2, row 0 SHALL always be the buffer tabs row; under 1
 - **WHEN** no file is listed under `option.showtabline 2`
 - **THEN** row 0 is the buffer tabs row and the first text row of the window is row 1
 
-### Requirement: A tab per listed file buffer
-Each tab SHALL read a space, a space, the file's icon, a space, the last segment of the path or `[No Name]`, a space, the `modified` icon or a space, and a space, in list order, and draw no gem and no separator glyph. The current tab SHALL be in `TabLineSel`, its leading space and icon included, so the accent background and the bold carry the selection; the others in `TabLine`.
-
-#### Scenario: Two tabs, one modified
-- **WHEN** "src/a.rb" is modified and "b.txt" is current, with the unicode icons
-- **THEN** row 0 reads "  ◈ a.rb ●   • b.txt" from column 0, the second tab in the selected group, with no `│` in the row
-
-#### Scenario: The selected tab's icon is in the selected group
-- **WHEN** "a.rb" is current among two listed files
-- **THEN** every cell of its tab, the leading space and the icon included, is in `TabLineSel`, and the other tab is in `TabLine`
-
-#### Scenario: The ascii icons give the ascii gem and separator
-- **WHEN** "a.txt" is current among "a.txt" and "b.txt", with the ascii icons
-- **THEN** row 0 reads "  . a.txt     . b.txt" from column 0, with no gem, no `|`, and no `*`
-
 ### Requirement: Tabs that do not fit are counted at the ends
 When the tabs do not fit the row, the row SHALL show a run of whole tabs that includes the current buffer's, preceded by " <N " when N tabs are hidden before it and followed by " N> " when N are hidden after it, both in `TabLine`. The run SHALL start as early as the current tab allows.
 
@@ -55,11 +40,11 @@ When the tabs do not fit the row, the row SHALL show a run of whole tabs that in
 - **THEN** the row starts with " <K " for the K hidden tabs before the run, shows the sixth file's tab selected, and ends its tabs with " M> " for the M hidden after it
 
 ### Requirement: Tab-page numbers at the right end
-When two or more tab pages exist, the right end of the row SHALL show each tab page's number with a space before and after, in order, the current one in `TabLineSel` and the others in `TabLine`, and the buffer tabs SHALL use only the columns before them.
+When two or more tab pages exist, the right end of the row SHALL show each tab page's number with a space before and after, in order, the current one bold in `TabLineName` and the others dim in `TabLine`, with no accent fill, and the buffer tabs SHALL use only the columns before them. Under 16 colors and NO_COLOR the current one SHALL be in `TabLineSel` and the others in `Normal`. `gt` SHALL move between the buffer tabs and the tab pages are the numbers at the right, under `option.gt` as before.
 
 #### Scenario: Two tab pages
 - **WHEN** two tab pages exist, the first current, in a 40-column frame
-- **THEN** row 0 ends with " 1  2 " with " 1 " selected
+- **THEN** row 0 ends with " 1  2 " with " 1 " in `TabLineName` and " 2 " in `TabLine`
 
 ### Requirement: gt and gT move between the buffer tabs
 With `option.gt buffers`, the shipped default, "gt" SHALL show the buffer of the next buffer tab in the current window, wrapping from the last tab to the first, "gT" that of the previous one, wrapping, "{count}gT" that of the tab count tabs back, and "{count}gt" that of the count-th tab of the row, doing nothing when the row has fewer tabs. The current tab page SHALL stay, whether one or more tab pages exist, and a modified current file buffer SHALL be refused or left hidden as ":bn" does.
@@ -130,3 +115,22 @@ The left sidebar's head SHALL read a space, the project (the last segment of the
 #### Scenario: The sidebar's head reads the project and branch
 - **WHEN** the working directory is "/work/carat" and the branch "main", in the unicode and the ascii icon sets, with no branch, at the root, with no directory, and in a head cut at its edge
 - **THEN** the head reads " carat · main" (" carat - main" in ascii), " carat" with no branch, " / · main" at the root, " main" with no directory, and " carat ·" when cut after the dot, the project in `Normal`, the dot in `NonText`, and the branch in `MsgDim`, all on the sidebar layer
+
+### Requirement: A tab is a name and a mark, with no icon
+Each tab SHALL read a space, a space, the last segment of the path or `[No Name]`, a space, the `modified` icon or a space, and a space, in list order, with no file icon, no gem, and no separator glyph. The current tab SHALL be in `TabLineSel`, bold on the editor's background with no accent fill, so the bold and the background carry the selection; the others in `TabLine`. Under 16 colors and NO_COLOR the row SHALL have no fill, the current tab bold and every other name in `Normal`.
+
+#### Scenario: Two tabs, one modified
+- **WHEN** "src/a.rb" is modified and "b.txt" is current
+- **THEN** row 0 reads "  a.rb ●   b.txt" from column 0, the second tab in the selected group, with no `│` in the row
+
+#### Scenario: The selected tab has no icon and no fill
+- **WHEN** "a.rb" is current among two listed files
+- **THEN** every cell of its tab is in `TabLineSel`, the other tab is in `TabLine`, and no cell of either is a file icon
+
+#### Scenario: Tabs under every icon set
+- **WHEN** "a.txt" is current among "a.txt" and "b.txt", with the unicode, nerd, or ascii icons
+- **THEN** row 0 reads "  a.txt     b.txt" from column 0, with no icon, gem, `|`, or `*`
+
+#### Scenario: The tab row at 16 colors and NO_COLOR
+- **WHEN** two files are listed and the frame is drawn with 16 colors, and again with NO_COLOR
+- **THEN** the selected tab is in `TabLineSel`, the other tab is in `Normal`, and the cells past the tabs are in `Normal`, with no `TabLineFill`
