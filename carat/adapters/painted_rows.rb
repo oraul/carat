@@ -9,7 +9,7 @@ module Carat
     # order, slots being at least the number of windows. For each
     # it keeps every input of its cells: the line string it drew (compared
     # by identity, since lines are never changed in place; TILDE for a row
-    # past the end of the buffer, UNSET for nothing painted), the window's
+    # past the end of the buffer, BLANK for one in a sidebar, UNSET for nothing painted), the window's
     # horizontal scroll, width, and gutter width, the line number, the
     # sign shown and its highlight group, the selected display columns
     # and the line end cell, the cursor's column on the cursor row, the
@@ -22,6 +22,7 @@ module Carat
     class PaintedRows
       UNSET = String.new("unset")
       TILDE = String.new("tilde")
+      BLANK = String.new("blank")
 
       attr_reader :size #: Integer
       attr_reader :slots #: Integer

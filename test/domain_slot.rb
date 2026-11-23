@@ -74,6 +74,14 @@ module DomainSlotTest
       after(steps.to_s)
     end
 
+    # Scenarios "Header of one view" and "A one-view left sidebar reads the head": a left sidebar with one view gives up its header row when the tab row
+    # heads its column, a second view brings it back, and no other slot loses its header.
+    page = page_with_sidebar
+    t.assert_equal([true, false], [page.left_slot.headed?(false), page.left_slot.headed?(true)], "a left sidebar with one view has its head row only without a tab row")
+    page.left_slot.add_view("other")
+    t.assert_equal([true, true], [page.left_slot.headed?(false), page.left_slot.headed?(true)], "two views keep the header row")
+    t.assert_equal([true, true, true, true], [page.slot(:right).headed?(false), page.slot(:right).headed?(true), page.slot(:bottom).headed?(false), page.slot(:bottom).headed?(true)], "the right sidebar and the panel always keep theirs")
+
     page = page_with_sidebar
     list = page.left_slot.view_window.buffer
     page.layout.close(page.layout.leaf_holding(page.left_slot.view_window))

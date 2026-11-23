@@ -419,8 +419,8 @@ module EditorExplorerTest
 
     h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
-    t.assert_equal([" ", H::SIDEBAR_LAYER, "~"], [h.row(0)[30, 1], h.frame.hl_at(0, 30), h.row(6)[0, 1]], "the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer")
-    t.assert_equal([" explorer", H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's header names the explorer over the tree")
+    t.assert_equal([" ", H::SIDEBAR_LAYER, " "], [h.row(0)[30, 1], h.frame.hl_at(0, 30), h.row(6)[0, 1]], "the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer, and no tilde under its rows")
+    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's one view has no explorer title: its first row reads the project, the tree under it")
 
     # Names with a space or a bar open as named, never parsed as an ex
     # command line.

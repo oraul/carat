@@ -191,7 +191,7 @@ No cell of a frame SHALL hold a code point below 32, U+007F, or U+0080 to U+009F
 - **THEN** the bytes written contain the markers "<9b>" and "<9d>" and, outside the presenter's own escape sequences, no byte sequence encoding a code point from U+0080 to U+009F
 
 ### Requirement: Frame layout for several windows
-The frame SHALL show every window in its own rectangle: stacked windows are divided by a separator row of "─" ("-" with `option.icons ascii`) across the upper window's width, side-by-side windows by one separator column of "│" ("|" with `option.icons ascii`) down to the status bar, every separator in `WinSeparator` but a sidebar's edge. Each window SHALL have its own gutter and text area, rows past its buffer's end SHALL show "~", and the message row SHALL stay the last row.
+The frame SHALL show every window in its own rectangle: stacked windows are divided by a separator row of "─" ("-" with `option.icons ascii`) across the upper window's width, side-by-side windows by one separator column of "│" ("|" with `option.icons ascii`) down to the status bar, every separator in `WinSeparator` but a sidebar's edge. Each window SHALL have its own gutter and text area, rows past its buffer's end SHALL show "~" (blank in a sidebar), and the message row SHALL stay the last row.
 
 #### Scenario: Two stacked windows
 - **WHEN** the lines ["one", "two", "three"] are shown in a window split horizontally in a 9-row, 14-column frame
@@ -378,7 +378,7 @@ The message row's visual mode indicators, `-- VISUAL --`, `-- VISUAL LINE --`, a
 - **THEN** every cell of the indicator on the message row is in `MsgDim`
 
 ### Requirement: A sidebar meets the editor by its background
-A sidebar window SHALL be drawn on the sidebar layer of groups, and the column between it and the editor SHALL be a blank cell of that layer with no glyph. Where the terminal shows no background change, under `NO_COLOR` or at 16 colors, the separator glyph SHALL stay as the edge.
+A sidebar window SHALL be drawn on the sidebar layer of groups, its rows past its buffer's end blank rather than `~`, and the column between it and the editor SHALL be a blank cell of that layer with no glyph. Where the terminal shows no background change, under `NO_COLOR` or at 16 colors, the separator glyph SHALL stay as the edge.
 
 #### Scenario: A sidebar beside the editor draws no separator glyph
 - **WHEN** a sidebar window 12 columns wide and the editor are shown side by side at 256 colors, and then the editor is split in two
@@ -387,6 +387,10 @@ A sidebar window SHALL be drawn on the sidebar layer of groups, and the column b
 #### Scenario: Without a background change the sidebar keeps its edge
 - **WHEN** the same frame is drawn under `NO_COLOR`, and again at 16 colors
 - **THEN** column 12 holds "│" in `WinSeparator`, and drawn again at 256 colors it holds the blank cell
+
+#### Scenario: Rows past a sidebar's text are blank
+- **WHEN** a sidebar window holding one line is shown beside the editor, at 24 bits, 16 colors, and under `NO_COLOR`
+- **THEN** its rows below the line are blank cells in the sidebar layer, with no `~`, while the editor's rows past its text keep theirs
 
 ### Requirement: Bracketed paste is on while the editor runs
 When the editor enters the screen it SHALL turn the terminal's bracketed paste on, and when it leaves the screen it SHALL turn it off before it resets the cursor shape and restores the main screen.

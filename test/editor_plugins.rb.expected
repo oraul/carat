@@ -54,6 +54,8 @@ ok   the plugin's close lets go of the view its hidden slot kept: the buffer lea
 ok   a plugin that raised leaves no hidden slot holding its view
 ok   the header lists both views, the shown one selected
 ok   the view let go leaves the buffer list
+ok   two views under a tab row keep the header under the project head
+ok   one view under a tab row has no header row: its text starts under the head
 ok   the configured sizes win over the sizes the views ask for
 ok   the side window shows the plugin's lines
 ok   a plugin that declares no filetype of its name leaves its scratch buffer without syntax
@@ -89,7 +91,7 @@ ok   opening the file a window already shows leaves it as it is, changes kept
 ok   a side window opens in the second tab page
 ok   and shows the one scratch buffer the first tab page shows
 ok   the first tab page still shows it
-ok   the side window's rows start at its first column, under its header
+ok   the side window's rows start at its first column, under its head
 ok   a plugin with an action hears no event before its first trigger, so nothing raised at startup
 ok   a raise in an event once active disables the plugin
 ok   its binding went with it
@@ -101,4 +103,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 103 passed, 0 failed
+editor_plugins: 105 passed, 0 failed
