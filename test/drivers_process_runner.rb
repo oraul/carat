@@ -56,6 +56,28 @@ module DriversProcessRunnerTest
     describe(queue)
   end
 
+  # A script named carat-planted in a directory, reached by a relative
+  # PATH entry, an empty one, and an absolute one: only the absolute
+  # entry runs it, in capture and in spawn.
+  def self.guard_path(t, runner)
+    base = "#{Dir.pwd}/build/test-files/process"
+    Dir.mkdir("#{Dir.pwd}/build/test-files") unless File.directory?("#{Dir.pwd}/build/test-files")
+    Dir.mkdir(base) unless File.directory?(base)
+    File.write("#{base}/carat-planted", "#!/bin/sh\nprintf planted\n")
+    File.chmod(0o755, "#{base}/carat-planted")
+    saved = ENV["PATH"].to_s
+    ENV["PATH"] = "build/test-files/process:#{saved}"
+    t.assert_equal(true, runner.capture(["carat-planted"], ENVIRONMENT).nil?, "capture skips a relative PATH entry")
+    t.assert_equal(0, runner.spawn(["carat-planted"]), "spawn skips a relative PATH entry")
+    ENV["PATH"] = ":#{saved}"
+    Dir.chdir(base) { t.assert_equal(true, runner.capture(["carat-planted"], ENVIRONMENT).nil?, "capture skips an empty PATH entry, the working directory") }
+    ENV["PATH"] = "#{base}:#{saved}"
+    t.assert_equal("planted", runner.capture(["carat-planted"], ENVIRONMENT).to_s, "capture runs a program found in an absolute PATH entry")
+    ENV["PATH"] = saved
+    File.delete("#{base}/carat-planted")
+    Dir.rmdir(base)
+  end
+
   def self.main
     t = Carat::Testing.new("drivers_process_runner")
     queue = Carat::Drivers::RuntimeQueue.new
@@ -128,6 +150,9 @@ module DriversProcessRunnerTest
     long = runner.capture(["sh", "-c", "yes é | head -c 70000"], ENVIRONMENT).to_s
     t.assert_equal(65_535, long.bytesize, "capture of output over the limit keeps at most 64 KiB, cut before the character the limit splits")
     t.assert_equal(true, long.valid_encoding?, "capture of long valid UTF-8 output answers valid UTF-8")
+
+    # Scenario "A relative PATH entry never runs a program": a relative PATH entry holds a script, never run.
+    guard_path(t, runner)
 
     loud = runner.spawn(["sh", "-c", "printf 'Content-Length: 999999999\\r\\n\\r\\n'; sleep 1"])
     t.assert_equal(true, loud > 0, "sh starts")

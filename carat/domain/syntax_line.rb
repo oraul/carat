@@ -13,6 +13,10 @@ module Carat
       # and was disabled, never a state a tokenizer gives.
       FAILED = -1
 
+      # The largest start or length a token keeps, more than any line
+      # holds, so the painter's column plus length stays small.
+      LONGEST_SPAN = 1 << 30
+
       # @rbs @text: String
       # @rbs @start: Integer
       # @rbs @tokens: Array[Integer]

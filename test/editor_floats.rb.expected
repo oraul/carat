@@ -62,6 +62,7 @@ ok   a span row past the lines
 ok   a negative span row
 ok   a negative column
 ok   a length of zero
+ok   a column past the longest span
 ok   Bad rows and spans are refused: five integers are not quadruples, and the float keeps its previous style
 ok   An empty style clears it: every row in NormalFloat again
 ok   The selected row's mark and label groups style a span: the first cell in PmenuMarkSel, the rest of alpha in PmenuLabelSel, the padding in PmenuSel
@@ -117,4 +118,4 @@ ok   The empty style follows winborder: double, then single again, the other flo
 ok   A restyled border repaints: the double corner with the box unchanged, equal to a full repaint
 ok   Bad border requests are refused: an unknown style, another plugin's float, an unknown id, the border kept
 ok   a refill keeps the border style
-editor_floats: 119 passed, 0 failed
+editor_floats: 120 passed, 0 failed

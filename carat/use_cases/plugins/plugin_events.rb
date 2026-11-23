@@ -211,8 +211,8 @@ module Carat
       def wanted?(name)
         i = 0
         while i < @registry.count
-          e = @registry.entry(i)
-          return true if e.enabled && e.active && e.subscribed?(name)
+          entry = @registry.entry(i)
+          return true if entry.enabled && entry.active && entry.subscribed?(name)
           i += 1
         end
         false
@@ -226,9 +226,9 @@ module Carat
         event = pending.event
         i = 0
         while i < @registry.count
-          e = @registry.entry(i)
-          if e.enabled && e.active && e.subscribed?(event.name) && pending.for?(e.name)
-            guarded(e) { e.plugin.on_event(event) }
+          entry = @registry.entry(i)
+          if entry.enabled && entry.active && entry.subscribed?(event.name) && pending.for?(entry.name)
+            guarded(entry) { entry.plugin.on_event(event) }
           end
           i += 1
         end

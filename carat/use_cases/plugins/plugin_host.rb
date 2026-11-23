@@ -102,8 +102,8 @@ module Carat
       # Registers a plugin and gives it its own host.
       #: (PluginApi::Plugin) -> void
       def register(plugin)
-        e = @registry.register(plugin)
-        e.attach(PluginLink.new(name: e.name, registry: @registry, buffer_requests: @buffer_requests, window_requests: @window_requests, file_requests: @file_requests, ui_requests: @ui_requests))
+        registered = @registry.register(plugin)
+        registered.attach(PluginLink.new(name: registered.name, registry: @registry, buffer_requests: @buffer_requests, window_requests: @window_requests, file_requests: @file_requests, ui_requests: @ui_requests))
         flush
       end
 
@@ -135,17 +135,17 @@ module Carat
       # Whether the named plugin was activated.
       #: (String) -> bool
       def active?(name)
-        e = @registry.find(name)
-        !e.nil? && e.active
+        found = @registry.find(name)
+        !found.nil? && found.active
       end
 
       # Activates the named plugin now, as its first trigger would; true
       # when it is enabled and active afterwards.
       #: (String) -> bool
       def activate(name)
-        e = @registry.find(name)
-        return false if e.nil?
-        done = @registry.activate(e)
+        found = @registry.find(name)
+        return false if found.nil?
+        done = @registry.activate(found)
         flush
         done
       end
@@ -184,9 +184,7 @@ module Carat
       # option.
       #: (String, String) -> String
       def option(name, key)
-        e = @registry.find(name)
-        return "" if e.nil?
-        value = e.options[key]
+        value = @registry.option_value(name, key)
         value.nil? ? "" : value
       end
 

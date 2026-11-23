@@ -134,9 +134,27 @@ module Carat
       # added to its environment, or 0 when the command cannot start.
       #: (Array[String], Hash[String, String], IO) -> Integer
       def start_quiet(argv, environment, output)
-        Process.spawn(environment, [argv[0], argv[0]], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
+        program = program_path(argv[0])
+        return 0 if program.empty?
+        Process.spawn(environment, [program, program], *argv.drop(1), in: File::NULL, out: output, err: File::NULL)
       rescue SystemCallError
         0
+      end
+
+      # The absolute path of the first executable file the name has in a
+      # directory of the PATH that is itself absolute, "" when there is
+      # none. Process.spawn searches every entry, a relative or empty one
+      # being the working directory, which is a project's, so a project's
+      # own git or ruby-lsp would run; a name with a slash is used as given.
+      #: (String) -> String
+      def program_path(name)
+        return name if name.include?("/")
+        ENV["PATH"].to_s.split(":").each do |directory|
+          next unless directory.start_with?("/")
+          candidate = "#{directory}/#{name}"
+          return candidate if File.file?(candidate) && File.executable?(candidate)
+        end
+        ""
       end
 
       # The output until it ends, at most CAPTURE_LIMIT bytes of it cut
@@ -199,7 +217,9 @@ module Carat
       # The child's pid, or 0 when the command cannot start.
       #: (Array[String], IO, IO) -> Integer
       def start(argv, input, output)
-        Process.spawn([argv[0], argv[0]], *argv.drop(1), in: input, out: output, err: File::NULL)
+        program = program_path(argv[0])
+        return 0 if program.empty?
+        Process.spawn([program, program], *argv.drop(1), in: input, out: output, err: File::NULL)
       rescue SystemCallError
         0
       end

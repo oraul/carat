@@ -135,6 +135,21 @@ module EditorFinderGrepTest
     files
   end
 
+  # guide.md, seventy files of one 262,144-byte line each, and a last file
+  # holding a needle: the bytes read pass READ_BUDGET before the last.
+  def self.heavy
+    files = Carat::Doubles::MemoryFiles.new
+    files.move_to(ROOT)
+    files.put("docs/guide.md", "guide\n")
+    i = 0
+    while i < 70
+      files.put("f#{i < 10 ? "0" : ""}#{i}.txt", "x" * 262_144)
+      i += 1
+    end
+    files.put("z_last.txt", "needle\n")
+    files
+  end
+
   # Lines for the term matching: a whole-word hit, a hit after a scattered
   # one, scattered letters only, a prefix that diverges, a hit between
   # underscores, a longer word, two whole-word hits (g.txt), and a part-word
@@ -381,6 +396,11 @@ module EditorFinderGrepTest
     h = editor_on(huge(150), "")
     h.type("<Space>fgx")
     t.assert_equal("Grep 30 of 30+ files, 29999+ of 150001 lines", h.state.tab.floats.at(0).spec.title.to_s, "150,001 lines are all stored with no cap mark, and a key checks 30,000 of them, its counts marked")
+
+    # Scenario: The files read are bounded by their bytes
+    h = editor_on(heavy, "")
+    h.type("<Space>fgneedle")
+    t.assert_equal("Grep 0 of 0 files, 0 of 65+ lines|No match", floats(h)[0].to_s, "the read stops once the files read hold 16 MiB, so the last file is never read, and the title marks the store cut")
 
     # Scenario: An extended query continues the search
     h = editor_on(far, "")

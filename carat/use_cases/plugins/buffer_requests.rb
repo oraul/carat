@@ -86,11 +86,11 @@ module Carat
         while i < edits.length
           item = edits[i]
           return PluginApi::Response.failure("edit #{i + 1}: not an edit") unless item.is_a?(PluginApi::Edit)
-          e = edit_item(edits, i)
-          problem = check_edit(buffer, e, prev_row, prev_col)
+          edit = edit_item(edits, i)
+          problem = check_edit(buffer, edit, prev_row, prev_col)
           return PluginApi::Response.failure("edit #{i + 1}: #{problem}") unless problem.empty?
-          prev_row = e.to_row
-          prev_col = e.to_col
+          prev_row = edit.to_row
+          prev_col = edit.to_col
           i += 1
         end
         opened = buffer.begin_transaction(cursor_on(buffer))
@@ -160,9 +160,9 @@ module Carat
       def apply(buffer, edits)
         i = edits.length - 1
         while i >= 0
-          e = edit_item(edits, i)
-          range = Domain::Range.charwise(Domain::Position.new(row: e.from_row, col: e.from_col), Domain::Position.new(row: e.to_row, col: e.to_col))
-          buffer.replace(range, e.text.dup)
+          edit = edit_item(edits, i)
+          range = Domain::Range.charwise(Domain::Position.new(row: edit.from_row, col: edit.from_col), Domain::Position.new(row: edit.to_row, col: edit.to_col))
+          buffer.replace(range, edit.text.dup)
           i -= 1
         end
       end
@@ -183,15 +183,15 @@ module Carat
 
       # The first rule an edit breaks, or "".
       #: (Domain::Buffer, PluginApi::Edit, Integer, Integer) -> String
-      def check_edit(buffer, e, prev_row, prev_col)
-        return "text is not a string" unless e.text.is_a?(String)
+      def check_edit(buffer, edit, prev_row, prev_col)
+        return "text is not a string" unless edit.text.is_a?(String)
         last = buffer.line_count - 1
-        return "row #{e.from_row} is outside the buffer" if e.from_row < 0 || e.from_row > last
-        return "row #{e.to_row} is outside the buffer" if e.to_row < 0 || e.to_row > last
-        return "column #{e.from_col} is outside row #{e.from_row}" if e.from_col < 0 || e.from_col > buffer.line(e.from_row).length
-        return "column #{e.to_col} is outside row #{e.to_row}" if e.to_col < 0 || e.to_col > buffer.line(e.to_row).length
-        return "end precedes start" if e.to_row < e.from_row || (e.to_row == e.from_row && e.to_col < e.from_col)
-        return "overlaps the edit before it" if e.from_row < prev_row || (e.from_row == prev_row && e.from_col < prev_col)
+        return "row #{edit.from_row} is outside the buffer" if edit.from_row < 0 || edit.from_row > last
+        return "row #{edit.to_row} is outside the buffer" if edit.to_row < 0 || edit.to_row > last
+        return "column #{edit.from_col} is outside row #{edit.from_row}" if edit.from_col < 0 || edit.from_col > buffer.line(edit.from_row).length
+        return "column #{edit.to_col} is outside row #{edit.to_row}" if edit.to_col < 0 || edit.to_col > buffer.line(edit.to_row).length
+        return "end precedes start" if edit.to_row < edit.from_row || (edit.to_row == edit.from_row && edit.to_col < edit.from_col)
+        return "overlaps the edit before it" if edit.from_row < prev_row || (edit.from_row == prev_row && edit.from_col < prev_col)
         ""
       end
     end

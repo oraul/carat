@@ -67,8 +67,9 @@ module Carat
         ok ? @end_state : Domain::SyntaxLine::FAILED
       end
 
-      # A copy of the valid triples of the last call: a start of 0 or
-      # more, a length of 1 or more, and a syntax or file-icon group id.
+      # A copy of the valid triples of the last call: a start of 0 to
+      # SyntaxLine::LONGEST_SPAN, a length of 1 or more cut to it, and a
+      # syntax or file-icon group id.
       #: () -> Array[Integer]
       def copied_tokens
         copy = Array.new(0, 0)
@@ -78,9 +79,9 @@ module Carat
           from = tokens[i]
           length = tokens[i + 1]
           group = tokens[i + 2]
-          if from >= 0 && length > 0 && Domain::Highlight.token?(group)
+          if from >= 0 && from <= Domain::SyntaxLine::LONGEST_SPAN && length > 0 && Domain::Highlight.token?(group)
             copy << from
-            copy << length
+            copy << (length > Domain::SyntaxLine::LONGEST_SPAN ? Domain::SyntaxLine::LONGEST_SPAN : length)
             copy << group
           end
           i += 3

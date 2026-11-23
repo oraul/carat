@@ -72,6 +72,13 @@ module Carat
         @entries.find(name)
       end
 
+      # A plugin's option value, nil for an unknown plugin or option.
+      #: (String, String) -> String?
+      def option_value(name, key)
+        found = find(name)
+        found.nil? ? nil : found.options[key]
+      end
+
       # The problems recorded while registering and activating: manifest
       # rules broken, refusals, option values of the wrong type, and
       # binding conflicts.
@@ -370,7 +377,8 @@ module Carat
         end
       end
 
-      # Removes what the named plugin left in the editor.
+      # Removes what the named plugin left in the editor: its scratch
+      # buffers go, a hidden slot's window over one included.
       #: (String) -> void
       def clean_up(name)
         state = @state
@@ -390,7 +398,10 @@ module Carat
         i = buffers.count - 1
         while i >= 0
           b = buffers.buffer_at(i)
-          buffers.remove(b) if b.owner == name
+          if b.owner == name
+            @tabs.drop_kept(b)
+            buffers.remove(b)
+          end
           i -= 1
         end
         @keymap.remove_owner(name)
