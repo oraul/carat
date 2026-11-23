@@ -3395,6 +3395,14 @@ for l in wl1 wl2 wl3 wl4; do
   state lane-close "$l" > /dev/null 2>&1
   git worktree remove --force "tmp/.lane-$l" > /dev/null 2>&1
 done
+# A remote-tracking ref planted for a branch origin does not hold seeds no
+# lane: lane-open asks origin first and removes it.
+git_q update-ref refs/remotes/origin/chore/wg "$(git rev-parse origin/main~1)"
+state lane-open wg chore/wg > /dev/null
+expect "run_state: lane-open starts a branch origin lacks from main, not from a planted remote-tracking ref" 0 "^yes none$" \
+  sh -c "echo \$([ \"\$(git -C tmp/.lane-wg rev-parse HEAD)\" = \"\$(git rev-parse origin/main)\" ] && echo yes) \$(git show-ref --verify -q refs/remotes/origin/chore/wg && echo kept || echo none)"
+state lane-close wg > /dev/null 2>&1
+git_q branch -q -D chore/wg 2> /dev/null
 state lane-open wb chore/wb > /dev/null
 state lane-open wc chore/wc > /dev/null
 expect "run_state: lane-open replaces a replaced run's worktree on another branch" 0 "removed the replaced run's tmp/[.]lane-wc lane: tmp/[.]lane-wc on chore/wc-two" sh -c "sh '$here/run_state.sh' lane-open wc chore/wc-two | tr '\n' ' '"

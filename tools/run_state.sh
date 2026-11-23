@@ -4475,6 +4475,22 @@ lane_open() {
       echo "lane-open: removed the replaced run's $dir"
     fi
   fi
+  # The remote-tracking refs a worktree starts from are read after origin's
+  # own answer: its main fetched, and the ref of BRANCH fetched, or removed
+  # when origin holds no such branch, so a ref a stage planted in an earlier
+  # check seeds nothing. An unreachable origin leaves them, with a note.
+  if [ -z "${BASE:-}" ] && git remote get-url origin > /dev/null 2>&1; then
+    if remote_branch=$(GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1 GIT_TERMINAL_PROMPT=0 bounded git -c core.hooksPath=/dev/null ls-remote origin "refs/heads/$branch" 2>/dev/null) &&
+        pinned_git fetch -q --no-tags --refmap= origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null; then
+      if [ -z "$remote_branch" ]; then
+        git update-ref -d "refs/remotes/origin/$branch" 2>/dev/null || :
+      else
+        pinned_git fetch -q --no-tags --refmap= origin "+refs/heads/$branch:refs/remotes/origin/$branch" 2>/dev/null || :
+      fi
+    else
+      echo "lane-open: origin could not be read; its remote-tracking refs are used as they stand" >&2
+    fi
+  fi
   if [ ! -e "$dir" ]; then
     mkdir -p tmp
     if git show-ref -q --verify "refs/heads/$branch"; then
