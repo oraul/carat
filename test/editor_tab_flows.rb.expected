@@ -1,25 +1,25 @@
 ok   l from the explorer onto the startup buffer, then a new and a listed file, step 1: <Space>e
-ok   l from the explorer onto the startup buffer, then a new and a listed file, step 2: 3Gl
-ok   l from the explorer onto the startup buffer, then a new and a listed file, step 3: <Space>e4Gl
-ok   l from the explorer onto the startup buffer, then a new and a listed file, step 4: <Space>e3Gl
+ok   l from the explorer onto the startup buffer, then a new and a listed file, step 2: 2Gl
+ok   l from the explorer onto the startup buffer, then a new and a listed file, step 3: <Space>e3Gl
+ok   l from the explorer onto the startup buffer, then a new and a listed file, step 4: <Space>e2Gl
 ok   l from the explorer onto the startup buffer, then a new and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   Enter from the explorer onto the startup buffer and a listed file, step 1: <Space>e3G<CR>
-ok   Enter from the explorer onto the startup buffer and a listed file, step 2: <Space>e4G<CR>
-ok   Enter from the explorer onto the startup buffer and a listed file, step 3: <Space>e3G<CR>
+ok   Enter from the explorer onto the startup buffer and a listed file, step 1: <Space>e2G<CR>
+ok   Enter from the explorer onto the startup buffer and a listed file, step 2: <Space>e3G<CR>
+ok   Enter from the explorer onto the startup buffer and a listed file, step 3: <Space>e2G<CR>
 ok   Enter from the explorer onto the startup buffer and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   s and v from the explorer, each split closed with Ctrl-W q, step 1: <Space>e3Gl
-ok   s and v from the explorer, each split closed with Ctrl-W q, step 2: <Space>e4Gs
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 1: <Space>e2Gl
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 2: <Space>e3Gs
 ok   s and v from the explorer, each split closed with Ctrl-W q, step 3: <C-w>q
-ok   s and v from the explorer, each split closed with Ctrl-W q, step 4: <Space>e4Gv
+ok   s and v from the explorer, each split closed with Ctrl-W q, step 4: <Space>e3Gv
 ok   s and v from the explorer, each split closed with Ctrl-W q, step 5: <C-w>q
 ok   s and v from the explorer, each split closed with Ctrl-W q: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 1: <Space>e3Gt
-ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 2: <Space>e4Gt
-ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 3: <Space>e3Gt
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 1: <Space>e2Gt
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 2: <Space>e3Gt
+ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 3: <Space>e2Gt
 ok   t from the explorer onto the startup buffer, a new file, and a listed file, step 4: gT
 ok   t from the explorer onto the startup buffer, a new file, and a listed file: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   t from the explorer into a directory's file, step 1: <Space>e2Gl3Gt
-ok   t from the explorer into a directory's file, step 2: <Space>e5Gt
+ok   t from the explorer into a directory's file, step 1: <Space>e1Gl2Gt
+ok   t from the explorer into a directory's file, step 2: <Space>e4Gt
 ok   t from the explorer into a directory's file: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   :e, :sp, and :vs from the file window, step 1: :e alpha.txt<CR>
 ok   :e, :sp, and :vs from the file window, step 2: :e beta.txt<CR>
@@ -102,17 +102,17 @@ ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 4: <C-w>q
 ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 5: :q<CR>
 ok   :tabc and Ctrl-W q in a split down to the editor quitting, step 6: :q<CR>
 ok   :tabc and Ctrl-W q in a split down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   closing beside the explorer and toggling it down to the editor quitting, step 1: <Space>e3Gt
-ok   closing beside the explorer and toggling it down to the editor quitting, step 2: <Space>e4Gt
+ok   closing beside the explorer and toggling it down to the editor quitting, step 1: <Space>e2Gt
+ok   closing beside the explorer and toggling it down to the editor quitting, step 2: <Space>e3Gt
 ok   closing beside the explorer and toggling it down to the editor quitting, step 3: :q<CR>
-ok   closing beside the explorer and toggling it down to the editor quitting, step 4: <Space>e4Gt
+ok   closing beside the explorer and toggling it down to the editor quitting, step 4: <Space>e3Gt
 ok   closing beside the explorer and toggling it down to the editor quitting, step 5: :bd<CR>
 ok   closing beside the explorer and toggling it down to the editor quitting, step 6: <Space>e
 ok   closing beside the explorer and toggling it down to the editor quitting, step 7: <Space>e
 ok   closing beside the explorer and toggling it down to the editor quitting, step 8: :q<CR>
 ok   closing beside the explorer and toggling it down to the editor quitting: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 1: <Space>e
-ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 2: jj
+ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 2: j
 ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 3: t
 ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 4: gT
 ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 5: :bd<CR>
@@ -120,38 +120,38 @@ ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 
 ok   the user's case D: gT from the explorer after :bd keeps the explorer, step 7: gT
 ok   the user's case D: gT from the explorer after :bd keeps the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 1: <Space>e
-ok   the user's case A: t opens buffer tabs that gt and gT move between, step 2: jjt
+ok   the user's case A: t opens buffer tabs that gt and gT move between, step 2: jt
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 3: <Space>ejt
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 4: gt
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 5: gT
 ok   the user's case A: t opens buffer tabs that gt and gT move between, step 6: <Space>egt
 ok   the user's case A: t opens buffer tabs that gt and gT move between: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   t from a lone tree opens a file window, step 1: <Space>e<C-w>l<C-w>c
-ok   t from a lone tree opens a file window, step 2: 3Gt
-ok   t from a lone tree opens a file window, step 3: <Space>e4Gt
+ok   t from a lone tree opens a file window, step 2: 2Gt
+ok   t from a lone tree opens a file window, step 3: <Space>e3Gt
 ok   t from a lone tree opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   t from a lone tree under tab pages opens a file window, step 1: <Space>e3Gl<C-w>c
-ok   t from a lone tree under tab pages opens a file window, step 2: 4Gt
-ok   t from a lone tree under tab pages opens a file window, step 3: <Space>e3Gt
+ok   t from a lone tree under tab pages opens a file window, step 1: <Space>e2Gl<C-w>c
+ok   t from a lone tree under tab pages opens a file window, step 2: 3Gt
+ok   t from a lone tree under tab pages opens a file window, step 3: <Space>e2Gt
 ok   t from a lone tree under tab pages opens a file window: ends with no [No Name] beside a file and no tab page of only the explorer
 ok   Ctrl-T from a lone tree, step 1: <Space>e<C-w>l<C-w>c
 ok   Ctrl-T from a lone tree, step 2: <C-p>beta<C-t>
 ok   Ctrl-T from a lone tree: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   Ctrl-T from a lone tree under tab pages, step 1: <Space>e3Gl<C-w>c
+ok   Ctrl-T from a lone tree under tab pages, step 1: <Space>e2Gl<C-w>c
 ok   Ctrl-T from a lone tree under tab pages, step 2: <C-p>beta<C-t>
 ok   Ctrl-T from a lone tree under tab pages: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   Ctrl-T opens a buffer tab beside the explorer, step 1: <Space>e3Gl
+ok   Ctrl-T opens a buffer tab beside the explorer, step 1: <Space>e2Gl
 ok   Ctrl-T opens a buffer tab beside the explorer, step 2: <C-p>beta<C-t>
 ok   Ctrl-T opens a buffer tab beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   Ctrl-T opens it in a tab page beside the explorer, step 1: <Space>e3Gl
+ok   Ctrl-T opens it in a tab page beside the explorer, step 1: <Space>e2Gl
 ok   Ctrl-T opens it in a tab page beside the explorer, step 2: <C-p>beta<C-t>
 ok   Ctrl-T opens it in a tab page beside the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   tab pages: opening with l, s, v, and t, step 1: <Space>e3Gl
-ok   tab pages: opening with l, s, v, and t, step 2: <Space>e4Gs
+ok   tab pages: opening with l, s, v, and t, step 1: <Space>e2Gl
+ok   tab pages: opening with l, s, v, and t, step 2: <Space>e3Gs
 ok   tab pages: opening with l, s, v, and t, step 3: <C-w>q
-ok   tab pages: opening with l, s, v, and t, step 4: <Space>e4Gv
+ok   tab pages: opening with l, s, v, and t, step 4: <Space>e3Gv
 ok   tab pages: opening with l, s, v, and t, step 5: <C-w>q
-ok   tab pages: opening with l, s, v, and t, step 6: <Space>e4Gt
+ok   tab pages: opening with l, s, v, and t, step 6: <Space>e3Gt
 ok   tab pages: opening with l, s, v, and t, step 7: :tabe alpha.txt<CR>
 ok   tab pages: opening with l, s, v, and t, step 8: :tabe<CR>
 ok   tab pages: opening with l, s, v, and t, step 9: :tabc<CR>
@@ -169,8 +169,8 @@ ok   tab pages: moving from a file window and from the explorer, step 9: 1gt
 ok   tab pages: moving from a file window and from the explorer, step 10: :bn<CR>
 ok   tab pages: moving from a file window and from the explorer, step 11: <Space>e:bp<CR>
 ok   tab pages: moving from a file window and from the explorer: ends with no [No Name] beside a file and no tab page of only the explorer
-ok   tab pages: closing down to the editor quitting, step 1: <Space>e3Gl
-ok   tab pages: closing down to the editor quitting, step 2: <Space>e4Gt
+ok   tab pages: closing down to the editor quitting, step 1: <Space>e2Gl
+ok   tab pages: closing down to the editor quitting, step 2: <Space>e3Gt
 ok   tab pages: closing down to the editor quitting, step 3: :tabc<CR>
 ok   tab pages: closing down to the editor quitting, step 4: <C-w>l:e beta.txt<CR>
 ok   tab pages: closing down to the editor quitting, step 5: :bd<CR>

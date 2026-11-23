@@ -1,6 +1,7 @@
-ok   the root, then directories, then files, each sorted ignoring case
+ok   the root's entries, directories then files, each sorted ignoring case, no line for the root
+ok   the first node is the root's first entry, at depth 0
 ok   an expanded directory lists its entries two spaces deeper
-ok   rows and parents
+ok   rows and parents: a top-level entry has none, the root has no row
 ok   collapsing hides the entries again
 ok   toggle expands a collapsed directory
 ok   hidden entries show when toggled, ignored ones never
@@ -10,7 +11,7 @@ ok   every directory above it is expanded and its line marked
 ok   the marked row
 ok   a rename moves the expanded set and the mark
 ok   the parent as root keeps the old root expanded
-ok   a directory as root
+ok   a directory as root starts at its entries
 ok   a link uses the symlink icon
 ok   a link to a directory still sorts and expands as one
 ok   ruby
@@ -34,4 +35,4 @@ ok   symlink
 ok   ascii
 ok   unicode
 ok   nerd
-plugins_explorer: 36 passed, 0 failed
+plugins_explorer: 37 passed, 0 failed

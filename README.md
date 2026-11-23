@@ -147,9 +147,9 @@ Each tab page has a left and a right sidebar and a bottom panel. A plugin's view
 
 With two or more file windows each shows a winbar on its first row: its file's path and, when the language server offers document symbols, the class and method the cursor is in, as `a.rb › Foo › bar` (`a.rb > Foo > bar` under `option.icons ascii`), the path and the outer names dimmed and the innermost name, or the path when there is none, on the accent the selected buffer tab shares in the current window. `option.breadcrumbs always` shows it on a single window too and `never` turns it off. The selected buffer tab reads by its accent background and bold, with no gem. Every tab ends in a thin `│` (`|`).
 
-`<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in the left sidebar, 30 columns wide, rooted at the directory you started Carat in, with the current file revealed and marked; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
+`<leader>e` (Space, then `e`) or `:Explorer` opens a file tree in the left sidebar, 30 columns wide, rooted at the directory you started Carat in (the tab row above names it, so the tree starts at its entries), with the current file revealed and its row drawn as a full-width highlight with a bar at its left edge; the same key focuses the tree when it is open and closes it when it is focused. `:ExplorerFind` reveals the current file in the tree. Inside the tree:
 
-- `<CR>` or `l` opens a file in the window you came from; on a directory `<CR>` and `o` toggle it, `l` expands it, and `h` collapses it or goes to the parent.
+- `<CR>` or `l` opens a file in the window you came from; on a directory `<CR>` and `o` toggle it, `l` expands it, and `h` collapses it or goes to the parent (a top-level entry has none).
 - `s`, `v`, and `t` open the file in a horizontal split, a vertical split, or a new tab page.
 - `a` creates a file next to the entry, or a directory when the name ends with `/`; `r` renames; `d` deletes a file or an empty directory after asking `y` or `n`. The name is typed on the command line, Enter confirms, Escape cancels.
 - `R` refreshes, `H` shows dot files, `-` moves the root up, `C` makes the directory under the cursor the root, `q` closes the tree, and `?` shows these keys.

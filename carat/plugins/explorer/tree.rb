@@ -107,12 +107,12 @@ module Carat
           @marked = to + @marked[from.length, @marked.length - from.length] if @marked == from || @marked.start_with?(from + "/")
         end
 
-        # Lists the root and every expanded directory below it again.
+        # Lists the entries of the root and of every expanded directory
+        # below it again; the root has no line, the tab row names it.
         #: (PluginApi::Host) -> void
         def build(host)
           @nodes = []
-          @nodes << Node.new(path: @root, name: PluginApi::Paths.basename(@root), depth: 0, directory: true, symlink: false)
-          walk(host, @root, 1)
+          walk(host, @root, 0)
         end
 
         #: () -> Integer
@@ -143,12 +143,12 @@ module Carat
           -1
         end
 
-        # The row of the directory holding the entry on row, the root's row
-        # for a top-level entry, -1 for the root itself.
+        # The row of the directory holding the entry on row, -1 for a
+        # top-level entry, whose directory is the root, which has no row.
         #: (Integer) -> Integer
         def parent_row(row)
           n = at(row)
-          return -1 if n.nil? || n.root?
+          return -1 if n.nil? || n.depth == 0
           row_of(PluginApi::Paths.dirname(n.path))
         end
 
@@ -160,7 +160,8 @@ module Carat
         end
 
         # The lines: a marker column holding the current icon on the marked
-        # entry, two spaces per level, the icon, a space, and the name.
+        # entry, two spaces per level below the first, the icon, a space,
+        # and the name.
         #: (PluginApi::Host) -> Array[String]
         def lines(host)
           out = []

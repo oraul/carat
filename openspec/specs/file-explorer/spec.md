@@ -40,15 +40,19 @@ The `explorer` plugin SHALL be compiled into the editor and enabled by the shipp
 - **THEN** the tree window is at the right edge
 
 ### Requirement: The tree lists the root and its entries in order
-The first line SHALL be the open folder icon and the name of the root, which is the working directory when the tree first opens. Each entry of an expanded directory SHALL follow it on its own line, indented two spaces per level below the root, as the entry's icon, a space, and its name; directories SHALL come before files, and each group SHALL be sorted by name ignoring case. Every line SHALL start with a one-cell marker column.
+The root, which is the working directory when the tree first opens, SHALL have no line of its own, the tab row's head naming it: the first line SHALL be the first entry of the root. Each entry SHALL be on its own line, indented two spaces per level below the root's entries, as the entry's icon, a space, and its name; directories SHALL come before files, and each group SHALL be sorted by name ignoring case. Every line SHALL start with a one-cell marker column.
 
 #### Scenario: Top level
 - **WHEN** the working directory "proj" holds "b.rb", "Lib/", "a.md", and "docs/", and the tree is opened with the ascii icon set
-- **THEN** the lines are " - proj", "   + docs", "   + Lib", "   m a.md", and "   r b.rb"
+- **THEN** the lines are " + docs", " + Lib", " m a.md", and " r b.rb"
 
 #### Scenario: Nested
 - **WHEN** "docs" is expanded and holds "guide.md"
-- **THEN** the line after "   - docs" is "     m guide.md"
+- **THEN** the line after " - docs" is "   m guide.md"
+
+#### Scenario: The tree starts at the root's entries
+- **WHEN** the tree is opened on "proj" holding "docs/" and "a.md" with the unicode icon set
+- **THEN** the head above the tree names "proj", the first tree row is " ▸ docs", and no line of the tree is the root
 
 ### Requirement: Hidden and ignored entries are filtered
 Entries whose name starts with "." SHALL be hidden unless the `show_hidden` option is true or `H` toggled them on, and entries whose name is in the `ignore` option SHALL never be shown. `H` SHALL toggle hidden entries and redraw the tree.
@@ -66,7 +70,7 @@ Each line SHALL use the configured icon set: folder_closed or folder_open for a 
 
 #### Scenario: Unicode set
 - **WHEN** the icons option is "unicode" and the root holds "a.rb" and "src/"
-- **THEN** the lines are " ▾ proj", "   ▸ src", and "   ◈ a.rb"
+- **THEN** the lines are " ▸ src" and " ◈ a.rb"
 
 #### Scenario: Nerd set
 - **WHEN** the icons option is "nerd" and the root holds "Makefile"
@@ -77,18 +81,26 @@ Each line SHALL use the configured icon set: folder_closed or folder_open for a 
 - **THEN** its line uses the symlink icon
 
 ### Requirement: The current file is marked and revealed
-The line of the file shown in the current window SHALL carry the `current` icon in the marker column, and the directories between the root and that file SHALL be expanded, when the tree opens and whenever another file becomes current. A file outside the root, an unnamed buffer, or a plugin window SHALL change nothing.
+The line of the file shown in the current window SHALL carry the `current` icon, the bar, in the marker column and SHALL be the current row, drawn as a full-width highlight (the host's `mark_scratch_row`) with the bar in its marker cell, and the directories between the root and that file SHALL be expanded, when the tree opens and whenever another file becomes current. A file outside the root, an unnamed buffer, or a plugin window SHALL change nothing.
 
 #### Scenario: Revealed on open
 - **WHEN** the editor shows "lib/deep/x.rb" and the tree is opened with the ascii set
-- **THEN** "lib" and "deep" are expanded, the line of "x.rb" starts with ">", and the tree's cursor is on it
+- **THEN** "lib" and "deep" are expanded, the line of "x.rb" starts with "|", and the tree's cursor is on it
 
 #### Scenario: Follows another file
 - **WHEN** the tree is open and ":e docs/guide.md" is run in the file window
 - **THEN** "docs" is expanded and the line of "guide.md" is marked
 
+#### Scenario: The current row is a full-width highlight
+- **WHEN** the tree is open with the unicode icon set and "a.md" is the current file
+- **THEN** the cells of the "a.md" row across the window are in the selection fill, the first holds "▎" in the bar's group, and the other rows are not
+
+#### Scenario: The highlight follows the current file
+- **WHEN** ":e b.rb" is run in the file window
+- **THEN** the highlight and the bar are on the "b.rb" row and the "a.md" row has neither
+
 ### Requirement: Enter toggles a directory and l expands one, both open a file
-`<CR>` and `l` on a file SHALL show it in the previously used window that shows a file, or the first such window in layout order, make that window current, and show the opened message; when no window of the tab page shows a file, it SHALL be shown in a new window beside the tree, which keeps its width. On a collapsed directory both SHALL expand it; on an expanded one `<CR>` SHALL collapse it and `l` SHALL leave it expanded. `o` SHALL act as `<CR>`. On the root line all three SHALL do nothing.
+`<CR>` and `l` on a file SHALL show it in the previously used window that shows a file, or the first such window in layout order, make that window current, and show the opened message; when no window of the tab page shows a file, it SHALL be shown in a new window beside the tree, which keeps its width. On a collapsed directory both SHALL expand it; on an expanded one `<CR>` SHALL collapse it and `l` SHALL leave it expanded. `o` SHALL act as `<CR>`.
 
 #### Scenario: Open a file
 - **WHEN** the cursor in the tree is on "b.rb" and `<CR>` is pressed
@@ -111,7 +123,7 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** there are two windows, the tree is 30 columns wide, and the other window shows "b.rb"
 
 ### Requirement: h collapses or moves to the parent
-`h` on an expanded directory SHALL collapse it and keep the cursor on its line; on a file or a collapsed directory it SHALL move the cursor to the line of its parent directory; on the root line it SHALL do nothing.
+`h` on an expanded directory SHALL collapse it and keep the cursor on its line; on a file or a collapsed directory it SHALL move the cursor to the line of its parent directory; on a top-level entry, whose directory is the root, it SHALL do nothing.
 
 #### Scenario: Collapse
 - **WHEN** "docs" is expanded and `h` is pressed on it
@@ -124,6 +136,10 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 #### Scenario: Parent of a collapsed directory
 - **WHEN** "lib" is expanded, the cursor is on the collapsed "deep" inside it, and `h` is pressed
 - **THEN** the cursor is on the line of "lib" and "deep" stays collapsed
+
+#### Scenario: Top-level entry
+- **WHEN** the cursor is on a top-level entry and `h` is pressed
+- **THEN** the cursor and the tree are unchanged
 
 ### Requirement: Files open in splits and tab pages
 `s` and `v` on a file SHALL open it in a new window split horizontally or vertically from the previously used file window. `t` SHALL open it as the tab the top row shows: under `option.gt buffers` a buffer tab in that file window, the focus in it and the tree kept, under `option.gt tabpages` a new tab page, and with no file window beside the tree a file window as `l` opens. On a directory they SHALL do nothing. A name holding a space or a `|` SHALL open as it is named.
@@ -165,10 +181,10 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** there are two tab pages and the current one shows "a|b.md" with its text
 
 ### Requirement: a creates a file or a directory
-`a` SHALL prompt for a name in the command-line row and create, under the directory of the entry under the cursor (the entry itself when it is a directory, the root on the root line), an empty file, or a directory when the name ends with "/"; the tree SHALL be redrawn with that directory expanded and the cursor on the new entry. An empty name, Escape, or a refusal from the host SHALL create nothing, a refusal showing its message as an error.
+`a` SHALL prompt for a name in the command-line row and create, under the directory of the entry under the cursor (the entry itself when it is a directory, else its directory, the root for a top-level file), an empty file, or a directory when the name ends with "/"; the tree SHALL be redrawn with that directory expanded and the cursor on the new entry. An empty name, Escape, or a refusal from the host SHALL create nothing, a refusal showing its message as an error.
 
 #### Scenario: Create a file
-- **WHEN** `a` is pressed on the root line and "new.rb" Enter is typed
+- **WHEN** `a` is pressed on the top-level file "a.md" and "new.rb" Enter is typed
 - **THEN** "new.rb" exists on disk and is listed
 
 #### Scenario: Create a directory
@@ -184,7 +200,7 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** the message row shows "Already exists: b.rb" as an error
 
 ### Requirement: r renames an entry
-`r` SHALL prompt for a new name with the current name as the initial text and rename the entry in its directory; an open buffer of the renamed file SHALL show the new path. A name with a path separator, an empty name, an existing name, or the root line SHALL be refused with a message.
+`r` SHALL prompt for a new name with the current name as the initial text and rename the entry in its directory; an open buffer of the renamed file SHALL show the new path. A name with a path separator, an empty name, or an existing name SHALL be refused with a message.
 
 #### Scenario: Rename an open file
 - **WHEN** "b.rb" is open in the file window and `r` is pressed on it, the text is cleared, and "c.rb" Enter is typed
@@ -218,11 +234,11 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 
 #### Scenario: Up
 - **WHEN** the root is "/home/ada/proj" and `-` is pressed
-- **THEN** the first line names "ada" and "proj" is listed expanded
+- **THEN** the first line is "proj", listed expanded, with its entries below it
 
 #### Scenario: Into a directory
 - **WHEN** `C` is pressed on "docs"
-- **THEN** the first line names "docs"
+- **THEN** the first line is the first entry of "docs"
 
 ### Requirement: Refresh, close, and help
 `R` SHALL list the directories again from disk, `q` SHALL close the tree window, and `?` SHALL show a one-line summary of the tree's keys in the message row. Every other key SHALL fall through to the normal keymap, so `j`, `k`, `gg`, and `G` move the cursor in the tree.
@@ -240,8 +256,8 @@ The line of the file shown in the current window SHALL carry the `current` icon 
 - **THEN** the message row starts with "<CR>/o toggle"
 
 #### Scenario: Movement falls through
-- **WHEN** `j` is pressed on the root line
-- **THEN** the cursor is on row 1 of the tree
+- **WHEN** `j` is pressed on the first row
+- **THEN** the cursor is on the second row of the tree
 
 ### Requirement: ExplorerFind reveals the current file
 `:ExplorerFind` SHALL open the tree when it is not shown, reveal and mark the current file, make the tree current, and put its cursor on that file's line.

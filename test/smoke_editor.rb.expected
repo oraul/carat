@@ -32,7 +32,7 @@ ok   <C-w>, a pause past timeoutlen, and l move to the right window, under its w
 ok   the editor exits with status 0 after the slow window move
 ok   the editor drew its first frame for the tree check
 ok   <leader>e opens the tree, titled explorer
-ok   the tree's root line has the open folder icon
+ok   the tree starts at the root's entries: its first rows are the closed folders, with no open root folder
 ok   the editor exits with status 0 after :q in the file window beside the tree
 ok   quitting beside the tree restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the page check

@@ -837,6 +837,27 @@ module AdaptersFramePresenterTest
     t.assert_equal([D::Highlight::CURSOR_LINE_LAYER + D::Highlight::NORMAL, side_layer + D::Highlight::NORMAL], [f.cell(0, 5).hl, f.cell(3, 0).hl], "the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's")
     s.options.cursorline = false
     f = draw(s, 6, 40)
+    # Scenario: The current row is a full-width highlight (a plugin's marked
+    # scratch row). The row is PmenuSel across the 12 cells of the window on
+    # the sidebar's layer with PmenuMarkSel in the first, the cursor-line
+    # layer under it; the next frame after the mark moves repaints the two
+    # rows; Scenario: Under NO_COLOR only the bar is drawn.
+    scratch.marked_row = 0
+    f = draw(s, 6, 40)
+    t.assert_equal([side_layer + D::Highlight::POPUP_MENU_MARK_SELECTED, side_layer + D::Highlight::POPUP_MENU_SELECTED, side_layer + D::Highlight::POPUP_MENU_SELECTED, D::Highlight::LINE_NUMBER], [f.cell(0, 0).hl, f.cell(0, 5).hl, f.cell(0, 11).hl, f.cell(0, 13).hl], "the marked row is a full-width highlight with the bar in its first cell, ending at the window's edge")
+    s.options.cursorline = true
+    f = draw(s, 6, 40)
+    t.assert_equal([side_layer + D::Highlight::POPUP_MENU_MARK_SELECTED, side_layer + D::Highlight::POPUP_MENU_SELECTED], [f.cell(0, 0).hl, f.cell(0, 5).hl], "the highlight wins over the cursor-line layer")
+    s.options.cursorline = false
+    scratch.marked_row = -1
+    f = draw(s, 6, 40)
+    t.assert_equal([side_layer + D::Highlight::SIGN_COLUMN, side_layer + D::Highlight::NORMAL], [f.cell(0, 0).hl, f.cell(0, 5).hl], "clearing the mark repaints the row plain, its sign cell as it was")
+    P.plain = true
+    scratch.marked_row = 0
+    f = draw(s, 6, 40)
+    t.assert_equal([side_layer + D::Highlight::POPUP_MENU_MARK_SELECTED, side_layer + D::Highlight::NORMAL], [f.cell(0, 0).hl, f.cell(0, 5).hl], "Under NO_COLOR only the bar is drawn")
+    P.plain = false
+    scratch.marked_row = -1
     s.tab.layout.split(0, true, 0, 5)
     f = draw(s, 6, 40)
     t.assert_equal([["\u2502"], " ", side_layer + D::Highlight::NORMAL], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl], "two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell")

@@ -68,21 +68,23 @@ module PluginsExplorerTest
   def self.main
     t = Carat::Testing.new("plugins_explorer")
 
+    # Scenarios: Top level and Nested.
     files = disk
     host = FakeHost.new(files, "ascii")
     tree = tree_over(files)
     tree.build(host)
-    t.assert_equal([" - proj", "   + docs", "   + Lib", "   m a.md", "   r b.rb", "   M Makefile"], tree.lines(host), "the root, then directories, then files, each sorted ignoring case")
+    t.assert_equal([" + docs", " + Lib", " m a.md", " r b.rb", " M Makefile"], tree.lines(host), "the root's entries, directories then files, each sorted ignoring case, no line for the root")
+    t.assert_equal(["docs", 0], [tree.node(0).name, tree.node(0).depth], "the first node is the root's first entry, at depth 0")
     tree.expand("/home/ada/proj/docs")
     tree.build(host)
-    t.assert_equal([" - proj", "   - docs", "     + deep", "     m guide.md", "   + Lib", "   m a.md", "   r b.rb", "   M Makefile"], tree.lines(host), "an expanded directory lists its entries two spaces deeper")
-    t.assert_equal([1, 0, 1, -1], [tree.row_of("/home/ada/proj/docs"), tree.parent_row(1), tree.parent_row(3), tree.parent_row(0)], "rows and parents")
+    t.assert_equal([" - docs", "   + deep", "   m guide.md", " + Lib", " m a.md", " r b.rb", " M Makefile"], tree.lines(host), "an expanded directory lists its entries two spaces deeper")
+    t.assert_equal([0, 0, 0, -1, -1], [tree.row_of("/home/ada/proj/docs"), tree.parent_row(1), tree.parent_row(2), tree.parent_row(0), tree.parent_row(3)], "rows and parents: a top-level entry has none, the root has no row")
     tree.collapse("/home/ada/proj/docs")
     tree.build(host)
-    t.assert_equal(6, tree.count, "collapsing hides the entries again")
+    t.assert_equal(5, tree.count, "collapsing hides the entries again")
     tree.toggle("/home/ada/proj/Lib")
     tree.build(host)
-    t.assert_equal("     c z.c", tree.node(3).depth == 2 ? tree.lines(host)[3] : "", "toggle expands a collapsed directory")
+    t.assert_equal("   c z.c", tree.node(2).depth == 1 ? tree.lines(host)[2] : "", "toggle expands a collapsed directory")
 
     # Hidden and ignored entries.
     tree = tree_over(files)
@@ -94,7 +96,7 @@ module PluginsExplorerTest
       names << tree.node(i).name
       i += 1
     end
-    t.assert_equal(["proj", "docs", "Lib", ".env", "a.md", "b.rb", "Makefile"], names, "hidden entries show when toggled, ignored ones never")
+    t.assert_equal(["docs", "Lib", ".env", "a.md", "b.rb", "Makefile"], names, "hidden entries show when toggled, ignored ones never")
 
     # Reveal and the marker.
     tree = tree_over(files)
@@ -102,8 +104,8 @@ module PluginsExplorerTest
     t.assert_equal(true, tree.reveal("/home/ada/proj/docs/deep/x.rb"), "a path inside the root is revealed")
     tree.mark("/home/ada/proj/docs/deep/x.rb")
     tree.build(host)
-    t.assert_equal(">      r x.rb", tree.lines(host)[3], "every directory above it is expanded and its line marked")
-    t.assert_equal(3, tree.row_of(tree.marked), "the marked row")
+    t.assert_equal("|    r x.rb", tree.lines(host)[2], "every directory above it is expanded and its line marked")
+    t.assert_equal(2, tree.row_of(tree.marked), "the marked row")
 
     # Renames move the expanded directories and the mark.
     tree.moved("/home/ada/proj/docs", "/home/ada/proj/doc")
@@ -114,10 +116,10 @@ module PluginsExplorerTest
     tree.reroot("/home/ada")
     tree.expand("/home/ada/proj")
     tree.build(host)
-    t.assert_equal([" - ada", "   - proj", "     + docs"], tree.lines(host)[0, 3], "the parent as root keeps the old root expanded")
+    t.assert_equal([" - proj", "   + docs", "   + Lib"], tree.lines(host)[0, 3], "the parent as root keeps the old root expanded")
     tree.reroot("/home/ada/proj/docs")
     tree.build(host)
-    t.assert_equal(" - docs", tree.lines(host)[0], "a directory as root")
+    t.assert_equal(" + deep", tree.lines(host)[0], "a directory as root starts at its entries")
 
     # Symbolic links.
     files = disk
@@ -125,8 +127,8 @@ module PluginsExplorerTest
     files.link("b.rb")
     tree = tree_over(files)
     tree.build(host = FakeHost.new(files, "ascii"))
-    t.assert_equal(["   ~ docs", "   ~ b.rb"], [tree.lines(host)[1], tree.lines(host)[4]], "a link uses the symlink icon")
-    t.assert_equal(true, tree.node(1).directory, "a link to a directory still sorts and expands as one")
+    t.assert_equal([" ~ docs", " ~ b.rb"], [tree.lines(host)[0], tree.lines(host)[3]], "a link uses the symlink icon")
+    t.assert_equal(true, tree.node(0).directory, "a link to a directory still sorts and expands as one")
 
     # Icon names: rows are [label, name, directory, expanded, symlink, icon].
     t.cases([
@@ -155,15 +157,15 @@ module PluginsExplorerTest
     # The same tree in every icon set.
     files = disk
     t.table([
-      ["ascii", "ascii", [" - proj", "   + docs", "   r b.rb", "   M Makefile"]],
-      ["unicode", "unicode", [" ▾ proj", "   ▸ docs", "   ◈ b.rb", "   ▤ Makefile"]],
-      ["nerd", "nerd", [" \u{F07C} proj", "   \u{F07B} docs", "   \u{E791} b.rb", "   \u{E779} Makefile"]]
+      ["ascii", "ascii", [" + docs", " r b.rb", " M Makefile"]],
+      ["unicode", "unicode", [" ▸ docs", " ◈ b.rb", " ▤ Makefile"]],
+      ["nerd", "nerd", [" \u{F07B} docs", " \u{E791} b.rb", " \u{E779} Makefile"]]
     ]) do |set|
       h = FakeHost.new(files, set)
       tr = tree_over(files)
       tr.build(h)
       all = tr.lines(h)
-      [all[0], all[1], all[4], all[5]]
+      [all[0], all[3], all[4]]
     end
 
     t.finish

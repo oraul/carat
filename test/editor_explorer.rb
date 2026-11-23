@@ -98,11 +98,11 @@ module EditorExplorerTest
     out
   end
 
-  TREE = [" - proj", "   + docs", "   + lib", ">  m a.md", "   r b.rb"]
+  TREE = [" + docs", " + lib", "|m a.md", " r b.rb"]
   OPEN = [[0, 30, "explorer"], [31, 49, "a.md"]]
-  DOCS = [" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"]
-  LIB = [" - proj", "   + docs", "   - lib", "     + deep", ">  m a.md", "   r b.rb"]
-  DEEP = [" - proj", "   + docs", "   - lib", "     - deep", "       r x.rb", ">  m a.md", "   r b.rb"]
+  DOCS = [" - docs", "   m guide.md", " + lib", "|m a.md", " r b.rb"]
+  LIB = [" + docs", " - lib", "   + deep", "|m a.md", " r b.rb"]
+  DEEP = [" + docs", " - lib", "   - deep", "     r x.rb", "|m a.md", " r b.rb"]
 
   def self.main
     t = Carat::Testing.new("editor_explorer")
@@ -110,21 +110,21 @@ module EditorExplorerTest
     # Opening, focusing, and closing: rows are [label, keys, [windows, current
     # window, cursor]].
     t.table([
-      ["<leader>e opens the tree at the left, focused on the current file", " e", [OPEN, 1, [3, 0]]],
-      ["<leader>e from the file window focuses the tree", " e<C-w>l e", [OPEN, 1, [3, 0]]],
+      ["<leader>e opens the tree at the left, focused on the current file", " e", [OPEN, 1, [2, 0]]],
+      ["<leader>e from the file window focuses the tree", " e<C-w>l e", [OPEN, 1, [2, 0]]],
       ["<leader>e in the tree closes it", " e e", [[[0, 80, "a.md"]], 1, [0, 0]]],
-      [":Explorer opens the tree", ":Explorer<CR>", [OPEN, 1, [3, 0]]],
+      [":Explorer opens the tree", ":Explorer<CR>", [OPEN, 1, [2, 0]]],
       [":Explorer twice closes it", ":Explorer<CR>:Explorer<CR>", [[[0, 80, "a.md"]], 1, [0, 0]]],
       ["q closes the tree", " eq", [[[0, 80, "a.md"]], 1, [0, 0]]],
       [":q in the tree closes only the tree", " e:q<CR>", [[[0, 80, "a.md"]], 1, [0, 0]]],
       ["Ctrl-W l and h move out of the tree and back", " e<C-w>l", [OPEN, 2, [0, 0]]],
-      ["Ctrl-W h returns to the tree", " e<C-w>l<C-w>h", [OPEN, 1, [3, 0]]],
+      ["Ctrl-W h returns to the tree", " e<C-w>l<C-w>h", [OPEN, 1, [2, 0]]],
       ["Ctrl-W Ctrl-L leaves the tree", " e<C-w><C-l>", [OPEN, 2, [0, 0]]],
-      ["Ctrl-W Ctrl-H returns to the tree", " e<C-w><C-l><C-w><C-h>", [OPEN, 1, [3, 0]]],
-      ["a count before Ctrl-W Ctrl-W picks the tree from the file window", " e<C-w><C-l>1<C-w><C-w>", [OPEN, 1, [3, 0]]],
+      ["Ctrl-W Ctrl-H returns to the tree", " e<C-w><C-l><C-w><C-h>", [OPEN, 1, [2, 0]]],
+      ["a count before Ctrl-W Ctrl-W picks the tree from the file window", " e<C-w><C-l>1<C-w><C-w>", [OPEN, 1, [2, 0]]],
       ["Ctrl-W = leaves the tree's width alone", " e<C-w>l<C-w>v<C-w>=", [[[0, 30, "explorer"], [31, 24, "a.md"], [56, 24, "a.md"]], 2, [0, 0]]],
       ["j and k fall through to the normal keymap", " eggj", [OPEN, 1, [1, 0]]],
-      ["G falls through too", " eG", [OPEN, 1, [4, 0]]]
+      ["G falls through too", " eG", [OPEN, 1, [3, 0]]]
     ]) do |keys|
       h = session(keys)
       [shape(h), h.window_index, h.cursor]
@@ -135,26 +135,26 @@ module EditorExplorerTest
     # rows are [label, keys, [windows, current window, cursor, tree]].
     t.table([
       ["Ctrl-W, a pause, and l leave the tree", " e<C-w>|l", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W, a pause, and h return to the tree", " e<C-w>|l<C-w>|h", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W, a pause, and h return to the tree", " e<C-w>|l<C-w>|h", [OPEN, 1, [2, 0], TREE]],
       ["Ctrl-W w leaves the tree", " e<C-w>w", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W w twice cycles back to the tree", " e<C-w>w<C-w>|w", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W w twice cycles back to the tree", " e<C-w>w<C-w>|w", [OPEN, 1, [2, 0], TREE]],
       ["Ctrl-W W leaves the tree backwards, wrapping", " e<C-w>|W", [OPEN, 2, [0, 0], TREE]],
       ["Ctrl-W p goes back to the file window", " e<C-w>l<C-w>h<C-w>|p", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W p from the file window returns to the tree", " e<C-w>|l<C-w>|p", [OPEN, 1, [3, 0], TREE]],
-      ["a pause after the leader still opens the tree", " |e", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W p from the file window returns to the tree", " e<C-w>|l<C-w>|p", [OPEN, 1, [2, 0], TREE]],
+      ["a pause after the leader still opens the tree", " |e", [OPEN, 1, [2, 0], TREE]],
       ["Ctrl-W, a pause, and Ctrl-L leave the tree", " e<C-w>|<C-l>", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W, a pause, and Ctrl-H return to the tree", " e<C-w>|<C-l><C-w>|<C-h>", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W, a pause, and Ctrl-H return to the tree", " e<C-w>|<C-l><C-w>|<C-h>", [OPEN, 1, [2, 0], TREE]],
       ["Ctrl-W Ctrl-W leaves the tree", " e<C-w><C-w>", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W Ctrl-W twice cycles back to the tree", " e<C-w><C-w><C-w>|<C-w>", [OPEN, 1, [3, 0], TREE]],
+      ["Ctrl-W Ctrl-W twice cycles back to the tree", " e<C-w><C-w><C-w>|<C-w>", [OPEN, 1, [2, 0], TREE]],
       ["Ctrl-W Ctrl-P goes back to the file window", " e<C-w><C-l><C-w><C-h><C-w>|<C-p>", [OPEN, 2, [0, 0], TREE]],
-      ["Ctrl-W Ctrl-P from the file window returns to the tree", " e<C-w>|<C-l><C-w>|<C-p>", [OPEN, 1, [3, 0], TREE]]
+      ["Ctrl-W Ctrl-P from the file window returns to the tree", " e<C-w>|<C-l><C-w>|<C-p>", [OPEN, 1, [2, 0], TREE]]
     ]) do |keys|
       h = slow_session(keys.to_s)
       [shape(h), h.window_index, h.cursor, tree_lines(h)]
     end
 
     h = session(" e")
-    t.assert_equal(TREE, tree_lines(h), "the root, the directories, then the files, the current file marked")
+    t.assert_equal(TREE, tree_lines(h), "the directories, then the files, the current file marked")
     t.assert_equal(["explorer", "30"], [h.status_row[9, 8], h.plugins.option("explorer", "width")], "the status bar shows the tree's title and the width option is 30")
     h.type("<C-w>l:q<CR>")
     t.assert_equal(true, h.quit?, "quitting the last file window ends the editor with the tree open")
@@ -202,33 +202,41 @@ module EditorExplorerTest
     config = config_with("ascii", "plugin.explorer.show_hidden true\n")
     h = editor_on("a.md", config)
     h.type(" e")
-    t.assert_equal("   . .env", tree_lines(h)[3], "show_hidden lists dot files but not ignored names")
+    t.assert_equal(" . .env", tree_lines(h)[2], "show_hidden lists dot files but not ignored names")
 
     # Follow: the current file is revealed and marked.
     h = editor_on("lib/deep/x.rb", config_with("ascii", ""))
     h.type(" e")
-    t.assert_equal([[" - proj", "   + docs", "   - lib", "     - deep", ">      r x.rb", "   m a.md", "   r b.rb"], [4, 0]], [tree_lines(h), h.cursor], "the directories above the current file are expanded on open and the cursor is on it")
+    t.assert_equal([[" + docs", " - lib", "   - deep", "|    r x.rb", " m a.md", " r b.rb"], [3, 0]], [tree_lines(h), h.cursor], "the directories above the current file are expanded on open and the cursor is on it")
     h = session(" e<C-w>l:e docs/guide.md<CR>")
-    t.assert_equal([" - proj", "   - docs", ">    m guide.md", "   + lib", "   m a.md", "   r b.rb"], tree_lines(h), "the tree follows another file")
+    t.assert_equal([" - docs", "|  m guide.md", " + lib", " m a.md", " r b.rb"], tree_lines(h), "the tree follows another file")
     h.type(":e b.rb<CR>")
-    t.assert_equal(">  r b.rb", tree_lines(h)[5], "and the next one")
-    h = session(" e<C-w>l:e lib/deep/x.rb<CR><C-w>hggjjh<C-w>l:ExplorerFind<CR>")
-    t.assert_equal([1, [4, 0], "     - deep"], [h.window_index, h.cursor, tree_lines(h)[3]], ":ExplorerFind reveals the current file, focuses the tree, and puts the cursor on it")
+    t.assert_equal("|r b.rb", tree_lines(h)[4], "and the next one")
+    h = session(" e<C-w>l:e lib/deep/x.rb<CR><C-w>hggjh<C-w>l:ExplorerFind<CR>")
+    t.assert_equal([1, [3, 0], "   - deep"], [h.window_index, h.cursor, tree_lines(h)[2]], ":ExplorerFind reveals the current file, focuses the tree, and puts the cursor on it")
     h = session(":ExplorerFind<CR>")
-    t.assert_equal([1, [3, 0], 2], [h.window_index, h.cursor, h.window_count], ":ExplorerFind opens a closed tree")
+    t.assert_equal([1, [2, 0], 2], [h.window_index, h.cursor, h.window_count], ":ExplorerFind opens a closed tree")
 
+    # The scenarios of the explorer's requirements are proven by the tables
+    # of this file:
+    # Revealed on open: the follow rows above.
+    # Enter toggles a directory, Expand and collapse with o: the directory table.
+    # Only the tree is left, Parent of a collapsed directory: the opening and directory tables.
+    # Create a file, Create a directory, Prompt cancelled, Name taken: the create table.
+    # Rename an open file, Separator refused: the rename rows.
+    # Movement falls through: j and G in the first table.
     # Opening files and directories: rows are [label, keys, [windows, current
     # window, tab pages, current buffer, message]].
     t.table([
       ["Enter opens the file in the editing window", " ej<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["l opens it too", " ejl", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["o on a file opens it too", " ejo", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
-      ["Enter on a file in an expanded directory opens it", " eggj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "docs/guide.md"]], 2, 1, "docs/guide.md", "\"docs/guide.md\" 1L, 6B"]],
-      ["Enter on a file in a nested directory opens it", " eggjjlj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "lib/deep/x.rb"]], 2, 1, "lib/deep/x.rb", "\"lib/deep/x.rb\" 1L, 2B"]],
+      ["Enter on a file in an expanded directory opens it", " egg<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "docs/guide.md"]], 2, 1, "docs/guide.md", "\"docs/guide.md\" 1L, 6B"]],
+      ["Enter on a file in a nested directory opens it", " eggjlj<CR>j<CR>", [[[0, 30, "explorer"], [31, 49, "lib/deep/x.rb"]], 2, 1, "lib/deep/x.rb", "\"lib/deep/x.rb\" 1L, 2B"]],
       ["s opens it in a horizontal split", " ejs", [[[0, 30, "explorer"], [31, 49, "b.rb"], [31, 49, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["v opens it in a vertical split", " ejv", [[[0, 30, "explorer"], [31, 24, "b.rb"], [56, 24, "a.md"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
       ["t opens it as a buffer tab in the editing window", " ejt", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]],
-      ["s on a directory does nothing", " eggjs", [OPEN, 1, 1, "explorer", ""]],
+      ["s on a directory does nothing", " eggs", [OPEN, 1, 1, "explorer", ""]],
       ["with only the tree left the file gets a new window", " e<C-w>l<C-w>cj<CR>", [[[0, 30, "explorer"], [31, 49, "b.rb"]], 2, 1, "b.rb", "\"b.rb\" 1L, 7B"]]
     ]) do |keys|
       h = session(keys)
@@ -278,40 +286,36 @@ module EditorExplorerTest
 
     # Directories: rows are [label, keys, [tree lines, cursor]].
     t.table([
-      ["Enter expands a directory", " eggj<CR>", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
-      ["l expands it too", " eggjl", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
-      ["Enter closes an expanded directory", " eggj<CR><CR>", [TREE, [1, 0]]],
-      ["Enter closes a directory l expanded", " eggjl<CR>", [TREE, [1, 0]]],
-      ["l leaves an expanded directory expanded", " eggjll", [DOCS, [1, 0]]],
-      ["l leaves a directory Enter expanded expanded", " eggj<CR>l", [DOCS, [1, 0]]],
-      ["o expands a directory", " eggjo", [DOCS, [1, 0]]],
-      ["o toggles it closed again", " eggjoo", [TREE, [1, 0]]],
-      ["o closes a directory Enter expanded", " eggj<CR>o", [TREE, [1, 0]]],
-      ["h collapses an expanded directory", " eggjlh", [TREE, [1, 0]]],
-      ["h collapses a directory Enter expanded", " eggj<CR>h", [TREE, [1, 0]]],
-      ["h on a collapsed directory goes to the root line", " eggjh", [TREE, [0, 0]]],
-      ["Enter expands a nested directory", " eggjjlj<CR>", [DEEP, [3, 0]]],
-      ["Enter closes a nested directory", " eggjjlj<CR><CR>", [LIB, [3, 0]]],
-      ["l leaves a nested directory expanded", " eggjjljll", [DEEP, [3, 0]]],
-      ["o toggles a nested directory", " eggjjljoo", [LIB, [3, 0]]],
-      ["h collapses an expanded nested directory", " eggjjlj<CR>h", [LIB, [3, 0]]],
-      ["h on a collapsed nested directory goes to its parent", " eggjjljh", [LIB, [2, 0]]],
-      ["Enter expands a directory in the tree reached through Ctrl-W", " e<C-w>l<C-w>hggj<CR>", [DOCS, [1, 0]]],
-      ["Enter closes it there", " e<C-w>l<C-w>hggj<CR><CR>", [TREE, [1, 0]]],
-      ["l leaves it expanded there", " e<C-w>l<C-w>hggjll", [DOCS, [1, 0]]],
-      ["o toggles it there", " e<C-w>l<C-w>hggjoo", [TREE, [1, 0]]],
-      ["h collapses it there", " e<C-w>l<C-w>hggj<CR>h", [TREE, [1, 0]]],
-      ["Enter toggles in the tree reached through Ctrl-W w", " e<C-w>w<C-w>wggjjlj<CR><CR>", [LIB, [3, 0]]],
-      ["h on a file goes to its parent", " eggjljh", [[" - proj", "   - docs", "     m guide.md", "   + lib", ">  m a.md", "   r b.rb"], [1, 0]]],
-      ["h on a top-level entry goes to the root line", " eh", [TREE, [0, 0]]],
-      ["h on the root line does nothing", " eggh", [TREE, [0, 0]]],
-      ["Enter on the root line does nothing", " egg<CR>", [TREE, [0, 0]]],
-      ["l on the root line does nothing", " eggl", [TREE, [0, 0]]],
-      ["o on the root line does nothing", " eggo", [TREE, [0, 0]]],
-      ["H shows hidden files but not ignored ones", " eH", [[" - proj", "   + docs", "   + lib", "   . .env", ">  m a.md", "   r b.rb"], [3, 0]]],
-      ["H again hides them", " eHH", [TREE, [3, 0]]],
-      ["- moves the root up and keeps the old root expanded", " e-", [[" - ada", "   - proj", "     + docs", "     + lib", ">    m a.md", "     r b.rb"], [1, 0]]],
-      ["C makes the directory under the cursor the root", " eggjC", [[" - docs", "   m guide.md"], [0, 0]]],
+      ["Enter expands a directory", " egg<CR>", [DOCS, [0, 0]]],
+      ["l expands it too", " eggl", [DOCS, [0, 0]]],
+      ["Enter closes an expanded directory", " egg<CR><CR>", [TREE, [0, 0]]],
+      ["Enter closes a directory l expanded", " eggl<CR>", [TREE, [0, 0]]],
+      ["l leaves an expanded directory expanded", " eggll", [DOCS, [0, 0]]],
+      ["l leaves a directory Enter expanded expanded", " egg<CR>l", [DOCS, [0, 0]]],
+      ["o expands a directory", " eggo", [DOCS, [0, 0]]],
+      ["o toggles it closed again", " eggoo", [TREE, [0, 0]]],
+      ["o closes a directory Enter expanded", " egg<CR>o", [TREE, [0, 0]]],
+      ["h collapses an expanded directory", " egglh", [TREE, [0, 0]]],
+      ["h collapses a directory Enter expanded", " egg<CR>h", [TREE, [0, 0]]],
+      ["h on a collapsed top-level directory does nothing", " eggh", [TREE, [0, 0]]],
+      ["Enter expands a nested directory", " eggjlj<CR>", [DEEP, [2, 0]]],
+      ["Enter closes a nested directory", " eggjlj<CR><CR>", [LIB, [2, 0]]],
+      ["l leaves a nested directory expanded", " eggjljll", [DEEP, [2, 0]]],
+      ["o toggles a nested directory", " eggjljoo", [LIB, [2, 0]]],
+      ["h collapses an expanded nested directory", " eggjlj<CR>h", [LIB, [2, 0]]],
+      ["h on a collapsed nested directory goes to its parent", " eggjljh", [LIB, [1, 0]]],
+      ["Enter expands a directory in the tree reached through Ctrl-W", " e<C-w>l<C-w>hgg<CR>", [DOCS, [0, 0]]],
+      ["Enter closes it there", " e<C-w>l<C-w>hgg<CR><CR>", [TREE, [0, 0]]],
+      ["l leaves it expanded there", " e<C-w>l<C-w>hggll", [DOCS, [0, 0]]],
+      ["o toggles it there", " e<C-w>l<C-w>hggoo", [TREE, [0, 0]]],
+      ["h collapses it there", " e<C-w>l<C-w>hgg<CR>h", [TREE, [0, 0]]],
+      ["Enter toggles in the tree reached through Ctrl-W w", " e<C-w>w<C-w>wggjlj<CR><CR>", [LIB, [2, 0]]],
+      ["h on a file goes to its parent", " eggljh", [DOCS, [0, 0]]],
+      ["h on a top-level entry does nothing", " eh", [TREE, [2, 0]]],
+      ["H shows hidden files but not ignored ones", " eH", [[" + docs", " + lib", " . .env", "|m a.md", " r b.rb"], [2, 0]]],
+      ["H again hides them", " eHH", [TREE, [2, 0]]],
+      ["- moves the root up and keeps the old root expanded", " e-", [[" - proj", "   + docs", "   + lib", "|  m a.md", "   r b.rb"], [0, 0]]],
+      ["C makes the directory under the cursor the root", " eggC", [[" m guide.md"], [0, 0]]],
       ["C on a file makes its directory the root", " eC", [TREE, [0, 0]]]
     ]) do |keys|
       h = session(keys)
@@ -321,27 +325,35 @@ module EditorExplorerTest
     h = session(" e")
     h.files.put("z.rb", "")
     h.type("R")
-    t.assert_equal("   r z.rb", tree_lines(h)[5], "R lists the directories again")
+    t.assert_equal(" r z.rb", tree_lines(h)[4], "R lists the directories again")
     h.type("?")
     t.assert_equal("<CR>/o toggle", h.message[0, 13], "? shows the keys in the message row")
 
     # Create: rows are [label, keys, [tree lines, cursor, message, mode]].
     t.table([
-      ["a on the root line creates a file there", " egga" + "new.rb<CR>", [[" - proj", "   + docs", "   + lib", ">  m a.md", "   r b.rb", "   r new.rb"], [5, 0], "Created new.rb", :normal]],
-      ["a trailing slash creates a directory", " egga" + "pkg/<CR>", [[" - proj", "   + docs", "   + lib", "   + pkg", ">  m a.md", "   r b.rb"], [3, 0], "Created pkg", :normal]],
-      ["a on a directory creates inside it", " eggja" + "n.md<CR>", [[" - proj", "   - docs", "     m guide.md", "     m n.md", "   + lib", ">  m a.md", "   r b.rb"], [3, 0], "Created docs/n.md", :normal]],
-      ["a on a file creates next to it", " ea" + "c.c<CR>", [[" - proj", "   + docs", "   + lib", ">  m a.md", "   r b.rb", "   c c.c"], [5, 0], "Created c.c", :normal]],
-      ["Escape cancels", " ea" + "x<Esc>", [TREE, [3, 0], "", :normal]],
-      ["an empty name creates nothing", " ea<CR>", [TREE, [3, 0], "", :normal]],
-      ["an existing name is refused", " ea" + "b.rb<CR>", [TREE, [3, 0], "Already exists: b.rb", :normal]],
-      ["a name leaving the root is refused", " egga" + "../x.rb<CR>", [TREE, [0, 0], "Outside the tree root: /home/ada/x.rb", :normal]]
+      ["a on a top-level file creates a file in the root", " ea" + "new.rb<CR>", [[" + docs", " + lib", "|m a.md", " r b.rb", " r new.rb"], [4, 0], "Created new.rb", :normal]],
+      ["a trailing slash creates a directory", " ea" + "pkg/<CR>", [[" + docs", " + lib", " + pkg", "|m a.md", " r b.rb"], [2, 0], "Created pkg", :normal]],
+      ["a on a directory creates inside it", " egga" + "n.md<CR>", [[" - docs", "   m guide.md", "   m n.md", " + lib", "|m a.md", " r b.rb"], [2, 0], "Created docs/n.md", :normal]],
+      ["a on a file creates next to it", " ea" + "c.c<CR>", [[" + docs", " + lib", "|m a.md", " r b.rb", " c c.c"], [4, 0], "Created c.c", :normal]],
+      ["Escape cancels", " ea" + "x<Esc>", [TREE, [2, 0], "", :normal]],
+      ["an empty name creates nothing", " ea<CR>", [TREE, [2, 0], "", :normal]],
+      ["an existing name is refused", " ea" + "b.rb<CR>", [TREE, [2, 0], "Already exists: b.rb", :normal]],
+      ["a name leaving the root is refused", " ea" + "../x.rb<CR>", [TREE, [2, 0], "Outside the tree root: /home/ada/x.rb", :normal]]
     ]) do |keys|
       h = session(keys)
       [tree_lines(h), h.cursor, h.message, h.mode]
     end
-    h = session(" egga")
+    h = session(" ea")
     t.assert_equal("Create in proj/: ", h.message_row.rstrip + " ", "the prompt names the directory")
-    h = session(" egga" + "pkg/<CR>")
+    # A tree with no entry has no row under the cursor: a creates in the root.
+    h = editor_on("a.md", config_with("ascii", "plugin.explorer.ignore a.md b.rb docs lib\n"))
+    h.type(" e")
+    t.assert_equal([[], -1], [tree_lines(h).reject { |line| line.empty? }, h.buffer.marked_row], "an empty tree lists no line and marks no row")
+    h.type("rd")
+    t.assert_equal([:normal, ""], [h.mode, h.message], "r and d with no entry under the cursor do nothing")
+    h.type("a" + "x.rb<CR>")
+    t.assert_equal([true, "Created x.rb"], [h.files.exist?("x.rb"), h.message], "a with no entry under the cursor creates in the root")
+    h = session(" ea" + "pkg/<CR>")
     t.assert_equal([true, nil], [h.files.directory?("pkg"), h.files.get("pkg")], "the directory exists on disk and no file was made")
     h = session(" ea" + "b.rb<CR>")
     t.assert_equal(true, h.state.message_error, "a refusal is an error")
@@ -349,7 +361,7 @@ module EditorExplorerTest
     h.files.mkdir("/srv")
     h.files.mkdir("out")
     h.files.link_to("out", "/srv")
-    h.type(" egga" + "out/x.rb<CR>")
+    h.type(" ea" + "out/x.rb<CR>")
     t.assert_equal(["Outside the tree root: out/x.rb", true, false], [h.message, h.state.message_error, h.files.exist?("out/x.rb")], "a name below a link leading out of the root is refused")
 
     # Rename.
@@ -357,11 +369,11 @@ module EditorExplorerTest
     t.assert_equal("Rename to: b.rb", h.message_row.rstrip, "the prompt starts with the current name")
     h.type("<BS><BS><BS><BS>c.rb<CR>")
     t.assert_equal([nil, "puts 1\n", ["a.md", "", "c.rb"], "Renamed b.rb to c.rb"], [h.files.get("b.rb"), h.files.get("c.rb"), h.buffer_paths, h.message], "a rename changes the disk and the open buffer follows")
-    t.assert_equal([">  r c.rb", [4, 0]], [tree_lines(h)[4], h.cursor], "the tree lists the new name, still marked, with the cursor on it")
+    t.assert_equal(["|r c.rb", [3, 0]], [tree_lines(h)[3], h.cursor], "the tree lists the new name, still marked, with the cursor on it")
     h = session(" er<BS><BS><BS><BS>x/y.md<CR>")
     t.assert_equal(["Name contains a path separator: x/y.md", "alpha\n"], [h.message, h.files.get("a.md")], "a separator is refused")
     h = session(" eggr")
-    t.assert_equal(["Cannot rename the root", :normal], [h.message, h.mode], "the root is not renamed")
+    t.assert_equal("Rename to: docs", h.message_row.rstrip, "the first row is an entry of the root, which has no row of its own to rename")
     h = session(" er<Esc>")
     t.assert_equal(["", "alpha\n"], [h.message, h.files.get("a.md")], "Escape renames nothing")
 
@@ -369,8 +381,8 @@ module EditorExplorerTest
     h = session(" ejd")
     t.assert_equal("Delete b.rb? (y/n): ", h.message_row.rstrip + " ", "the confirmation names the entry")
     h.type("y<CR>")
-    t.assert_equal([false, ["   + lib", ">  m a.md"], "Deleted b.rb"], [h.files.exist?("b.rb"), tree_lines(h)[2, 2], h.message], "yes deletes the file")
-    t.assert_equal(4, tree_lines(h).length, "and it is no longer listed")
+    t.assert_equal([false, [" + lib", "|m a.md"], "Deleted b.rb"], [h.files.exist?("b.rb"), tree_lines(h)[1, 2], h.message], "yes deletes the file")
+    t.assert_equal(3, tree_lines(h).length, "and it is no longer listed")
     t.table([
       ["n declines", " ejd" + "n<CR>", [true, "Delete cancelled"]],
       ["Escape declines", " ejd<Esc>", [true, "Delete cancelled"]],
@@ -379,27 +391,27 @@ module EditorExplorerTest
       h = session(keys)
       [h.files.exist?("b.rb"), h.message]
     end
-    h = session(" eggjd" + "y<CR>")
+    h = session(" eggd" + "y<CR>")
     t.assert_equal([true, "Directory not empty: docs", true], [h.files.exist?("docs/guide.md"), h.message, h.state.message_error], "a directory with entries is refused")
     h = session(" ed" + "y<CR>")
     t.assert_equal([false, ["a.md", ""], true], [h.files.exist?("a.md"), h.buffer_paths, h.assembly.buffers.buffer_at(0).modified?], "deleting the open file keeps its buffer, modified")
     h.type("<C-w>l:q<CR>")
     t.assert_equal([false, "E37: No write since last change (add ! to override)"], [h.quit?, h.message], "and :q asks for a write")
     h = session(" eggd")
-    t.assert_equal(["Cannot delete the root", :normal], [h.message, h.mode], "the root is not deleted")
+    t.assert_equal("Delete docs? (y/n): ", h.message_row.rstrip + " ", "the first row is an entry of the root, never the root")
 
     # The tree window in every icon set, as the presenter draws it, under
     # the left slot's header on row 0.
     t.table([
-      ["ascii", "ascii", [" - proj", "   + docs", "   + lib", ">  m a.md", "   r b.rb"]],
-      ["unicode", "unicode", [" ▾ proj", "   ▸ docs", "   ▸ lib", "›  ¶ a.md", "   ◈ b.rb"]],
-      ["nerd", "nerd", [" \u{F07C} proj", "   \u{F07B} docs", "   \u{F07B} lib", "\u{F054}  \u{E73E} a.md", "   \u{E791} b.rb"]]
+      ["ascii", "ascii", [" + docs", " + lib", "|m a.md", " r b.rb"]],
+      ["unicode", "unicode", [" ▸ docs", " ▸ lib", "▎¶ a.md", " ◈ b.rb"]],
+      ["nerd", "nerd", [" \u{F07B} docs", " \u{F07B} lib", "\u{F054}\u{E73E} a.md", " \u{E791} b.rb"]]
     ]) do |set|
       h = editor_on("a.md", config_with(set.to_s, ""))
       h.type(" e")
       rows = []
       i = 1
-      while i < 6
+      while i < 5
         rows << h.row(i)[0, 30].rstrip
         i += 1
       end
@@ -408,19 +420,36 @@ module EditorExplorerTest
     # Icons in their file type's color, through the tree's own syntax.
     h = editor_on("a.md", config_with("unicode", ""))
     h.type(" e")
-    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_MARKDOWN, H::ICON_RUBY], [H.base(h.frame.hl_at(1, 1)), H.base(h.frame.hl_at(2, 3)), H.base(h.frame.hl_at(4, 3)), H.base(h.frame.hl_at(5, 3))], "each icon is drawn in its file type's group, after a marker of any width")
-    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [H.base(h.frame.hl_at(5, 0)), H.base(h.frame.hl_at(5, 4)), H.base(h.frame.hl_at(5, 5))], "the rest of the line keeps the normal group")
+    t.assert_equal([H::ICON_FOLDER, H::ICON_FOLDER, H::ICON_RUBY], [H.base(h.frame.hl_at(1, 1)), H.base(h.frame.hl_at(2, 1)), H.base(h.frame.hl_at(4, 1))], "each icon is drawn in its file type's group, right after the marker column")
+    t.assert_equal([H::NORMAL, H::NORMAL, H::NORMAL], [H.base(h.frame.hl_at(4, 0)), H.base(h.frame.hl_at(4, 2)), H.base(h.frame.hl_at(4, 3))], "the rest of the line keeps the normal group")
     h.type(":set syntax?<CR>")
     t.assert_equal("  syntax=explorer", h.message, "the tree buffer takes the explorer's filetype")
     h.type(":syntax off<CR>")
-    t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(5, 3)), ":syntax off draws the icons plain")
+    t.assert_equal(H::NORMAL, H.base(h.frame.hl_at(4, 1)), ":syntax off draws the icons plain")
     h.type(":syntax on<CR>")
-    t.assert_equal(H::ICON_RUBY, H.base(h.frame.hl_at(5, 3)), ":syntax on colors them again")
+    t.assert_equal(H::ICON_RUBY, H.base(h.frame.hl_at(4, 1)), ":syntax on colors them again")
+
+    # Scenario "The tree starts at the root's entries": the first row under
+    # the tab row's head is the first entry, not the project's name.
+    h = editor_on("a.md", config_with("unicode", ""))
+    h.type(" e")
+    t.assert_equal([" proj", " ▸ docs"], [h.row(0)[0, 30].rstrip, h.row(1)[0, 30].rstrip], "the tree starts at the root's entries: the first tree row is the first directory, the head above it names the project")
+    t.assert_equal(["▸ docs", "▸ lib"], [tree_lines(h)[0].strip, tree_lines(h)[1].strip], "no line of the tree repeats the root")
+
+    # Scenario "The current row is a full-width highlight": the current
+    # file's row is PmenuSel across the tree window with the bar in
+    # PmenuMarkSel, the others stay on the panel.
+    t.assert_equal(["▎", H::POPUP_MENU_MARK_SELECTED, H::POPUP_MENU_SELECTED, H::POPUP_MENU_SELECTED, H::NORMAL, H::NORMAL], [h.row(3)[0, 1], H.base(h.frame.hl_at(3, 0)), H.base(h.frame.hl_at(3, 10)), H.base(h.frame.hl_at(3, 29)), H.base(h.frame.hl_at(4, 10)), H.base(h.frame.hl_at(2, 29))], "the current row is a full-width highlight with the bar in its first cell, the other rows are not")
+    t.assert_equal([H::SIDEBAR_LAYER + H::POPUP_MENU_SELECTED, H::NORMAL], [h.frame.hl_at(3, 29), H.base(h.frame.hl_at(3, 30))], "the highlight keeps the sidebar's layer and ends at the window's edge")
+    h.type("<C-w>l:e b.rb<CR>")
+    t.assert_equal([" ", "▎", H::POPUP_MENU_SELECTED, H::NORMAL], [h.row(3)[0, 1], h.row(4)[0, 1], H.base(h.frame.hl_at(4, 10)), H.base(h.frame.hl_at(3, 10))], "The highlight follows the current file: it moves to the file that becomes current")
+    h.type("<C-w>h")
+    t.assert_equal(H::POPUP_MENU_SELECTED, H.base(h.frame.hl_at(4, 10)), "and stays on its row with the tree focused, the cursor line under it")
 
     h = editor_on("a.md", config_with("ascii", ""))
     h.type(" e")
     t.assert_equal([" ", H::SIDEBAR_LAYER, " "], [h.row(0)[30, 1], h.frame.hl_at(0, 30), h.row(6)[0, 1]], "the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer, and no tilde under its rows")
-    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's one view has no explorer title: its first row reads the project, the tree under it")
+    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " + docs"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 12), h.row(1)[0, 30].rstrip], "the left slot's one view has no explorer title: its first row reads the project, the tree starts under it at the root's first entry")
 
     # Names with a space or a bar open as named, never parsed as an ex
     # command line.
@@ -428,18 +457,18 @@ module EditorExplorerTest
     h.files.put("my notes.md", "spaced\n")
     h.files.put("a|b.md", "barred\n")
     h.type("R")
-    t.assert_equal(["   m a|b.md", "   m my notes.md"], [tree_lines(h)[4], tree_lines(h)[6]], "the tree lists both names")
-    h.type("7Gs")
+    t.assert_equal([" m a|b.md", " m my notes.md"], [tree_lines(h)[3], tree_lines(h)[5]], "the tree lists both names")
+    h.type("6Gs")
     t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "s opens a name with a space in a split")
     # Scenario "A name with a bar in a tab page".
     h = editor_on("a.md", config_with("ascii", "option.gt tabpages\n"))
     h.type(" e")
     h.files.put("a|b.md", "barred\n")
-    h.type("R5Gt")
+    h.type("R4Gt")
     t.assert_equal([2, "a|b.md", ["barred"]], [h.tab_count, h.buffer.path, h.lines], "t opens a name with a bar in a tab page")
     h = session(" e")
     h.files.put("my notes.md", "spaced\n")
-    h.type("R6Gv")
+    h.type("R5Gv")
     t.assert_equal([3, "my notes.md", ["spaced"]], [h.window_count, h.buffer.path, h.lines], "v opens a name with a space in a vertical split")
 
     # Names that are not UTF-8 are listed with one replacement cell per
@@ -449,11 +478,11 @@ module EditorExplorerTest
     h.files.put("\xF4\x90\x80\x80.md", "beyond\n")
     h.type("R")
     listed = tree_lines(h)
-    t.assert_true(listed.include?("   m caf\xE9.md") && listed.include?("   m \xF4\x90\x80\x80.md"), "the tree lists names that are not UTF-8 as they are")
+    t.assert_true(listed.include?(" m caf\xE9.md") && listed.include?(" m \xF4\x90\x80\x80.md"), "the tree lists names that are not UTF-8 as they are")
     drawn = h.screen.join("\n")
     t.assert_true(drawn.include?("m caf\u{FFFD}.md") && drawn.include?("m \u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}.md"), "the screen shows each illegal byte as one replacement character")
     t.assert_true(h.plugins.enabled?("explorer"), "the explorer stays enabled after listing them")
-    row = listed.index("   m \xF4\x90\x80\x80.md").to_i
+    row = listed.index(" m \xF4\x90\x80\x80.md").to_i
     h.type("#{row + 1}G<CR>")
     t.assert_equal(["\xF4\x90\x80\x80.md", ["beyond"]], [h.buffer.path, h.lines], "Enter opens a name that is not UTF-8")
     t.assert_true(h.status_row.include?("\u{FFFD}\u{FFFD}\u{FFFD}\u{FFFD}.md"), "the status line names the opened file with one replacement character per illegal byte")

@@ -69,6 +69,12 @@ ok   the cursor is on row 5 of the list
 ok   the lines are replaced, the cursor clamped, and the buffer unmodified
 ok   an unknown title fails
 ok   writing a scratch buffer is refused
+ok   a new scratch buffer has no marked row
+ok   mark_scratch_row marks the row
+ok   a row outside the buffer fails and changes nothing
+ok   an unknown title fails
+ok   -1 clears the mark
+ok   set_scratch_lines clears the mark
 ok   editing the scratch buffer is allowed
 ok   quit-all ignores the scratch buffer's changes
 ok   write-all skips the scratch buffer
@@ -103,4 +109,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 105 passed, 0 failed
+editor_plugins: 111 passed, 0 failed

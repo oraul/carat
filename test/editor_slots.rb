@@ -59,14 +59,14 @@ module EditorSlotsTest
     t.cases([
       ["<leader>ls hides the explorer and the file window is current", ["", " e ls"], [FILE, "a.md", [0, 0], ""]],
       ["<leader>ls again shows it with its cursor, the focus staying", ["", " ek<C-w>l ls ls"], [OPEN, "a.md", [0, 0], ""]],
-      ["the shown tree keeps its cursor", ["", " ek<C-w>l ls ls<C-w>h"], [OPEN, "explorer", [1, 0], ""]],
-      ["<leader>e shows a hidden explorer again, focused", ["", " e ls e"], [OPEN, "explorer", [2, 0], ""]],
+      ["the shown tree keeps its cursor", ["", " ek<C-w>l ls ls<C-w>h"], [OPEN, "explorer", [0, 0], ""]],
+      ["<leader>e shows a hidden explorer again, focused", ["", " e ls e"], [OPEN, "explorer", [1, 0], ""]],
       ["an empty left sidebar says so", ["", " ls"], [FILE, "a.md", [0, 0], "No view in the left sidebar"]],
       ["an empty right sidebar says so", ["", " lr"], [FILE, "a.md", [0, 0], "No view in the right sidebar"]],
       ["an empty panel says so", ["", " lp"], [FILE, "a.md", [0, 0], "No view in the panel"]],
       ["the explorer on the right toggles with <leader>lr", ["plugin.explorer.side right", " e lr"], [FILE, "a.md", [0, 0], ""]],
-      ["the configured width wins over plugin.explorer.width", ["option.layout.left_width 24", " e"], [[[0, 24, "explorer"], [25, 55, "a.md"]], "explorer", [2, 0], ""]],
-      ["the explorer alone cannot be hidden", ["", " e:only<CR> ls"], [[[0, 80, "explorer"]], "explorer", [2, 0], "E444: Cannot close last window"]]
+      ["the configured width wins over plugin.explorer.width", ["option.layout.left_width 24", " e"], [[[0, 24, "explorer"], [25, 55, "a.md"]], "explorer", [1, 0], ""]],
+      ["the explorer alone cannot be hidden", ["", " e:only<CR> ls"], [[[0, 80, "explorer"]], "explorer", [1, 0], "E444: Cannot close last window"]]
     ]) do |input|
       after(input[0], input[1])
     end
@@ -79,7 +79,7 @@ module EditorSlotsTest
     # Scenario "A one-view left sidebar reads the head": with a tab row the head stands on it, the tabs start at the editor's first column, and the tree under it.
     h = editor("")
     h.type(":e b.rb<CR> e")
-    t.assert_equal([" proj", "  a.md", " - proj", 1, 21], [h.row(0)[0, 5], h.row(0)[31, 8].rstrip, h.row(1)[0, 7].rstrip, h.state.tab.slot(:left).view_window.row, h.state.tab.slot(:left).view_window.height], "a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it")
+    t.assert_equal([" proj", "  a.md", " + docs", 1, 21], [h.row(0)[0, 5], h.row(0)[31, 8].rstrip, h.row(1)[0, 7].rstrip, h.state.tab.slot(:left).view_window.row, h.state.tab.slot(:left).view_window.height], "a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it")
     # Scenario "Header of one view": the right sidebar keeps its title row, the view's text under it.
     h = editor("plugin.explorer.side right")
     h.type(" e")
@@ -88,7 +88,7 @@ module EditorSlotsTest
     # The header row and the tree under it.
     h = editor("")
     h.type(" e")
-    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 20), h.row(1)[0, 30].rstrip], "the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it")
+    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " + docs"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 20), h.row(1)[0, 30].rstrip], "the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it")
     h.type(" ls")
     t.assert_equal(["alpha", true], [h.row(0)[4, 5], h.assembly.buffers.scratch_for("explorer", "explorer").nil? == false], "hidden, the file takes the row and the tree's buffer stays listed")
 

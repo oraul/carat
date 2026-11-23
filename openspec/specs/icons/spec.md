@@ -32,8 +32,8 @@ The table SHALL hold, for each set, a glyph for the names folder_closed, folder_
 - **THEN** the glyph is "+"
 
 #### Scenario: Current marker
-- **WHEN** "current" is looked up in the ascii set
-- **THEN** the glyph is ">"
+- **WHEN** "current" is looked up in the ascii set and in the unicode set
+- **THEN** the glyphs are "|" and "▎", the bar of a current row, never a chevron
 
 #### Scenario: Unknown name
 - **WHEN** "nope" is looked up

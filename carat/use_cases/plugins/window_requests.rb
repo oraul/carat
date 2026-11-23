@@ -110,6 +110,18 @@ module Carat
         buffer = @buffers.scratch_for(name, title)
         return PluginApi::Response.failure("No scratch buffer #{title}") if buffer.nil?
         replace_lines(buffer, lines)
+        buffer.marked_row = -1
+        PluginApi::Response.success("", 0)
+      end
+
+      # Draws one row of the plugin's scratch buffer as the current entry,
+      # -1 for none.
+      #: (String, String, Integer) -> PluginApi::Response
+      def mark_scratch_row(name, title, row)
+        buffer = @buffers.scratch_for(name, title)
+        return PluginApi::Response.failure("No scratch buffer #{title}") if buffer.nil?
+        return PluginApi::Response.failure("Row #{row} is outside the buffer") if row < -1 || row >= buffer.line_count
+        buffer.marked_row = row
         PluginApi::Response.success("", 0)
       end
 

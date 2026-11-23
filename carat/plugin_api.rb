@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 16
-    VERSION = "2.16"
+    MINOR = 17
+    VERSION = "2.17"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -536,6 +536,17 @@ module Carat
       # @rbs lines: Array[String]
       def set_scratch_lines(title, lines)
         raise NotImplementedError, "Host#set_scratch_lines"
+      end
+
+      # Draws the row (0-based) of the plugin's scratch buffer with that
+      # title as the current entry, a full-width selection fill with the
+      # bar at its first cell, and returns a Response (from 2.17); -1 draws
+      # none, a row outside the buffer fails, and set_scratch_lines clears
+      # the mark. Under NO_COLOR only the bar is drawn.
+      # @rbs title: String
+      # @rbs row: Integer
+      def mark_scratch_row(title, row)
+        raise NotImplementedError, "Host#mark_scratch_row"
       end
 
       # Closes the window showing the plugin's scratch buffer with that

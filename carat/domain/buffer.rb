@@ -65,9 +65,11 @@ module Carat
     # fold_lists holds the folds of the windows with folds over the
     # buffer, which every splice moves with its lines; marked_folds and
     # marked_fold_copies pair each of them with a copy taken by
-    # transaction_mark, which revert_to puts back. A Struct
+    # transaction_mark, which revert_to puts back. marked_row is the one
+    # row of a plugin scratch buffer drawn as the current entry (-1 for
+    # none), cleared whenever the plugin replaces the lines. A Struct
     # record: mutable, with a reader and a writer per member.
-    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, keyword_init: true)
+    class Buffer < Struct.new(:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, :marked_row, keyword_init: true)
       # @rbs @lines: Array[String]
       # @rbs @path: String?
       # @rbs @line_ending: String
@@ -97,6 +99,7 @@ module Carat
       # @rbs @fold_lists: Array[untyped]
       # @rbs @marked_folds: Array[untyped]
       # @rbs @marked_fold_copies: Array[untyped]
+      # @rbs @marked_row: Integer
 
       # Every member is stored through its writer after super(), so the
       # empty sign list takes the pinned type: Spinel's keyword super of a
@@ -136,6 +139,7 @@ module Carat
         self.fold_lists = []
         self.marked_folds = []
         self.marked_fold_copies = []
+        self.marked_row = -1
       end
 
       # Has splice move folds, a window's, with every edit; once only.
