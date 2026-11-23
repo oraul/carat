@@ -2269,8 +2269,21 @@ chmod +x "$work/bin/fail-make"
 store_bench() {
   env BASE=main MAKE="${1:-$work/bin/echo-make}" sh "$here/run_state.sh" bench bench-store
 }
+# A make that records its arguments and fails when an output the measuring
+# script reads stands in the base worktree, as a planted one would.
+cat > "$work/bin/rec-make" <<EOF3
+#!/bin/sh
+echo "make \$*" >> "$work/make-args"
+dir=.
+[ "\$1" = -C ] && dir=\$2
+for f in build/dev/carat.timing build/test/run_all.timing build/bench/keys-budget; do
+  if [ -e "\$dir/\$f" ]; then echo "a planted \$f stood at the build" >&2; exit 1; fi
+done
+exit 0
+EOF3
+chmod +x "$work/bin/rec-make"
 store_figures() {
-  env BASE=main sh "$here/run_state.sh" base-figures bench-store "$@"
+  env BASE=main MAKE="${SAVE_MAKE:-$work/bin/rec-make}" sh "$here/run_state.sh" base-figures bench-store "$@"
 }
 expect "run_state: base-figures says none are stored for main's commit" 1 "none stored for main $(git rev-parse --short=12 main)" store_figures
 expect "run_state: bench without stored figures compares with the recorded ones and names the difference" 1 "^allocs[.]lh 27 -> 28[.]0$" store_bench
@@ -2293,7 +2306,27 @@ git -C tmp/.base checkout -q -- tools/metrics.sh
 rm -f tmp/.base/tools/metrics.sh
 expect "run_state: base-figures save refuses a base whose measuring script was removed" 1 "tracked files of tmp/.base differ" store_figures save
 git -C tmp/.base checkout -q -- tools/metrics.sh
+# The outputs the script reads are removed before the build (cache-reuse, the
+# measurement of untracked build outputs): planted ones never reach it, and
+# the build is main's make with the lane's toolchain and cache.
+mkdir -p tmp/.base/build/dev tmp/.base/build/test tmp/.base/build/bench
+: > tmp/.base/build/dev/carat.timing
+: > tmp/.base/build/test/run_all.timing
+: > tmp/.base/build/bench/keys-budget
+: > "$work/make-args"
+# An untracked makefile in the base would be read by make before main's.
+printf 'all:\n\ttrue\n' > tmp/.base/GNUmakefile
+expect "run_state: base-figures save refuses an untracked GNUmakefile in the base" 1 "untracked GNUmakefile" store_figures save
+rm -f tmp/.base/GNUmakefile
+printf 'all:\n\ttrue\n' > tmp/.base/makefile
+expect "run_state: base-figures save refuses an untracked makefile in the base" 1 "untracked makefile" store_figures save
+rm -f tmp/.base/makefile
+store_figures_failing() {
+  SAVE_MAKE="$work/bin/fail-make" store_figures "$@"
+}
+expect "run_state: base-figures save refuses a base whose build failed" 1 "main's build failed in tmp/.base" store_figures_failing save
 expect "run_state: base-figures save stores main's own measurement of the base worktree, not the planted file" 0 "stored the figures of main $(git rev-parse --short=12 main)" store_figures save
+expect "run_state: base-figures save built main in the base with the lane's toolchain and cache, planted outputs removed first" 0 "^make -C tmp/.base dev-build test-build bench-budget PREFIX=\S+/tmp/[.]toolchain SPINEL_CACHE_DIR=\S+/build/spinel-cache$" tail -n 1 "$work/make-args"
 expect "run_state: base-figures stores the commit and the figures, dropping an unmeasured one" 0 "^main $(git rev-parse main) allocs[.]lh 28[.]0 rounds[.]carat 2 us[.]lh 55[.]0$" \
   sh -c "{ sed -n 1p build/pipeline/main-figures.tsv | tr '\n' ' '; sed '1d' build/pipeline/main-figures.tsv | sort | tr '\t\n' '  '; } | sed 's/ \$//'"
 expect "run_state: base-figures says the figures are stored and nothing is built" 0 "are stored; build nothing" store_figures

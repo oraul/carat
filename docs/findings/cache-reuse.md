@@ -12,3 +12,8 @@
 - Location: `.claude/agents/benchmark.md` step 4
 - Why: step 4 now runs only when the brief states a time target, so a slowdown above ten percent on a change with no target is no longer reported (it was never blocking)
 - Fix: store the release timing of main beside its figures, measured once per merge, and report against it
+
+### base-figures save is allowed to every read-profile agent
+- Location: tools/agent_guard.sh, the read profile's `base-figures` form
+- Why: the form is shared by every agent of the read profile, though only the benchmark agent saves; save now builds and measures main's tracked tree itself, so a planted output no longer reaches the stored figures, but any read-profile agent can still trigger the build and the store.
+- Fix: give the benchmark its own guard profile (or an `only_profiles` check on `save`) and add the guard cases for the other profiles refusing it.

@@ -230,7 +230,8 @@
 #                               or rounds, which exit 1 with no base to build
 #   base-figures CHANGE [save]  exit 0 when main's measured figures for its
 #                               current commit are stored, else say so and
-#                               exit 1; save measures tmp/.base with its own
+#                               exit 1; save builds tmp/.base (outputs cleared first,
+#                               an untracked makefile refused), measures it with its own
 #                               tools/metrics.sh and stores that,
 #                               refused unless that worktree is at main
 #   carried CHANGE COMMIT       exit 0 and print "carried: every stage passed
@@ -2026,8 +2027,8 @@ stored_figures() {
 
 # base-figures [save]: without an argument, say whether figures measured at
 # main's current commit are stored (exit 0) or the base must be measured
-# (exit 1); save measures tmp/.base with main's own script from the builds the
-# benchmark agent made there (no file is copied) and stores it,
+# (exit 1); save builds tmp/.base, measures it with main's own script and
+# stores it (no file is copied),
 # refused unless that worktree is at main's current commit.
 base_figures() {
   at=$(main_ref_commit) || die "base-figures: no ${BASE:-origin/main} to measure"
@@ -2047,12 +2048,26 @@ base_figures() {
       [ "$(git -C tmp/.base rev-parse --verify -q HEAD 2>/dev/null)" = "$at" ] ||
         die "base-figures: refused: tmp/.base is not at ${BASE:-origin/main}, $short"
       # The measurement is taken here, by main's own script in tmp/.base from
-      # the builds it holds, never copied from a file anyone could have
-      # written; the tracked files of tmp/.base must be main's.
+      # builds made here from main's tracked tree, never copied from a file
+      # anyone could have written; the tracked files of tmp/.base must be
+      # main's, no makefile of its own may stand there (make reads
+      # GNUmakefile and makefile before Makefile), and the outputs the
+      # script reads are removed before the build, so a planted one is
+      # never measured.
       [ -z "$(GIT_OPTIONAL_LOCKS=0 git -C tmp/.base status --porcelain --untracked-files=no)" ] ||
         die "base-figures: refused: tracked files of tmp/.base differ from ${BASE:-origin/main}"
+      for planted in GNUmakefile makefile; do
+        if [ -e "tmp/.base/$planted" ] || [ -L "tmp/.base/$planted" ]; then
+          [ -n "$(git -C tmp/.base ls-files -- "$planted")" ] ||
+            die "base-figures: refused: tmp/.base holds an untracked $planted, which make would read first"
+        fi
+      done
       [ -f tmp/.base/tools/metrics.sh ] || die "base-figures: refused: tmp/.base has no tools/metrics.sh"
       measured=$(mktemp) || die "base-figures: no temporary file"
+      rm -rf tmp/.base/build/dev/carat.timing tmp/.base/build/test/run_all.timing tmp/.base/build/bench/keys-budget tmp/.base/build/metrics
+      lane_top=$(pwd -P)
+      "$make_cmd" -C tmp/.base dev-build test-build bench-budget "PREFIX=$lane_top/tmp/.toolchain" "SPINEL_CACHE_DIR=$lane_top/build/spinel-cache" > /dev/null ||
+        { rm -f "$measured"; die "base-figures: refused: main's build failed in tmp/.base"; }
       mkdir -p tmp/.base/build/metrics
       (cd tmp/.base && sh tools/metrics.sh measure "$measured") > /dev/null ||
         { rm -f "$measured"; die "base-figures: refused: main's measurement failed in tmp/.base"; }
