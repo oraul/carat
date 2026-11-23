@@ -21,8 +21,11 @@ module Carat
     # the description's score, a leading ":" of the text dropped, equal
     # scores in the table's order, every entry for an empty text) and
     # selects the first, and a changed text or selection reopens the
-    # float: a bordered menu titled "Commands" near the top of the editor,
-    # the rows around the selection, each the description, its readable
+    # float: a bordered menu titled "Commands" and the counts of the
+    # matches and of the entries (the finder's form, "Commands 12/87"),
+    # near the top of the editor, its first row the query, the prompt
+    # Palette::PROMPT and the typed text, where the cursor stands while
+    # the command line stays blank, then the rows around the selection, each the description, its readable
     # label, then the dotted name, left out when the label would get under
     # LABEL_MIN cells, and the key on the right, left out when the label
     # would get under KEY_WIDTH cells, in columns measured in cells, a
@@ -40,8 +43,9 @@ module Carat
       CUT = "\u2026"
       CUT_ASCII = ">"
       TITLE = "Commands"
+      QUERY_ROWS = 1
       EMPTY = "No match"
-      private_constant :Z, :MAX_ROWS, :MAX_WIDTH, :NAME_WIDTH, :KEY_WIDTH, :LABEL_MIN, :CUT, :CUT_ASCII, :TITLE, :EMPTY
+      private_constant :Z, :MAX_ROWS, :MAX_WIDTH, :NAME_WIDTH, :KEY_WIDTH, :LABEL_MIN, :CUT, :CUT_ASCII, :TITLE, :QUERY_ROWS, :EMPTY
 
       # @rbs @palette: Domain::Palette
       # @rbs @open_float: OpenFloat
@@ -127,29 +131,41 @@ module Carat
       def show(state)
         palette = @palette
         room = state.screen_rows - 5
-        return if room < 1 || state.screen_cols < 8
+        return if room < QUERY_ROWS + 1 || state.screen_cols < 8
         width = Domain::FloatWindow.text_room(state.screen_cols, state.options.winborder)
         width = MAX_WIDTH if width > MAX_WIDTH
         matches = palette.matches
-        height = matches.length
-        height = MAX_ROWS if height > MAX_ROWS
-        height = room if height > room
-        height = 1 if height < 1
-        top = palette.selected - height + 1
+        list = matches.length
+        list = MAX_ROWS if list > MAX_ROWS
+        list = room - QUERY_ROWS if list > room - QUERY_ROWS
+        list = 1 if list < 1
+        top = palette.selected - list + 1
         top = 0 if top < 0
         cut = state.options.icons == "ascii" ? CUT_ASCII : CUT
-        lines = rows(top, height, width, cut)
-        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: TITLE, z: Z)
+        lines = rows(top, list, width, cut)
+        styled = matches.empty? ? Array.new(0, nil) : styles(top, lines, width)
+        query = query_row(state.cmdline, width)
+        lines.insert(0, query)
+        styled.insert(0, Domain::SyntaxLine.new(text: query, start: 0, tokens: Array.new(0, 0), end_state: 0)) unless matches.empty?
+        height = lines.length
+        title = "#{TITLE} #{matches.length}/#{palette.names.length}"
+        spec = Domain::FloatSpec.new(anchor: "editor", row: 1, col: 0, height: height, width: width, border: true, title: title, z: Z)
         buffer = Domain::Buffer.new(lines: lines, path: nil, line_ending: "\n")
         buffer.owner = Domain::Palette::OWNER
-        buffer.styles = styles(top, lines, width) unless matches.empty?
+        buffer.styles = styled unless matches.empty?
         float = Domain::FloatWindow.new(window: Domain::Window.new(buffer: buffer), spec: spec)
         float.centered = true
-        float.selected = matches.empty? ? -1 : palette.selected - top
+        float.selected = matches.empty? ? -1 : palette.selected - top + QUERY_ROWS
         return unless @open_float.call(state, float, false).ok
         palette.float_id = float.id
         palette.shown_query = palette.query
         palette.shown_selected = palette.selected
+      end
+
+      # The query row: the prompt and the typed text, cut to the width.
+      #: (String, Integer) -> String
+      def query_row(text, width)
+        Domain::DisplayWidth.cut(Domain::Palette::PROMPT + text, width)
       end
 
       # The rows of the matches from top, the description, the name and the

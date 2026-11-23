@@ -10,8 +10,13 @@ ok   nothing matches
 ok   backspace widens the list
 ok   Esc closes the palette
 ok   Enter runs an action
-ok   the prompt is >
+ok   the prompt is > on the float's first row, the command-line row blank
+ok   The query is the float's first row: the text, the title counts, the cursor after the text
+ok   The query is the float's first row: the cursor follows the command line's cursor
+ok   The query is the float's first row: a character typed at the cursor
+ok   The query row selects the list's first row: the row after the query is highlighted
 ok   the first row is the first action registered
+ok   With no room for a list row the prompt stays on the command line
 ok   the palette over an empty buffer lists every entry and Esc leaves the buffer empty
 ok   The label first, the key in caret notation on the right: the description, the name, and the key
 ok   the palette shows its own key
@@ -57,4 +62,4 @@ ok   the palette shows every row whole under winborder none at 80 by 24
 ok   Without an edge the palette uses the border columns, the screen less its margin and its padding
 ok   The palette is centered without a border: as many columns left of its box as right
 ok   The palette is centered again after a resize: centered at 120 columns and at 100
-editor_palette: 59 passed, 0 failed
+editor_palette: 64 passed, 0 failed

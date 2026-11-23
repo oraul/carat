@@ -28,6 +28,10 @@ module Carat
       # The owner of the scratch buffer the list is shown in.
       OWNER = ":palette"
 
+      # The prompt text before the typed text, on the first row of the
+      # float and in the cursor's column; the finder's prompt is the same.
+      PROMPT = "> "
+
       # The empty string arrays go through the writers, as Keymap's do.
       #: () -> void
       def initialize

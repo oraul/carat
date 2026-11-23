@@ -95,7 +95,7 @@ module EditorCmdlineCompleteTest
       ["Typing closes the menu: a deletion", ":e lib/<Tab><BS>", "cmdline|:e lib/a.r|10|-"],
       ["Typing closes the menu: a Tab after it completes afresh", ":e lib/<Tab><BS><Tab>", "cmdline|:e lib/a.rb|11|a.rb"],
       ["Tab at another prompt does nothing", "/a<Tab>", "cmdline|/a|2|-"],
-      ["Tab at another prompt does nothing: the palette", "<F1>sp<Tab>", "cmdline|>sp|3|-"]
+      ["Tab at another prompt does nothing: the palette", "<F1>sp<Tab>", "cmdline||7|-"]
     ]) { |keys| typed(keys) }
 
     # Scenario: The bounded directory read: 1001 entries, 1000 read.

@@ -373,6 +373,30 @@ module UseCasesPluginFilesTest
     t.assert_equal([:normal, 1, ""], [h.mode, fs.inputs.length, h.message_row.rstrip], "close_prompt closes the plugin's prompt")
     t.assert_equal([false, "No prompt is open"], [fs.host.close_prompt.ok, fs.host.close_prompt.message], "close_prompt without a prompt fails")
 
+    # float_prompt (API 2.16): the prompt's text shows in the plugin's float.
+    session = editor
+    h, fs = session.harness, session.plugin
+    id = fs.host.open_float(Carat::PluginApi::FloatOptions.at(2, 0, 2, 20), ["> ", "row"]).window
+    # Scenario: A refused attachment (no prompt open, the current window, an id no float has).
+    refused = fs.host.float_prompt(id)
+    t.assert_equal([false, "No prompt is open"], [refused.ok, refused.message], "float_prompt without a prompt fails")
+    fs.host.live_prompt("live", "> ", "", ["keymap.cmdline <C-x> plugin.fs.close"])
+    missing = fs.host.float_prompt(id + 100)
+    current = fs.host.float_prompt(0)
+    t.assert_equal([false, false, "No float #{id + 100}", "No float 0"], [missing.ok, current.ok, missing.message, current.message], "float_prompt refuses a float the plugin does not hold, and the current window")
+    # Scenario: The cursor stands in the float.
+    attached = fs.host.float_prompt(id)
+    h.type("ab")
+    window = h.state.tab.floats.at(0).window
+    t.assert_equal([true, id, true, [window.row, window.col + 4, :bar]], [attached.ok, h.assembly.plugin_ui.prompt_float, h.message_row.strip.empty?, [h.frame.cursor_row, h.frame.cursor_col, h.frame.cursor_shape]], "float_prompt puts the cursor in the float's first row and leaves the command-line row blank")
+    h.type("<C-x>")
+    t.assert_equal([0, :normal], [h.assembly.plugin_ui.prompt_float, h.mode], "the attachment ends with the prompt")
+    fs.host.live_prompt("live", "> ", "", ["keymap.cmdline <C-x> plugin.fs.close"])
+    fs.host.float_prompt(id)
+    fs.host.close_float(id)
+    h.type("c")
+    t.assert_equal([0, "> c", h.state.screen_rows - 1], [h.state.tab.floats.count, h.message_row.rstrip, h.frame.cursor_row], "a float closed under the prompt leaves the prompt on the command line")
+
     t.finish
   end
 end

@@ -106,7 +106,7 @@ module Carat
       SHOWCMD_WIDTH = 10
       HIT_ENTER = "Press ENTER or type command to continue"
       SEPARATOR = "│"
-      PALETTE_PROMPT = ">"
+      PALETTE_PROMPT = Domain::Palette::PROMPT
       ROW_SEPARATOR = "─"
       # The window separators under option.icons ascii.
       ASCII_SEPARATOR = "|"
@@ -513,11 +513,20 @@ module Carat
       #: (Domain::Frame, Domain::EditorState, Domain::Options, Integer, bool, Integer, Integer) -> void
       def place_cursor(frame, state, options, tabstop, visual, rows, cols)
         if state.mode == Domain::Mode::CMDLINE
-          frame.cursor_row = rows - 1
           before = state.cmdline
           position = state.cmdline_position
           before = before[0, position].to_s if position < before.length
-          frame.cursor_col = clamp(display_width(command_prefix(state), tabstop) + display_width(before, tabstop), cols - 1)
+          typed = display_width(command_prefix(state), tabstop) + display_width(before, tabstop)
+          float = prompt_float(state)
+          if float.nil?
+            frame.cursor_row = rows - 1
+            frame.cursor_col = clamp(typed, cols - 1)
+          else
+            # The query row is the float's first text row, the cursor in
+            # its text area.
+            frame.cursor_row = float.window.row
+            frame.cursor_col = float.window.col + clamp(typed, float.window.width - 1)
+          end
         else
           window = state.window
           cursor = window.cursor
@@ -1028,14 +1037,29 @@ module Carat
       end
 
       # ":" for an ex command line, "/" or "?" for a search prompt, a
-      # plugin's prompt text while one is open, ">" while the command
-      # palette is.
+      # plugin's prompt text while one is open, the palette's prompt while
+      # the command palette is: the text before the typed text, on the
+      # command-line row or on the first row of the prompt's float.
       #: (Domain::EditorState) -> String
       def command_prefix(state)
         ui = @plugin_ui
         return ui.prompt if ui.prompting?
         return PALETTE_PROMPT if @palette.active
         @search_prompt.active ? @search_prompt.prefix : ":"
+      end
+
+      # The float showing the typed text of the command-line prompt on
+      # its first row: the palette's while it is active, or the float a
+      # plugin attached to its open prompt, when the current tab page
+      # still holds it; nil for the command-line row.
+      #: (Domain::EditorState) -> Domain::FloatWindow?
+      def prompt_float(state)
+        id = @palette.active ? @palette.float_id : 0
+        id = @plugin_ui.prompt_float if id == 0 && @plugin_ui.prompting?
+        return nil if id == 0
+        floats = state.tab.floats
+        at = floats.index_of(id)
+        at < 0 ? nil : floats.at(at)
       end
 
       # The keys of the command being typed, for the pending-keys display:
@@ -1113,6 +1137,7 @@ module Carat
       #: (Domain::Frame, Integer, Integer, Domain::EditorState) -> void
       def paint_message(frame, frame_row, cols, state)
         if state.mode == Domain::Mode::CMDLINE
+          return unless prompt_float(state).nil?
           col = frame.put(frame_row, 0, command_prefix(state), Domain::Highlight::MESSAGE_DIM)
           frame.put(frame_row, col, state.cmdline, Domain::Highlight::NORMAL)
           return

@@ -45,11 +45,13 @@ module EditorPaletteTest
     h
   end
 
-  # The lines of the topmost float, none when no float shows.
+  # The list rows of the topmost float, under its query row, none when
+  # no float shows.
   def self.lines(h)
     floats = h.state.tab.floats
     return [] if floats.count == 0
-    floats.at(floats.count - 1).window.buffer.lines
+    all = floats.at(floats.count - 1).window.buffer.lines
+    all[1, all.length - 1].to_a
   end
 
   # The first word of a row's name column, which starts 42 cells before
@@ -73,7 +75,9 @@ module EditorPaletteTest
   def self.selected_name(h)
     floats = h.state.tab.floats
     return "" if floats.count == 0
-    name_at(h, floats.at(floats.count - 1).selected)
+    shown = floats.at(floats.count - 1).selected
+    return "" if shown < 1
+    name_at(h, shown - 1)
   end
 
   # The row of the float whose name column holds the name, "" for none.
@@ -111,11 +115,12 @@ module EditorPaletteTest
     -1
   end
 
-  # The group, without its layer, of the cell at col of the float's row.
+  # The group, without its layer, of the cell at col of the list row of
+  # the float, the row after the query row.
   def self.group_at(h, row, col)
     floats = h.state.tab.floats
     window = floats.at(floats.count - 1).window
-    H.base(h.frame.hl_at(window.row + row - window.top, window.col + col))
+    H.base(h.frame.hl_at(window.row + 1 + row - window.top, window.col + col))
   end
 
   # Whether a cell of the float's row from col to before stop is drawn in
@@ -220,6 +225,9 @@ module EditorPaletteTest
   def self.main
     t = Carat::Testing.new("editor_palette")
 
+    # Scenario: Open with the leader (the row "leader p opens the palette").
+    # Scenario: Open with F1 (the row "F1 opens the palette").
+    # Scenario: Ex commands are listed (the row "an ex command is found").
     # Rows are [label, keys, [floats, mode, title, first row's name]].
     t.table([
       ["leader p opens the palette", "<Space>p", [1, "cmdline", "Commands", "motion.repeat_find"]],
@@ -239,12 +247,34 @@ module EditorPaletteTest
     ]) do |keys|
       h = session(keys)
       floats = h.state.tab.floats
-      [floats.count, h.mode.to_s, floats.count == 0 ? "" : floats.at(0).spec.title, name_at(h, 0)]
+      [floats.count, h.mode.to_s, floats.count == 0 ? "" : floats.at(0).spec.title.split(" ")[0].to_s, name_at(h, 0)]
     end
 
     h = session("<Space>p")
-    t.assert_equal(">", h.message_row[0, 1], "the prompt is >")
+    t.assert_equal([true, "> "], [h.message_row.strip.empty?, h.state.tab.floats.at(0).window.buffer.lines[0].to_s], "the prompt is > on the float's first row, the command-line row blank")
+    # Scenario: The query is the float's first row (the palette).
+    # The float's first row is the prompt and the typed text, the cursor
+    # stands after it as a bar, the command-line row is blank, and the
+    # title carries the counts of the matches and the entries.
+    h = session("<Space>pwsp")
+    float = h.state.tab.floats.at(0)
+    window = float.window
+    palette = h.assembly.palette
+    t.assert_equal(["> wsp", "> wsp", "Commands #{palette.matches.length}/#{palette.names.length}", true, [window.row, window.col + 5, :bar]], [window.buffer.lines[0], h.row(window.row)[window.col, 5].to_s, float.spec.title, h.message_row.strip.empty?, [h.frame.cursor_row, h.frame.cursor_col, h.frame.cursor_shape]], "The query is the float's first row: the text, the title counts, the cursor after the text")
+    h.type("<Left>")
+    t.assert_equal([window.row, window.col + 4], [h.frame.cursor_row, h.frame.cursor_col], "The query is the float's first row: the cursor follows the command line's cursor")
+    h.type("x")
+    t.assert_equal(["> wsxp", window.col + 5], [h.state.tab.floats.at(0).window.buffer.lines[0], h.frame.cursor_col], "The query is the float's first row: a character typed at the cursor")
+    # Scenario: The query row selects the list's first row.
+    h = session("<Space>p")
+    t.assert_equal([1, h.assembly.actions.names[0]], [h.state.tab.floats.at(0).selected, selected_name(h)], "The query row selects the list's first row: the row after the query is highlighted")
     t.assert_equal(h.assembly.actions.names[0], name_at(h, 0), "the first row is the first action registered")
+    # Scenario: A screen with no room for a list row. The palette has no
+    # float and the prompt stays on the command-line row.
+    h = sized("", 6, 40)
+    h.type("<Space>pab")
+    t.assert_equal([0, "> ab", 5, 4], [h.state.tab.floats.count, h.message_row.rstrip, h.frame.cursor_row, h.frame.cursor_col], "With no room for a list row the prompt stays on the command line")
+    h = session("<Space>p")
     # Edge case: the palette over an empty buffer lists the same entries
     # and Esc leaves the buffer's one empty line as it was.
     empty = session_on("", "<Space>p")
@@ -297,7 +327,7 @@ module EditorPaletteTest
     t.assert_equal(name_at(h, 0), selected_name(h), "the selection stops at the top")
 
     h = session("<Space>p" + "<C-n>" * 20)
-    t.assert_equal([h.assembly.actions.names[20], 14], [selected_name(h), h.state.tab.floats.at(0).selected], "the list scrolls to keep the selection shown")
+    t.assert_equal([h.assembly.actions.names[20], 15], [selected_name(h), h.state.tab.floats.at(0).selected], "the list scrolls to keep the selection shown")
 
     h = session("<Space>pwsp<CR>")
     t.assert_equal([2, :normal], [h.window_count, h.mode], "Enter runs the selected action")

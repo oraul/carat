@@ -9,11 +9,13 @@ module Carat
     # without building a list, and the prompt a plugin opened on the command line: its text,
     # the plugin, and the plugin's id for it, all "" when none is open;
     # a live prompt also holds the text last reported to its plugin and
-    # its own command-line keymap, which a plain prompt leaves nil.
+    # its own command-line keymap, which a plain prompt leaves nil, and
+    # prompt_float, the id of the plugin's float whose first row shows the
+    # typed text in place of the command line, 0 for none.
     # The presenter draws it; the command line hands an answer to the
     # owner. A Struct record: mutable, with a reader and a writer per
     # member.
-    class PluginUi < Struct.new(:segments, :owners, :priorities, :prompt, :prompt_owner, :prompt_id, :prompt_live, :prompt_seen, :prompt_keymap, keyword_init: true)
+    class PluginUi < Struct.new(:segments, :owners, :priorities, :prompt, :prompt_owner, :prompt_id, :prompt_live, :prompt_seen, :prompt_keymap, :prompt_float, keyword_init: true)
       # @rbs @segments: Hash[String, String]
       # @rbs @owners: Array[String]
       # @rbs @priorities: Array[Integer]
@@ -23,6 +25,7 @@ module Carat
       # @rbs @prompt_live: bool
       # @rbs @prompt_seen: String
       # @rbs @prompt_keymap: Keymap?
+      # @rbs @prompt_float: Integer
 
       # The empty segments are stored through the writer, so they take the
       # pinned type.
@@ -38,6 +41,7 @@ module Carat
         self.prompt_live = false
         self.prompt_seen = ""
         self.prompt_keymap = nil
+        self.prompt_float = 0
       end
 
       # Whether a plugin's prompt holds the command line.
@@ -70,6 +74,7 @@ module Carat
         self.prompt_live = false
         self.prompt_seen = ""
         self.prompt_keymap = nil
+        self.prompt_float = 0
       end
 
       # Sets the plugin's status segment with its priority; empty text

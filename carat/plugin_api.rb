@@ -8,8 +8,8 @@ module Carat
   # it cannot reach an entity, a use case, or a driver.
   module PluginApi
     MAJOR = 2
-    MINOR = 15
-    VERSION = "2.15"
+    MINOR = 16
+    VERSION = "2.16"
 
     # The priority of a status bar segment set with set_status, and the
     # highest a plugin may give with set_segment (from 2.2). When the bar
@@ -901,6 +901,19 @@ module Carat
       # @rbs bindings: Array[String]
       def live_prompt(id, text, initial, bindings)
         raise NotImplementedError, "Host#live_prompt"
+      end
+
+      # Shows the open prompt's typed text in the plugin's float with the
+      # window id (API 2.16): the cursor stands in the float's first text
+      # row after the prompt text and what was typed before the command
+      # line's cursor, and the command-line row stays blank. The plugin
+      # fills that row, the prompt text then the typed text, whenever it
+      # refills the float; the attachment ends with the prompt or the
+      # float. Returns a Response, failed when the plugin holds no open
+      # prompt or no float of that id.
+      # @rbs window: Integer
+      def float_prompt(window)
+        raise NotImplementedError, "Host#float_prompt"
       end
 
       # Closes the plugin's open prompt without an on_input and returns

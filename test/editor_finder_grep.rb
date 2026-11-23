@@ -172,14 +172,17 @@ module EditorFinderGrepTest
     h
   end
 
-  # Each float of the current tab page as its title, "|", and its lines.
+  # Each float of the current tab page as its title, "|", and its lines;
+  # the first float, the list, without its query row.
   def self.floats(h)
     layer = h.state.tab.floats
     out = []
     i = 0
     while i < layer.count
       f = layer.at(i)
-      out << "#{f.spec.title}|#{f.window.buffer.lines.join("\n")}"
+      lines = f.window.buffer.lines
+      lines = lines[1, lines.length - 1].to_a if i == 0
+      out << "#{f.spec.title}|#{lines.join("\n")}"
       i += 1
     end
     out
@@ -256,7 +259,7 @@ module EditorFinderGrepTest
     h.type("<Space>fgneedle")
     layer = h.state.tab.floats
     lines = layer.at(0).window.buffer.lines
-    t.assert_equal("  z/one.txt:1: needle here", lines[1].to_s, "a file with one hit is the second row, ahead of the 250-hit file's second line")
+    t.assert_equal("  z/one.txt:1: needle here", lines[2].to_s, "a file with one hit is the second row, ahead of the 250-hit file's second line")
     # Scenario: The title counts files and lines
     t.assert_equal("Grep 2 of 2 files, 251 of 251 lines", layer.at(0).spec.title.to_s, "the title counts 2 of 2 files and 251 of 251 lines")
     h.type("<C-n>" * 205)

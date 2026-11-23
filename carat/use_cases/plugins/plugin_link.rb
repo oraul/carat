@@ -407,6 +407,15 @@ module Carat
       end
 
       # Returns a Response.
+      # @rbs window: Integer
+      def float_prompt(window)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        return PluginApi::Response.failure("No float #{window}") unless @windows.holds_float?(@name, window)
+        @ui.float_prompt(@name, window)
+      end
+
+      # Returns a Response.
       # @rbs skip
       def close_prompt
         why = refusal
