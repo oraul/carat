@@ -890,7 +890,9 @@ stage_end() {
 # BEFORE passed (skipped, carried, scoped, or compiled counts) when both
 # are in the list. test-run runs test-build's runner and, in the smoke
 # test, dev-build's binary; gates (its snapshots gate) runs test-build's
-# runner on the changed snapshots and fails without it; metrics reads the
+# runner on the changed snapshots and fails without it, and after test-run,
+# which writes the same build/test/NAME.out and the smoke test's build/smoke
+# files (a changed smoke snapshot ran both at once); metrics reads the
 # reports of dev-build and test-build and measures bench-budget's binary.
 # diagnose reads the runner's source, not the runner. Every other stage is
 # free: each writes its own build path (build/dev, build/test,
@@ -900,7 +902,7 @@ stage_end() {
 # with no stage running and hold every other start while they run, so
 # metrics measures time per key beside no compiler. CHECK_JOBS caps the
 # stages running at once (default 3: 4 CPUs, two lanes checking at once).
-STAGE_AFTER="test-run:test-build test-run:dev-build gates:test-build metrics:dev-build metrics:test-build metrics:bench-budget"
+STAGE_AFTER="test-run:test-build test-run:dev-build gates:test-build gates:test-run metrics:dev-build metrics:test-build metrics:bench-budget"
 STAGE_ALONE="metrics"
 
 # Prints why CHECK_JOBS is refused, nothing when it is a positive number

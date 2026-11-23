@@ -76,6 +76,56 @@ module SmokeEditorTest
   class HostileRun < Struct.new(:out, :code, keyword_init: true)
   end
 
+  # What one session drew at a terminal: the escape sequences the status
+  # bar's file name (StatusLine), its file type (StatusLineDim), and the
+  # visual indicator on the message row (ModeMsg) were written after.
+  class BarRun < Struct.new(:name, :quiet, :indicator, :code, keyword_init: true)
+  end
+
+  # The escape sequence written last before the first word at or after
+  # from in out, "" when the word is missing.
+  def self.sequence_before(out, word, from)
+    at = out.index(word, from)
+    return "" if at.nil?
+    start = at
+    start -= 1 while start > 0 && out.getbyte(start) != 27
+    stop = out.index("m", start)
+    return "" if stop.nil?
+    out.byteslice(start, stop - start + 1).to_s
+  end
+
+  # Whether a sequence turns bold on, as every sequence of the editor
+  # writes it: reset, then the attributes, then the colors.
+  def self.bold?(sequence)
+    sequence.start_with?("\e[0;1;") || sequence == "\e[0;1m"
+  end
+
+  # Starts the editor on path at the terminal named by term, with the
+  # truecolor variable empty so it cannot override term, and NO_COLOR set
+  # to no_color ("" is unset), and answers the sequences of its bar and of
+  # the linewise visual indicator after V, and its exit status after :q.
+  def self.bar_session(path, term, no_color)
+    home = File.expand_path("#{DIR}/bar-home")
+    make_dirs(home)
+    env = { "HOME" => home, "TERM" => term, "COLORTERM" => "", "NO_COLOR" => no_color }
+    reader, writer, pid = PTY.spawn(env, BIN, path)
+    writer.winsize = [24, 80]
+    out = +"".b
+    settle(reader, out, 0.5)
+    bar = out.index(" NORMAL ").to_i
+    name = sequence_before(out, "colors.rb", bar)
+    quiet = sequence_before(out, "utf-8", bar)
+    mark = out.bytesize
+    writer.write("V")
+    settle(reader, out, 0.5)
+    indicator = sequence_before(out, "-- VISUAL LINE --", mark)
+    writer.write("\e")
+    settle(reader, out, 0.5)
+    writer.write(":q\r")
+    code = finish_session(reader, out, pid)
+    BarRun.new(name: name, quiet: quiet, indicator: indicator, code: code)
+  end
+
   # Reads until the editor closes the terminal, then reaps it.
   def self.finish_session(reader, out, pid)
     loop do
@@ -331,6 +381,33 @@ module SmokeEditorTest
     writer.write(":q\r")
     code = finish_session(reader, out, pid)
     t.assert_equal(0, code, "the editor exits with status 0 after the color check")
+
+    # Scenario: The bar's bytes at 16 colors, 256 colors, and under NO_COLOR
+    # (status-bar). The status bar and the visual indicator at 16
+    # colors (TERM=xterm-color, the terminals ColorDepth lists as basic),
+    # at 256 colors (TERM=xterm), and under NO_COLOR, whose group ids the
+    # presenter tests prove: the file name's sequence (StatusLine) and the
+    # file type's (StatusLineDim) are real sequences of the depth that
+    # differ, the name bold and the type not, and the indicator (ModeMsg)
+    # is bold. NO_COLOR keeps the groups, so its sequences are the 256
+    # colors' ones with the same attributes.
+    bar_path = "#{DIR}/colors.rb"
+    sixteen = bar_session(bar_path, "xterm-color", "")
+    t.assert_equal(0, sixteen.code, "the editor exits with status 0 at 16 colors")
+    t.assert_true(!sixteen.name.empty? && !sixteen.quiet.empty?, "the bar's name and type are written after a sequence at 16 colors")
+    t.assert_true(!sixteen.name.include?("38;") && !sixteen.name.include?("48;") && !sixteen.quiet.include?("38;") && !sixteen.quiet.include?("48;"), "the bar writes basic colors only at 16 colors")
+    t.assert_true(sixteen.name != sixteen.quiet, "StatusLine and StatusLineDim are different bytes at 16 colors")
+    t.assert_equal([true, false], [bold?(sixteen.name), bold?(sixteen.quiet)], "the bar's name is bold and its type is not at 16 colors")
+    t.assert_true(bold?(sixteen.indicator) && !sixteen.indicator.include?("38;"), "the visual indicator is bold in basic colors at 16 colors")
+    xterm = bar_session(bar_path, "xterm", "")
+    t.assert_equal(0, xterm.code, "the editor exits with status 0 at TERM=xterm")
+    t.assert_true(xterm.name.include?("38;5;") && xterm.quiet.include?("38;5;"), "the bar writes 256-color sequences at TERM=xterm")
+    t.assert_true(xterm.name != xterm.quiet, "StatusLine and StatusLineDim are different bytes at TERM=xterm")
+    t.assert_equal([true, false, true], [bold?(xterm.name), bold?(xterm.quiet), bold?(xterm.indicator)], "the name and the indicator are bold and the type is not at TERM=xterm")
+    plain = bar_session(bar_path, "xterm", "1")
+    t.assert_equal(0, plain.code, "the editor exits with status 0 under NO_COLOR")
+    t.assert_true(plain.name != plain.quiet, "StatusLine and StatusLineDim are different bytes under NO_COLOR")
+    t.assert_equal([true, false, true], [bold?(plain.name), bold?(plain.quiet), bold?(plain.indicator)], "the name and the indicator are bold and the type is not under NO_COLOR")
 
     # A file that is not UTF-8 opens with its first illegal line named,
     # each illegal byte drawn as U+FFFD, and is written back byte for byte;
