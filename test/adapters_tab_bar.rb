@@ -180,6 +180,24 @@ module AdaptersTabBarTest
     Carat::Adapters::TabBar.new(buffers: side.list).paint(frame, side.state, 30, 20)
     t.assert_equal("", frame.row_text(0), "a start past the width paints no tab")
 
+    # Scenario "The file's tab stays selected while a sidebar has focus": with the explorer's window
+    # focused, the tab of the file window's buffer is in TabLineSel and the other in TabLine, whether
+    # the previous window is the file window or was lost.
+    focused = setup(["a.txt", "b.txt"], 1, 1)
+    page = focused.state.tab
+    page.layout.arrange(0, 0, 20, 80)
+    tree = page.layout.split(0, true, 0, 1)
+    tree_buffer = D::Buffer.new(lines: ["x"], path: nil, line_ending: "\n")
+    tree_buffer.owner = "explorer"
+    tree_buffer.title = "tree"
+    page.layout.window_at(tree).buffer = tree_buffer
+    page.slot(:left).attach(page.layout.window_at(tree), "explorer", 20)
+    t.assert_equal(true, page.side_window?(tree), "the explorer's window is a side window")
+    page.focus(tree)
+    t.assert_equal(["  a.txt     b.txt", H::TAB_LINE, H::TAB_LINE_SELECTED], [paint(focused, 40).row_text(0), paint(focused, 40).cell(0, 0).hl, paint(focused, 40).cell(0, 10).hl], "the file window's tab is selected with the explorer focused")
+    page.previous = -1
+    t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [paint(focused, 40).cell(0, 0).hl, paint(focused, 40).cell(0, 10).hl], "the file window's tab is selected when no previous window is left to name it")
+
     # Scenario "The sidebar's head reads the project and branch": the last segment of the base directory
     # bright, a faint dot, and the branch dim, all in the sidebar's layer, cut at the sidebar's edge; with no
     # branch the project alone, with the ascii icons a hyphen for the dot.
