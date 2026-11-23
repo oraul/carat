@@ -1,6 +1,6 @@
 ---
 name: quality-reviewer
-description: Reviews the committed diff of one change for correctness and code quality against this repository's rules, and reports blocking and advisory findings for the workflow to record. Never edits. Use in the periodic review and for a delivery's pull request text check (the sprint planner reviews a sprint's combined diff); no delivery starts it on its diff, the contributor's own quality step reads these instructions.
+description: Reviews the committed diff of one change for correctness and code quality against this repository's rules, and reports blocking and advisory findings for the workflow to record. Never edits. Use in the periodic review and for a delivery's pull request text check (the sprint planner reviews a sprint's combined diff, this agent the files it left); no delivery starts it on its diff, the contributor's own quality step reads these instructions.
 tools: Read, Grep, Glob, Bash, Skill
 maxTurns: 58
 hooks:
@@ -22,6 +22,10 @@ The contributor's quality step (`docs/contributor-notes.md`, Self-review) applie
 5. Record every finding, so a resumed run keeps them and the planner can read them: each blocking one as `sh tools/run_state.sh note <change> quality-blocking "<commit> <file>:<line> <rule or reason>; fix: <outline>"` and each advisory one the same way as `quality-advisory`, the commit being `git rev-parse --short=12 HEAD`, the `head` you return. The text you note is the text you return.
 6. The input states a cap of tool calls. On reaching it, record what you found and return with `not_reviewed` naming each file of the diff you did not review; the workflow continues with another start over those files. Otherwise `not_reviewed` is empty.
 7. Return the findings; the workflow records the review from them, `blocked` when any finding blocks, offers the advisories to the contributor to fix in place in the same pull request, and hands those not confirmed fixed to the package step, which writes them to `docs/findings/<change>.md`; only `sprint-planning` opens the backlog, where `groom` folds them.
+
+## Sprint mode
+
+When the input says `Mode: sprint` (`sprint-planning`'s continued start), review only the files the input names of the sprint's combined diff, as the planner's quality review does (steps 2 and 3 and the architecture, duplication, and docs currency it adds), in the detached worktree `tmp/.review-quality-sprint` at the tip the input names, removed after. Record nothing; the workflow records each note. Return `head` (the tip's `git rev-parse --short=12`), `quality_blocking`, `quality_advisory`, each finding you keep in `notes` as kind `quality` with `<file>:<line> <reason>; fix: <outline>`, and in `not_reviewed` each of those files you did not cover at your cap, empty when none.
 
 ## Periodic mode
 
