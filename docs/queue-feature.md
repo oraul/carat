@@ -4,9 +4,7 @@ Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every featur
 
 ## Sprint 32
 
-Delivered: `explorer-rows` (69e59b6, #330), `tab-name-parent` (this delivery).
-
-1. `ui-groups-c` (T2, estimated medium, split from ui-groups-b): Where: `carat/domain/highlight.rb:166` (ModeMsg and MoreMsg, which no painter draws), `test/adapters_status_bar.rb` (NO_COLOR and 16 colors proven on group ids only). Why: 2 groups a theme sets change nothing on screen; the bytes a terminal gets at `TERM=xterm` and under NO_COLOR are untested. Outcome: ModeMsg and MoreMsg are drawn where Neovim draws them or removed; the bars' bytes at 16 colors and NO_COLOR are proven. Accepted when a pty smoke case at `TERM=xterm` and NO_COLOR comparing StatusLine and StatusLineDim bytes fails before. Backlog: "### The visual indicator is dim but ModeMsg and MoreMsg are still unused", "### NO_COLOR and 16 colors are proven on the groups, not on the terminal bytes".
+Delivered: `explorer-rows` (69e59b6, #330), `tab-name-parent` (#333), `ui-groups-c` (this delivery). No feature item is left; the hold draws none until lifted.
 
 ## Pool
 
@@ -27,10 +25,10 @@ Delivered: `explorer-rows` (69e59b6, #330), `tab-name-parent` (this delivery).
 
 ## Decisions
 
-- Security first (T0): none; the sprint-31 review 0 security findings, none disputed; the 3 pending runs carry no periodic finding.
-- Restored (T1 pipeline defect): #330 rewrote this queue to the tab-focus-mark plan (Sprint 31, 3 Pool items lost); the Sprint 32 queue of 092d282 is the base; evidence in `backlog.md`.
-- Delivered (T2 user request): `tab-name-parent`, Sprint 32 item 2; `explorer-rows` (#330, 1,412,911 total, medium, over 1.2M) removed.
-- Size up (T2): medium on content (ui-groups-b 545,902, surface-edges-fix 567,768, one-accent-tabs 867,943); the last two over (tab-focus-mark 46 minutes on small's 25, explorer-rows 1,412,911 on 1.2M): large.
-- Not split (T2): 2 parts in 2 map areas, the name and gap in `tab_width` and `paint_tab`, one dead member; the large is the size-up, not the content.
-- Critical (T2): d carat/domain/buffer.rb, the icon member's removal.
-- Placed (T1): explorer-rows retro 14, 15 and notes 3, 4 into `backlog.md`; head-form, hand pr (#329 fixed wait) and the escape note (Pool 15 `check-escape-lane-build`) dropped; review-in-openspec 9 to 12 already in backlog Pool 18.
+- Security first (T0): none; the pending runs merge-git-unpin, review-in-openspec, and tab-name-parent carry no periodic finding; the sprint-31 review 0 security findings, none disputed.
+- Delivered (T2): `ui-groups-c`, Sprint 32 item 1; with `explorer-rows` and `tab-name-parent` (561,129 total, rework 0) the sprint's 3 features are done.
+- Size (T2): medium, 2 parts (2 groups no painter draws at `highlight.rb:166`; the bars' bytes at `TERM=xterm` and NO_COLOR) against ui-groups-b's 545,902 medium; no size-up: of the last two, explorer-rows went over (1,412,911 on 1.2M), tab-name-parent stayed under (561,129 on 2.5M).
+- Not split (T2): 2 independently testable parts, under 3, in the highlight and bars areas.
+- Not critical (T2): no path of rules a to d; the smoke case is a test.
+- Hold (T2 user request, 2026-11-23, "Go this sprint and after on hold"): no Pool item drawn into Sprint 32.
+- Placed (T1): merge-git-unpin retro note 4 (a Low (6) restating a recorded user decision started a fix round and a close-advisories start; note 5: 5 of the last 10 backlog rows rework 1 or more) into `backlog.md` for the backlog lane; head-form notes (merge-git-unpin 1 to 3 and 6, tab-name-parent 1 and 2) dropped: they escalate nothing; review-in-openspec 8 to 12 already in backlog Pool 18.

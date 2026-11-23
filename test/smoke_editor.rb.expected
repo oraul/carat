@@ -48,6 +48,19 @@ ok   def is written after a color sequence
 ok   the string is written after a color sequence
 ok   :syntax off writes def in the normal group
 ok   the editor exits with status 0 after the color check
+ok   the editor exits with status 0 at 16 colors
+ok   the bar's name and type are written after a sequence at 16 colors
+ok   the bar writes basic colors only at 16 colors
+ok   StatusLine and StatusLineDim are different bytes at 16 colors
+ok   the bar's name is bold and its type is not at 16 colors
+ok   the visual indicator is bold in basic colors at 16 colors
+ok   the editor exits with status 0 at TERM=xterm
+ok   the bar writes 256-color sequences at TERM=xterm
+ok   StatusLine and StatusLineDim are different bytes at TERM=xterm
+ok   the name and the indicator are bold and the type is not at TERM=xterm
+ok   the editor exits with status 0 under NO_COLOR
+ok   StatusLine and StatusLineDim are different bytes under NO_COLOR
+ok   the name and the indicator are bold and the type is not under NO_COLOR
 ok   a file that is not UTF-8 opens with its first illegal line named
 ok   each illegal byte is drawn as one replacement character
 ok   writing the unedited file gives back its bytes
@@ -62,4 +75,4 @@ ok   SIGTERM restores the cursor and leaves the alternate screen
 ok   the editor shows the bar cursor before the interrupt
 ok   SIGINT ends the editor with status 0
 ok   SIGINT restores the cursor and leaves the alternate screen
-smoke_editor: 64 passed, 0 failed
+smoke_editor: 77 passed, 0 failed
