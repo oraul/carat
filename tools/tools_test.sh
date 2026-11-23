@@ -1109,6 +1109,13 @@ state note state security "disputed: no caller; High (9) tools/x.sh:3 a \"quoted
 state note state security "High (9) tools/x.sh:4 another title; fix: an outline" > /dev/null
 expect "run_state: a disputed security note beside its finding is still recorded" 0 "^1 1 1$" \
   sh -c 'echo "$(grep -c "\"security High (9) tools/x.sh:3 a" build/pipeline/state.json) $(grep -c "\"security disputed: no caller; High (9) tools/x.sh:3" build/pipeline/state.json) $(grep -c "\"security High (9) tools/x.sh:4 another" build/pipeline/state.json)"'
+# sprint-guard-lows: the planner's quality notes (kind quality) of a /sprint
+# rerun after a partial review are one note too, a differing text another.
+state note state quality "tools/x.sh:3 a quality finding; fix: an outline" > /dev/null
+expect "run_state: a rerun's quality note is recorded once" 0 "the quality finding is already recorded" state note state quality "tools/x.sh:3 a quality finding; fix: an outline"
+state note state quality "tools/x.sh:4 another quality finding; fix: an outline" > /dev/null
+expect "run_state: a quality note records once and a different quality note again" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "\"quality tools/x.sh:3 a quality finding" build/pipeline/state.json) $(grep -c "\"quality tools/x.sh:4 another" build/pipeline/state.json)"'
 
 # The compile stages skip the code they last passed while their outputs
 # are the ones that pass left; a change to the code they read, to their
@@ -3729,6 +3736,11 @@ expect "guard: merger refuses open_pr message of a path" 2 "tools/open_pr.sh mes
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
+# sprint-guard-lows: lane-close and merge-main take only a change name.
+expect "guard: merger refuses lane-close of a path" 2 "tools/run_state.sh lane-close other than CHANGE" guard merger 'sh tools/run_state.sh lane-close ../c'
+expect "guard: merger refuses lane-close with no change or with two" 2 "tools/run_state.sh lane-close other than CHANGE" guard merger 'sh tools/run_state.sh lane-close c d'
+expect "guard: contributor refuses merge-main of a path" 2 "tools/run_state.sh merge-main other than CHANGE" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main ../c'
+expect "guard: contributor refuses merge-main with no change" 2 "tools/run_state.sh merge-main other than CHANGE" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@2.1.1 new change c && npx @fission-ai/openspec@2.1.1 validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'
@@ -5129,6 +5141,24 @@ expect "gates: security refuses an edit of an earlier sprint row" 1 "code change
 printf 'sprint\tlast\nsprint-0\tseed\n%s\n' "$groomed" > docs/sprints.tsv
 commit "docs: restore the sprint rows"
 expect "gates: security passes after the restored sprint rows" 0 "ok   security: pass" gates security
+# sprint-guard-lows: groom_row reads the history rows from HEAD, compares
+# the appended bytes exactly, and accepts only grown history files.
+cp docs/metrics-backlog.tsv "$work/mb.keep"
+sed 's/^a1\t/zz\t/' "$work/mb.keep" > docs/metrics-backlog.tsv
+expect "run_state: sprint-row committed ignores an edit of the working tree's history rows" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 " sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' committed | tr '\t' ' '"
+expect "run_state: sprint-row reads the working tree's history rows without committed" 0 "^sprint-1 a5 5 zz,a2,a3,a4,a5 " sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' | tr '\t' ' '"
+expect "gates: security reads groom's row from committed history, not an edit of the working tree" 0 "ok   security: pass" gates security
+cp "$work/mb.keep" docs/metrics-backlog.tsv
+printf '\n' >> docs/sprints.tsv
+commit "docs: a blank line after groom's row"
+expect "gates: security refuses groom's row followed by a blank line" 1 "code changed since" gates security
+git_q checkout -q HEAD~1 -- docs/sprints.tsv
+awk -F'\t' -v OFS='\t' '$1 == "a1" { $2 = "x" } 1' "$work/mb.keep" > docs/metrics-backlog.tsv
+commit "docs: edit an earlier history row"
+expect "gates: security refuses groom's row beside an edited earlier history row" 1 "code changed since" gates security
+cp "$work/mb.keep" docs/metrics-backlog.tsv
+commit "docs: restore the history rows"
+expect "gates: security passes after the history rows are restored" 0 "ok   security: pass" gates security
 expect "run_state: sprint-row refuses a marker naming another sprint" 1 "names sprint-1, but the sprint in progress at [0-9a-f]+ is sprint-2" state sprint-row "$(git rev-parse --short=12 HEAD)"
 first_review=$(state get security review.security | cut -d" " -f2)
 state review security security pass "no finding" > /dev/null

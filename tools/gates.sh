@@ -151,13 +151,28 @@ settled_at() {
 
 # True when the bytes HEAD appended to docs/sprints.tsv since COMMIT are
 # exactly the one row groom appends for the sprint the plan's marker names
-# (tools/run_state.sh sprint-row COMMIT, the copy beside this script), so
-# no forged row or second row moves the sprint base.
+# (tools/run_state.sh sprint-row COMMIT committed, the copy beside this
+# script, which reads the history rows from HEAD's committed files, never
+# the working tree), so no forged row, second row, or extra line break moves
+# the sprint base, and the two lane histories only grew since COMMIT. Both
+# sides are compared as files, byte for byte, since a
+# command substitution would drop trailing line breaks (sprint-guard-lows).
 groom_row() {
+  # The history rows the sprint row is computed from only grew since
+  # COMMIT: no earlier row edited after the review.
+  for row_file in docs/metrics-feature.tsv docs/metrics-backlog.tsv; do
+    appended_rows "$1" "$row_file" || return 1
+  done
   row_size=$(git cat-file -s "$1:docs/sprints.tsv" 2>/dev/null) || row_size=0
-  row_added=$(git cat-file blob HEAD:docs/sprints.tsv 2>/dev/null | tail -c +$((row_size + 1)))
-  row_want=$(sh "$here/run_state.sh" sprint-row "$1" 2>/dev/null) || return 1
-  [ -n "$row_want" ] && [ "$row_added" = "$row_want" ]
+  row_have=$(mktemp "${TMPDIR:-/tmp}/carat-groom-have.XXXXXX") || return 1
+  row_need=$(mktemp "${TMPDIR:-/tmp}/carat-groom-need.XXXXXX") || { rm -f "$row_have"; return 1; }
+  git cat-file blob HEAD:docs/sprints.tsv 2>/dev/null | tail -c +$((row_size + 1)) > "$row_have"
+  row_ok=1
+  sh "$here/run_state.sh" sprint-row "$1" committed > "$row_need" 2>/dev/null || row_ok=
+  [ -z "$row_ok" ] || [ -s "$row_need" ] || row_ok=
+  [ -z "$row_ok" ] || cmp -s "$row_have" "$row_need" || row_ok=
+  rm -f "$row_have" "$row_need"
+  [ -n "$row_ok" ]
 }
 
 # True when FILE at HEAD is FILE at COMMIT with lines appended: absent at

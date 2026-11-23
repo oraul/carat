@@ -680,8 +680,13 @@ run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
     read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:base-figures|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
-    merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
-    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
+    merger:show|merger:status|merger:get|merger:trusted|merger:metric) ;;
+    merger:lane-close|contributor:merge-main)
+      # The change's name is a path component of the worktree lane-close
+      # removes and of the run state merge-main reads: only CHANGE_NAME
+      # (sprint-guard-lows).
+      [ $# -eq 2 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh $verb other than CHANGE" ;;
+    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:reviewed-edits) ;;
     # The runner: the resume recipe and the records the workflow wrote
     # (cheap-tier), the note text data as for read. Sprint planning's notes
     # and plan notes, which quote reviewed code, run on the read profile
