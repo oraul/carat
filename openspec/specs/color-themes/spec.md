@@ -163,13 +163,6 @@ The groups of a menu's selected row, `PmenuSel`, `PmenuMatchSel`, and `PmenuExtr
 - **WHEN** any shipped palette is chosen, with the theme's background or the terminal's
 - **THEN** with the theme's background `PmenuSel`, `PmenuMatchSel`, and `PmenuExtraSel` reach 4.5:1 inside a float at 24 bits and at 256 colors, and under either background at 16 colors they carry reverse video and `PmenuSel`'s 16-color foreground and background
 
-### Requirement: The selected tab reads at a glance
-In every shipped palette `TabLineSel`, the group of the selected buffer tab, the current tab-page number, and the current window's winbar, SHALL be drawn bold at every color depth in the palette's color for text on a strong accent over its blue accent, its background at 3:1 or more against the backgrounds of `TabLine` and `TabLineFill` at 24-bit and 256 colors and another basic color than theirs at 16 colors; `TabLine` SHALL not be bold, so the selected tab is never told by color alone.
-
-#### Scenario: Every palette's selected tab stands out
-- **WHEN** the tab groups of the six shipped palettes are measured, with the theme's background or the terminal's
-- **THEN** `TabLineSel`'s background is at 3:1 or more from `TabLine`'s and `TabLineFill`'s at 24 bits and 256 colors, differs from theirs at 16 colors, and `TabLineSel` is bold at every depth while `TabLine` is not
-
 ### Requirement: The lsp slot reads on the status bar's background
 In every shipped palette the `lsp` groups SHALL be drawn over the status bar's own background, the background of `StatusLine`, at 24-bit, 256, and 16 colors, so the bar shows as one band, each in the accent of its state picked for that bar: starting yellow, ready green, and error red and bold, at 4.5:1 or more on the bar at 24-bit and 256 colors, and at 16 colors at 4.5:1 or more under xterm's default colors, an accent no basic color can give there taking the bar's text color.
 
@@ -378,3 +371,10 @@ Every palette SHALL color `WinSeparator` with its `BORDER` role, basic color 8 a
 #### Scenario: WinSeparator is the quiet border tone
 - **WHEN** `WinSeparator` is looked up in the six palettes and its contrast on `Normal`'s background is measured for `carat-dark` and `carat-light`
 - **THEN** it is the palette's `BORDER` color and basic color at 16 colors, and at least 1.5:1 at 24 bits and 1.4:1 at 256 colors
+
+### Requirement: The selected tab is bold on the editor's background
+In every shipped palette `TabLineSel`, the group of the selected buffer tab, SHALL be drawn bold at every attribute depth in Normal's own foreground and background, so the selected tab takes the editor's background with no accent fill; `TabLineName`, the group of the current tab-page number, the current window's winbar name, and the shown view of a slot header, SHALL be drawn bold over the tab row's own background; `TabLine` SHALL not be bold, so the selected tab is never told by color alone.
+
+#### Scenario: The selected tab is bold on the editor's background
+- **WHEN** the tab groups of the six shipped palettes are measured, with the theme's background or the terminal's, and the sequences of carat-dark at 24 bits, 256 colors, and 16 colors are read
+- **THEN** `TabLineSel` and `TabLineName` are bold and `TabLine` is not, `TabLineSel` has Normal's colors, and the sequence of `TabLineSel` has no accent background and is Normal's with the bold added at every depth
