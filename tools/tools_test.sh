@@ -888,6 +888,41 @@ expect "run_state: a sibling stopped by a failure is recorded killed" 0 "^killed
 expect "run_state: a stopped sibling's log names the failed stage" 0 "^KILLED: the check stopped after stage fail failed$" tail -1 build/stages/isolated/long.log
 expect "run_state: a stopped sibling never ends" 0 "^not before$" order "start long" "end long"
 expect "run_state: a failed parallel check removes its clone" 0 "^$" ls -A "$work/checks"
+# A stage's pass is what the runner observed of its own job, never a file a
+# stage could write: the stage forge writes the job files of its sibling
+# victim, which fails, and the victim's record and the verdict stay failed.
+cat > "$work/bin/forge-make" <<'EOF'
+#!/bin/sh
+for arg in "$@"; do
+  case "$arg" in S=*) s=${arg#S=} ;; esac
+done
+case "$s" in
+  victim) sleep 3; exit 5 ;;
+  forge)
+    sleep 1
+    for dir in ../jobs "$PWD/../jobs" "${TMPDIR:-/tmp}/jobs"; do
+      echo 0 > "$dir/victim.status" 2> /dev/null
+      echo "1 0 x" > "$dir/victim.start" 2> /dev/null
+    done
+    sleep 3 ;;
+  esc) printf 'before\033[31mred\033[0m\tafter\r\n'; exit 6 ;;
+  c1) printf 'one\302\233[31mred\ntwo\233[0m\n'; exit 7 ;;
+esac
+exit 0
+EOF
+chmod +x "$work/bin/forge-make"
+forge_check() {
+  env STAGES="$1" CHECK_JOBS=2 MAKE="$work/bin/forge-make" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+}
+expect "run_state: a stage writing its sibling's job files cannot make the sibling pass" 1 "^check: stage victim failed at $at; read build/stages/isolated/victim[.]log$" forge_check "victim forge"
+expect "run_state: a forged job file leaves the sibling's record at its own status" 0 "^5 [0-9]+s $at " sh "$here/run_state.sh" get isolated stage.victim
+# A failing stage's log excerpt shows a control byte as text, not to the terminal.
+expect "run_state: a failing stage's excerpt shows control bytes as visible text" 1 "^[|] before[?][[]31mred[?][[]0m after[?]$" forge_check "esc"
+expect "run_state: a failing stage's excerpt holds no escape byte" 1 "^0$" sh -c "grep -c \"\$(printf '\\033')\" build/stages/isolated/check.log"
+# A C1 control, as the UTF-8 pair C2 9B or a raw 9B byte, is shown as text too.
+expect "run_state: a failing stage's excerpt shows a UTF-8 C1 control as visible text" 1 "^[|] one[?][[]31mred$" forge_check "c1"
+expect "run_state: a failing stage's excerpt shows a raw C1 byte as visible text" 0 "^[|] two[?][[]0m$" sed '$d' build/stages/isolated/check.log
+expect "run_state: a failing stage's excerpt holds no C1 byte" 1 "^0$" sh -c "LC_ALL=C grep -c \"\$(printf '\\233')\" build/stages/isolated/check.log"
 cd "$work/state" || exit 1
 # A check that did not finish says so: a stage ended by a signal, its own
 # or the runner's, is killed; one during which HEAD moved is superseded at

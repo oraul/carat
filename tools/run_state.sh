@@ -966,10 +966,11 @@ lane_written() {
 }
 
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
-# record reading running, its log NAME.log, and "PID SECONDS COMMIT" in
-# job_dir/NAME.start; the job writes CMD's exit status to
-# job_dir/NAME.status when CMD ends, passing a terminate signal on to CMD
-# and waiting for it again. Only the runner writes the run state.
+# record reading running, its log NAME.log, and "NAME PID SECONDS COMMIT"
+# in the runner's job_table; the job ends with CMD's exit status, which the
+# runner alone reads with wait, passing a terminate signal on to CMD and
+# waiting for it again. No file carries a result, so no stage's code can
+# write another's. Only the runner writes the run state.
 stage_launch() {
   launch_name=$1
   shift
@@ -977,7 +978,6 @@ stage_launch() {
   launch_at=$(head_commit)
   launch_start=$(date +%s)
   stage_record "stage.$launch_name" "running 0s $launch_at $(utc_now)"
-  rm -f "$job_dir/$launch_name.status"
   (
     job_child=''
     trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null' TERM
@@ -989,11 +989,43 @@ stage_launch() {
       wait "$job_child"
       job_status=$?
     done
-    { echo "$job_status" > "$job_dir/$launch_name.status.tmp" &&
-        mv "$job_dir/$launch_name.status.tmp" "$job_dir/$launch_name.status"; } 2> /dev/null
+    exit "$job_status"
   ) &
-  echo "$! $launch_start $launch_at" > "$job_dir/$launch_name.start"
+  job_table="$job_table
+$launch_name $! $launch_start $launch_at"
   running="$running $launch_name"
+}
+
+# job_load NAME: sets job_pid, job_start, and job_at from job_table, empty
+# for an unknown job.
+job_load() {
+  # shellcheck disable=SC2046
+  set -- $(printf '%s\n' "$job_table" | sed -n "s/^$1 //p" | tail -n 1)
+  job_pid=${1:-}
+  job_start=${2:-}
+  job_at=${3:-}
+}
+
+# job_ended PID: true when the job is gone or ended and not yet waited for
+# (kill -0 still succeeds on such a child, so the process table says).
+job_ended() {
+  job_state=$(ps -o stat= -p "$1" 2> /dev/null | tr -d ' ')
+  case "$job_state" in ''|Z*) return 0 ;; esac
+  return 1
+}
+
+# visible_text: stdin with a tab or NUL as a space and every other control
+# byte as "?", so a log's escape sequence never reaches the terminal. The
+# C1 controls go too, as the UTF-8 pair C2 80 to C2 9F and as a raw byte
+# 80 to 9F, which a terminal acting on 8-bit controls runs as a CSI; the
+# raw-byte pass also turns a UTF-8 continuation byte in that range into "?".
+visible_text() {
+  c1_lead=$(printf '\302')
+  c1_low=$(printf '\200')
+  c1_high=$(printf '\237')
+  tr '\t\000' '  ' | LC_ALL=C sed -e 's/[[:cntrl:]]/?/g' \
+    -e "s/${c1_lead}[${c1_low}-${c1_high}]/?/g" \
+    -e "s/[${c1_low}-${c1_high}]/?/g"
 }
 
 # Starts the queued stages that are ready, in queue order, while fewer
@@ -1022,14 +1054,14 @@ stages_start() {
 }
 
 # Waits until a running stage ended and records it; returns 1, its name in
-# ended, when it did not pass.
+# ended, when it did not pass. The status is the job's own exit status.
 stages_reap() {
   while :; do
     for s in $running; do
-      [ -f "$job_dir/$s.status" ] || continue
-      read -r job_pid job_start job_at < "$job_dir/$s.start"
-      wait "$job_pid" 2> /dev/null
-      read -r job_status < "$job_dir/$s.status"
+      job_load "$s"
+      job_ended "$job_pid" || continue
+      wait "$job_pid"
+      job_status=$?
       running=$(echo " $running " | sed "s/ $s / /; s/^ *//; s/ *\$//")
       ended=$s
       stage_end "$s" "$job_at" "$job_start" "$job_status" || return 1
@@ -1049,21 +1081,27 @@ stages_stop() {
   [ "$(head_commit)" = "$head" ] || stop_word=superseded
   stopped=''
   for s in $running; do
-    [ -f "$job_dir/$s.status" ] && continue
-    read -r job_pid _ < "$job_dir/$s.start" 2> /dev/null && kill -TERM "$job_pid" 2> /dev/null
+    job_load "$s"
+    [ -n "$job_pid" ] || continue
+    job_ended "$job_pid" || kill -TERM "$job_pid" 2> /dev/null
   done
   if [ "$(ps -o pgid= -p $$ 2>/dev/null | tr -d ' ')" = "$$" ]; then
     trap '' HUP INT TERM
     kill -TERM 0 2>/dev/null
   fi
   for s in $running; do
-    read -r job_pid job_start job_at < "$job_dir/$s.start" 2> /dev/null || continue
-    if [ -f "$job_dir/$s.status" ] && ! one_of "$(cat "$job_dir/$s.status")" "$KILLED_STATUSES"; then
-      stage_end "$s" "$job_at" "$job_start" "$(cat "$job_dir/$s.status")" || :
-      continue
-    fi
+    job_load "$s"
+    [ -n "$job_pid" ] || continue
     n=0
-    while [ ! -f "$job_dir/$s.status" ] && [ $n -lt 50 ]; do pause; n=$((n + 1)); done
+    while ! job_ended "$job_pid" && [ $n -lt 50 ]; do pause; n=$((n + 1)); done
+    if job_ended "$job_pid"; then
+      wait "$job_pid"
+      job_status=$?
+      if ! one_of "$job_status" "$KILLED_STATUSES"; then
+        stage_end "$s" "$job_at" "$job_start" "$job_status" || :
+        continue
+      fi
+    fi
     echo "$1" >> "$stage_dir/$change/$s.log"
     stage_record "stage.$s" "$stop_word $(( $(date +%s) - job_start ))s $job_at $(utc_now)"
     stopped="$stopped $s"
@@ -1177,15 +1215,14 @@ check_stages() {
   fi
   # The stages left run at once (stages_start), each in its job; the runner
   # alone writes their records as they end (stages_reap).
-  job_dir=${check_root%/repo}/jobs
-  mkdir -p "$job_dir" "$stage_dir/$change"
+  mkdir -p "$stage_dir/$change"
   while [ -n "$queue$running" ]; do
     stages_start
     if ! stages_reap; then
       case "$stage_word" in killed|superseded) word=$stage_word ;; *) word=failed ;; esac
       stages_stop "KILLED: the check stopped after stage $ended $word"
       echo "the last lines of the log of stage $ended:"
-      tail -n 20 "$stage_dir/$change/$ended.log" | sed 's/^/| /'
+      tail -n 20 "$stage_dir/$change/$ended.log" | visible_text | sed 's/^/| /'
       echo "check: stage $ended $word at $head; read $stage_dir/$change/$ended.log"
       exit 1
     fi
@@ -1246,7 +1283,7 @@ check_run() {
   echo "$$ $head" > "$pid_file"
   queue=''
   running=''
-  job_dir=''
+  job_table=''
   check_root=''
   trap 'check_signalled HUP' HUP
   trap 'check_signalled INT' INT
