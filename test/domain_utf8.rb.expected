@@ -38,9 +38,16 @@ ok   a NUL takes two cells as ^@
 ok   a letter
 ok   a wide character
 ok   a valid C1 control takes four as <xx>
+ok   a format code point takes six as <xxxx>
 ok   a lone byte 9B is U+FFFD, one cell
 ok   a lone byte FF is one cell
 ok   the first byte of an overlong form is one cell
+ok   a letter
+ok   a two-byte character
+ok   a three-byte character
+ok   a four-byte character
+ok   a lone byte 9B
+ok   an overlong lead
 ok   zero
 ok   U+D7FF
 ok   U+D800
@@ -76,4 +83,4 @@ ok   a four-byte character counts two
 ok   a stray continuation byte counts one
 ok   a truncated four-byte sequence counts one per byte
 ok   a lead byte F5 counts one per byte
-domain_utf8: 78 passed, 0 failed
+domain_utf8: 85 passed, 0 failed

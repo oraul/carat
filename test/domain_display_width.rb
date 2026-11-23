@@ -88,6 +88,31 @@ module DomainDisplayWidthTest
     text = "keep"
     t.assert_equal(true, D::DisplayWidth.cut(text, 10).equal?(text), "a text that fits is answered itself, not copied")
 
+    # DisplayWidth.format_char? names the code points shown as <xxxx>, and
+    # code_cells gives each six cells.
+    t.table([
+      ["a letter", 0x61, [false, 1]],
+      ["U+061B, before the Arabic letter mark", 0x061B, [false, 1]],
+      ["U+061C, the Arabic letter mark", 0x061C, [true, 6]],
+      ["U+200A, a hair space", 0x200A, [false, 1]],
+      ["U+200B, a zero width space", 0x200B, [true, 6]],
+      ["U+200F, a right-to-left mark", 0x200F, [true, 6]],
+      ["U+2010, a hyphen", 0x2010, [false, 1]],
+      ["U+2027, before the separators", 0x2027, [false, 1]],
+      ["U+2028, the line separator", 0x2028, [true, 6]],
+      ["U+202E, a right-to-left override", 0x202E, [true, 6]],
+      ["U+202F, a narrow no-break space", 0x202F, [false, 1]],
+      ["U+205F, before the word joiner", 0x205F, [false, 1]],
+      ["U+2060, the word joiner", 0x2060, [true, 6]],
+      ["U+206F, the last invisible operator", 0x206F, [true, 6]],
+      ["U+2070, a superscript zero", 0x2070, [false, 1]],
+      ["U+FEFF, the byte order mark", 0xFEFF, [true, 6]],
+      ["U+FF00, a fullwidth form", 0xFF00, [false, 2]],
+      ["delete stays a four-cell control", 0x7F, [false, 4]]
+    ]) do |code|
+      [D::DisplayWidth.format_char?(code.to_i), D::DisplayWidth.code_cells(code.to_i, 0, 8)]
+    end
+
     t.finish
   end
 end

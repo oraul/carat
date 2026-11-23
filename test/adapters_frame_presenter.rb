@@ -59,7 +59,8 @@ module AdaptersFramePresenterTest
     "#{f.row_text(0)}|#{f.row_text(1)}"
   end
 
-  # Delete and the C1 controls show as <xx> markers and never reach a cell raw.
+  # Delete, the C1 controls, and the format code points show as markers and
+  # never reach a cell raw.
   def self.control_free?(frame)
     r = 0
     while r < frame.rows
@@ -67,6 +68,7 @@ module AdaptersFramePresenterTest
       while c < frame.cols
         code = frame.cell(r, c).code
         return false if code != 0 && Carat::Domain::DisplayWidth.control?(code)
+        return false if Carat::Domain::DisplayWidth.format_char?(code)
         c += 1
       end
       r += 1
@@ -596,6 +598,49 @@ module AdaptersFramePresenterTest
       f = draw(s, 4, 12)
       [P.display_width(line, 4), f.row_text(0)[5, 1], f.cell(0, 1).width, control_free?(f)]
     end
+    # Scenario: Override and zero-width marks as hexadecimal markers
+    format_markers = [
+      ["U+202E shows as <202e>", "a\u202Eb", "a<202e>b"],
+      ["U+200B shows as <200b>", "a\u200Bb", "a<200b>b"],
+      ["U+FEFF shows as <feff>", "a\uFEFFb", "a<feff>b"],
+      ["U+061C shows as <061c>", "a\u061Cb", "a<061c>b"],
+      ["U+2029 shows as <2029>", "a\u2029b", "a<2029>b"],
+      ["U+2066 shows as <2066>", "a\u2066b", "a<2066>b"],
+      ["U+200A, below the zero-width range, stays raw", "a\u200Ab", "a\u200Ab"],
+      ["U+2070, past the invisible operators, stays raw", "a\u2070b", "a\u2070b"]
+    ]
+    t.table(format_markers) do |line|
+      s = state_for([line.to_s], "a.txt")
+      s.options.number = false
+      draw(s, 4, 12).row_text(0)
+    end
+    format_widths = [
+      ["U+202E marker is six cells wide and the frame holds no format code point", "a\u202Eb", [8, "b", 1, true]],
+      ["U+200B marker is six cells wide and the frame holds no format code point", "a\u200Bb", [8, "b", 1, true]]
+    ]
+    t.table(format_widths) do |line|
+      s = state_for([line.to_s], "a.txt")
+      s.options.number = false
+      f = draw(s, 4, 12)
+      [P.display_width(line, 4), f.row_text(0)[7, 1], f.cell(0, 1).width, control_free?(f)]
+    end
+    # Scenario: Cursor over and after a format marker
+    s = state_for(["a\u200Bb"], "a.txt")
+    s.options.number = false
+    s.cursor.move_to(0, 1)
+    f = draw(s, 4, 12)
+    t.assert_equal(1, f.cursor_col, "cursor on a format code point sits on the first cell of its marker")
+    s.cursor.move_to(0, 2)
+    f = draw(s, 4, 12)
+    t.assert_equal(7, f.cursor_col, "cursor after a format code point is placed past its six cells")
+    s = state_for(["a\u202E\u009B"], "a.txt")
+    s.options.number = false
+    f = draw(s, 4, 14)
+    t.assert_equal("a<202e><9b>", f.row_text(0), "format and C1 markers mix on one line")
+    s = state_for(["a\u202Eb"], "a.txt")
+    s.options.number = false
+    f = draw(s, 4, 5)
+    t.assert_equal("a", f.row_text(0), "a format marker cut by the window's edge shows as blanks")
     s = state_for(["a\u009Bb"], "a.txt")
     s.options.number = false
     s.cursor.move_to(0, 1)
