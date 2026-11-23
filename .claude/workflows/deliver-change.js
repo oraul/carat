@@ -888,14 +888,14 @@ function headProblem(reported, lane) {
 }
 // The lane's head and dirty count from the `key value` lines of
 // tools/lane_facts.sh: only a 12-character hex head and a whole count kept, and
-// machinery yes or no, else unknown.
+// machinery and ruby yes or no, else unknown.
 function parseLaneFacts(text) {
   const facts = {}
   for (const line of String(text || '').split('\n')) {
     const m = /^([a-z_]+) (\S+)$/.exec(line.trim())
     if (m) facts[m[1]] = m[2]
   }
-  return { head: HEAD12.test(facts.head || '') ? facts.head : '', dirty: /^[0-9]+$/.test(facts.dirty || '') ? Number(facts.dirty) : -1, machinery: /^(yes|no)$/.test(facts.machinery || '') ? facts.machinery : 'unknown' }
+  return { head: HEAD12.test(facts.head || '') ? facts.head : '', dirty: /^[0-9]+$/.test(facts.dirty || '') ? Number(facts.dirty) : -1, machinery: /^(yes|no)$/.test(facts.machinery || '') ? facts.machinery : 'unknown', ruby: /^(yes|no)$/.test(facts.ruby || '') ? facts.ruby : 'unknown' }
 }
 // True when a reported head differs from the lane's committed head only in
 // form: the lane read with no uncommitted path, and the head, lower-cased,
@@ -934,6 +934,26 @@ function resultProblems(mode, r, lane) {
 async function laneHead() {
   const r = await recordStart(`sh tools/lane_facts.sh ${state.change}`, 'record: lane head')
   return parseLaneFacts(r && r.ok ? r.output : '')
+}
+
+// A change whose committed diff against its base touches no Ruby code (no file
+// under carat/, bin/, bench/, or config/, no carat.rb) cannot change the
+// allocations or rounds the benchmark compares (bench-skip-nonruby). The
+// fact is read from git by tools/lane_facts.sh in a record start, never
+// from a contributor's claim, and holds only for a clean lane at the commit
+// the check passed at: ruby no, any other value (yes, unknown), a dirty or
+// unread lane, or another head keeps the gate.
+function noRubyAt(lane, at) {
+  return Boolean(lane) && lane.ruby === 'no' && lane.dirty === 0 && sameCommit(lane.head, at)
+}
+// Records the benchmark review passed at the head with no agent when the diff
+// changed no Ruby code; false, recording nothing, otherwise.
+async function benchWithoutRuby() {
+  if (!doneAtHead('check') || !noRubyAt(await laneHead(), head)) return false
+  verdict('bench', true)
+  note(`benchmark at ${head}: no Ruby code changed (no file under carat/, bin/, bench/, or config/, no carat.rb); no agent`)
+  reviewed('bench', true, head, { blocking: 0 })
+  return true
 }
 
 // The contributor's own check (contributor-self-check): a done implement or
@@ -1588,7 +1608,7 @@ async function rounds(fixes = true) {
         verdict('bench', true)
         note(`benchmark at ${benchSameAt}: allocations and rounds equal main's recorded figures; no agent`)
         reviewed('bench', true, benchSameAt, { blocking: 0 })
-      } else {
+      } else if (!(await benchWithoutRuby())) {
         const b = await measured('bench', () => agent(
           `${intro()} The check's measurement differs from main's recorded figures, or was not compared:\n- ${benchReport.join('\n- ') || 'no comparison'}\nCompare with main and return the result. Measure main only when your step 1 finds no stored figures of its current commit, building the base with PREFIX=$PWD/tmp/.toolchain SPINEL_CACHE_DIR=$PWD/build/spinel-cache.${capLine('bench')}`,
           calibrate('bench', { agentType: 'benchmark', schema: withCalls(BENCH) })), callCap('bench'))

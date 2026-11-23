@@ -19,6 +19,11 @@
 #             machinery, whose stage records the branch's runner wrote, so
 #             the workflow backs no contributor's pass; no otherwise;
 #             unknown without a base or when git diff fails
+#   ruby      yes when a path changed from base to HEAD lies under carat/,
+#             bin/, bench/, or config/, or is carat.rb, the Ruby code whose
+#             allocations and rounds the benchmark compares; no otherwise,
+#             so the workflow records the benchmark with no agent;
+#             unknown without a base or when git diff fails
 # Runs from the main checkout or any worktree of it: the lane and the check
 # log are the main checkout's. Exits 2, printing nothing on stdout, for a
 # bad change name, no repository, or no lane worktree.
@@ -66,9 +71,14 @@ fi
 
 # The check's own machinery: the scripts and recipes that run the stages.
 machinery=unknown
+ruby=unknown
 if [ -n "${merge_base:-}" ] && changed=$(lane_git diff --no-renames --name-only "$merge_base" HEAD 2>/dev/null); then
   machinery=no
   ! printf '%s\n' "$changed" | grep -q -E '^(tools/|Makefile$|test/runner/)' || machinery=yes
+  # A path git quotes (one with a special character) keeps its leading
+  # quote, so it never reads as outside the Ruby code.
+  ruby=no
+  ! printf '%s\n' "$changed" | grep -q -E '^"?(carat/|bin/|bench/|config/|carat[.]rb$)' || ruby=yes
 fi
 
 # The verdict line: "check: every stage passed at C[; ...]" or
@@ -97,5 +107,5 @@ case "$word" in
     esac ;;
 esac
 
-printf 'head %s\nbranch %s\nbase %s\npushed %s\ndirty %s\ncheck %s\ncheck_at %s\nmachinery %s\n' \
-  "$head" "$branch" "$base" "$pushed" "$dirty" "$check" "$check_at" "$machinery"
+printf 'head %s\nbranch %s\nbase %s\npushed %s\ndirty %s\ncheck %s\ncheck_at %s\nmachinery %s\nruby %s\n' \
+  "$head" "$branch" "$base" "$pushed" "$dirty" "$check" "$check_at" "$machinery" "$ruby"

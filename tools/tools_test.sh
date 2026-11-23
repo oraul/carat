@@ -3471,9 +3471,9 @@ facts_base=$(git rev-parse --short=12 HEAD)
 git_q worktree add -q -b chore/lf tmp/.lane-lf
 (cd tmp/.lane-lf && echo one > one.txt && commit "chore: one")
 facts_head=$(git -C tmp/.lane-lf rev-parse --short=12 HEAD)
-expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
+expect "lane_facts: a clean, unpushed lane with no check prints every line from git" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no ruby no $" \
   facts lf
-expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no $" \
+expect "lane_facts: run from the lane it prints the same lines" 0 "^head $facts_head branch chore/lf base $facts_base pushed no dirty 0 check none check_at none machinery no ruby no $" \
   sh -c "cd tmp/.lane-lf && sh '$here/lane_facts.sh' lf | tr '\n' ' '"
 git -C tmp/.lane-lf push -q origin chore/lf 2>/dev/null
 expect "lane_facts: a lane whose origin branch is its head reads pushed yes" 0 " pushed yes " facts lf
@@ -3484,13 +3484,13 @@ expect "lane_facts: dirty counts the uncommitted paths, untracked ones included"
 expect "lane_facts: a commit past origin's branch reads pushed no and a new head" 0 "^head $(git -C tmp/.lane-lf rev-parse --short=12 HEAD) .* pushed no dirty 0 " facts lf
 mkdir -p build/stages/lf
 printf 'stage a: passed\ncheck: stage test-run failed at abc1234def56; read build/stages/lf/test-run.log\n' > build/stages/lf/check.log
-expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 machinery no $" facts lf
+expect "lane_facts: the last check's failed verdict and commit come from the check log" 0 " check failed check_at abc1234def56 machinery no ruby no $" facts lf
 echo "check: every stage passed at 0123456789ab; the workflow records the check" >> build/stages/lf/check.log
-expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab machinery no $" facts lf
+expect "lane_facts: a passed verdict and its commit" 0 " check passed check_at 0123456789ab machinery no ruby no $" facts lf
 echo 'check: stage x failed at $(id); read y' >> build/stages/lf/check.log
-expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none machinery no $" facts lf
+expect "lane_facts: a verdict line with a commit that is not hex reads none" 0 " check none check_at none machinery no ruby no $" facts lf
 echo "stage a: running" >> build/stages/lf/check.log
-expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none machinery no $" facts lf
+expect "lane_facts: a log with no verdict last reads none" 0 " check none check_at none machinery no ruby no $" facts lf
 idx=$(git -C tmp/.lane-lf rev-parse --path-format=absolute --git-path index)
 cp "$idx" "$work/facts.index"
 echo broken > "$idx"
@@ -3500,13 +3500,25 @@ cp "$work/facts.index" "$idx"
 # Makefile, or test/runner/, reads machinery yes; no base reads unknown.
 for p in tools/x.sh Makefile test/runner/x.rb; do
   (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
-  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes $" facts lf
+  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes ruby no $" facts lf
   (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
 done
-expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no $" facts lf
+expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no ruby no $" facts lf
+# bench-skip-nonruby: the Ruby code is what a file under carat/, bin/, bench/,
+# or config/ or carat.rb changes; tools, docs, and tests alone read ruby no.
+for p in carat/x.rb bin/x.rb bench/x.rb config/x.caratrc carat.rb; do
+  (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
+  expect "lane_facts: a change of $p reads ruby yes" 0 " ruby yes $" facts lf
+  (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
+done
+for p in docs/x.md tools/x.sh test/x.rb carat-notes/x.md; do
+  (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
+  expect "lane_facts: a change of $p reads ruby no" 0 " ruby no $" facts lf
+  (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
+done
 facts_main=$(git rev-parse refs/remotes/origin/main)
 git_q update-ref -d refs/remotes/origin/main
-expect "lane_facts: a lane with no base reads machinery unknown" 0 " base none .* machinery unknown $" facts lf
+expect "lane_facts: a lane with no base reads machinery unknown" 0 " base none .* machinery unknown ruby unknown $" facts lf
 git_q update-ref refs/remotes/origin/main "$facts_main"
 expect "lane_facts: a change with no lane worktree is refused" 2 "no lane worktree tmp/[.]lane-nolane" sh "$here/lane_facts.sh" nolane
 expect "lane_facts: a name outside the change form is refused" 2 "not a change name: ../lf" sh "$here/lane_facts.sh" ../lf
@@ -5706,6 +5718,29 @@ expect "workflow: a carried line for another commit, or with no bench result, is
   js "$wf" "COMMIT sameCommit CARRIED_FIRST carriedRun" "[carriedRun('carried: every stage passed at def5678; no stage ran\ncarried: bench same', 'abc1234'), carriedRun('carried: every stage passed at abc1234; no stage ran\nspent: x', 'abc1234'), carriedRun('carried: no: stage a has no pass record', 'abc1234')]"
 expect "workflow: the carried check runs before the checker start, which runs only when it is not carried" 0 '^yes$' \
   sh -c "awk '/carryWanted\\(claimedPass/ { a = NR } /if \\(!c\\) c = await measured\\(.check., \\(\\) => agent/ { b = NR } END { print (a > 0 && b > a) ? \"yes\" : \"no\" }' '$wf'"
+# bench-skip-nonruby (the user's decision of 2026-11-23): a diff with no Ruby
+# code records the benchmark review passed with no benchmark start; any other
+# diff, or a fact not read as no at the check's clean head, keeps the gate.
+bench_js() {
+  js "$wf" "COMMIT sameCommit noRubyAt benchWithoutRuby" "(async () => {
+    globalThis.head = 'bbbbbbbbbbbb'; globalThis.recorded = []; globalThis.starts = 0; globalThis.checked = true; globalThis.lane = { head: 'bbbbbbbbbbbb', dirty: 0, ruby: 'no' }
+    globalThis.doneAtHead = (n) => n === 'check' && checked
+    globalThis.laneHead = async () => lane
+    globalThis.verdict = (g, p) => recorded.push('verdict ' + g + ' ' + p)
+    globalThis.note = (l) => recorded.push('note ' + l)
+    globalThis.reviewed = (k, p, c, n) => recorded.push('review ' + k + ' ' + p + ' ' + c + ' ' + n.blocking)
+    globalThis.agent = async () => { starts++; return null }
+    $1
+  })()"
+}
+expect "workflow: a docs-and-tools-only diff records the bench review passed at the head, noting no Ruby code changed, and starts no agent" 0 '^\{"ran":true,"starts":0,"recorded":\["verdict bench true","note benchmark at bbbbbbbbbbbb: no Ruby code changed [(]no file under carat/, bin/, bench/, or config/, no carat.rb[)]; no agent","review bench true bbbbbbbbbbbb 0"\]\}$' \
+  bench_js "const ran = await benchWithoutRuby(); return { ran, starts, recorded }"
+expect "workflow: a diff touching carat/, bin/, bench/, or config/ (ruby yes) records nothing and keeps the benchmark gate" 0 '^\{"ran":false,"recorded":\[\]\}$' \
+  bench_js "lane = { head: 'bbbbbbbbbbbb', dirty: 0, ruby: 'yes' }; const ran = await benchWithoutRuby(); return { ran, recorded }"
+expect "workflow: an unknown or unparsed ruby fact, a dirty or unread lane, another head, or a check not at the head keeps the gate" 0 '^\[false,false,false,false,false,false\]$' \
+  bench_js "const out = []; for (const l of [{ head: 'bbbbbbbbbbbb', dirty: 0, ruby: 'unknown' }, { head: 'bbbbbbbbbbbb', dirty: 1, ruby: 'no' }, { head: 'bbbbbbbbbbbb', dirty: -1, ruby: 'no' }, { head: 'cccccccccccc', dirty: 0, ruby: 'no' }, { head: '', dirty: -1, ruby: 'unknown' }]) { lane = l; out.push(await benchWithoutRuby()) } lane = { head: 'bbbbbbbbbbbb', dirty: 0, ruby: 'no' }; checked = false; out.push(await benchWithoutRuby()); return out"
+expect "workflow: the no-Ruby record stands in the Benchmark phase after the equal-figures branch and before the benchmark agent start" 0 '^yes$' \
+  sh -c "awk '/benchSameAt && benchSameAt === state/ { a = NR } /else if \\(!\\(await benchWithoutRuby\\(\\)\\)\\) \\{/ { b = NR } /agentType: .benchmark./ { c = NR } END { print (a > 0 && b > a && c > b) ? \"yes\" : \"no\" }' '$wf'"
 # An advisory-only round whose fix changed only records stands on the
 # check, security, and bench passes of the commit it started from; no
 # review runs (review-lite).
@@ -6067,8 +6102,8 @@ expect "head form: a placeholder head over a committed lane is taken from git, n
   contributor_js "results = [{ status: 'done', head: 'placeholder', summary: 's', quality_review: { status: 'done', added: 0, fixed: 0, recorded: 0 } }]; const r = await contributor('implement', 'd'); return { ok: !!r, head, kept: r.head, starts: prompts.length, queued, escalated, closable: queued.every((l) => CLOSABLE.test(l)) }"
 expect "head form: a short, full, upper-case, empty, or placeholder head of a committed lane is a form; another commit, a six-character prefix, the head itself, or a dirty or unread lane is not" 0 '^\[\[true,true,true,true,true,true\],\[false,false,false,false\],\[false,false,false\]\]$' \
   contributor_js "const clean = { head: 'bbbbbbbbbbbb', dirty: 0 }; return [['bbbbbbb', 'b'.repeat(40), 'BBBBBBBBBBBB', '', 'HEAD', '<head>'].map((h) => headForm(h, clean)), ['cccccccccccc', 'bbbbbb', 'bbbbbbbbbbbb', 'bbbbbbbc'].map((h) => headForm(h, clean)), [headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: 1 }), headForm('placeholder', { head: 'bbbbbbbbbbbb', dirty: -1 }), headForm('placeholder', { head: '', dirty: 0 })]]"
-expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1, and machinery yes or no, else unknown" 0 '^\[\{"head":"0123456789ab","dirty":3,"machinery":"no"\},\{"head":"","dirty":-1,"machinery":"unknown"\},\{"head":"","dirty":-1,"machinery":"unknown"\}\]$' \
-  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\nmachinery no\n'), parseLaneFacts('head HEAD\ndirty many\nmachinery maybe'), parseLaneFacts('')]"
+expect "head form: parseLaneFacts keeps a 12-character hex head and a whole dirty count, else no head and -1, and machinery and ruby yes or no, else unknown" 0 '^\[\{"head":"0123456789ab","dirty":3,"machinery":"no","ruby":"no"\},\{"head":"","dirty":-1,"machinery":"unknown","ruby":"unknown"\},\{"head":"","dirty":-1,"machinery":"unknown","ruby":"unknown"\}\]$' \
+  contributor_js "return [parseLaneFacts('head 0123456789ab\nbranch chore/x\ndirty 3\nmachinery no\nruby no\n'), parseLaneFacts('head HEAD\ndirty many\nmachinery maybe\nruby NO'), parseLaneFacts('')]"
 # contributor-self-check: the contributor's own passing check at its
 # returned head, over a lane that leaves the check's machinery alone, is the
 # commit the checker's check backs, so the stages passed there are skipped;
