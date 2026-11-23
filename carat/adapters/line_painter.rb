@@ -7,15 +7,16 @@ module Carat
   module Adapters
     # Paints a decoded line into a frame row, the text cells a window row
     # and a float row share: its characters in Normal from a display
-    # column (C0 controls as ^X, delete and C1 controls as <xx>), then its
-    # tokens' groups plus a layer. It holds no state, so the frame
-    # presenter and the float painter each keep one, and it allocates
-    # nothing.
+    # column (C0 controls as ^X, delete and C1 controls as <xx>, format
+    # code points as <xxxx>), then its tokens' groups plus a layer. It
+    # holds no state, so the frame presenter and the float painter each
+    # keep one, and it allocates nothing.
     class LinePainter
       # Paints the visible part of a decoded line from frame column col
       # over width cells: characters whose display columns fall inside
       # [left, left + width), C0 controls as ^X, delete and C1 controls as
-      # <xx>, and blanks everywhere else, tabs included.
+      # <xx>, format code points (zero-width, directional, and separator
+      # marks) as <xxxx>, and blanks everywhere else, tabs included.
       #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer) -> void
       def paint_text(frame, frame_row, col, decoded, width, left)
         if decoded.plain
@@ -44,6 +45,13 @@ module Carat
               frame.put_code(frame_row, at + 1, hex_digit(code >> 4), 1, Domain::Highlight::NORMAL)
               frame.put_code(frame_row, at + 2, hex_digit(code & 15), 1, Domain::Highlight::NORMAL)
               frame.put_code(frame_row, at + 3, 62, 1, Domain::Highlight::NORMAL)
+            elsif w == 6 && Domain::DisplayWidth.format_char?(code)
+              frame.put_code(frame_row, at, 60, 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 1, hex_digit(code >> 12), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 2, hex_digit((code >> 8) & 15), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 3, hex_digit((code >> 4) & 15), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 4, hex_digit(code & 15), 1, Domain::Highlight::NORMAL)
+              frame.put_code(frame_row, at + 5, 62, 1, Domain::Highlight::NORMAL)
             else
               frame.put_code(frame_row, at, code, w, Domain::Highlight::NORMAL)
             end

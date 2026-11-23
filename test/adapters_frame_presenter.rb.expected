@@ -87,6 +87,20 @@ ok   U+007F marker is four cells wide and the frame holds no control
 ok   U+0080 marker is four cells wide and the frame holds no control
 ok   U+009B marker is four cells wide and the frame holds no control
 ok   U+009D marker is four cells wide and the frame holds no control
+ok   U+202E shows as <202e>
+ok   U+200B shows as <200b>
+ok   U+FEFF shows as <feff>
+ok   U+061C shows as <061c>
+ok   U+2029 shows as <2029>
+ok   U+2066 shows as <2066>
+ok   U+200A, below the zero-width range, stays raw
+ok   U+2070, past the invisible operators, stays raw
+ok   U+202E marker is six cells wide and the frame holds no format code point
+ok   U+200B marker is six cells wide and the frame holds no format code point
+ok   cursor on a format code point sits on the first cell of its marker
+ok   cursor after a format code point is placed past its six cells
+ok   format and C1 markers mix on one line
+ok   a format marker cut by the window's edge shows as blanks
 ok   cursor on a C1 control sits on the first cell of its marker
 ok   cursor after a C1 control is placed past its four cells
 ok   markers and caret notation mix on one line
@@ -272,4 +286,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 274 passed, 0 failed
+adapters_frame_presenter: 288 passed, 0 failed

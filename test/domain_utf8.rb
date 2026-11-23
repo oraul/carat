@@ -151,11 +151,24 @@ module DomainUtf8Test
       ["a letter", "a", 1],
       ["a wide character", "中", 2],
       ["a valid C1 control takes four as <xx>", "\u009B", 4],
+      ["a format code point takes six as <xxxx>", "\u202E", 6],
       ["a lone byte 9B is U+FFFD, one cell", "\x9B", 1],
       ["a lone byte FF is one cell", "\xFF", 1],
       ["the first byte of an overlong form is one cell", "\xC0", 1]
     ]) do |ch|
       cell(ch)
+    end
+
+    # Utf8.code_of is the first character's code point, U+FFFD for a stray byte.
+    t.table([
+      ["a letter", "a", 97],
+      ["a two-byte character", "é", 233],
+      ["a three-byte character", "\u202E", 0x202E],
+      ["a four-byte character", "😀", 0x1F600],
+      ["a lone byte 9B", "\x9B", R],
+      ["an overlong lead", "\xC0", R]
+    ]) do |ch|
+      D::Utf8.code_of(ch.to_s)
     end
 
     t.table([

@@ -26,4 +26,22 @@ ok   a stray byte is one cell
 ok   a wide character is three bytes
 ok   a combining mark adds its bytes
 ok   a text that fits is answered itself, not copied
-domain_display_width: 28 passed, 0 failed
+ok   a letter
+ok   U+061B, before the Arabic letter mark
+ok   U+061C, the Arabic letter mark
+ok   U+200A, a hair space
+ok   U+200B, a zero width space
+ok   U+200F, a right-to-left mark
+ok   U+2010, a hyphen
+ok   U+2027, before the separators
+ok   U+2028, the line separator
+ok   U+202E, a right-to-left override
+ok   U+202F, a narrow no-break space
+ok   U+205F, before the word joiner
+ok   U+2060, the word joiner
+ok   U+206F, the last invisible operator
+ok   U+2070, a superscript zero
+ok   U+FEFF, the byte order mark
+ok   U+FF00, a fullwidth form
+ok   delete stays a four-cell control
+domain_display_width: 46 passed, 0 failed
