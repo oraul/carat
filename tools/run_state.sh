@@ -408,11 +408,13 @@
 #                               entries and the sprint findings not queued),
 #                               and append the sprint's row from its history
 #                               rows, the marker kept until BASE holds it
-#   sprint-row COMMIT           print the row groom appends for the sprint
+#   sprint-row COMMIT [committed]  print the row groom appends for the sprint
 #                               the marker names (PLAN_DIR/sprint, else
 #                               sprint.applied), against the sprints file
 #                               at COMMIT; refuse a marker naming another
-#                               sprint than the one in progress there
+#                               sprint than the one in progress there;
+#                               committed reads the history rows from HEAD,
+#                               not the working tree (the gates' form)
 #   groom-proof COMMIT LINE     exit 0 when the groom line LINE ("listed CHANGE
 #                               HEADING" or "fixed COMMIT HEADING") holds
 #                               groom's proof against the sprint in progress
@@ -2223,15 +2225,16 @@ add_note() {
       return 0
     fi
   fi
-  # A security finding a /sprint rerun records again is one note: the
-  # whole text compared, since it carries no leading commit, so a disputed
-  # note beside its finding is still recorded (sprint-close-lows).
-  if [ "$1" = security ]; then
-    if keys_under note. | T="$(escape "$2")" awk '
+  # A security finding or a quality finding a /sprint rerun records again
+  # (after a partial review) is one note: the whole text compared, since it
+  # carries no leading commit, so a disputed note beside its finding is
+  # still recorded (sprint-close-lows, sprint-guard-lows).
+  if [ "$1" = security ] || [ "$1" = quality ]; then
+    if keys_under note. | K="$1" T="$(escape "$2")" awk '
         { sub(/^[0-9]+=/, "") }
-        sub(/^security /, "") { if ($0 == ENVIRON["T"]) found = 1 }
+        index($0, ENVIRON["K"] " ") == 1 { if (substr($0, length(ENVIRON["K"]) + 2) == ENVIRON["T"]) found = 1 }
         END { exit !found }'; then
-      echo "note: the security finding is already recorded; not recorded again"
+      echo "note: the $1 finding is already recorded; not recorded again"
       return 0
     fi
   fi
@@ -2264,10 +2267,16 @@ has_row() {
 }
 
 # Both lanes' history rows, unsorted and without the header, for a lookup
-# by name.
+# by name: from the working tree, or from the commit history_at names when
+# it is set (sprint-row's committed form), where the branch's later edits
+# of the files are the only ones counted.
 lane_rows() {
   for f in $metrics_files; do
-    [ ! -f "$f" ] || awk 'NR > 1 && NF' "$f"
+    if [ -n "${history_at:-}" ]; then
+      git show "$history_at:$f" 2>/dev/null | awk 'NR > 1 && NF'
+    else
+      [ ! -f "$f" ] || awk 'NR > 1 && NF' "$f"
+    fi
   done
 }
 
@@ -4432,7 +4441,10 @@ case "$command" in
   backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   backlog-oldest) [ $# -ge 1 ] || usage; backlog_oldest "$@"; exit $? ;;
   groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
-  sprint-row) [ $# -eq 1 ] || usage; sprint_row_at "$1"; exit $? ;;
+  sprint-row)
+    [ $# -eq 1 ] || { [ $# -eq 2 ] && [ "$2" = committed ]; } || usage
+    [ $# -eq 1 ] || history_at=HEAD
+    sprint_row_at "$1"; exit $? ;;
   groom-proof) [ $# -eq 2 ] || usage; groom_proof "$1" "$2"; exit $? ;;
 esac
 [ $# -ge 1 ] || usage
