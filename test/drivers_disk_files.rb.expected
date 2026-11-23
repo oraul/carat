@@ -32,4 +32,7 @@ ok   a rename below a link that stays inside
 ok   a delete below a linked root
 ok   a delete of the link leading out unlinks only the link
 ok   the link is gone and its target stays
-drivers_disk_files: 34 passed, 0 failed
+ok   a private directory is made 0700 and a private file 0600 holding its text
+ok   a private create refuses a file, a link, and a dangling link, and writes through none
+ok   a rename over a link replaces the link and leaves its target
+drivers_disk_files: 37 passed, 0 failed

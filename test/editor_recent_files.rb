@@ -116,13 +116,44 @@ module EditorRecentFilesTest
 
     # Scenario: A state file that cannot be written does not stop the editor.
     files = disk
-    files.unwritable << STATE
+    files.unwritable << "#{STATE}.tmp"
     h = session(files, "lib/alpha.rb", ["lib/beta.rb"])
     t.assert_equal([nil, true], [files.get(STATE), h.state.buffer.path_text == "lib/beta.rb"], "A state file that cannot be written does not stop the editor: the write is skipped, the session is intact")
     files = disk
     files.put("/home/user/.local", "a file, not a directory\n")
     session(files, "lib/alpha.rb", [])
     t.assert_equal("a file, not a directory\n", files.get("/home/user/.local").to_s, "a home whose .local is a file loses the write and nothing else")
+
+    # Scenario: The state file and its directories are private to the user.
+    files = disk
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal([true, true, true, true, false], [files.owner_only?(STATE), files.owner_only?("/home/user/.local"), files.owner_only?("/home/user/.local/state"), files.owner_only?("/home/user/.local/state/carat"), files.exist?("#{STATE}.tmp")], "The state file and its directories are private to the user: the file is made owner only, each directory made for it too, and no temporary file stays")
+    files = disk
+    files.mkdir("/home/user/.local")
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal([false, true, "/p/lib/alpha.rb\n"], [files.owner_only?("/home/user/.local"), files.owner_only?("/home/user/.local/state/carat"), files.get(STATE).to_s], "a directory that was already there keeps its own mode, the ones made are owner only")
+
+    # Scenario: The state file is written without following a link.
+    files = disk
+    files.put("/home/user/victim", "keep\n")
+    files.put(STATE, "")
+    files.link_to(STATE, "/home/user/victim")
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal(["keep\n", "/p/lib/alpha.rb\n", true], [files.get("/home/user/victim").to_s, files.get(STATE).to_s, files.owner_only?(STATE)], "The state file is written without following a link: a link in its place is replaced, its target keeps its text")
+    files = disk
+    files.put("/home/user/victim", "keep\n")
+    files.put("#{STATE}.tmp", "stale\n")
+    files.link_to("#{STATE}.tmp", "/home/user/victim")
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal(["keep\n", "/p/lib/alpha.rb\n", false], [files.get("/home/user/victim").to_s, files.get(STATE).to_s, files.exist?("#{STATE}.tmp")], "a link left where the temporary file goes is removed, never written through")
+    files = disk
+    files.dangling("#{STATE}.tmp")
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal("/p/lib/alpha.rb\n", files.get(STATE).to_s, "a dangling link left where the temporary file goes is removed and the write goes on")
+    files = disk
+    files.put("#{STATE}/entry", "")
+    session(files, "lib/alpha.rb", [])
+    t.assert_equal([true, false], [files.directory?(STATE), files.exist?("#{STATE}.tmp")], "a directory in the state file's place stays and no temporary file is left")
 
     # Scenario: The recent files stay bounded across restarts.
     files = disk

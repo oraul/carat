@@ -14,6 +14,12 @@ ok   with no home directory nothing is written
 ok   with no home directory nothing is read
 ok   A state file that cannot be written does not stop the editor: the write is skipped, the session is intact
 ok   a home whose .local is a file loses the write and nothing else
+ok   The state file and its directories are private to the user: the file is made owner only, each directory made for it too, and no temporary file stays
+ok   a directory that was already there keeps its own mode, the ones made are owner only
+ok   The state file is written without following a link: a link in its place is replaced, its target keeps its text
+ok   a link left where the temporary file goes is removed, never written through
+ok   a dangling link left where the temporary file goes is removed and the write goes on
+ok   a directory in the state file's place stays and no temporary file is left
 ok   The recent files stay bounded across restarts: 150 earlier paths and one new one keep 100, the new first and the oldest dropped
 ok   an editor that opened no file writes no state file
 ok   usable paths are absolute, longer than the root, without controls, and at most 4096 bytes, multi-byte text kept
@@ -21,4 +27,4 @@ ok   parse keeps usable lines once, in order, up to the limit
 ok   parse reads a last line with no line feed and an empty text as no paths
 ok   render writes the usable paths, one per line, nothing for none
 ok   the state file lives under the home directory, nowhere with none
-editor_recent_files: 23 passed, 0 failed
+editor_recent_files: 29 passed, 0 failed

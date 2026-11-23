@@ -32,8 +32,8 @@ Out of scope: showing the finder's rows with control characters made safe (`plug
 
 ## Impact
 
-- Code: `carat/domain/buffer_list.rb`, `carat/domain/recent_files_text.rb`, `carat/use_cases/files/open_file.rb`, `carat/use_cases/plugins/buffer_requests.rb`, `carat/use_cases/plugins/plugin_host.rb`, `carat/adapters/editor_assembly.rb`, `bin/carat.rb`, `carat.rb`.
-- Tests: `test/editor_recent_files.rb`, `test/domain_buffer_list.rb`, `test/adapters_assembly.rb`, `test/runner/run_all.rb`.
+- Code: `carat/domain/buffer_list.rb`, `carat/domain/recent_files_text.rb`, `carat/use_cases/files/open_file.rb`, `carat/use_cases/plugins/buffer_requests.rb`, `carat/use_cases/plugins/plugin_host.rb`, `carat/adapters/editor_assembly.rb`, `carat/ports/file_port.rb`, `carat/drivers/disk_files.rb`, `carat/doubles/memory_files.rb`, `bin/carat.rb`, `carat.rb`.
+- Tests: `test/editor_recent_files.rb`, `test/drivers_disk_files.rb`, `test/domain_buffer_list.rb`, `test/adapters_assembly.rb`, `test/runner/run_all.rb`.
 - Docs: README.md (the `fr` picker and the state file), `docs/architecture.md` (sections 5.2 and 8.3 name the use cases and the state file), `docs/codebase-map.md`.
 - CLAUDE.md: unchanged, no process, agent, or workflow changed.
 - docs/compatibility.md: unchanged, no Neovim command is implemented.

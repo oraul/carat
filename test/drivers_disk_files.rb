@@ -217,6 +217,29 @@ module DriversDiskFilesTest
     end
     t.assert_equal([false, true], [File.symlink?("#{base}/tree/out"), File.directory?("#{base}/outside")], "the link is gone and its target stays")
 
+    # Private creates: the modes are those of the entries on the disk.
+    # Scenario: The state file and its directories are private to the user.
+    files.mkdir_private("#{base}/priv")
+    files.create_private("#{base}/priv/state", "one\n")
+    t.assert_equal([0700, 0600, "one\n"], [File.stat("#{base}/priv").mode & 0777, File.stat("#{base}/priv/state").mode & 0777, File.read("#{base}/priv/state")], "a private directory is made 0700 and a private file 0600 holding its text")
+    # Scenario: The state file is written without following a link.
+    File.symlink("#{base}/outside/keep.rb", "#{base}/priv/planted")
+    refused = []
+    targets = ["#{base}/priv/state", "#{base}/reg.txt", "#{base}/link.txt", "#{base}/dangling", "#{base}/priv/planted"]
+    i = 0
+    while i < targets.length
+      begin
+        files.create_private(targets[i], "x")
+        refused << "made"
+      rescue StandardError
+        refused << "refused"
+      end
+      i += 1
+    end
+    t.assert_equal([["refused", "refused", "refused", "refused", "refused"], "keep\n", "hello\n", "one\n", false], [refused, File.read("#{base}/outside/keep.rb"), File.read("#{base}/reg.txt"), File.read("#{base}/priv/state"), File.exist?("#{base}/nowhere")], "a private create refuses a file, a link, and a dangling link, and writes through none")
+    files.rename("#{base}/priv/state", "#{base}/priv/planted")
+    t.assert_equal([false, "one\n", "keep\n"], [File.symlink?("#{base}/priv/planted"), File.read("#{base}/priv/planted"), File.read("#{base}/outside/keep.rb")], "a rename over a link replaces the link and leaves its target")
+
     remove(base)
     t.finish
   end

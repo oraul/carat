@@ -12,3 +12,8 @@
 - Location: `carat/use_cases/files/save_recent_files.rb`
 - Why: `FilePort#write` follows a symbolic link at the state file and two editors ending together leave the later one's list. The file is in the user's own home and holds a convenience list, so neither loses anything that matters.
 - Fix: write a temporary file and rename it over the state file, and merge the file's current paths with the list at save.
+
+### Two editors ending together share one temporary state file name
+- Location: `carat/adapters/editor_assembly.rb`, `save_recent_files` (the `recent_files.tmp` beside the state file)
+- Why: the private write removes a leftover temporary file and then creates it exclusively, so two editors ending at the same moment can remove each other's file or fail the create, and one list is lost; the list is a convenience and every failure is skipped, so nothing breaks, but the later list may not be the one kept.
+- Fix: name the temporary file by the process id, or take an advisory lock on the state directory around the write.

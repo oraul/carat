@@ -40,6 +40,19 @@ module Carat
         File.open(path, File::WRONLY | File::CREAT | File::EXCL | File::NOFOLLOW).close
       end
 
+      # Creates the file as create does, with mode 0600 and the text, so a
+      # file nobody else may read is never briefly open to them, and a
+      # failed write leaves the file for the caller to remove.
+      #: (String, String) -> void
+      def create_private(path, text)
+        file = File.open(path, File::WRONLY | File::CREAT | File::EXCL | File::NOFOLLOW, 0600)
+        begin
+          file.write(text)
+        ensure
+          file.close
+        end
+      end
+
       # Returns whether path exists.
       # @rbs path: String
       def exist?(path)
@@ -98,6 +111,12 @@ module Carat
       #: (String) -> void
       def mkdir(path)
         Dir.mkdir(path)
+      end
+
+      # Makes the directory with mode 0700.
+      #: (String) -> void
+      def mkdir_private(path)
+        Dir.mkdir(path, 0700)
       end
 
       #: (String, String) -> void
