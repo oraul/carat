@@ -3636,6 +3636,11 @@ state init review-20261116 main > /dev/null 2>&1
 state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
 expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change planned after it has merged since, nor has a later whole-tree security review passed\$" state plan-needed next
 expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
+# Every failing review is named, since merged_since clears each of them.
+state init review-20261117 main > /dev/null 2>&1
+state review review-20261117 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
+expect "run_state: plan-needed names every failing periodic security review" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, .*passed; review-20261117 also records a failing one at [0-9a-f]+\$" state plan-needed later
+rm -f build/pipeline/review-20261117.json
 expect "run_state: a periodic review records its time" 0 "^20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z\$" state get review-20261116 at.review.periodic-security
 expect "run_state: set refuses a record time" 1 "set: refused: at[.]review[.]periodic-security is written only by its own command" state set review-20261116 at.review.periodic-security 2000-01-01T00:00:00Z
 # Only the security review's time is read (merged_since, passed_since).

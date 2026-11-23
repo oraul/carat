@@ -4343,6 +4343,7 @@ plan_needed() {
   fi
   queues=$queue_files
   ! sprint_waiting || queues="$plan_dir/queue-feature.md $plan_dir/queue-backlog.md"
+  failing=""
   for run in $(review_runs); do
     record=$(change=$run; read_key review.periodic-security)
     case "${record%% *}: $record" in
@@ -4354,9 +4355,17 @@ plan_needed() {
     recorded=$(change=$run; read_key at.review.periodic-security)
     merged_since "$reviewed" "$recorded" && continue
     passed_since "$reviewed" "$recorded" && continue
-    echo "needed: $run records a failing periodic security review at $reviewed, and no change planned after it has merged since, nor has a later whole-tree security review passed"
-    return 0
+    if [ -z "$failing" ]; then
+      failing="needed: $run records a failing periodic security review at $reviewed, and no change planned after it has merged since, nor has a later whole-tree security review passed"
+    else
+      # Every failing review is named, as merged_since clears each one.
+      failing="$failing; $run also records a failing one at $reviewed"
+    fi
   done
+  if [ -n "$failing" ]; then
+    echo "$failing"
+    return 0
+  fi
   queue=""
   heads=""
   for q in $queues; do
