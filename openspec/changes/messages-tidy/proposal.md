@@ -30,5 +30,5 @@ Assumptions: the wrap message of a search stays kept, as Neovim keeps it; the tw
 - Code: `carat/domain/message_history.rb`, `carat/domain/editor_state.rb`, `carat/domain/notices.rb`, `carat/adapters/editor_assembly.rb`, `carat/use_cases/search/jump_to_match.rb`, `carat/use_cases/ex/messages_command_handler.rb`.
 - Tests: `test/editor_messages.rb`, `test/domain_messages.rb`, `test/adapters_assembly.rb`, and every test that builds an `EditorState` or `Notices`.
 - Docs: `docs/compatibility.md` (the messages table), `docs/codebase-map.md`.
-- README.md: unchanged, it describes no message history rule.
+- README.md: one bullet beside the search bullets says what `:messages` keeps.
 - docs/architecture.md: unchanged, it names no message history rule.

@@ -108,6 +108,7 @@ The files load in order, and a later line wins: the built-in defaults (`config/d
 - Patterns are Vim's magic patterns: `. * \+ \= \{n,m} ^ $ [a-z] \( \) \| \< \> \s \d \w \k \c \C \v \V` and the rest `docs/compatibility.md` lists, with `~` for the last substitute's replacement string; back references and look-around are not supported.
 - `hlsearch` (on) highlights every match until `:noh`, the match under the cursor bold in a stronger color as Neovim's `CurSearch`, `incsearch` (on) moves to the first match while you type, and `ignorecase` with `smartcase` ignores case unless the pattern has a capital letter; set them with `option.hlsearch false` in a configuration file or `:set nohls`, `:set ic`, `:set scs?`. The bracket under the cursor and its partner, when the partner is in view, are painted in `MatchParen` (not in insert mode).
 - A pattern can never hang Carat: one too large is refused with `E363`, and a search that would scan too long stops with a message.
+- `:messages` keeps what the message row told you, an error of several lines whole; the pattern a search shows when it jumps (`n N * #`) is left out, the wrap message and a failed search are kept.
 
 ## Substitute
 

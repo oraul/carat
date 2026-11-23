@@ -74,6 +74,7 @@ module DomainMessagesTest
       kept(texts)
     end
 
+    # Scenario: The oldest entry is dropped.
     history = H.new
     i = 0
     while i < 501
