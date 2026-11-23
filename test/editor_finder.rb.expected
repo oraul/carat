@@ -114,5 +114,8 @@ ok   The query row is above the highlight: the second file is on the third row
 ok   Enter with no match keeps the query in the float: the prompt opens again on the same text with the cursor in the float
 ok   The query is the list float's first row: a wide character takes two cells
 ok   The query is the list float's first row: a query wider than the float keeps the cursor in its text area
+ok   The finder attaches its prompt to the list float
+ok   The finder asks for the attachment once for each float, not at every refill
+ok   The finder attaches the reopened prompt to the same float
 ok   The prompt leaves the float when the finder closes
-editor_finder: 117 passed, 0 failed
+editor_finder: 120 passed, 0 failed

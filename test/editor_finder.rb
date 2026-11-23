@@ -534,6 +534,18 @@ module EditorFinderTest
     h = session("<Space>ff" + "a" * 100, 80)
     window = h.state.tab.floats.at(0).window
     t.assert_equal([window.row, window.col + window.width - 1], [h.frame.cursor_row, h.frame.cursor_col], "The query is the list float's first row: a query wider than the float keeps the cursor in its text area")
+    # The attachment is asked once for each float, not at every refill: a
+    # response an allocation per key in a grep. A cleared attachment stays
+    # cleared while the float is the same, and the float's id is held again
+    # when the prompt reopens on it.
+    h = session("<Space>ffb", 80)
+    id = h.state.tab.floats.at(0).id
+    t.assert_equal(id, h.assembly.plugin_ui.prompt_float, "The finder attaches its prompt to the list float")
+    h.assembly.plugin_ui.prompt_float = 0
+    h.type("e")
+    t.assert_equal(0, h.assembly.plugin_ui.prompt_float, "The finder asks for the attachment once for each float, not at every refill")
+    h = session("<Space>ffzzz<CR>", 80)
+    t.assert_equal(h.state.tab.floats.at(0).id, h.assembly.plugin_ui.prompt_float, "The finder attaches the reopened prompt to the same float")
     # Scenario: The prompt leaves the float when the finder closes.
     h = session("<Space>ffbe<Esc>", 80)
     t.assert_equal([0, :normal, 0], [h.state.tab.floats.count, h.mode, h.assembly.plugin_ui.prompt_float], "The prompt leaves the float when the finder closes")

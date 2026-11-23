@@ -22,3 +22,7 @@
 - [x] 5.2 A query wider than the float had no test of the cursor's clamp; add it to `test/editor_finder.rb`, fixed
 - [x] 5.3 A query wider than its float is cut, not scrolled; recorded in `docs/findings/prompt-in-float.md`
 - [x] 5.4 The grep picker's title keeps its two-count form; recorded in `docs/findings/prompt-in-float.md`
+
+## 6. Regression
+
+- [x] 6.1 The grep scenario allocated 1.7 more per key than main (685.3 to 687.0): the finder asks the host for the prompt's float attachment once for each float, not at every refill, proved by `test/editor_finder.rb`

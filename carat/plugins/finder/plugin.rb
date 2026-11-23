@@ -85,6 +85,7 @@ module Carat
         # @rbs @matches: Array[Integer]
         # @rbs @selected: Integer
         # @rbs @list_float: Integer
+        # @rbs @prompt_float: Integer
         # @rbs @preview_float: Integer
         # @rbs @list_box: String
         # @rbs @preview_box: String
@@ -108,6 +109,7 @@ module Carat
           @matches = []
           @selected = 0
           @list_float = 0
+          @prompt_float = 0
           @preview_float = 0
           @list_box = ""
           @preview_box = ""
@@ -210,6 +212,7 @@ module Carat
           line = selected_line
           column = selected_column
           if !input.cancelled && path.empty? && host.live_prompt(PROMPT_ID, PROMPT, input.text, KEYS).ok
+            @prompt_float = 0
             attach_prompt(host)
             return
           end
@@ -415,6 +418,7 @@ module Carat
         def close_floats(host)
           host.close_float(@list_float) if @list_float != 0
           @list_float = 0
+          @prompt_float = 0
           close_preview(host)
         end
 
@@ -467,10 +471,12 @@ module Carat
         end
 
         # Shows the typed text on the list float's first row, where the
-        # cursor stands, in place of the command line.
+        # cursor stands, in place of the command line; asked once for each
+        # float, not at every refill, which costs a response each time.
         #: (Carat::PluginApi::Host) -> void
         def attach_prompt(host)
-          host.float_prompt(@list_float) if @list_float != 0
+          return if @list_float == 0 || @prompt_float == @list_float
+          @prompt_float = @list_float if host.float_prompt(@list_float).ok
         end
 
         # The list float's title word for the source.
