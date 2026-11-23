@@ -17,10 +17,11 @@ module EditorMessagesTest
       i += 1
     end
     files.put("a.txt", text)
+    files.put("b.txt", "other\n")
     h = Carat::Doubles::EditorHarness.default(files, 12, 60)
     h.terminal.no_color = plain
     h.open("a.txt")
-    h.state.history.clear
+    h.state.message_history.clear
     h
   end
 
@@ -35,6 +36,11 @@ module EditorMessagesTest
   def self.listed(keys)
     h = editor(false)
     h.type(keys.to_s)
+    listed_of(h)
+  end
+
+  # The lines of the listing above the message row of a harness.
+  def self.listed_of(h)
     out = []
     r = 0
     while r < 12
@@ -64,6 +70,7 @@ module EditorMessagesTest
   def self.main
     t = Carat::Testing.new("editor_messages")
 
+    # Scenario: The wrap message of a search is kept.
     # Rows are [label, keys, message row].
     t.table([
       ["an error is kept after the next key", ":foo<CR>l:messages<CR>", "E492: Not an editor command: foo"],
@@ -72,10 +79,27 @@ module EditorMessagesTest
       ["no history shows nothing", ":messages<CR>", ""],
       ["clear empties the history", ":foo<CR>:messages clear<CR>:messages<CR>", ""],
       ["another argument is refused", ":messages all<CR>", "✖ E474: Invalid argument"],
-      ["the output of :messages is not kept", ":foo<CR>:messages<CR>:messages<CR>", "E492: Not an editor command: foo"]
+      ["the output of :messages is not kept", ":foo<CR>:messages<CR>:messages<CR>", "E492: Not an editor command: foo"],
+      ["the echo of n is not kept", "/line 2<CR>n:messages<CR>", ""],
+      ["the echo of N is not kept", "3G/line 2<CR>N:messages<CR>", ""],
+      ["the echo of * is not kept", "*:messages<CR>", ""],
+      ["the echo of # is not kept", "5G#:messages<CR>", ""],
+      ["the echo of a ? search is not kept", "5G?line 2<CR>:messages<CR>", ""],
+      ["a wrap message is kept", "G/line 1 of<CR>:messages<CR>", "search hit BOTTOM, continuing at TOP"],
+      ["a search that finds nothing is kept", "/nothing<CR>:messages<CR>", "E486: Pattern not found: nothing"]
     ]) do |keys|
       after(keys)
     end
+
+    # Scenario: The echo of a search is not kept.
+    h = editor(false)
+    h.type("/line 2<CR>n")
+    t.assert_equal("/line 2", h.message_row.strip, "n shows the pattern it searched for")
+
+    # Scenario: The refusal of a quit over an unsaved buffer is kept whole.
+    h = editor(false)
+    h.type("x:e b.txt<CR>:qa<CR>:messages<CR>")
+    t.assert_equal(["E37: No write since last change", "E162: No write since last change for buffer \"a.txt\"", "Press ENTER or type command to continue"], listed_of(h), "the two lines of the refusal are in the history, whole")
 
     t.assert_equal(["E492: Not an editor command: foo", "E492: Not an editor command: bar", "Press ENTER or type command to continue"], listed(":foo<CR>:bar<CR>:mes<CR>"), "several entries are listed in order with the hit-enter prompt")
     h = editor(false)
@@ -88,7 +112,7 @@ module EditorMessagesTest
     t.assert_equal(["╭──── Warning ─────╮", "│ disk almost full │", "╰──────────────────╯"], [h.row(0)[39, 20], h.row(1)[39, 20], h.row(2)[39, 20]], "a warning box ends one column before the right edge")
     t.assert_equal([59, "line 2 of the fi"], [h.row(1).rstrip.length, h.row(1)[4, 16]], "the last column and the window beside the box are kept")
     t.assert_equal([H::FLOAT_BORDER, H::DIAGNOSTIC_WARN, H::DIAGNOSTIC_WARN, H::NORMAL_FLOAT], [h.frame.hl_at(0, 39), h.frame.hl_at(0, 44), h.frame.hl_at(0, 45), h.frame.hl_at(1, 41)], "the border, the title in its severity's group, the text in NormalFloat")
-    t.assert_equal(0, h.state.history.to_s.index("disk almost full"), "a notification is kept in the history")
+    t.assert_equal(0, h.state.message_history.to_s.index("disk almost full"), "a notification is kept in the history")
 
     # Keys go on under a notification, and the screen equals a full repaint.
     h.type("jjlh")

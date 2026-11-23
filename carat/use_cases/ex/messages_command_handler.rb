@@ -19,7 +19,7 @@ module Carat
       # @rbs command: Domain::ExCommand
       def call(state, command)
         args = command.args.strip
-        history = state.history
+        history = state.message_history
         if args == "clear"
           history.clear
           return Outcome.none

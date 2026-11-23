@@ -8,7 +8,9 @@ module Carat
     # A search command outside an operator: the cursor moves to the start
     # of the match FindMatch found, a match at the end of a line resting
     # on its last character outside the visual modes, and the hit's
-    # message is shown, as an error when there was no match. A match
+    # message is shown, as an error when there was no match. The echo of
+    # the pattern is output the message history does not keep; the wrap
+    # message and an error are kept. A match
     # found records the position left in the jump list. In a visual
     # mode the moved cursor extends the selection.
     class JumpToMatch
@@ -25,7 +27,9 @@ module Carat
         return Outcome.failure(hit.message) unless hit.found?
         state.window.record_jump
         state.cursor.move_to(hit.row, state.clamp_col(hit.row, hit.col))
-        Outcome.success(hit.message)
+        return Outcome.success(hit.message) if hit.wrapped
+        state.show_output(hit.message)
+        Outcome.none
       end
     end
   end

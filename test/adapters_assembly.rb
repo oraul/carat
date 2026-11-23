@@ -196,7 +196,7 @@ module AdaptersAssemblyTest
     t.assert_equal([], strangers(a.cache, [["arrange_view", a.arrange_view.cache], ["frame_presenter", a.frame_presenter.cache], ["float_painter", a.frame_presenter.float_painter.cache]]), "the line cache")
     t.assert_equal([], strangers(a.start_screen, [["controller", a.controller.start_screen], ["frame_presenter", a.frame_presenter.start_screen]]), "the start screen")
     t.assert_equal([], strangers(a.notices, [["controller", a.controller.notices], ["float_painter", a.frame_presenter.float_painter.notices], ["services", a.services.notices]]), "the notifications")
-    t.assert_equal(true, a.notices.history.equal?(a.state.history), "the notifications keep the state's history")
+    t.assert_equal([true, true], [a.notices.message_history.equal?(a.message_history), a.state.message_history.equal?(a.message_history)], "the notifications and the state keep the one message history")
     t.assert_equal([], strangers(a.arrange_view, [["handle_key", a.handle_key.arrange_view]]), "the arrange view use case")
     t.assert_equal([], strangers(a.plugins.syntax, [["highlight_view", a.highlight_view.syntax], ["format_docs", a.format_docs.syntax]]), "the plugins as tokenizers")
     t.assert_equal([], strangers(a.format_docs, [["show_hover", a.show_hover.format_docs], ["show_docs", a.show_completion.show_docs.format_docs], ["toggle_reading", a.toggle_reading.format_docs]]), "the one documentation formatter")

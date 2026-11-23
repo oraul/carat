@@ -109,7 +109,7 @@ module DomainSelectionTest
     t.assert_true(!D::Selection.none.active?, "no selection is inactive")
 
     # The editor state's selection and leaving visual mode.
-    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: buffer_of(["abc", "de"]))), options: D::Options.new)
+    state = D::EditorState.new(message_history: D::MessageHistory.new, tabs: D::TabList.new(window: D::Window.new(buffer: buffer_of(["abc", "de"]))), options: D::Options.new)
     t.assert_equal(:none, state.selection.kind, "normal mode has no selection")
     state.mode = D::Mode::VISUAL
     state.window.anchor = pos([0, 1])

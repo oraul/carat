@@ -19,7 +19,7 @@ module AdaptersStatusBarTest
     buffer = D::Buffer.new(lines: lines, path: path, line_ending: "\n")
     options = D::Options.new
     options.icons = "unicode"
-    s = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: buffer)), options: options)
+    s = D::EditorState.new(message_history: D::MessageHistory.new, tabs: D::TabList.new(window: D::Window.new(buffer: buffer)), options: options)
     s.window.height = 10
     SLOTS.branch = ""
     SLOTS.errors = 0

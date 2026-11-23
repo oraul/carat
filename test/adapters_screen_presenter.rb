@@ -150,11 +150,11 @@ module AdaptersScreenPresenterTest
     buffer = D::Buffer.new(lines: ["a\u009Bb\u009Dc"], path: "a.txt", line_ending: "\n")
     options = D::Options.new
     options.number = false
-    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: buffer)), options: options)
+    state = D::EditorState.new(message_history: D::MessageHistory.new, tabs: D::TabList.new(window: D::Window.new(buffer: buffer)), options: options)
     cache = D::LineCache.new
     state.resize(3, 12)
     Carat::UseCases::ArrangeView.new(cache: cache, buffers: listed_none).call(state)
-    drawn = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new, palette: D::Palette.new, start_screen: D::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: D::PluginUi.new, slots: D::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: listed_none), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: cache, notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new))).call(state)
+    drawn = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new, palette: D::Palette.new, start_screen: D::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: D::PluginUi.new, slots: D::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: listed_none), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: cache, notices: Carat::Domain::Notices.new(message_history: Carat::Domain::MessageHistory.new))).call(state)
     screen.present(drawn)
     bytes = terminal.last_write
     t.assert_true(bytes.include?("a<9b>b<9d>c"), "C1 controls are written as markers")
@@ -249,10 +249,10 @@ module AdaptersScreenPresenterTest
       i += 1
     end
     options = D::Options.new
-    state = D::EditorState.new(tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
+    state = D::EditorState.new(message_history: D::MessageHistory.new, tabs: D::TabList.new(window: D::Window.new(buffer: D::Buffer.new(lines: lines, path: "a.txt", line_ending: "\n"))), options: options)
     cache = D::LineCache.new
     arrange = Carat::UseCases::ArrangeView.new(cache: cache, buffers: listed_none)
-    frames = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new, palette: D::Palette.new, start_screen: D::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: D::PluginUi.new, slots: D::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: listed_none), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: cache, notices: Carat::Domain::Notices.new(history: Carat::Domain::MessageHistory.new)))
+    frames = Carat::Adapters::FramePresenter.new(input: D::InputState.new, plugin_ui: D::PluginUi.new, cache: cache, last_search: D::LastSearch.new, search_prompt: D::SearchPrompt.new, palette: D::Palette.new, start_screen: D::StartScreen.new, status_bar: Carat::Adapters::StatusBar.new(plugin_ui: D::PluginUi.new, slots: D::StatusSlots.new), tab_bar: Carat::Adapters::TabBar.new(buffers: listed_none), winbar: Carat::Adapters::Winbar.new(symbols: Carat::Domain::SymbolRequest.new), float_painter: Carat::Adapters::FloatPainter.new(cache: cache, notices: Carat::Domain::Notices.new(message_history: Carat::Domain::MessageHistory.new)))
     clock = Carat::Doubles::ManualClock.new
     terminal = Carat::Doubles::FakeTerminal.new(clock: clock, rows: 5, cols: 20)
     screen = presenter(terminal)

@@ -5,6 +5,15 @@ ok   no history shows nothing
 ok   clear empties the history
 ok   another argument is refused
 ok   the output of :messages is not kept
+ok   the echo of n is not kept
+ok   the echo of N is not kept
+ok   the echo of * is not kept
+ok   the echo of # is not kept
+ok   the echo of a ? search is not kept
+ok   a wrap message is kept
+ok   a search that finds nothing is kept
+ok   n shows the pattern it searched for
+ok   the two lines of the refusal are in the history, whole
 ok   several entries are listed in order with the hit-enter prompt
 ok   the refusal is an error
 ok   a warning box ends one column before the right edge
@@ -20,4 +29,4 @@ ok   a plain box in ASCII, at least 20 columns wide
 ok   a plain box is all in Normal
 ok   a short warning draws its whole title
 ok   a short error draws its whole title
-editor_messages: 22 passed, 0 failed
+editor_messages: 31 passed, 0 failed

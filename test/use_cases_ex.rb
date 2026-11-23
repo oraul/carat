@@ -44,7 +44,7 @@ module UseCasesExTest
     tabs = D::TabList.new(window: D::Window.new(buffer: buffer))
     buffers = D::BufferList.new(tabs: tabs)
     buffers.add(buffer)
-    state = D::EditorState.new(tabs: tabs, options: D::Options.new)
+    state = D::EditorState.new(message_history: D::MessageHistory.new, tabs: tabs, options: D::Options.new)
     commands = U::ExTable.new
     ex = U::ExecuteEx.new(commands: commands)
     probe_path = U::ProbePath.new(files: files)

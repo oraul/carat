@@ -1,6 +1,7 @@
-ok   one-line texts in order with their levels
+ok   one-line texts in order
 ok   an empty text is not kept
 ok   a listing is not kept
+ok   an error of two lines is kept whole
 ok   nothing shown, nothing kept
 ok   past 500 the oldest is dropped
 ok   clear empties the history
@@ -11,4 +12,4 @@ ok   a level out of range is info
 ok   with none shown the wait is the longest lifetime
 ok   the wait to the next deadline, each notice kept in the history with a serial
 ok   expire answers whether one went
-domain_messages: 13 passed, 0 failed
+domain_messages: 14 passed, 0 failed

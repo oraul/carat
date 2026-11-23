@@ -33,7 +33,7 @@ module AdaptersFloatPainterTest
   # and a notification when notice, plain when asked, under the default
   # options with the icons of the icon set given.
   def self.setup(float, notice, plain, icons)
-    notices = D::Notices.new(history: D::MessageHistory.new)
+    notices = D::Notices.new(message_history: D::MessageHistory.new)
     notices.add("saved", D::MessageHistory::WARNING, 0.0) if notice
     painter = Carat::Adapters::FloatPainter.new(cache: D::LineCache.new, notices: notices)
     painter.plain = plain

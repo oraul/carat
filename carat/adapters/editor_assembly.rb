@@ -233,6 +233,7 @@ module Carat
       attr_reader :cache #: Domain::LineCache
       attr_reader :start_screen #: Domain::StartScreen
       attr_reader :status_slots #: Domain::StatusSlots
+      attr_reader :message_history #: Domain::MessageHistory
       attr_reader :notices #: Domain::Notices
       attr_reader :arrange_view #: UseCases::ArrangeView
       attr_reader :highlight_view #: UseCases::HighlightView
@@ -355,7 +356,8 @@ module Carat
         @buffers = Domain::BufferList.new(tabs: @tabs)
         @buffers.base = files.cwd
         @buffers.add(first)
-        @state = Domain::EditorState.new(tabs: @tabs, options: Domain::Options.from_config(value))
+        @message_history = Domain::MessageHistory.new
+        @state = Domain::EditorState.new(tabs: @tabs, options: Domain::Options.from_config(value), message_history: @message_history)
         @keymap = Domain::Keymap.new
         @registers = Domain::Registers.new
         @last_change = Domain::LastChange.new
@@ -377,7 +379,7 @@ module Carat
         @key_hints = Domain::KeyHints.new
         @palette = Domain::Palette.new
         @cmdline_menu = Domain::CmdlineMenu.new
-        @notices = Domain::Notices.new(history: @state.history)
+        @notices = Domain::Notices.new(message_history: @message_history)
         @services = JsonRpcLanguageGateway.new(processes: processes, messages: messages, files: files, buffers: @buffers, config: value, slots: @status_slots, completion: completions.request, clock: clock, hover: @hover, definition: @definition, signature: @signature, symbols: @symbols, notices: @notices)
         @arrange_view = UseCases::ArrangeView.new(cache: @cache, buffers: @buffers)
         @actions = UseCases::ActionTable.new

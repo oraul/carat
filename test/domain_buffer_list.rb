@@ -24,7 +24,7 @@ module DomainBufferListTest
     tabs = D::TabList.new(window: D::Window.new(buffer: buffer))
     buffers = D::BufferList.new(tabs: tabs)
     buffers.add(buffer)
-    Lists.new(tabs: tabs, buffers: buffers, state: D::EditorState.new(tabs: tabs, options: D::Options.new))
+    Lists.new(tabs: tabs, buffers: buffers, state: D::EditorState.new(message_history: D::MessageHistory.new, tabs: tabs, options: D::Options.new))
   end
 
   def self.ints(values)
