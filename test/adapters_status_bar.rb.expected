@@ -8,6 +8,7 @@ ok   the counts above zero
 ok   every count in order
 ok   the lsp slot
 ok   the lsp slot after the plugins' segments
+ok   the folder before the file name
 ok   the position and Top
 ok   a percentage
 ok   Bot
@@ -18,13 +19,15 @@ ok   carat-dark: the pill stands out from the bar and both are readable
 ok   carat-light: the pill stands out from the bar and both are readable
 ok   option.icons ascii: the modified icon is an asterisk
 ok   an lsp state without a server name shows nothing
-ok   ready shows the name
-ok   starting
-ok   indexing with its percent
-ok   stopped
-ok   crashed names the restart command
-ok   untrusted names the start command
+ok   ready is the name and a dot
+ok   starting is the same dot
+ok   indexing is the same dot, the percent left to the progress bar
+ok   stopped is the same dot
+ok   crashed names the restart command after the dot
+ok   untrusted names the start command after the dot
 ok   setting the same server again changes nothing
+ok   only a crash and an untrusted directory name a command
+ok   option.icons ascii: the server's dot is an asterisk
 ok   40 columns keep every segment
 ok   32 columns drop the encoding
 ok   25 columns drop the file type
@@ -44,15 +47,28 @@ ok   visual block
 ok   replace
 ok   operator pending
 ok   command line
-ok   the pill ends at its closing space and the status group fills the rest
+ok   the pill ends at its closing space, the status group fills the rest, and the percent's last space is dim
 ok   each group's color and the spacing between the groups
 ok   NO_COLOR keeps the groups and the spacing
-ok   the branch, the type, and the encoding step back; the file, the position, and the percent do not
+ok   the branch, the type, the encoding, and the percent step back; the file and the position do not
+ok   a percentage and its spaces are in StatusLineDim
+ok   a folder before the name
+ok   an absolute path
+ok   a multi-byte folder counts cells, not bytes
+ok   no folder
+ok   the root
+ok   a path ending in a slash
+ok   the modified icon after the name is in StatusLine
+ok   a scratch title is in StatusLine
+ok   NO_COLOR keeps the folder in StatusLineDim and the name in StatusLine
+ok   a bar cut inside the folder keeps the cut cells dim
 ok   starting
 ok   ready
 ok   indexing
 ok   stopped
 ok   crashed
+ok   untrusted
+ok   the restart hint after the dot is in the error group
 ok   each count in its status bar count group, the closing space in the last one's
 ok   new slots are empty
 ok   a buffer's diagnostics are counted by severity
@@ -66,9 +82,9 @@ ok   reduced motion leaves out a bar without a percent
 ok   reduced motion keeps a bar with a percent
 ok   a plain bar under NO_COLOR
 ok   no title, the bar alone
-ok   done cells in StatusLineLspReady, the rest in StatusLine
-ok   plain done cells in StatusLine
-ok   an ascii bar reads #### and ------ with the done cells in StatusLineLspReady
+ok   done cells in StatusLineLspReady, the undone ones in StatusLineDim, the space and the title in StatusLine
+ok   plain done cells in StatusLine, the undone ones in StatusLineDim
+ok   an ascii bar reads #### and ------ with the done cells in StatusLineLspReady and the rest in StatusLineDim
 ok   a narrow bar drops the progress (35) before the branch (40)
 ok   clearing ends the progress once
-adapters_status_bar: 73 passed, 0 failed
+adapters_status_bar: 89 passed, 0 failed

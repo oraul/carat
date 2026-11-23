@@ -112,6 +112,8 @@ module AdaptersStatusBarTest
       s = state_for("a.txt", 3)
       SLOTS.set_lsp("ruby-lsp", :ready, 0)
       s
+    when "folder"
+      state_for("src/lib/a.rb", 3)
     when "plugin and lsp"
       s = state_for("a.txt", 3)
       UI.segment("probe", "x", 10)
@@ -173,8 +175,9 @@ module AdaptersStatusBarTest
       ["the git branch", "branch", pad(" NORMAL  a.txt   ± main ", right, 60)],
       ["the counts above zero", "two counts", pad(" NORMAL  a.txt   ✖ 2 ◇ 1 ", right, 60)],
       ["every count in order", "four counts", pad(" NORMAL  a.txt   ✖ 1 ▲ 2 ◆ 3 ◇ 4 ", right, 60)],
-      ["the lsp slot", "lsp", pad(" NORMAL  a.txt ", "  ruby-lsp " + right, 60)],
-      ["the lsp slot after the plugins' segments", "plugin and lsp", pad(" NORMAL  a.txt ", "  x   ruby-lsp " + right, 60)],
+      ["the lsp slot", "lsp", pad(" NORMAL  a.txt ", "  ruby-lsp ● " + right, 60)],
+      ["the lsp slot after the plugins' segments", "plugin and lsp", pad(" NORMAL  a.txt ", "  x   ruby-lsp ● " + right, 60)],
+      ["the folder before the file name", "folder", pad(" NORMAL  src/lib/a.rb ", "  ruby " + right, 60)],
       ["the position and Top", "cursor at the top", pad(" NORMAL  a.txt ", "  utf-8   5:3  Top ", 60)],
       ["a percentage", "cursor in the middle", pad(" NORMAL  a.txt ", "  utf-8   51:1  50% ", 60)],
       ["Bot", "cursor at the bottom", pad(" NORMAL  a.txt ", "  utf-8   100:1  Bot ", 60)]
@@ -204,19 +207,19 @@ module AdaptersStatusBarTest
     ascii.options.icons = "ascii"
     t.assert_equal(pad(" NORMAL  a.txt * ", right, 60), paint(ascii, 60).row_text(0), "option.icons ascii: the modified icon is an asterisk")
 
-    # Empty slots take no cells: the bar is the same as without them.
+    # Scenario: Empty slots take no room. Empty slots take no cells: the bar is the same as without them.
     plain = paint(scenario("plain"), 60).row_text(0)
     SLOTS.set_lsp("", :crashed, 0)
     t.assert_equal(plain, paint(scenario("plain"), 60).row_text(0), "an lsp state without a server name shows nothing")
 
-    # The slot names the state after the server's name.
+    # Scenario: The slot names the state. The slot shows the server's name and one dot, with the hint of a crash or an untrusted directory. Scenario: Filled slots and Scenario: The lsp slot keeps its place are the first rows of the segment table above.
     t.table([
-      ["ready shows the name", "ready", " ruby-lsp "],
-      ["starting", "starting", " ruby-lsp starting "],
-      ["indexing with its percent", "indexing", " ruby-lsp indexing 42% "],
-      ["stopped", "stopped", " ruby-lsp stopped "],
-      ["crashed names the restart command", "crashed", " ruby-lsp crashed :LspRestart "],
-      ["untrusted names the start command", "untrusted", " ruby-lsp untrusted :LspStart "]
+      ["ready is the name and a dot", "ready", " ruby-lsp ● "],
+      ["starting is the same dot", "starting", " ruby-lsp ● "],
+      ["indexing is the same dot, the percent left to the progress bar", "indexing", " ruby-lsp ● "],
+      ["stopped is the same dot", "stopped", " ruby-lsp ● "],
+      ["crashed names the restart command after the dot", "crashed", " ruby-lsp ● crashed :LspRestart "],
+      ["untrusted names the start command after the dot", "untrusted", " ruby-lsp ● untrusted :LspStart "]
     ]) do |state|
       s = scenario("plain")
       SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 42)
@@ -225,6 +228,12 @@ module AdaptersStatusBarTest
       text[at, text.index("  utf-8").to_i - at]
     end
     t.assert_equal([true, false], [SLOTS.set_lsp("x", :ready, 0), SLOTS.set_lsp("x", :ready, 0)], "setting the same server again changes nothing")
+    t.assert_equal(["crashed :LspRestart", "untrusted :LspStart", "", "", ""], [D::StatusSlots.hint(:crashed), D::StatusSlots.hint(:untrusted), D::StatusSlots.hint(:ready), D::StatusSlots.hint(:stopped), D::StatusSlots.hint(:none)], "only a crash and an untrusted directory name a command")
+    # The dot is the modified icon of the set: * under option.icons ascii.
+    s = scenario("plain")
+    s.options.icons = "ascii"
+    SLOTS.set_lsp("ruby-lsp", :ready, 0)
+    t.assert_equal(pad(" NORMAL  a.txt ", "  ruby-lsp * " + right, 60), paint(s, 60).row_text(0), "option.icons ascii: the server's dot is an asterisk")
 
     # Scenario: Widths drop segments one by one. One row per width:
     # segments go by priority, the file is cut last.
@@ -271,11 +280,11 @@ module AdaptersStatusBarTest
       [text[0, width], f.cell(0, 1).hl]
     end
     f = paint(scenario("plain"), 60)
-    t.assert_equal([H::STATUS_MODE_NORMAL, H::STATUS, H::STATUS, H::STATUS], [f.cell(0, 7).hl, f.cell(0, 8).hl, f.cell(0, 30).hl, f.cell(0, 59).hl], "the pill ends at its closing space and the status group fills the rest")
+    t.assert_equal([H::STATUS_MODE_NORMAL, H::STATUS, H::STATUS, H::STATUS_DIM], [f.cell(0, 7).hl, f.cell(0, 8).hl, f.cell(0, 30).hl, f.cell(0, 59).hl], "the pill ends at its closing space, the status group fills the rest, and the percent's last space is dim")
 
     # Scenario: The spacing between the groups and Scenario: The bar's groups and spacing. A row of every group, 80
     # columns wide: the pill, the file and the position in StatusLine, the
-    # branch, the stopped server, the file type, and the encoding in
+    # branch, the stopped server, the file type, the encoding, and the percent in
     # StatusLineDim, the counts in their own group; two cells between the
     # pill and the file and between the position and the percent, three
     # between the other groups, the fill in StatusLine. NO_COLOR draws the
@@ -285,9 +294,9 @@ module AdaptersStatusBarTest
     SLOTS.errors = 2
     SLOTS.set_lsp("ruby-lsp", :stopped, 0)
     text = " NORMAL  a.rb " + "  ± main " + "  ✖ 2 "
-    right = "  ruby-lsp stopped " + "  ruby " + "  utf-8 " + "  1:1 " + " All "
+    right = "  ruby-lsp ● " + "  ruby " + "  utf-8 " + "  1:1 " + " All "
     groups = "P" * 8 + "S" * 6 + "S" + "d" * 8 + "S" + "e" * 5
-    right_groups = "S" + "d" * 18 + "S" + "d" * 6 + "S" + "d" * 7 + "S" + "S" * 5 + "S" * 5
+    right_groups = "S" + "d" * 12 + "S" + "d" * 6 + "S" + "d" * 7 + "S" + "S" * 5 + "d" * 5
     fill = 80 - text.length - right.length
     expected = groups + "S" * fill + right_groups
     f = paint(s, 80)
@@ -304,24 +313,59 @@ module AdaptersStatusBarTest
     SLOTS.branch = "main"
     f = paint(s, 60)
     text = f.row_text(0)
-    quiet = ["main", "ruby", "utf-8"].map { |word| f.cell(0, text.index(word).to_i).hl }
-    lead = ["a.rb", "1:1", "All"].map { |word| f.cell(0, text.index(word).to_i).hl }
-    t.assert_equal([[H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM], [H::STATUS, H::STATUS, H::STATUS]], [quiet, lead], "the branch, the type, and the encoding step back; the file, the position, and the percent do not")
+    quiet = ["main", "ruby", "utf-8", "All"].map { |word| f.cell(0, text.index(word).to_i).hl }
+    lead = ["a.rb", "1:1"].map { |word| f.cell(0, text.index(word).to_i).hl }
+    t.assert_equal([[H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM], [H::STATUS, H::STATUS]], [quiet, lead], "the branch, the type, the encoding, and the percent step back; the file and the position do not")
+    f = paint(scenario("cursor in the middle"), 60)
+    t.assert_equal([H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM], [f.cell(0, f.row_text(0).index("50%").to_i).hl, f.cell(0, f.row_text(0).index("50%").to_i + 2).hl, f.cell(0, f.row_text(0).index("50%").to_i + 3).hl], "a percentage and its spaces are in StatusLineDim")
 
-    # The lsp slot's group follows its state; the counts take theirs.
+    # Scenario: The folder before the file name. The folder is in
+    # StatusLineDim and the name in StatusLine, under NO_COLOR as well; a
+    # name with no folder, a root, and a scratch title are all StatusLine.
     t.table([
-      ["starting", "starting", H::STATUS_LSP_STARTING],
-      ["ready", "ready", H::STATUS_LSP_READY],
-      ["indexing", "indexing", H::STATUS_LSP_STARTING],
-      ["stopped", "stopped", H::STATUS_DIM],
-      ["crashed", "crashed", H::STATUS_LSP_ERROR]
+      ["a folder before the name", "src/lib/a.rb", "ddddddddSSSS"],
+      ["an absolute path", "/home/u/a.rb", "ddddddddSSSS"],
+      ["a multi-byte folder counts cells, not bytes", "é/ü/a.rb", "ddddSSSS"],
+      ["no folder", "a.rb", "SSSS"],
+      ["the root", "/", "S"],
+      ["a path ending in a slash", "dir/", "dddd"]
+    ]) do |path|
+      groups = group_letters(paint(state_for(path.to_s, 3), 60), 60)
+      groups[9, D::DisplayWidth.text_width(path.to_s, 0)]
+    end
+    s = state_for("src/a.rb", 3)
+    s.buffer.mark_unsaved
+    t.assert_equal("dddd" + "SSSS" + "SS", group_letters(paint(s, 60), 60)[9, 10], "the modified icon after the name is in StatusLine")
+    s = scenario("scratch")
+    t.assert_equal("SSSS", group_letters(paint(s, 60), 60)[9, 4], "a scratch title is in StatusLine")
+    BAR.plain = true
+    t.assert_equal("ddddddddSSSS", group_letters(paint(scenario("folder"), 60), 60)[9, 12], "NO_COLOR keeps the folder in StatusLineDim and the name in StatusLine")
+    BAR.plain = false
+    f = paint(scenario("folder"), 12)
+    t.assert_equal([" NORMAL  src", "PPPPPPPPSddd"], [f.row_text(0), group_letters(f, 12)], "a bar cut inside the folder keeps the cut cells dim")
+
+    # The lsp slot's name is quiet and its dot takes the group of its state.
+    t.table([
+      ["starting", "starting", [H::STATUS_DIM, H::STATUS_LSP_STARTING, H::STATUS_LSP_STARTING]],
+      ["ready", "ready", [H::STATUS_DIM, H::STATUS_LSP_READY, H::STATUS_LSP_READY]],
+      ["indexing", "indexing", [H::STATUS_DIM, H::STATUS_LSP_STARTING, H::STATUS_LSP_STARTING]],
+      ["stopped", "stopped", [H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM]],
+      ["crashed", "crashed", [H::STATUS_DIM, H::STATUS_LSP_ERROR, H::STATUS_LSP_ERROR]],
+      ["untrusted", "untrusted", [H::STATUS_DIM, H::STATUS_DIM, H::STATUS_DIM]]
     ]) do |state|
       s = scenario("lsp")
       SLOTS.set_lsp("ruby-lsp", lsp_state_of(state), 5)
-      f = paint(s, 60)
-      at = f.row_text(0).index("ruby-lsp").to_i
-      [f.cell(0, at - 1).hl, f.cell(0, at).hl, f.cell(0, at + 8).hl].uniq.length == 1 ? f.cell(0, at).hl : -1
+      f = paint(s, 70)
+      text = f.row_text(0)
+      at = text.index("ruby-lsp").to_i
+      [f.cell(0, at).hl, f.cell(0, at + 9).hl, f.cell(0, text.index("  utf-8").to_i - 1).hl]
     end
+    # The hint a crash or an untrusted directory names is in the dot's group.
+    s = scenario("lsp")
+    SLOTS.set_lsp("ruby-lsp", :crashed, 0)
+    f = paint(s, 70)
+    at = f.row_text(0).index("crashed").to_i
+    t.assert_equal([H::STATUS_LSP_ERROR, H::STATUS_LSP_ERROR, H::STATUS_LSP_ERROR], [f.cell(0, at - 1).hl, f.cell(0, at).hl, f.cell(0, at + 18).hl], "the restart hint after the dot is in the error group")
     f = paint(scenario("four counts"), 60)
     text = f.row_text(0)
     # Scenario: A row per state. Each count, and the closing space after the
@@ -356,17 +400,18 @@ module AdaptersStatusBarTest
     SLOTS.set_progress("Indexing", "", 40)
     f = paint(s, 60)
     x = f.row_text(0).index("━").to_i
-    t.assert_equal([H::STATUS_LSP_READY, H::STATUS, H::STATUS], [f.cell(0, x).hl, f.cell(0, x + 4).hl, f.cell(0, x - 1).hl], "done cells in StatusLineLspReady, the rest in StatusLine")
+    t.assert_equal([H::STATUS_LSP_READY, H::STATUS_DIM, H::STATUS, H::STATUS], [f.cell(0, x).hl, f.cell(0, x + 4).hl, f.cell(0, x - 1).hl, f.cell(0, x - 3).hl], "done cells in StatusLineLspReady, the undone ones in StatusLineDim, the space and the title in StatusLine")
     BAR.plain = true
     f = paint(s, 60)
-    t.assert_equal(H::STATUS, f.cell(0, f.row_text(0).index("#").to_i).hl, "plain done cells in StatusLine")
+    x = f.row_text(0).index("#").to_i
+    t.assert_equal([H::STATUS, H::STATUS_DIM], [f.cell(0, x).hl, f.cell(0, x + 4).hl], "plain done cells in StatusLine, the undone ones in StatusLineDim")
     BAR.plain = false
     # An ascii bar: # and - under option.icons ascii, the done cells still
     # in StatusLineLspReady.
     s.options.icons = "ascii"
     f = paint(s, 60)
     x = f.row_text(0).index("#").to_i
-    t.assert_equal([" Indexing ####------ ", H::STATUS_LSP_READY, H::STATUS], [f.row_text(0)[x - 10, 21], f.cell(0, x).hl, f.cell(0, x + 4).hl], "an ascii bar reads #### and ------ with the done cells in StatusLineLspReady")
+    t.assert_equal([" Indexing ####------ ", H::STATUS_LSP_READY, H::STATUS_DIM], [f.row_text(0)[x - 10, 21], f.cell(0, x).hl, f.cell(0, x + 4).hl], "an ascii bar reads #### and ------ with the done cells in StatusLineLspReady and the rest in StatusLineDim")
     s.options.icons = "unicode"
     SLOTS.branch = "main"
     # A narrow bar drops the segment before the file type.

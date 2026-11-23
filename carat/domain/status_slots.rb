@@ -88,9 +88,18 @@ module Carat
         return "#{name} starting" if state == :starting
         return "#{name} indexing #{percent}%" if state == :indexing
         return "#{name} stopped" if state == :stopped
-        return "#{name} #{CRASH_HINT}" if state == :crashed
-        return "#{name} #{UNTRUSTED_HINT}" if state == :untrusted
+        hint = StatusSlots.hint(state)
+        return "#{name} #{hint}" unless hint.empty?
         name
+      end
+
+      # The command a state names after the server: the restart of a crash,
+      # the start of an untrusted directory, else nothing.
+      #: (Symbol) -> String
+      def self.hint(state)
+        return CRASH_HINT if state == :crashed
+        return UNTRUSTED_HINT if state == :untrusted
+        ""
       end
 
       # Counts a buffer's diagnostics by severity into the four counts;

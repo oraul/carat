@@ -394,6 +394,7 @@ module AdaptersLanguageGatewayTest
     h.wait
     t.assert_equal([7, -32_601], [J.field(last_body(h), "id"), J.reach(last_body(h), "error.code")], "another request is refused as not found")
     notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "begin", "title" => "Indexing" } })
+    # Scenario: Indexing shows a percent. The label keeps the percent; the bar draws a dot.
     t.assert_equal("ruby-lsp indexing 0%", label(h), "progress begins")
     notify(h, "$/progress", { "token" => "t", "value" => { "kind" => "report", "percentage" => 42 } })
     t.assert_equal("ruby-lsp indexing 42%", label(h), "progress reports a percent")
@@ -474,6 +475,7 @@ module AdaptersLanguageGatewayTest
     h = ready
     h.messages.push(Carat::Domain::ServiceMessage.new(handle: 1, kind: "exit", text: ""))
     h.wait
+    # Scenario: A crash names the restart command.
     t.assert_equal(["ruby-lsp crashed :LspRestart", [1]], [label(h), h.processes.stopped], "output that ends crashes the server")
     h.wait
     t.assert_equal(1, h.processes.spawned.length, "a crashed server is not started again on its own")

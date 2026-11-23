@@ -159,25 +159,25 @@ module EditorLspTest
     t = Carat::Testing.new("editor_lsp")
 
     t.table([
-      ["the bar shows the server starting", "starting", "\"a.rb\" 1L, 6B|NORMAL  a.rb   ruby-lsp starting   ruby   utf-8   1:1  All"],
-      ["the bar shows the ready server by name", "ready", "\"a.rb\" 1L, 6B|NORMAL  a.rb            ruby-lsp   ruby   utf-8   1:1  All"],
-      ["the bar names the restart after a crash, the encoding dropped at 60 columns", "crashed", "\"a.rb\" 1L, 6B|NORMAL  a.rb       ruby-lsp crashed :LspRestart   1:1  All"],
+      ["the bar shows the starting server as its name and a dot", "starting", "\"a.rb\" 1L, 6B|NORMAL  a.rb          ruby-lsp ●   ruby   utf-8   1:1  All"],
+      ["the bar shows the ready server as its name and a dot", "ready", "\"a.rb\" 1L, 6B|NORMAL  a.rb          ruby-lsp ●   ruby   utf-8   1:1  All"],
+      ["the bar names the restart after a crash, the encoding dropped at 60 columns", "crashed", "\"a.rb\" 1L, 6B|NORMAL  a.rb     ruby-lsp ● crashed :LspRestart   1:1  All"],
       [":LspRestart starts the server again", "restart after a crash", "2 |ruby-lsp starting"],
       [":LspRestart stops a running server first", "restart a running server", "initialize,initialized,textDocument/didOpen,shutdown,exit,initialize|ruby-lsp starting"],
       [":LspRestart stops only the old server", "restart stops only the old server", "1|2"],
       [":LspRestart on a buffer without a server", "a text buffer", "No language server for this buffer|NORMAL  b.txt                             utf-8   1:1  All"],
       [":LspRestart with a command that cannot start", "a missing command", "Cannot start ruby-lsp|NORMAL  a.rb                       ruby   utf-8   1:1  All"],
-      [":LspRestart refuses arguments", "arguments", "E488: Trailing characters: x|NORMAL  a.rb   ruby-lsp starting   ruby   utf-8   1:1  All"],
-      ["an untrusted directory starts nothing and names :LspStart", "untrusted", "0|NORMAL  a.rb       ruby-lsp untrusted :LspStart   1:1  All"],
+      [":LspRestart refuses arguments", "arguments", "E488: Trailing characters: x|NORMAL  a.rb          ruby-lsp ●   ruby   utf-8   1:1  All"],
+      ["an untrusted directory starts nothing and names :LspStart", "untrusted", "0|NORMAL  a.rb     ruby-lsp ● untrusted :LspStart   1:1  All"],
       [":LspStart starts the server in an untrusted directory", "start untrusted", "ruby-lsp |ruby-lsp starting"],
       [":LspStart leaves a running server alone", "start a running server", "ruby-lsp |ruby-lsp starting"],
       [":LspStart starts the server again after a crash", "start after a crash", "2 |ruby-lsp starting"],
       [":LspStart on a buffer without a server", "start a text buffer", "No language server for this buffer|NORMAL  b.txt                             utf-8   1:1  All"],
-      ["a published error is drawn as a sign, the cursor line's message, and a count", "diagnostics", "expected end found EOF[31m|X  1 |NORMAL  a.rb   X 1 ? 1          ruby-lsp   ruby   1:1  All"],
+      ["a published error is drawn as a sign, the cursor line's message, and a count", "diagnostics", "expected end found EOF[31m|X  1 |NORMAL  a.rb   X 1 ? 1        ruby-lsp *   ruby   1:1  All"],
       ["the sign and the message move with an inserted line", "diagnostics after an edit", "|   1|X  2 |expected end found EOF[31m"],
       ["another buffer shows its own counts, none", "diagnostics in another buffer", "\"b.txt\" 1L, 5B|NORMAL  b.txt                             utf-8   1:1  All"],
-      ["a start after a crash clears the drawn diagnostics", "diagnostics after a crash and a start", "X  1 |  1 x|NORMAL  a.rb   ruby-lsp starting   ruby   utf-8   1:1  All"],
-      [":LspStart refuses arguments", "start arguments", "E488: Trailing characters: x|NORMAL  a.rb       ruby-lsp untrusted :LspStart   1:1  All"]
+      ["a start after a crash clears the drawn diagnostics", "diagnostics after a crash and a start", "X  1 |  1 x|NORMAL  a.rb          ruby-lsp *   ruby   utf-8   1:1  All"],
+      [":LspStart refuses arguments", "start arguments", "E488: Trailing characters: x|NORMAL  a.rb     ruby-lsp ● untrusted :LspStart   1:1  All"]
     ]) { |name| run(name) }
 
     t.finish
