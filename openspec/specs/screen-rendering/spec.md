@@ -370,13 +370,6 @@ When the cursor of the current window is on one of `(` `)` `[` `]` `{` `}` in no
 - **WHEN** the cursor is on a bracket with its partner in view, in a window that holds a closed fold on another row
 - **THEN** no cell is drawn in `MatchParen`
 
-### Requirement: The visual mode indicators are dim
-The message row's visual mode indicators, `-- VISUAL --`, `-- VISUAL LINE --`, and `-- VISUAL BLOCK --`, SHALL be drawn in the `MsgDim` group, as the pending keys beside them are, in every theme and under `NO_COLOR`.
-
-#### Scenario: The visual indicators are dim
-- **WHEN** the mode is charwise, linewise, or blockwise visual with an empty message
-- **THEN** every cell of the indicator on the message row is in `MsgDim`
-
 ### Requirement: A sidebar meets the editor by its background
 A sidebar window SHALL be drawn on the sidebar layer of groups, its rows past its buffer's end blank rather than `~`, and the column between it and the editor SHALL be a blank cell of that layer with no glyph. Where the terminal shows no background change, under `NO_COLOR` or at 16 colors, the separator glyph SHALL stay as the edge.
 
@@ -409,3 +402,10 @@ A code point of a buffer line that reorders or hides text, U+061C, U+200B to U+2
 #### Scenario: Cursor over and after a format marker
 - **WHEN** the line "a​b" is rendered with number off and the cursor on the second code point, and then on the third
 - **THEN** the frame cursor column is 1, and then 7
+
+### Requirement: The visual mode indicators are in ModeMsg
+The message row's visual mode indicators, `-- VISUAL --`, `-- VISUAL LINE --`, and `-- VISUAL BLOCK --`, SHALL be drawn in the `ModeMsg` group, as Neovim draws its mode message, and the pending keys beside them in `MsgDim`, in every theme and under `NO_COLOR`.
+
+#### Scenario: The visual indicators are in ModeMsg
+- **WHEN** the mode is charwise, linewise, or blockwise visual with an empty message
+- **THEN** every cell of the indicator on the message row is in `ModeMsg`
