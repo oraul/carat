@@ -2559,6 +2559,15 @@ queue_hold() {
   echo "the plan's security first"
 }
 
+# lane_checkout_only CHANGE COMMAND: dies, writing nothing, when the lane
+# worktree tmp/.lane-CHANGE exists and this is not it, so the package step's
+# plan-apply and history never edit the main checkout's queues and histories
+# while another lane runs (lane-isolation).
+lane_checkout_only() {
+  lane_dir=$(cd "tmp/.lane-$1" 2> /dev/null && pwd -P) || return 0
+  [ "$(pwd -P)" = "$lane_dir" ] || die "$2: refused: run it in $1's lane worktree $lane_dir, not in $(pwd -P); nothing written"
+}
+
 # Applies the delivery planner's directory, PLAN_DIR/CHANGE, for the
 # change's lane (lane_of) only: its queue over that lane's docs/ queue,
 # fitted within the lane's budget (queue_fit) or refused with the bytes
@@ -2567,10 +2576,19 @@ queue_hold() {
 # and backlog.md appended to the change's findings file. Two lanes' package
 # steps so write no common record.
 plan_apply() {
+  lane_checkout_only "$change" plan-apply
   dir=$plan_dir/$change
   lane=$(lane_of)
   if [ ! -d "$dir" ]; then echo "plan-apply: no plan in $dir/; nothing applied"; return 0; fi
   if [ -f "$dir/queue-$lane.md" ]; then
+    # A plan written before a merge of the lane still lists that merge's
+    # item; copying it would queue a delivered change again (plan-apply-stale).
+    stale=$(L="$metrics_prefix-$lane.tsv" C="$change" awk -F'\t' '
+      BEGIN { while ((getline line < ENVIRON["L"]) > 0) { split(line, f, "\t"); merged[f[1]] = 1 } }
+      { item = $0 }
+      sub(/^[0-9]+[.] `/, "", item) && index(item, "`") > 1 { name = substr(item, 1, index(item, "`") - 1)
+        if ((name in merged) && name != ENVIRON["C"]) printf "%s ", name }' "$dir/queue-$lane.md")
+    [ -z "$stale" ] || die "plan-apply: refused: $dir/queue-$lane.md names ${stale% }, which $metrics_prefix-$lane.tsv holds a row of: the plan is older than the branch's queue; docs/queue-$lane.md left as it was"
     fit="docs/queue-$lane.md.fit"
     cp "$dir/queue-$lane.md" "$fit" || die "plan-apply: $fit not written"
     if ! queue_fit "$lane" "$fit"; then
@@ -3136,6 +3154,7 @@ late_findings() {
 # (metrics-header-fix), stops the command before any row is written: the
 # change that alters HEADER rewrites line 1 and pads the older rows.
 append_history() {
+  [ -z "${1:-}" ] || lane_checkout_only "$1" history
   unmerged_list | while read -r name merged; do
     echo "history: $name records merged $merged, no commit on main; not appended"
   done

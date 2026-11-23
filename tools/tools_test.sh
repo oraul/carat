@@ -3542,6 +3542,28 @@ mkdir -p "$work/sp ace"
 printf '%s\nabc\tcol\t0123456789ab\n' "$HISTORY_HEADER" > "$work/sp ace/m-feature.tsv"
 expect "run_state: status reads the history rows of a metrics prefix holding a space" 0 "^abc[[:space:]]col" env METRICS_PREFIX="$work/sp ace/m" sh "$here/run_state.sh" status
 
+# plan-apply-stale and lane-isolation: a plan that queues a change the
+# lane's history holds a row of is refused, and plan-apply and history write
+# only in the change's own lane worktree.
+fresh stale
+printf '# Queue\n\n1. `next-one` (T4, estimated small): one.\n' > docs/queue-backlog.md
+printf '%s\nmerged-one\tcol\t0123456789ab\n' "$HISTORY_HEADER" > docs/metrics-backlog.tsv
+commit "docs: the queue and a history"
+state init stale chore/stale > /dev/null
+mkdir -p build/plan/stale
+printf '# Queue\n\n1. `merged-one` (T4, estimated small): again.\n2. `next-one` (T4, estimated small): one.\n' > build/plan/stale/queue-backlog.md
+expect "run_state: plan-apply refuses a plan that queues a change the lane's history holds a row of" 1 "plan-apply: refused: build/plan/stale/queue-backlog[.]md names merged-one, which docs/metrics-backlog[.]tsv holds a row of" state plan-apply stale
+expect "run_state: a refused stale plan leaves the lane queue as it was" 0 "^1[.] .next-one. [(]T4, estimated small[)]: one[.]$" sed -n 3p docs/queue-backlog.md
+printf '# Queue\n\n1. `next-one` (T4, estimated small): one, planned.\n' > build/plan/stale/queue-backlog.md
+expect "run_state: plan-apply copies a plan that names no merged change" 0 "^plan-apply: copied build/plan/stale/queue-backlog[.]md" state plan-apply stale
+# The package step's plan-apply and history run in the change's lane
+# worktree, never in the checkout that holds it.
+mkdir -p tmp/.lane-stale
+expect "run_state: plan-apply refuses outside the change's lane worktree" 1 "plan-apply: refused: run it in stale's lane worktree .*tmp/[.]lane-stale, not in .*; nothing written" state plan-apply stale
+expect "run_state: history refuses outside the change's lane worktree" 1 "history: refused: run it in stale's lane worktree" state history stale
+expect "run_state: plan-apply from the lane worktree itself is not refused" 0 "^plan-apply: " sh -c "cd tmp/.lane-stale && sh '$here/run_state.sh' plan-apply stale"
+rm -rf tmp/.lane-stale
+
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
 # proposal or finding to place.
