@@ -89,11 +89,20 @@ module DomainBufferTest
     t.assert_equal("\r\n", D::Buffer.from_text("\xFFa\r\nb\r\n", nil).line_ending, "windows endings are found after an illegal byte")
     t.assert_equal("", D::Buffer.from_text("#!/usr/bin/\xFF ruby\n", "x").filetype, "a shebang that is not UTF-8 names no filetype")
     renamed = D::Buffer.from_text("x\n", "src/a.rb")
-    icons = [renamed.icon, renamed.name_start]
+    starts_before = renamed.name_start
     renamed.rename("Makefile")
-    t.assert_equal([["ruby", 4], ["makefile", 0], "default"], [icons, [renamed.icon, renamed.name_start], D::Buffer.from_text("", nil).icon], "the icon name follows the file name, and the name starts after the last slash")
+    t.assert_equal([4, 0], [starts_before, renamed.name_start], "the name starts after the last slash and follows a rename")
     starts = ["\u30C7\u30A3\u30EC\u30AF\u30C8\u30EA/a.rb", "\u65E5\u672C/caf\u00E9.rb", "dir/", "/"].map { |path| D::Buffer.from_text("x\n", path).name_start }
     t.assert_equal([19, 7, 4, 0], starts, "the name starts at the byte Paths.basename cuts, after a multi-byte directory, and at 0 for the root")
+    folders = ["a/x.rb", "src/a/x.rb", "/x.rb", "x.rb", "/", "\u65E5\u672C/x.rb", "\u65E5\u672C/\u30C7/x.rb"].map { |path| D::Buffer.from_text("x\n", path).parent_start }
+    t.assert_equal([0, 4, 0, 0, 0, 0, 7], folders, "the folder starts after the slash before it, at 0 in the root or in a one-folder path, and at the name when there is none")
+    t.assert_equal(0, D::Buffer.from_text("", nil).parent_start, "no path has no folder")
+    spans = []
+    ["a/x.rb", "x.rb", "/x.rb"].each do |path|
+      folder = D::Buffer.from_text("x\n", path)
+      spans << path.byteslice(folder.parent_start, folder.name_start - folder.parent_start).to_s
+    end
+    t.assert_equal(["a/", "", "/"], spans, "the folder span is its name and its slash, empty with no folder")
     hostile = D::Buffer.from_text("a\xFFb\n", nil)
     hostile.insert(pos(0, 1), "\xC0\n\xAF")
     t.assert_equal(["a\xC0", "\xAF\xFFb"], hostile.lines, "text with illegal bytes and a newline is inserted by bytes")
@@ -205,7 +214,7 @@ module DomainBufferTest
     t.assert_equal([0, 0, 0, "w.txt", [0, 0], false], [w.top, w.left, w.height, w.buffer.path, w.cursor.to_a, w.fixed_width], "a window starts at the origin with no height, showing its buffer from the start")
     w.top = 7
     t.assert_equal(7, w.top, "a window member has a writer")
-    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :icon, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, :marked_row], D::Buffer.members, "buffer members in constructor order")
+    t.assert_equal([:lines, :path, :line_ending, :saved_change, :owner, :title, :keymap, :sign_layers, :changes, :id, :transaction, :last_transaction, :closed_count, :feed, :undo, :filetype, :syntax, :syntax_cache, :global_marks, :last_cursor, :diagnostics, :diagnostic_marks, :styles, :readonly, :listed, :fold_lists, :marked_folds, :marked_fold_copies, :marked_row], D::Buffer.members, "buffer members in constructor order")
     t.assert_equal([:code, :width, :hl], D::Cell.members, "cell members")
     o = D::Options.new
     t.assert_equal([false, 8, 0], [o.number, o.tabstop, o.scrolloff], "options start with Vim's defaults")

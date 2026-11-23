@@ -21,8 +21,11 @@ ok   several lines with illegal bytes
 ok   windows endings with an illegal byte
 ok   windows endings are found after an illegal byte
 ok   a shebang that is not UTF-8 names no filetype
-ok   the icon name follows the file name, and the name starts after the last slash
+ok   the name starts after the last slash and follows a rename
 ok   the name starts at the byte Paths.basename cuts, after a multi-byte directory, and at 0 for the root
+ok   the folder starts after the slash before it, at 0 in the root or in a one-folder path, and at the name when there is none
+ok   no path has no folder
+ok   the folder span is its name and its slash, empty with no folder
 ok   text with illegal bytes and a newline is inserted by bytes
 ok   loaded buffer is unmodified
 ok   loaded buffer keeps its path
@@ -106,4 +109,4 @@ ok   a deleted line moves them up
 ok   a later list replaces the earlier one
 ok   an empty list clears the diagnostics and keeps the plugin's signs
 ok   clearing removes the signs and the messages
-domain_buffer: 108 passed, 0 failed
+domain_buffer: 111 passed, 0 failed

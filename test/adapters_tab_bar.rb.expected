@@ -21,6 +21,22 @@ ok   nerd
 ok   unicode
 ok   ascii
 ok   the counts are plain
+ok   two blank cells follow a drawn mark, and the blank mark cell and the space before it join them: four after a plain name
+ok   a folder before each of two same names
+ok   no folder while no other tab has the name
+ok   only the tabs sharing the name show it
+ok   an unlisted file does not share its name
+ok   a scratch buffer does not share its name
+ok   only the last folder shows
+ok   a file in the root shows its slash
+ok   a file with no folder shows none
+ok   a name that only ends alike is not shared
+ok   a multi-byte folder
+ok   the unnamed buffer shows no folder
+ok   the selected tab's folder is MsgDim and its name TabLineSel, the other tab's folder and name TabLine
+ok   bare: the folder takes its tab's group, bold on the selected tab, Normal on the other
+ok   a tab shared by name counts its folder in the overflow
+ok   a folder is cut at the row's end
 ok   no gem, separator, unicode
 ok   no gem, separator, nerd
 ok   no gem, separator, ascii
@@ -44,4 +60,4 @@ ok   showing?: two files at 1 show the row
 ok   showing?: one file on two tab pages at 1 shows the row
 ok   showing?: two files at 0 show no row
 ok   showing?: one file at 2 shows the row
-adapters_tab_bar: 46 passed, 0 failed
+adapters_tab_bar: 62 passed, 0 failed

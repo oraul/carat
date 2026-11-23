@@ -10,12 +10,14 @@ module Carat
   module Adapters
     # Paints the top row of buffer tabs: one tab per listed file buffer in
     # list order, two spaces, the last segment of its path or [No Name],
-    # a space, the modified icon or a space (one cell either way), and a
-    # space, with no file icon, the tab of the current window's buffer (the
+    # a space, and the modified icon or a space (one cell either way),
+    # so two tabs stand two blank cells apart, with no file icon, the tab of the current window's buffer (the
     # file window's while a sidebar has focus) selected in TabLineSel,
     # bold on the editor's background, so the bold and the background
     # carry the selection and no glyph or accent fill separates two
-    # tabs; scratch and unlisted buffers get none.
+    # tabs; scratch and unlisted buffers get none. While another listed
+    # file has the same last segment, the folder holding the file and its
+    # slash stand dim before the name ("a/x.rb" beside "b/x.rb").
     # The row starts at the editor's first column, after a left sidebar,
     # whose width above it holds the project and branch (paint_head).
     # From two tab pages their numbers stand at the right end, " 1  2 ",
@@ -29,8 +31,8 @@ module Carat
     class TabBar
       MARK_CELLS = 1
       # The cells of a tab besides its name and mark: the two leading
-      # spaces and the two after the name and the mark.
-      FRAME_CELLS = 4
+      # spaces and the one after the name.
+      FRAME_CELLS = 3
       HEAD_DOT = "·"
       HEAD_ASCII_DOT = "-"
 
@@ -181,12 +183,67 @@ module Carat
         path = buffer.path
         if path.nil?
           x = frame.put_within(0, x, Domain::Messages::NO_NAME, hl, limit)
+        elsif shares_name?(buffer)
+          x = paint_parent_and_name(frame, x, limit, buffer, path, hl, selected)
         else
           x = frame.put_from(0, x, path, buffer.name_start, hl, limit)
         end
         x = frame.put_within(0, x, " ", hl, limit)
-        x = frame.put_within(0, x, buffer.modified? ? mark(set) : " ", hl, limit)
-        frame.put_within(0, x, " ", hl, limit)
+        frame.put_within(0, x, buffer.modified? ? mark(set) : " ", hl, limit)
+      end
+
+      # Writes the folder holding the file, with its slash, dim, then the
+      # name in hl; the folder is MsgDim on the selected tab's background
+      # and TabLine on the others', hl itself when bare. Returns the
+      # column after it.
+      #: (Domain::Frame, Integer, Integer, Domain::Buffer, String, Integer, bool) -> Integer
+      def paint_parent_and_name(frame, x, limit, buffer, path, hl, selected)
+        dim = hl
+        unless @bare
+          dim = selected ? Domain::Highlight::MESSAGE_DIM : Domain::Highlight::TAB_LINE
+        end
+        from = buffer.parent_start
+        named = x + Domain::DisplayWidth.text_width(path, from) - Domain::DisplayWidth.text_width(path, buffer.name_start)
+        stop = frame.put_from(0, x, path, from, dim, limit)
+        frame.fill(0, named, stop, hl)
+        stop
+      end
+
+      # Whether another file tab has the last segment of this buffer's
+      # path, so two tabs would read alike without their folders. Compared
+      # by bytes, nothing allocated.
+      #: (Domain::Buffer) -> bool
+      def shares_name?(buffer)
+        path = buffer.path
+        return false if path.nil?
+        start = buffer.name_start
+        list = @buffers
+        count = list.count
+        i = 0
+        while i < count
+          other = list.buffer_at(i)
+          i += 1
+          next if other.tabless? || other.equal?(buffer)
+          return true if same_name?(path, start, other)
+        end
+        false
+      end
+
+      # Whether the last segment of other's path is the bytes of path from
+      # start on.
+      #: (String, Integer, Domain::Buffer) -> bool
+      def same_name?(path, start, other)
+        theirs = other.path
+        return false if theirs.nil?
+        from = other.name_start
+        size = path.bytesize - start
+        return false if theirs.bytesize - from != size
+        k = 0
+        while k < size
+          return false if path.getbyte(start + k) != theirs.getbyte(from + k)
+          k += 1
+        end
+        true
       end
 
       # The modified mark of the set, the ascii set's when the set's glyph
@@ -226,11 +283,16 @@ module Carat
         @bare ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE_NAME
       end
 
-      # The cells of one tab, its mark one cell whether modified or not.
+      # The cells of one tab, its mark one cell whether modified or not,
+      # its folder included while another tab has its name.
       #: (Domain::Buffer) -> Integer
       def tab_width(buffer)
         path = buffer.path
-        name = path.nil? ? Domain::Messages::NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
+        name = Domain::Messages::NO_NAME.length
+        unless path.nil?
+          from = shares_name?(buffer) ? buffer.parent_start : buffer.name_start
+          name = Domain::DisplayWidth.text_width(path, from)
+        end
         name + MARK_CELLS + FRAME_CELLS
       end
 

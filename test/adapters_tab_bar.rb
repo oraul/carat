@@ -75,35 +75,35 @@ module AdaptersTabBarTest
 
     # One row per case, 40 columns wide.
     t.cases([
-      ["two tabs, one modified: a tab per file with no icon and the modified dot", [["*src/a.rb", "b.txt"], 1, 1], "  a.rb ●   b.txt"],
-      ["an unnamed buffer", [["", "b.txt"], 0, 1], "  " + Carat::Domain::Messages::NO_NAME + "     b.txt"],
-      ["a buffer at the root shows / in its tab", [["/", "b.txt"], 0, 1], "  /     b.txt"],
-      ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], "  a.txt     b.txt"],
-      ["an unlisted buffer has no tab", [["~a.txt", "b.txt", "c.txt"], 1, 1], "  b.txt     c.txt"],
-      ["an unlisted buffer at the end has no tab", [["a.txt", "b.txt", "~c.txt"], 0, 1], "  a.txt     b.txt"],
-      ["the tab-page numbers at the right end", [["a.txt", "b.txt"], 0, 2], "  a.txt     b.txt" + (" " * 18) + "1  2"],
-      ["tab pages without a second file", [["a.txt"], 0, 3], "  a.txt   " + (" " * 22) + "1  2  3"]
+      ["two tabs, one modified: a tab per file with no icon and the modified dot", [["*src/a.rb", "b.txt"], 1, 1], "  a.rb ●  b.txt"],
+      ["an unnamed buffer", [["", "b.txt"], 0, 1], "  " + Carat::Domain::Messages::NO_NAME + "    b.txt"],
+      ["a buffer at the root shows / in its tab", [["/", "b.txt"], 0, 1], "  /    b.txt"],
+      ["a scratch buffer has no tab", [["a.txt", "!", "b.txt"], 0, 1], "  a.txt    b.txt"],
+      ["an unlisted buffer has no tab", [["~a.txt", "b.txt", "c.txt"], 1, 1], "  b.txt    c.txt"],
+      ["an unlisted buffer at the end has no tab", [["a.txt", "b.txt", "~c.txt"], 0, 1], "  a.txt    b.txt"],
+      ["the tab-page numbers at the right end", [["a.txt", "b.txt"], 0, 2], "  a.txt    b.txt" + (" " * 19) + "1  2"],
+      ["tab pages without a second file", [["a.txt"], 0, 3], "  a.txt  " + (" " * 23) + "1  2  3"]
     ]) { |input| paint(setup(input[0], input[1], input[2]), 40).row_text(0) }
 
-    # Overflow: ten tabs of 12 cells in 40 columns, counted at the ends,
+    # Overflow: ten tabs of 10 cells in 40 columns, counted at the ends,
     # the current one always shown.
     t.table([
-      ["the first current", 0, "  f0.txt     f1.txt    8>"],
-      ["the sixth current", 5, " <4   f4.txt     f5.txt    4>"],
-      ["the last current", 9, " <8   f8.txt     f9.txt"]
+      ["the first current", 0, "  f0.txt    f1.txt    f2.txt   7>"],
+      ["the sixth current", 5, " <3   f3.txt    f4.txt    f5.txt   4>"],
+      ["the last current", 9, " <7   f7.txt    f8.txt    f9.txt"]
     ]) { |current| paint(setup(ten, current, 1), 40).row_text(0) }
-    t.assert_equal(" <1   f1.txt     f2.txt     f3.txt     f4.txt     f5.txt    4>", paint(setup(ten, 5, 1), 70).row_text(0), "a wider row starts its run as early as the current tab allows")
+    t.assert_equal(" <1   f1.txt    f2.txt    f3.txt    f4.txt    f5.txt   4>", paint(setup(ten, 5, 1), 62).row_text(0), "a wider row starts its run as early as the current tab allows")
     t.assert_equal("  f0.txt", paint(setup(ten, 0, 1), 11).row_text(0), "a row narrower than the counts still shows the current tab, cut")
     t.table([
-      ["unlisted buffers are neither shown nor counted", 5, " <2   f4.txt     f5.txt    3>"],
-      ["a leading unlisted buffer is neither shown nor counted", 1, "  f1.txt     f2.txt    5>"]
+      ["unlisted buffers are neither shown nor counted", 5, " <1   f2.txt    f4.txt    f5.txt   3>"],
+      ["a leading unlisted buffer is neither shown nor counted", 1, "  f1.txt    f2.txt    f4.txt   4>"]
     ]) { |current| paint(setup(unlisted, current, 1), 40).row_text(0) }
 
     # Scenarios "Two tabs, one modified" (the first row of the cases above) and "The selected tab has no icon and no fill":
     # the current tab in TabLineSel, the others in TabLine, the current page number bold in TabLineName and
     # the other dim in TabLine, the rest the fill.
     f = paint(setup(["*src/a.rb", "b.txt"], 0, 2), 40)
-    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL, H::TAB_LINE_NAME, H::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 2).hl, f.cell(0, 8).hl, f.cell(0, 9).hl, f.cell(0, 10).hl, f.cell(0, 18).hl, f.cell(0, 30).hl, f.cell(0, 35).hl, f.cell(0, 38).hl], "selected tab with its leading space, the plain tab in TabLine, fill, and the tab-page numbers: the current one TabLineName, the other TabLine")
+    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL, H::TAB_LINE_NAME, H::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 2).hl, f.cell(0, 7).hl, f.cell(0, 8).hl, f.cell(0, 9).hl, f.cell(0, 16).hl, f.cell(0, 30).hl, f.cell(0, 35).hl, f.cell(0, 38).hl], "selected tab with its leading space, the plain tab in TabLine, fill, and the tab-page numbers: the current one TabLineName, the other TabLine")
 
     # Scenario "The tab row at 16 colors and NO_COLOR": bare, the row has no fill, the selected tab and the
     # current page number are in TabLineSel and every other name and count in Normal.
@@ -112,7 +112,7 @@ module AdaptersTabBarTest
     bar = Carat::Adapters::TabBar.new(buffers: bare.list)
     bar.bare = true
     bar.paint(frame, bare.state, 0, 40)
-    t.assert_equal(["  a.txt     b.txt", H::TAB_LINE_SELECTED, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED, H::NORMAL], [frame.row_text(0)[0, 17], frame.cell(0, 3).hl, frame.cell(0, 13).hl, frame.cell(0, 25).hl, frame.cell(0, 35).hl, frame.cell(0, 38).hl], "bare: the selected tab and the current page in TabLineSel, the other tab, the fill, and the other page in Normal")
+    t.assert_equal(["  a.txt    b.txt", H::TAB_LINE_SELECTED, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED, H::NORMAL], [frame.row_text(0)[0, 16], frame.cell(0, 3).hl, frame.cell(0, 13).hl, frame.cell(0, 25).hl, frame.cell(0, 35).hl, frame.cell(0, 38).hl], "bare: the selected tab and the current page in TabLineSel, the other tab, the fill, and the other page in Normal")
     filled = paint(setup(["a.txt", "b.txt"], 0, 2), 40)
     t.assert_equal([H::TAB_LINE_FILL, H::TAB_LINE_NAME], [filled.cell(0, 25).hl, filled.cell(0, 35).hl], "not bare, the fill and the TabLineName page number are back")
 
@@ -124,7 +124,7 @@ module AdaptersTabBarTest
     cut_bar.bare = true
     cut_bar.paint(cut_frame, cut.state, 0, 40)
     cut_text = cut_frame.row_text(0)
-    t.assert_equal([" <4   f4.txt     f5.txt    4>", H::NORMAL, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED], [cut_text.rstrip, cut_frame.cell(0, 1).hl, cut_frame.cell(0, 2).hl, cut_frame.cell(0, cut_text.rstrip.length - 2).hl, cut_frame.cell(0, cut_text.index("f5.txt")).hl], "bare: the counts before and after the run are in Normal, the current tab in TabLineSel")
+    t.assert_equal([" <3   f3.txt    f4.txt    f5.txt   4>", H::NORMAL, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED], [cut_text.rstrip, cut_frame.cell(0, 1).hl, cut_frame.cell(0, 2).hl, cut_frame.cell(0, cut_text.rstrip.length - 2).hl, cut_frame.cell(0, cut_text.index("f5.txt")).hl], "bare: the counts before and after the run are in Normal, the current tab in TabLineSel")
 
     # The modified mark keeps the tab's width: the second tab starts at
     # the same column whether the first is modified, in every icon set.
@@ -144,12 +144,48 @@ module AdaptersTabBarTest
     f = paint(setup(ten, 5, 1), 40)
     t.assert_equal([H::TAB_LINE, H::TAB_LINE], [f.cell(0, 1).hl, f.cell(0, f.row_text(0).index("4>").to_i).hl], "the counts are plain")
 
+    # Scenario "Two tabs, one modified" (its gap): after the modified mark only the next tab's two
+    # leading spaces stand before its name, whether the mark is drawn or blank.
+    gap = paint(setup(["*a.rb", "b.txt"], 1, 1), 40).row_text(0)
+    t.assert_equal([2, 4], [gap.index("b.txt").to_i - gap.index("●").to_i - 1, paint(setup(["a.txt", "b.txt"], 1, 1), 40).row_text(0).index("b.txt").to_i - 7], "two blank cells follow a drawn mark, and the blank mark cell and the space before it join them: four after a plain name")
+
+    # Scenario "Two files with one name show their folders": a dim folder and its slash precede the name
+    # only while another listed file tab has the same last segment.
+    t.cases([
+      ["a folder before each of two same names", [["a/x.rb", "b/x.rb"], 0, 1], "  a/x.rb    b/x.rb"],
+      ["no folder while no other tab has the name", [["a/x.rb", "b/y.rb"], 0, 1], "  x.rb    y.rb"],
+      ["only the tabs sharing the name show it", [["a/x.rb", "b/x.rb", "c/z.rb"], 0, 1], "  a/x.rb    b/x.rb    z.rb"],
+      ["an unlisted file does not share its name", [["a/x.rb", "~b/x.rb"], 0, 1], "  x.rb"],
+      ["a scratch buffer does not share its name", [["a/x.rb", "!"], 0, 1], "  x.rb"],
+      ["only the last folder shows", [["src/a/x.rb", "src/b/x.rb"], 0, 1], "  a/x.rb    b/x.rb"],
+      ["a file in the root shows its slash", [["/x.rb", "a/x.rb"], 0, 1], "  /x.rb    a/x.rb"],
+      ["a file with no folder shows none", [["x.rb", "a/x.rb"], 0, 1], "  x.rb    a/x.rb"],
+      ["a name that only ends alike is not shared", [["a/x.rb", "b/ax.rb"], 0, 1], "  x.rb    ax.rb"],
+      ["a multi-byte folder", [["\u65E5\u672C/x.rb", "b/x.rb"], 0, 1], "  \u65E5\u672C/x.rb    b/x.rb"],
+      ["the unnamed buffer shows no folder", [["", "a/x.rb"], 0, 1], "  " + Carat::Domain::Messages::NO_NAME + "    x.rb"]
+    ]) { |input| paint(setup(input[0], input[1], input[2]), 40).row_text(0) }
+    f = paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 40)
+    t.assert_equal([H::TAB_LINE_SELECTED, H::MESSAGE_DIM, H::MESSAGE_DIM, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL], [f.cell(0, 1).hl, f.cell(0, 2).hl, f.cell(0, 3).hl, f.cell(0, 4).hl, f.cell(0, 9).hl, f.cell(0, 12).hl, f.cell(0, 13).hl, f.cell(0, 19).hl, f.cell(0, 20).hl], "the selected tab's folder is MsgDim and its name TabLineSel, the other tab's folder and name TabLine")
+    frame = D::Frame.new(rows: 1, cols: 40)
+    shared = setup(["a/x.rb", "b/x.rb"], 0, 1)
+    shared_bar = Carat::Adapters::TabBar.new(buffers: shared.list)
+    shared_bar.bare = true
+    shared_bar.paint(frame, shared.state, 0, 40)
+    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::NORMAL, H::NORMAL], [frame.cell(0, 2).hl, frame.cell(0, 4).hl, frame.cell(0, 12).hl, frame.cell(0, 14).hl], "bare: the folder takes its tab's group, bold on the selected tab, Normal on the other")
+    # Scenario "A shared name's folder counts in the overflow": 19 columns cannot hold both tabs of 10
+    # cells, so the second is counted, and 20 columns show both whole.
+    t.assert_equal(["  a/x.rb   1>", "  a/x.rb    b/x.rb"], [paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 19).row_text(0), paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 20).row_text(0)], "a tab shared by name counts its folder in the overflow")
+    narrow = D::Frame.new(rows: 1, cols: 40)
+    narrow_setup = setup(["a/x.rb", "b/x.rb"], 0, 1)
+    Carat::Adapters::TabBar.new(buffers: narrow_setup.list).paint(narrow, narrow_setup.state, 0, 5)
+    t.assert_equal("  a/x", narrow.row_text(0)[0, 5], "a folder is cut at the row's end")
+
     # Scenario "Tabs under every icon set": no set draws a file icon or a gem, so the ascii `*` stays the modified
     # mark's alone and no separator ends a tab, in every icon set.
     t.table([
-      ["no gem, separator, unicode", "unicode", "  a.txt     b.txt"],
-      ["no gem, separator, nerd", "nerd", "  a.txt     b.txt"],
-      ["no gem, separator, ascii", "ascii", "  a.txt     b.txt"]
+      ["no gem, separator, unicode", "unicode", "  a.txt    b.txt"],
+      ["no gem, separator, nerd", "nerd", "  a.txt    b.txt"],
+      ["no gem, separator, ascii", "ascii", "  a.txt    b.txt"]
     ]) do |set|
       one = setup(["a.txt", "b.txt"], 0, 1)
       one.state.options.icons = set.to_s
@@ -158,10 +194,10 @@ module AdaptersTabBarTest
     # The selected tab is told apart by its group alone: its first and last cells are in TabLineSel (bold on the editor's background), the other tab's in TabLine, and
     # no separator stands between or after them: the cell after the tab run is the fill.
     f = paint(setup(["a.txt", "b.txt"], 0, 1), 40)
-    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL], [f.cell(0, 0).hl, f.cell(0, 9).hl, f.cell(0, 10).hl, f.cell(0, 19).hl, f.cell(0, 20).hl], "the selected tab's cells are in the selected group, the other tab's in TabLine, no separator between or after them")
+    t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL], [f.cell(0, 0).hl, f.cell(0, 8).hl, f.cell(0, 9).hl, f.cell(0, 17).hl, f.cell(0, 18).hl], "the selected tab's cells are in the selected group, the other tab's in TabLine, no separator between or after them")
     ascii = setup(["*a.txt", "b.txt"], 0, 1)
     ascii.state.options.icons = "ascii"
-    t.assert_equal("  a.txt *   b.txt", paint(ascii, 40).row_text(0), "under ascii the only * in a row is the modified mark")
+    t.assert_equal("  a.txt *  b.txt", paint(ascii, 40).row_text(0), "under ascii the only * in a row is the modified mark")
 
     # Scenario "The row starts at the editor's first column": the cells before the start column are the
     # caller's, the first tab starts at it, the overflow counts and the run use the columns from it, and a
@@ -170,7 +206,7 @@ module AdaptersTabBarTest
     frame = D::Frame.new(rows: 1, cols: 40)
     frame.put(0, 0, "sidebar", H::NORMAL)
     Carat::Adapters::TabBar.new(buffers: side.list).paint(frame, side.state, 14, 40)
-    t.assert_equal(["sidebar", "  a.txt     b.txt"], [frame.row_text(0)[0, 7], frame.row_text(0)[14, 17]], "the first tab starts at the start column and the cells before it are left alone")
+    t.assert_equal(["sidebar", "  a.txt    b.txt"], [frame.row_text(0)[0, 7], frame.row_text(0)[14, 16]], "the first tab starts at the start column and the cells before it are left alone")
     t.assert_equal([H::NORMAL, H::TAB_LINE_SELECTED, H::TAB_LINE_FILL], [frame.cell(0, 13).hl, frame.cell(0, 14).hl, frame.cell(0, 39).hl], "no fill before the start column, the first tab selected from it")
     far = setup(ten, 5, 2)
     frame = D::Frame.new(rows: 1, cols: 40)
@@ -194,7 +230,7 @@ module AdaptersTabBarTest
     page.slot(:left).attach(page.layout.window_at(tree), "explorer", 20)
     t.assert_equal(true, page.side_window?(tree), "the explorer's window is a side window")
     page.focus(tree)
-    t.assert_equal(["  a.txt     b.txt", H::TAB_LINE, H::TAB_LINE_SELECTED], [paint(focused, 40).row_text(0), paint(focused, 40).cell(0, 0).hl, paint(focused, 40).cell(0, 10).hl], "the file window's tab is selected with the explorer focused")
+    t.assert_equal(["  a.txt    b.txt", H::TAB_LINE, H::TAB_LINE_SELECTED], [paint(focused, 40).row_text(0), paint(focused, 40).cell(0, 0).hl, paint(focused, 40).cell(0, 10).hl], "the file window's tab is selected with the explorer focused")
     page.previous = -1
     t.assert_equal([H::TAB_LINE, H::TAB_LINE_SELECTED], [paint(focused, 40).cell(0, 0).hl, paint(focused, 40).cell(0, 10).hl], "the file window's tab is selected when no previous window is left to name it")
 

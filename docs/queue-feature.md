@@ -2,32 +2,35 @@
 
 Ordered by `docs/goals.md`; folded findings are in `docs/backlog/`. Every feature is also accepted with a docs row, a table-driven test per command, key, and option, and `lh` 26.0, `j` 27.0, `insert` 26.0 held.
 
-## Sprint 31
+## Sprint 32
 
-All three features delivered: `surface-edges-fix` (0773c27, #322), `one-accent-tabs` (38642f0, #325), `tab-focus-mark` (this delivery); the sprint closes at its review.
+Delivered: `explorer-rows` (69e59b6, #330), `tab-name-parent` (this delivery).
+
+1. `ui-groups-c` (T2, estimated medium, split from ui-groups-b): Where: `carat/domain/highlight.rb:166` (ModeMsg and MoreMsg, which no painter draws), `test/adapters_status_bar.rb` (NO_COLOR and 16 colors proven on group ids only). Why: 2 groups a theme sets change nothing on screen; the bytes a terminal gets at `TERM=xterm` and under NO_COLOR are untested. Outcome: ModeMsg and MoreMsg are drawn where Neovim draws them or removed; the bars' bytes at 16 colors and NO_COLOR are proven. Accepted when a pty smoke case at `TERM=xterm` and NO_COLOR comparing StatusLine and StatusLineDim bytes fails before. Backlog: "### The visual indicator is dim but ModeMsg and MoreMsg are still unused", "### NO_COLOR and 16 colors are proven on the groups, not on the terminal bytes".
 
 ## Pool
 
-1. `tab-name-parent` (T2 user request, estimated small): a dim parent folder only when two open files share a name; after the tab changes.
-2. `ui-groups-c` (T2, estimated medium, split from ui-groups-b): ModeMsg and MoreMsg used or removed (`frame_presenter.rb:1133`, `themes.rb:131`); a pty smoke case at `TERM=xterm` and NO_COLOR comparing StatusLine and StatusLineDim bytes. "### The visual indicator is dim but ModeMsg and MoreMsg are still unused", "### NO_COLOR and 16 colors are proven on the groups, not on the terminal bytes".
-3. `finder-word`, `panel-surface` (T2, estimated small each): 3 headings.
-4. Facet waves (T2 user request, estimated medium each): `dim-backdrop`, `float-polish`, `separator-styles`, `glyph-audit`, `plugin-ui-tokens` (disputed Low (3)), `finder-refined` (3 headings), `key-hints-dock`, `start-gem`, `diagnostic-text`, `explorer-git`.
-5. `finder-preview-gutter` (estimated small), `grep-finish`, `explorer-filter`, `finder-ranking`, `finder-layout`, `explorer-file-ops`, `search-count` (T2, estimated medium each, pushed back 4 to 8, reason: the user's tab changes first).
-6. `background-theme` (T2 user request, estimated medium, pushed back 5, reason: the user's tab changes first, critical d carat/drivers/ansi_terminal.rb): 3 OSC 11 entries, `ansi_terminal.rb:79`.
-7. `finder-path-safe` (T2 user request, security Lows, estimated medium, pushed back 5, reason: the user's tab changes first, critical a carat/plugin_api.rb): its headings at 24e3738 less plugin-host-lows'.
-8. `vim-folds-d`, `markdown-reading-e` (T2, estimated medium each, pushed back 4, 8, reason: UI first).
-9. Async and debugger (T2 user request, estimated medium each, pushed back 4, reason: UI first): `background-spike`, `idle-scheduler`, `plugin-tasks`, `task-programs`, `git-signs-tasks`, `finder-streaming`, `program-jobs`, `socket-probe`, `debug-keys`, `debug-breakpoints`, `debug-channel`, `debug-session` (large), `debug-stepping`, `debug-panel`, `debug-console`, `debug-more`.
-10. `tree-spike`, `mermaid-spike`, `markdown-preview`, `mermaid-flowchart`, `mermaid-sequence` (T2, estimated medium each, pushed back 7, reason: after the UI track); `git-panel`, `lint-panel`, `claude-bridge`, `claude-workflow` (T2, estimated large each); containers (T2 user request, estimated medium each): `dockerfile-support`, `containers-panel`, `containers-logs`.
-11. `vim-increment` (T2, estimated small); `git-push-pull`, `git-diff-blame`, `language-any`, `vim-macros-marks`, `spinel-workarounds` (T2, estimated medium each).
-12. T5 (estimated medium each, pushed back 9, reason: after the UI track): `theme-tuning`, `semantic-highlight` (large), `plugin-protocol-a`, `formatting`, `plugin-protocol-b`, `release-build`, `sample-plugin`, `dogfooding`, `ux-fixes-b`, `definition-tab`, `finder-pickers`, `filetype-rules`, `syntax-definitions`, `syntax-forms`, `syntax-embedded`, `javascript-syntax`, `html-syntax`, `csv-viewer` (large).
-13. `bidi-controls` (T3 security Lows (6), (3), estimated small, pushed back 14, reason: the user's tab changes first): "### File text paints Unicode format characters raw (sprint-22 sweep security Low (6))", sprint-30 sweep notes 3 (`line_painter.rb:48`, Low (3)), 34 (finder preview rows), 45 (explorer names); `insert-copy` (T4, estimated small).
+1. `sidebar-head-tidy` (T6, estimated medium, area 13): surface-edges-fix's 4 headings (head groups, `:cd` leaves the project name, right sidebar, narrow cut); sprint-31 review: `frame_presenter.rb:765` repeats `slot.rb:78` headed?, `:715` reads the branch through the status bar, `tab_bar.rb:132` a third basename copy.
+2. `tab-float-mark` (T6, estimated small): "### The tab mark under a focused float" (`tab_bar.rb` selected_buffer).
+3. `explorer-look` (T2 user request, estimated small): width 30 at `carat/plugins/explorer/plugin.rb:66` against `docs/design.md:136`'s 36; folder colors.
+4. `finder-word`, `panel-surface` (T2, estimated small each): 3 headings.
+5. Facet waves (T2 user request, estimated medium each): `dim-backdrop`, `float-polish`, `separator-styles`, `glyph-audit`, `plugin-ui-tokens` (disputed Low (3)), `finder-refined` (3 headings), `key-hints-dock`, `start-gem`, `diagnostic-text`, `explorer-git`.
+6. `finder-preview-gutter` (estimated small), `grep-finish`, `explorer-filter`, `finder-ranking`, `finder-layout`, `explorer-file-ops`, `search-count` (T2, estimated medium each, pushed back 5 to 9, reason: the user's tab and explorer items first).
+7. `background-theme` (T2 user request, estimated medium, pushed back 6, reason: the user's tab and explorer items first, critical d carat/drivers/ansi_terminal.rb): 3 OSC 11 entries, `ansi_terminal.rb:79`.
+8. `finder-path-safe` (T2 user request, security Lows, estimated medium, pushed back 6, reason: the user's tab and explorer items first, critical a carat/plugin_api.rb): its headings at 24e3738 less plugin-host-lows'.
+9. `vim-folds-d`, `markdown-reading-e` (T2, estimated medium each, pushed back 5, 9, reason: UI first).
+10. Async and debugger (T2 user request, estimated medium each, pushed back 5, reason: UI first): `background-spike`, `idle-scheduler`, `plugin-tasks`, `task-programs`, `git-signs-tasks`, `finder-streaming`, `program-jobs`, `socket-probe`, `debug-keys`, `debug-breakpoints`, `debug-channel`, `debug-session` (large), `debug-stepping`, `debug-panel`, `debug-console`, `debug-more`.
+11. `tree-spike`, `mermaid-spike`, `markdown-preview`, `mermaid-flowchart`, `mermaid-sequence` (T2, estimated medium each, pushed back 8, reason: after the UI track); `git-panel`, `lint-panel`, `claude-bridge`, `claude-workflow` (T2, estimated large each); containers (T2 user request, estimated medium each): `dockerfile-support`, `containers-panel`, `containers-logs`.
+12. `vim-increment` (T2, estimated small); `git-push-pull`, `git-diff-blame`, `language-any`, `vim-macros-marks`, `spinel-workarounds` (T2, estimated medium each).
+13. T5 (estimated medium each, pushed back 10, reason: after the UI track): `theme-tuning`, `semantic-highlight` (large), `plugin-protocol-a`, `formatting`, `plugin-protocol-b`, `release-build`, `sample-plugin`, `dogfooding`, `ux-fixes-b`, `definition-tab`, `finder-pickers`, `filetype-rules`, `syntax-definitions`, `syntax-forms`, `syntax-embedded`, `javascript-syntax`, `html-syntax`, `csv-viewer` (large).
+14. `bidi-controls` (T3 security Low, estimated small, pushed back 15, reason: the file text part moved to the backlog lane's `render-text-lows`): sprint-30 sweep notes 34 (finder preview rows), 45 (explorer names); `insert-copy` (T4, estimated small).
 
 ## Decisions
 
-- Security first (T0): none; sprint-30 review High 0, Medium 0, Low 1 (`tools/gates.sh:662`, Low (6)); the 3 pending runs carry no periodic finding.
-- Delivered (T2 user request): `tab-focus-mark`, Sprint 31's third feature; with the explorer focused the current window is the sidebar's, whose buffer has no tab (`tab_bar.rb:73`, `:91`), so 0 tabs are marked.
-- Removed (T2): `surface-edges-fix` merged at 0773c27 (567,768 total, medium, under 1.2M) and `one-accent-tabs` at 38642f0 (867,943 total, small, over 500k).
-- Estimated small, not split (T2): one code file and one test, no shared table (one-accent-tabs retro note 7: size by files touched); the last two feature runs not both over (567,768 under medium).
-- Not critical (T2): `carat/adapters/tab_bar.rb` is under no rule a to d.
-- Kept (T2): Pool order unchanged; `explorer-rows` stays Sprint 32's first feature (user); `tab-name-parent` now follows the delivered tab changes.
-- Placed (T1): one-accent-tabs retro note 8 (package 45,250 output in 10 calls, 18 percent) into `backlog.md`, near the backlog lane's `package-one-start`; review-in-openspec notes 9 to 11 already in that lane's Pool 12; head-form and overrun notes dropped: heads read from git, overruns cited above.
+- Security first (T0): none; the sprint-31 review 0 security findings, none disputed; the 3 pending runs carry no periodic finding.
+- Restored (T1 pipeline defect): #330 rewrote this queue to the tab-focus-mark plan (Sprint 31, 3 Pool items lost); the Sprint 32 queue of 092d282 is the base; evidence in `backlog.md`.
+- Delivered (T2 user request): `tab-name-parent`, Sprint 32 item 2; `explorer-rows` (#330, 1,412,911 total, medium, over 1.2M) removed.
+- Size up (T2): medium on content (ui-groups-b 545,902, surface-edges-fix 567,768, one-accent-tabs 867,943); the last two over (tab-focus-mark 46 minutes on small's 25, explorer-rows 1,412,911 on 1.2M): large.
+- Not split (T2): 2 parts in 2 map areas, the name and gap in `tab_width` and `paint_tab`, one dead member; the large is the size-up, not the content.
+- Critical (T2): d carat/domain/buffer.rb, the icon member's removal.
+- Placed (T1): explorer-rows retro 14, 15 and notes 3, 4 into `backlog.md`; head-form, hand pr (#329 fixed wait) and the escape note (Pool 15 `check-escape-lane-build`) dropped; review-in-openspec 9 to 12 already in backlog Pool 18.
