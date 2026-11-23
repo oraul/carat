@@ -1248,10 +1248,10 @@ function carried(line, head, from) {
   return !!m && sameCommit(m[1], head) && sameCommit(m[2], from)
 }
 // The main-moved contributor start's task: merge-main, a conflict merged
-// by the push mode's rules, and a conflict both sides changed the same
-// logic in a stop naming its files.
+// by the push mode's rules and committed, every conflict resolved by the
+// contributor and none a stop.
 function movedTask(problem) {
-  return `The merge was refused because main moved: ${problem || 'no reason given'}. Run \`sh tools/run_state.sh merge-main ${state.change}\` in the worktree. On the conflicts it names, merge origin/main by hand by your push mode's conflict rules and commit the merge with the trailer; where both sides changed the same logic, return stopped, with the question naming each such file. Commit nothing else and push nothing: the workflow reruns the check, and the reviews when the merge changed files of the change, before the main-moved push.`
+  return `The merge was refused because main moved: ${problem || 'no reason given'}. Run \`sh tools/run_state.sh merge-main ${state.change}\` in the worktree. On the conflicts it names, merge origin/main by hand by your push mode's conflict rules and commit the merge with the trailer, resolving every conflict yourself, a conflict where both sides changed the same logic included, without stopping to ask. Commit nothing else and push nothing: the workflow reruns the check, and the reviews when the merge changed files of the change, before the main-moved push.`
 }
 // The reviewed commit tools/run_state.sh moved compares with the head the
 // check after a main-moved merge passes at; '' once compared.

@@ -3280,24 +3280,15 @@ expect "run_state: merge-main's merge commit carries the trailer, no rebase" 0 "
 expect "run_state: merge-main does nothing once the branch holds main" 0 "^merge-main: feature/wa holds origin/main$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' merge-main wa"
 expect "run_state: merge-main aborts and names a conflict outside the appended records" 1 "conflicts in shared[.]txt" sh -c "cd tmp/.lane-wb && sh '$here/run_state.sh' merge-main wb"
 expect "run_state: an aborted merge-main leaves the branch as it was" 0 "^branch side none$" sh -c "cd tmp/.lane-wb && echo \$(cat shared.txt) \$([ -f \"\$(git rev-parse --git-dir)/MERGE_HEAD\" ] && echo merging || echo none)"
-# merge_main runs git with no global or system configuration and no hook
-# (lane-guard-lows): a global hooks path and a repository hook that refuse
-# every merge do not stop it, and neither runs.
+# merge_main's merge, queue checkout, add, commit, and abort run with plain
+# git (merge-git-unpin); only its fetch keeps the pinned git.
+expect "run_state: merge_main runs plain git past its fetch" 0 '^0 1$' \
+  sh -c 'awk "/^merge_main[(][)] [{]/ {f=1} f && /pinned_git/ && !/fetch/ {n++} f && /pinned_git fetch/ {k++} f && /^}/ {f=0} END {print n+0, k+0}" "$1"' _ "$here/run_state.sh"
 state lane-open wh chore/wh > /dev/null
 (cd tmp/.lane-wh && echo h > h.txt && commit "chore: the wh edit")
 echo m > m.txt
 commit "chore: main moved again"
 git_q push -q origin main 2>/dev/null
-mkdir -p "$work/ghooks" .git/hooks
-printf '#!/bin/sh\necho ran >> "%s/global-hook-ran"\nexit 1\n' "$work" > "$work/ghooks/pre-merge-commit"
-printf '#!/bin/sh\necho ran >> "%s/repo-hook-ran"\nexit 1\n' "$work" > .git/hooks/pre-merge-commit
-chmod +x "$work/ghooks/pre-merge-commit" .git/hooks/pre-merge-commit
-printf '[core]\n\thooksPath = %s/ghooks\n' "$work" > "$work/ghooks.gitconfig"
-rm -f "$work/global-hook-ran" "$work/repo-hook-ran"
-expect "run_state: merge-main merges past a global hooks path and a repository hook" 0 "^merge-main: merged origin/main into chore/wh at " \
-  sh -c "cd tmp/.lane-wh && GIT_CONFIG_GLOBAL='$work/ghooks.gitconfig' sh '$here/run_state.sh' merge-main wh"
-expect "run_state: merge-main ran neither hook" 0 "^none$" sh -c "[ -e '$work/global-hook-ran' ] || [ -e '$work/repo-hook-ran' ] && echo ran || echo none"
-rm -f .git/hooks/pre-merge-commit
 state lane-close wh > /dev/null 2>&1
 git_q merge -q --no-edit feature/wa > /dev/null 2>&1
 state set wa merged "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -6528,8 +6519,8 @@ expect "workflow: the reviews stand only on a moved line naming the head and the
   js "$wf" "COMMIT sameCommit CARRIED carried" "[carried('moved: the change is the same at abcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('moved: the merge changed files of the change: a.rb; the reviews run again at abcdef012345', 'abcdef012345', '111111222222'), carried('moved: the change is the same at bbcdef012345 as at 111111222222: x', 'abcdef012345', '111111222222'), carried('', 'abcdef012345', '111111222222')]"
 expect "workflow: the check after a main-moved merge asks for the moved line and carries only on a pass" 0 "^2$" \
   grep -c -F -e 'moved: movedFrom ? `${rs} moved ${change} ${movedFrom}`' -e '        if (movedFrom) carryReviews(c.moved)' "$wf"
-expect "workflow: a conflict merge-main cannot resolve stops naming its files" 0 '^true$' \
-  js "$wf" "movedTask" "(() => { globalThis.state = { change: 'mm' }; const t = movedTask('405'); return /run_state.sh merge-main mm/.test(t) && /both sides changed the same logic, return stopped, with the question naming each such file/.test(t) })()"
+expect "workflow: a same-logic conflict of the main-moved start goes to the contributor, not a stop" 0 '^true$' \
+  js "$wf" "movedTask" "(() => { globalThis.state = { change: 'mm' }; const t = movedTask('405'); return /run_state.sh merge-main mm/.test(t) && /the same logic included, without stopping to ask/.test(t) && !/return stopped/.test(t) })()"
 expect "workflow: first.ci keeps the green read before main moved" 0 '^1$' \
   js "$wf" "firstPass verdict" "(() => { verdict('ci', true); verdict('ci', false); return firstPass.ci })()"
 expect "workflow: the review fix round pushes with --review-fix" 0 "^1$" \

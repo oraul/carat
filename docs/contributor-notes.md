@@ -8,7 +8,7 @@ Read in order until you know what the change touches: the locations the change e
 
 ## Conflicts with main
 
-On its conflicts merge `origin/main` by hand (the trailer of `CLAUDE.md`): keep both sides of appended files, regenerate generated ones with `make`, and stop and name a conflict where both sides changed the same logic. The fix stays in the push start; the checks and reviews rerun.
+On its conflicts merge `origin/main` by hand (the trailer of `CLAUDE.md`): keep both sides of appended files, regenerate generated ones with `make`, and resolve a conflict where both sides changed the same logic yourself, keeping the behavior of both, without stopping to ask. The fix stays in the push start; the checks and reviews rerun.
 
 ## Propose
 

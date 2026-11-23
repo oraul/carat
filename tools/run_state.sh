@@ -509,8 +509,9 @@
 #                               in the lane queues keeps the branch's own
 #                               lane queue (lane_of) and BASE's other; any
 #                               other conflict aborts the merge and names
-#                               its files, exit 1; git runs with no global
-#                               or system configuration and no hook
+#                               its files, exit 1; only its fetch runs
+#                               with no global or system configuration
+#                               and no hook
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
@@ -4397,7 +4398,7 @@ merge_main() {
   own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
-  if pinned_git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+  if git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
       -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" > /dev/null 2>&1; then
     rm -f "$attrs"
     echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
@@ -4415,16 +4416,16 @@ merge_main() {
       git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
       side=--theirs
       [ "$l" != "$own" ] || side=--ours
-      { pinned_git checkout "$side" -- "docs/queue-$l.md" && pinned_git add -- "docs/queue-$l.md"; } || { pinned_git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
+      { git checkout "$side" -- "docs/queue-$l.md" && git add -- "docs/queue-$l.md"; } || { git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
     done
-    if pinned_git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
+    if git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
         -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" > /dev/null 2>&1; then
       echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
       return 0
     fi
   fi
-  pinned_git merge --abort 2>/dev/null
-  echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules, or stop and name each file where both sides changed the same logic"
+  git merge --abort 2>/dev/null
+  echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules and commit the merge"
   exit 1
 }
 
