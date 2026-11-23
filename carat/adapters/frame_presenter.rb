@@ -149,7 +149,6 @@ module Carat
       # @rbs @budget: Domain::SearchBudget
       # @rbs @pattern: Domain::SearchPattern
       # @rbs @drawn: Integer
-      # @rbs @row_of: Integer
       # @rbs @cursor_col: Integer
       # @rbs @pairing: bool
       # @rbs @pair_budget: Domain::SearchBudget
@@ -158,8 +157,6 @@ module Carat
       # @rbs @pair_b_row: Integer
       # @rbs @pair_b_col: Integer
       # @rbs @pair_here: Integer
-      # @rbs @current: bool
-      # @rbs @number_hl: Integer
       # @rbs @floating: bool
       # @rbs @basic_colors: bool
       # @rbs @repainted: Array[Integer]
@@ -187,7 +184,6 @@ module Carat
         @budget = Domain::SearchBudget.new(left: Domain::SearchBudget::FRAME)
         @pattern = Domain::SearchPattern.none
         @drawn = 0
-        @row_of = -1
         @cursor_col = -1
         @pairing = false
         @pair_budget = Domain::SearchBudget.new(left: PAIR_BUDGET)
@@ -196,8 +192,6 @@ module Carat
         @pair_b_row = -1
         @pair_b_col = -1
         @pair_here = 0
-        @current = false
-        @number_hl = Domain::Highlight::LINE_NUMBER
         @floating = false
         @repainted = [1]
         @front = Domain::Frame.new(rows: 1, cols: 1)
@@ -235,7 +229,7 @@ module Carat
         options = state.options
         tabstop = options.tabstop > 0 ? options.tabstop : 8
         @float_painter.configure(options)
-        tabline = @tab_bar.buffers.tab_row?(state.tabs.tab_count, options.showtabline) ? 1 : 0
+        tabline = @tab_bar.showing?(state.tabs.tab_count, options.showtabline) ? 1 : 0
         tab = state.tab
         layout = tab.layout
         ids = layout.leaves
@@ -324,10 +318,8 @@ module Carat
         if listed
           back.cursor_row = rows - 1
           back.cursor_col = clamp(HIT_ENTER.length, cols - 1)
-          back.layout.clear
-          @back_rows.invalidate
         end
-        if start
+        if listed || start
           back.layout.clear
           @back_rows.invalidate
         end
@@ -605,7 +597,6 @@ module Carat
         highlights = buffer.syntax_cache
         styled = !@plain && buffer.styled? && !highlights.active?
         search = @drawn
-        @current = current
         surface = window.fixed_width ? Domain::Highlight::SIDEBAR_LAYER : 0
         lit = current && options.cursorline ? Domain::Highlight::CURSOR_LINE_LAYER : surface
         count = buffer.line_count
@@ -669,13 +660,15 @@ module Carat
             end
           end
           unless @back_rows.same?(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
-            @row_of = row
             @cursor_col = fold >= 0 ? -1 : cur
-            @number_hl = number_group(layer, cur, number, options)
-            paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
+            paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax, row, current, number_group(layer, cur, number, options))
             @repainted[frame_row] = 1 if @floating
             frame.lift(frame_row, x, x + width, layer) if layer > 0
-            @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, search, guide, pair)
+            # A row painted after the highlighting budget stopped misses
+            # matches, so its stamp is one no frame draws and the next
+            # frame, with a fresh budget, paints it again.
+            stamp = search > 0 && @budget.stopped ? -1 : search
+            @back_rows.store(seg, line, left, width, gutter, number, sign, sign_group, @sel_from, @sel_to, @sel_end, cur, layer, syntax, stamp, guide, pair)
           end
           @back_rows.place(seg, window.id, top)
           if base_same
@@ -818,8 +811,10 @@ module Carat
       # and blanks between and after, then the token groups, the indent
       # guides, the whitespace marks, the search matches, the pair, and the
       # selection.
-      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine) -> void
-      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax)
+      # row is the buffer row shown, current whether the window is the
+      # current one, and number_hl the number's highlight group.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine, Integer, bool, Integer) -> void
+      def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax, row, current, number_hl)
         if line.equal?(PaintedRows::TILDE)
           frame.blank(frame_row, x, x + width)
           frame.put(frame_row, x, "~", Domain::Highlight::NON_TEXT)
@@ -838,7 +833,7 @@ module Carat
           end
           if number >= 0
             visible = numbers > width ? width : numbers
-            frame.put_number(frame_row, start, numbers - 1, number, visible, @number_hl)
+            frame.put_number(frame_row, start, numbers - 1, number, visible, number_hl)
           end
         end
         decoded = @cache.fetch(line, tabstop)
@@ -846,8 +841,8 @@ module Carat
         @lines.paint_tokens(frame, frame_row, x + gutter, decoded, text_width, left, syntax.tokens, 0, false) unless syntax.tokens.empty?
         @guides.paint(frame, frame_row, @guide_row, x + gutter, text_width, left) if @guide_row >= 0
         @marks.paint(frame, frame_row, x + gutter, decoded, text_width, left) if @mark_here
-        paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line) if @drawn > 0
-        paint_pair(frame, frame_row, x + gutter, decoded, text_width, left) if @pair_here > 0
+        paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line, row, current) if @drawn > 0
+        paint_pair(frame, frame_row, x + gutter, decoded, text_width, left, row) if @pair_here > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
       end
 
@@ -858,8 +853,8 @@ module Carat
       # it, in the current window, IncSearch. An empty match is not drawn.
       # The row cache keys on the cursor's column, so a row repaints when
       # its current match changes.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, String) -> void
-      def paint_matches(frame, frame_row, col, decoded, width, left, line)
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, String, Integer, bool) -> void
+      def paint_matches(frame, frame_row, col, decoded, width, left, line, row, current)
         pattern = @pattern
         size = decoded.size
         limit = left + width
@@ -885,7 +880,7 @@ module Carat
           end
         end
         search = @last_search
-        return unless @current && search.preview_row == @row_of && search.preview_end > search.preview_col
+        return unless current && search.preview_row == row && search.preview_end > search.preview_col
         fill_columns(frame, frame_row, col, decoded, left, limit, search.preview_col, search.preview_end, Domain::Highlight::INC_SEARCH)
       end
 
@@ -965,13 +960,13 @@ module Carat
 
       # Gives the brackets of the pair on the row being painted the
       # MatchParen group.
-      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer) -> void
-      def paint_pair(frame, frame_row, col, decoded, width, left)
+      #: (Domain::Frame, Integer, Integer, Domain::DecodedLine, Integer, Integer, Integer) -> void
+      def paint_pair(frame, frame_row, col, decoded, width, left, row)
         limit = left + width
-        if @row_of == @pair_a_row
+        if row == @pair_a_row
           fill_columns(frame, frame_row, col, decoded, left, limit, @pair_a_col, @pair_a_col + 1, Domain::Highlight::MATCH_PAREN)
         end
-        if @row_of == @pair_b_row
+        if row == @pair_b_row
           fill_columns(frame, frame_row, col, decoded, left, limit, @pair_b_col, @pair_b_col + 1, Domain::Highlight::MATCH_PAREN)
         end
       end

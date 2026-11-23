@@ -36,6 +36,13 @@ module Carat
         @buffers = buffers
       end
 
+      # Whether the row shows under showtabline with tab_count tab pages,
+      # as BufferList#tab_row? says.
+      #: (Integer, Integer) -> bool
+      def showing?(tab_count, showtabline)
+        @buffers.tab_row?(tab_count, showtabline)
+      end
+
       # Paints row 0 of a frame cols wide.
       #: (Domain::Frame, Domain::EditorState, Integer) -> void
       def paint(frame, state, cols)

@@ -991,6 +991,19 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 20)
     t.assert_equal([NOR, D::Highlight::INC_SEARCH, NOR], highlights(f, 1, 3), "the previewed match is in the IncSearch group")
     LAST.end_preview
+    # A row painted after the frame's highlighting budget stopped misses
+    # its matches, so the next frame paints it again; a row painted
+    # before the stop stays as it is.
+    LAST.hide
+    wide = []
+    30.times { wide << ("b" * 600) }
+    s = state_for(wide, "a.txt")
+    heavy = D::VimPattern.compile("a\\{1,1990\\}", false, false)
+    t.assert_equal(true, heavy.size > 1900, "the pattern is large enough to stop the budget within the window")
+    LAST.remember(heavy, true)
+    draw(s, 33, 20)
+    f = draw(s, 33, 20)
+    t.assert_equal([0, 1], [f.dirty[0], f.dirty[28]], "a row painted after the budget stopped is painted again, one before it is not")
     LAST.hide
     PROMPT.open(false, D::Mode::NORMAL, 0, 0, 0, 0)
     s.mode = D::Mode::CMDLINE
