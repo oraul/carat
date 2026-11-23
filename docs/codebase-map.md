@@ -145,7 +145,7 @@ Flow: `InputController#pump` reads bytes, `KeyDecoder#feed` turns them into key 
 
 Files:
 
-- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`; a CSI modifier is read only for Ctrl on the page keys; `ESC [ Z` is `<S-Tab>`.
+- `carat/adapters/key_decoder.rb`: `KeyDecoder`; `feed`, `flush`, `pending?`, `encode`; a CSI modifier is read only for Ctrl on the page keys; `ESC [ Z` is `<S-Tab>`. The text of a bracketed paste (`ESC [ 200 ~` to `ESC [ 201 ~`) is decoded to codes with `Key::PASTED` set: printable characters, a tab, one newline for CR, LF, or CRLF, and every other control byte, `Esc` included, dropped; `flush` leaves a paste that stopped short.
 - `carat/adapters/input_controller.rb`: `InputController`; `pump` (the notifications expired at an idle read and the read's wait cut to the next one's deadline; the `timeoutlen` wait from the options; the start screen's next frame, `tick`, and its dismissal on a key; a 0.02 second wait while the language services wait, and the popup refreshed when a completion answer arrived at the idle tick, `ShowHover` when a hover answer did, `ShowSignature` when a signature answer did; `ShowKeyHints` once `keyhints.delay` passed over a `:waiting` key), `decoder`.
 - `carat/domain/key.rb`: `Key` codes; `printable?`, `alt?`, `base`, `char`, `TIMEOUT`.
 - `carat/domain/key_notation.rb`: `KeyNotation`; `parse`, `resolve`, `format`, `caret` (the palette's `^W`), `control_code`, `special_name`; Vim notation such as `<C-w>`.

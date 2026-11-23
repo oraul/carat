@@ -23,4 +23,9 @@ ok   no gem, separator, nerd
 ok   no gem, separator, ascii
 ok   the selected tab's leading space is in the selected group, the other tab and the separators in TabLine
 ok   under ascii the only * in a row is the modified mark
-adapters_tab_bar: 25 passed, 0 failed
+ok   showing?: one file at 1 shows no row
+ok   showing?: two files at 1 show the row
+ok   showing?: one file on two tab pages at 1 shows the row
+ok   showing?: two files at 0 show no row
+ok   showing?: one file at 2 shows the row
+adapters_tab_bar: 30 passed, 0 failed

@@ -30,4 +30,19 @@ ok   indicator cleared in normal mode
 ok   block cursor in normal mode
 ok   typed text appears on the screen
 ok   the status bar shows the mode and the buffer as modified
-editor_insert: 32 passed, 0 failed
+ok   paste: the Escape is dropped and the colon and the text after it are inserted, not run
+ok   paste: the pasted Escape does not leave insert mode
+ok   paste: the cursor is after the pasted text
+ok   paste: nothing ran
+ok   paste: a paste over two reads, a CRLF breaking the line and a tab inserted
+ok   paste: pasted text matches no insert-mode binding
+ok   paste: multi-byte characters are inserted
+ok   paste: the undo takes the paste back
+ok   paste: pasted text in normal mode runs no command
+ok   paste: pasted text in normal mode starts no command line
+ok   paste: pasted text in normal mode does not quit
+ok   paste: a pasted Escape and newline do not leave or run the command line
+ok   paste: a typed Escape still leaves the command line
+ok   paste: an empty paste inserts nothing
+ok   paste: keys after the paste are keys again, the arrow moving the cursor
+editor_insert: 47 passed, 0 failed

@@ -50,6 +50,9 @@ module Carat
       TIMEOUT = SPECIAL + 98
 
       ALT = 0x400000
+      # A flag bit like ALT: the key is a character of a bracketed paste,
+      # which HandleKey inserts as text and never as a command.
+      PASTED = 0x800000
 
       # A key that inserts itself as text: a code point at or above space
       # that is not a special key, not Alt-flagged, and not DEL.
@@ -66,6 +69,11 @@ module Carat
       #: (Integer) -> Integer
       def self.base(code)
         code & ~ALT
+      end
+
+      #: (Integer) -> bool
+      def self.pasted?(code)
+        (code & PASTED) != 0
       end
 
       # The plain arrow a Shift or Ctrl arrow stands for, any other code

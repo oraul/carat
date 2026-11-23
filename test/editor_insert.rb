@@ -89,6 +89,52 @@ module EditorInsertTest
     t.assert_equal("  1 hello ab", h.row(0), "typed text appears on the screen")
     t.assert_equal(" INSERT  a.txt ●", h.status_row[0, 16], "the status bar shows the mode and the buffer as modified")
 
+    # Bracketed paste: pasted text is text, never keys. These prove the
+    # key-input scenarios "A paste in insert mode runs nothing" and
+    # "A paste in normal mode runs nothing".
+    h = editor("ab\n", false, true)
+    h.type("i")
+    h.raw("\e[200~x\e:w!\e[201~")
+    t.assert_equal(["x:w!ab"], h.lines, "paste: the Escape is dropped and the colon and the text after it are inserted, not run")
+    t.assert_equal(:insert, h.mode, "paste: the pasted Escape does not leave insert mode")
+    t.assert_equal([0, 4], h.cursor, "paste: the cursor is after the pasted text")
+    t.assert_equal(false, h.quit?, "paste: nothing ran")
+
+    h = editor("ab\n", false, true)
+    h.type("i")
+    h.raw("\e[200~c")
+    h.raw("d\r\nef\t\e[201~")
+    t.assert_equal(["cd", "ef\tab"], h.lines, "paste: a paste over two reads, a CRLF breaking the line and a tab inserted")
+    h.raw("\e[200~jk\e[201~")
+    t.assert_equal(["cd", "ef\tjkab"], h.lines, "paste: pasted text matches no insert-mode binding")
+
+    h = editor("ab\n", false, true)
+    h.type("i")
+    h.raw("\e[200~日é\e[201~")
+    t.assert_equal(["日éab"], h.lines, "paste: multi-byte characters are inserted")
+    h.type("<Esc>u")
+    t.assert_equal(["ab"], h.lines, "paste: the undo takes the paste back")
+
+    h = editor("ab\n", false, true)
+    h.raw("\e[200~dd:q!\r\e[201~")
+    t.assert_equal(["ab"], h.lines, "paste: pasted text in normal mode runs no command")
+    t.assert_equal(:normal, h.mode, "paste: pasted text in normal mode starts no command line")
+    t.assert_equal(false, h.quit?, "paste: pasted text in normal mode does not quit")
+
+    h = editor("ab\n", false, true)
+    h.type(":")
+    h.raw("\e[200~w\e!\r\e[201~")
+    t.assert_equal(:cmdline, h.mode, "paste: a pasted Escape and newline do not leave or run the command line")
+    h.type("<Esc>")
+    t.assert_equal(:normal, h.mode, "paste: a typed Escape still leaves the command line")
+
+    h = editor("ab\n", false, true)
+    h.type("i")
+    h.raw("\e[200~\e[201~")
+    t.assert_equal(["ab"], h.lines, "paste: an empty paste inserts nothing")
+    h.raw("\e[Cc")
+    t.assert_equal(["acb"], h.lines, "paste: keys after the paste are keys again, the arrow moving the cursor")
+
     t.finish
   end
 end

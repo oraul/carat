@@ -141,6 +141,19 @@ module AdaptersTabBarTest
     ascii.state.options.icons = "ascii"
     t.assert_equal("  . a.txt * |  . b.txt   |", paint(ascii, 40).row_text(0), "under ascii the only * in a row is the modified mark")
 
+    # TabBar#showing? tells whether the row shows as BufferList#tab_row? does, which FramePresenter
+    # and ArrangeView agree on: rows are [label, paths, pages, showtabline, expected].
+    [
+      ["one file at 1 shows no row", ["a.txt"], 1, 1, false],
+      ["two files at 1 show the row", ["a.txt", "b.txt"], 1, 1, true],
+      ["one file on two tab pages at 1 shows the row", ["a.txt"], 2, 1, true],
+      ["two files at 0 show no row", ["a.txt", "b.txt"], 1, 0, false],
+      ["one file at 2 shows the row", ["a.txt"], 1, 2, true]
+    ].each do |label, paths, pages, showtabline, expected|
+      list = setup(paths, 0, pages)
+      t.assert_equal(expected, Carat::Adapters::TabBar.new(buffers: list.list).showing?(list.state.tabs.tab_count, showtabline), "showing?: #{label}")
+    end
+
     t.finish
   end
 end
