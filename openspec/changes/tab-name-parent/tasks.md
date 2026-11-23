@@ -12,3 +12,8 @@
 ## 3. Docs
 
 - [x] 3.1 Update README.md, `docs/codebase-map.md`, the `FileIcons` comment, the `buffer-tabs` Purpose, and the delta spec
+
+## Quality review
+
+- [x] 4.1 `shares_name?` is rescanned for every tab width in the overflow loops, growing with the listed files; recorded in `docs/findings/tab-name-parent.md` (a cache needs a flush on open, close, and rename, beyond the brief)
+- [x] 4.2 The first-tab scenarios of the `buffer-tabs` spec still read a `•` before the name; recorded in `docs/findings/tab-name-parent.md` (a different requirement, outside the brief)
