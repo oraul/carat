@@ -19,9 +19,12 @@ module Carat
     # before it where an independent group starts (GAP), so the bar has no
     # separator glyphs: two cells between the pill and the file and
     # between the position and the percent, three between the other
-    # groups. The file and the position lead in StatusLine, bold; the
-    # branch, the file type, the encoding, and the server while it shows
-    # no state step back in StatusLineDim, the quiet PANEL_DIM text. An empty slot (branch, diagnostics, lsp, file
+    # groups. The file name and the position lead in StatusLine, bold; the
+    # folder before the name, the branch, the server's name, the file type,
+    # the encoding, and the percent step back in StatusLineDim, the quiet
+    # PANEL_DIM text. The server's state is one dot after its name, in
+    # the state's group, with the command a crash or an untrusted
+    # directory names after it. An empty slot (branch, diagnostics, lsp, file
     # type, a plugin without a segment) takes no cells but keeps its
     # place in the order.
     #
@@ -177,7 +180,7 @@ module Carat
           k += 1
         end
         add(PROGRESS, progress_width(state), -1) if slots.progress?
-        add(LSP, text_width(slots.lsp_label) + 2, -1) if slots.lsp?
+        add(LSP, lsp_width(set), -1) if slots.lsp?
         add(FILETYPE, text_width(buffer.filetype) + 2, -1) unless buffer.filetype.empty?
         add(ENCODING, ENCODING_TEXT.length + 2, -1)
         cursor = window.cursor
@@ -246,7 +249,7 @@ module Carat
           x = frame.put_within(row, x, StatusBar.mode_name(state.mode), hl, limit)
         elsif kind == FILE
           x = frame.put_within(row, x, " ", hl, limit)
-          x = frame.put_within(row, x, file_name(buffer), hl, limit)
+          x = paint_file_name(frame, row, x, limit, buffer, hl)
           if buffer.modified?
             x = frame.put_within(row, x, " ", hl, limit)
             x = frame.put_within(row, x, Domain::Icons.glyph("modified", set), hl, limit)
@@ -271,9 +274,8 @@ module Carat
           x = frame.put_within(row, x, slots.progress_label, hl, limit)
           x = paint_bar(frame, row, x, limit, set == "ascii") if bar?(state)
         elsif kind == LSP
+          x = paint_lsp(frame, row, x, limit, set)
           hl = StatusBar.lsp_group(slots.lsp_state)
-          x = frame.put_within(row, x, " ", hl, limit)
-          x = frame.put_within(row, x, slots.lsp_label, hl, limit)
         elsif kind == FILETYPE
           hl = Domain::Highlight::STATUS_DIM
           x = frame.put_within(row, x, " ", hl, limit)
@@ -289,6 +291,7 @@ module Carat
           x = frame.put_within(row, x, ":", hl, limit)
           x = frame.put_digits_within(row, x, cursor.col + 1, hl, limit)
         else
+          hl = Domain::Highlight::STATUS_DIM
           x = frame.put_within(row, x, " ", hl, limit)
           percent = percent_of(window)
           if percent >= 0
@@ -306,6 +309,58 @@ module Carat
       #: (Domain::EditorState) -> bool
       def bar?(state)
         @slots.progress_percent >= 0 || !state.options.reducedmotion
+      end
+
+      # The file name from x: the folder before its last segment in
+      # StatusLineDim, the name in hl; returns the column after it. The
+      # name is written whole and the folder's cells recolored, so no
+      # string is cut.
+      #: (Domain::Frame, Integer, Integer, Integer, Domain::Buffer, Integer) -> Integer
+      def paint_file_name(frame, row, x, limit, buffer, hl)
+        name = file_name(buffer)
+        stop = frame.put_within(row, x, name, hl, limit)
+        start = buffer.name_start
+        return stop if start == 0
+        folder = Domain::DisplayWidth.text_width(name, 0) - Domain::DisplayWidth.text_width(name, start)
+        c = 0
+        while c < folder && x + c < stop
+          frame.set_hl(row, x + c, Domain::Highlight::STATUS_DIM)
+          c += 1
+        end
+        stop
+      end
+
+      # The lsp slot from x: a space, the server's name in StatusLineDim,
+      # a space, the state's dot in the state's group, and for a crash or
+      # an untrusted directory a space and the command it names in the
+      # same group; returns the column after it, the closing space left
+      # to the caller.
+      #: (Domain::Frame, Integer, Integer, Integer, String) -> Integer
+      def paint_lsp(frame, row, x, limit, set)
+        slots = @slots
+        dim = Domain::Highlight::STATUS_DIM
+        hl = StatusBar.lsp_group(slots.lsp_state)
+        x = frame.put_within(row, x, " ", dim, limit)
+        x = frame.put_within(row, x, slots.lsp_name, dim, limit)
+        x = frame.put_within(row, x, " ", dim, limit)
+        x = frame.put_within(row, x, Domain::Icons.glyph("modified", set), hl, limit)
+        hint = Domain::StatusSlots.hint(slots.lsp_state)
+        unless hint.empty?
+          x = frame.put_within(row, x, " ", hl, limit)
+          x = frame.put_within(row, x, hint, hl, limit)
+        end
+        x
+      end
+
+      # The cells of the lsp slot: a space, the name, a space, the dot, the
+      # state's hint after a space when it has one, and a space.
+      #: (String) -> Integer
+      def lsp_width(set)
+        slots = @slots
+        width = text_width(slots.lsp_name) + text_width(Domain::Icons.glyph("modified", set)) + 3
+        hint = Domain::StatusSlots.hint(slots.lsp_state)
+        width += 1 + text_width(hint) unless hint.empty?
+        width
       end
 
       # The cells of the progress segment: its label, the bar with the space
@@ -338,7 +393,7 @@ module Carat
         c = 0
         while c < BAR_CELLS && x < limit
           on = c >= from && c < to
-          x = frame.put_code(row, x, on ? (flat ? 0x23 : 0x2501) : (flat ? 0x2D : 0x2500), 1, on ? done : Domain::Highlight::STATUS)
+          x = frame.put_code(row, x, on ? (flat ? 0x23 : 0x2501) : (flat ? 0x2D : 0x2500), 1, on ? done : Domain::Highlight::STATUS_DIM)
           c += 1
         end
         x
