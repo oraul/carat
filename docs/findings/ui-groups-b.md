@@ -10,3 +10,7 @@
 - Location: `carat/adapters/status_bar.rb` (`paint_file_name`, `fit`)
 - Why: the folder is part of the file entry, which is never dropped, so a long path takes the width a narrow bar's other segments need before the file is cut.
 - Fix: draw only the last segment of the path when the bar is narrow, or give the folder its own entry of low priority.
+### The lsp group is computed twice per paint
+- Location: `carat/adapters/status_bar.rb` (`paint_entry`, `paint_lsp`)
+- Why: `paint_lsp` and the closing space in `paint_entry` each call `lsp_group`, a small duplication kept because returning the column and the group together would allocate each frame.
+- Fix: keep the group in an integer instance variable that `paint_lsp` sets and `paint_entry` reads.

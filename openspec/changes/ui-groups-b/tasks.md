@@ -11,3 +11,8 @@
 
 - [x] 2.1 Update README.md, `docs/compatibility.md`, and `docs/codebase-map.md`
 - [x] 2.2 Append the out-of-scope gaps to `docs/findings/ui-groups-b.md`
+
+## Quality review
+
+- [x] 3.1 `StatusSlots.hint` had no direct test; assert each state's hint in `test/adapters_status_bar.rb`, fixed
+- [x] 3.2 `paint_entry` asks `lsp_group` again after `paint_lsp` did for the closing space; recorded in `docs/findings/ui-groups-b.md` (a return of two values would need an object per frame)

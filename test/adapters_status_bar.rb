@@ -228,6 +228,7 @@ module AdaptersStatusBarTest
       text[at, text.index("  utf-8").to_i - at]
     end
     t.assert_equal([true, false], [SLOTS.set_lsp("x", :ready, 0), SLOTS.set_lsp("x", :ready, 0)], "setting the same server again changes nothing")
+    t.assert_equal(["crashed :LspRestart", "untrusted :LspStart", "", "", ""], [D::StatusSlots.hint(:crashed), D::StatusSlots.hint(:untrusted), D::StatusSlots.hint(:ready), D::StatusSlots.hint(:stopped), D::StatusSlots.hint(:none)], "only a crash and an untrusted directory name a command")
     # The dot is the modified icon of the set: * under option.icons ascii.
     s = scenario("plain")
     s.options.icons = "ascii"
