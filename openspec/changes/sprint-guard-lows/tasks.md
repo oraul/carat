@@ -10,3 +10,8 @@
 ## 2. Docs
 
 - [x] 2.1 Update the `sprint-row` words of `docs/codebase-map.md`
+
+## Quality review
+
+- [x] 3.1 `sprint-row COMMIT other` (a second word other than `committed`) had no test: added the usage case in `tools/tools_test.sh`
+- [x] 3.2 The headings whose fix the delivery cannot derive, the moved RISKY_CONFIG heading, and the untracked marker are recorded in `docs/findings/sprint-guard-lows.md`, recorded

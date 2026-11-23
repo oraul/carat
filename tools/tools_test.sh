@@ -5147,6 +5147,7 @@ cp docs/metrics-backlog.tsv "$work/mb.keep"
 sed 's/^a1\t/zz\t/' "$work/mb.keep" > docs/metrics-backlog.tsv
 expect "run_state: sprint-row committed ignores an edit of the working tree's history rows" 0 "^sprint-1 a5 5 a1,a2,a3,a4,a5 " sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' committed | tr '\t' ' '"
 expect "run_state: sprint-row reads the working tree's history rows without committed" 0 "^sprint-1 a5 5 zz,a2,a3,a4,a5 " sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' | tr '\t' ' '"
+expect "run_state: sprint-row refuses a second word other than committed" 2 "^Usage: sh tools/run_state.sh COMMAND" sh -c "sh '$here/run_state.sh' sprint-row '$reviewed' other 2>&1; exit \$?"
 expect "gates: security reads groom's row from committed history, not an edit of the working tree" 0 "ok   security: pass" gates security
 cp "$work/mb.keep" docs/metrics-backlog.tsv
 printf '\n' >> docs/sprints.tsv
