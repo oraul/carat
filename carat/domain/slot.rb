@@ -70,6 +70,16 @@ module Carat
         side != :bottom
       end
 
+      # Whether the slot's window gives its first row to a header: always
+      # for a slot other than the left sidebar; the left sidebar's only
+      # while it holds two views, or when no tab row shows to head its
+      # column with the project and branch.
+      #: (bool) -> bool
+      def headed?(tab_row)
+        return true unless side == :left
+        views.length > 1 || !tab_row
+      end
+
       # Takes a newly placed window showing the view titled title.
       #: (Window, String, Integer) -> void
       def attach(target, title, amount)

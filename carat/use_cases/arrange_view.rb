@@ -15,7 +15,7 @@ module Carat
     # file buffers are listed or two tab pages exist, the row above the
     # last the status bar, and the last row the message row; the layout gets
     # the rows between, each shown slot window gives its first row to the
-    # slot's header, and, when the breadcrumbs mode shows winbars
+    # slot's header (Slot#headed?), and, when the breadcrumbs mode shows winbars
     # (TabPage#winbar?), each file window gives its first row to its
     # winbar. Each window scrolls vertically to keep its cursor
     # row visible with scrolloff and horizontally to keep the display
@@ -53,7 +53,7 @@ module Carat
         area = 1 if area < 1
         layout = state.tab.layout
         layout.arrange(tabline, 0, area, cols)
-        reserve_headers(state.tab)
+        reserve_headers(state.tab, tabline == 1)
         reserve_winbars(layout, state.tab.winbar?(options.breadcrumbs))
         id = 0
         typing = state.mode == Domain::Mode::INSERT || state.mode == Domain::Mode::REPLACE
@@ -75,15 +75,17 @@ module Carat
 
       private
 
-      # Gives each shown slot window's first row to its header: the window
-      # starts a row lower, a row shorter, when it has two rows or more.
-      #: (Domain::TabPage) -> void
-      def reserve_headers(tab)
+      # Gives each shown slot window's first row to its header, as
+      # Slot#headed? decides with tab_row, whether the tab row shows: the
+      # window starts a row lower, a row shorter, when it has two rows or
+      # more.
+      #: (Domain::TabPage, bool) -> void
+      def reserve_headers(tab, tab_row)
         layout = tab.layout
         i = 0
         while i < Domain::TabPage::SLOT_COUNT
           slot = tab.slot_at(i)
-          if slot.shown?(layout)
+          if slot.shown?(layout) && slot.headed?(tab_row)
             window = slot.view_window
             if window.height > 1
               window.row = window.row + 1
