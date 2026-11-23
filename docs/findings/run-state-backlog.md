@@ -550,3 +550,21 @@
 - Location: tools/run_state.sh merge_main
 - Why: closed as already fixed by run-state-backlog: The merge, checkout, add, commit, abort, and conflict reads run with plain git by decision of the merge-main change; only the fetch is pinned.
 - Fix: tools-test: merge_main runs plain git past its fetch
+
+### Security: a check leaves the remote-tracking refs unchecked, so a stage can forge origin/main for the next lane
+
+- Location: tools/run_state.sh lane_open
+- Why: closed as fixed by run-state-backlog: lane-open asks origin first: it fetches origin's main and, for the branch, fetches its ref or removes the local remote-tracking ref when origin holds no such branch, so a ref a stage planted seeds no lane; an unreachable origin leaves the refs with a note.
+- Fix: tools-test: lane-open starts a branch origin lacks from main, not from a planted remote-tracking ref
+
+### Security: refs_view leaves refs/remotes/ out, and lane_open bases a new lane on a remote-tracking ref without fetching (security Low (5))
+
+- Location: tools/run_state.sh lane_open
+- Why: closed as fixed by run-state-backlog: As the entry above: the ref of BRANCH and origin/main are read after origin's own answer.
+- Fix: tools-test: lane-open starts a branch origin lacks from main, not from a planted remote-tracking ref
+
+### Plan notes reach the findings file twice (facet-design-doc retro note 17)
+
+- Location: tools/run_state.sh plan_apply
+- Why: closed as fixed by run-state-backlog: plan-apply appends an entry only when the findings file lacks its heading, so notes the implement step appended are not appended again by the package step.
+- Fix: tools-test: a second plan-apply appends no entry twice

@@ -9,7 +9,7 @@
 
 ## 2. Lanes, merge, push
 
-- [x] 2.1 `lane-open` checks the branch with `valid`; `lane-open` and `lane-close` share `lane_remove`; `lane` prints no shell error; `merge-main` shows git's message on a failure with no conflicted file; `push --pr-text` accepts only the archived `pr.md` (tests for each)
+- [x] 2.1 `lane-open` reads origin's refs first and checks the branch with `valid`; `lane-open` and `lane-close` share `lane_remove`; `lane` prints no shell error; `merge-main` shows git's message on a failure with no conflicted file; `push --pr-text` accepts only the archived `pr.md` (tests for each)
 
 ## 3. Groom and fold
 
