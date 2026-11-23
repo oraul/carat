@@ -105,4 +105,9 @@ ok   the next command line is an ex command again
 ok   its bindings went with it
 ok   close_prompt closes the plugin's prompt
 ok   close_prompt without a prompt fails
-use_cases_plugin_files: 107 passed, 0 failed
+ok   float_prompt without a prompt fails
+ok   float_prompt refuses a float the plugin does not hold, and the current window
+ok   float_prompt puts the cursor in the float's first row and leaves the command-line row blank
+ok   the attachment ends with the prompt
+ok   a float closed under the prompt leaves the prompt on the command line
+use_cases_plugin_files: 112 passed, 0 failed

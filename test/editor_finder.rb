@@ -47,17 +47,28 @@ module EditorFinderTest
     out.join(",")
   end
 
-  # Each float of the current tab page as its title, "|", and its lines.
+  # Each float of the current tab page as its title, "|", and its lines;
+  # the first float, the list, without its query row.
   def self.floats(h)
     layer = h.state.tab.floats
     out = []
     i = 0
     while i < layer.count
       f = layer.at(i)
-      out << "#{f.spec.title}|#{f.window.buffer.lines.join("\n")}"
+      lines = f.window.buffer.lines
+      lines = lines[1, lines.length - 1].to_a if i == 0
+      out << "#{f.spec.title}|#{lines.join("\n")}"
       i += 1
     end
     out
+  end
+
+  # The prompt row: the first float's query row while the prompt is
+  # open, the command-line row otherwise, without trailing blanks.
+  def self.prompt_row(h)
+    layer = h.state.tab.floats
+    return h.message_row.rstrip if h.mode != :cmdline || layer.count == 0
+    layer.at(0).window.buffer.lines[0].to_s.rstrip
   end
 
   # An 80-column editor on lib/alpha.rb holding text, over the same
@@ -72,18 +83,18 @@ module EditorFinderTest
 
   # The prompt row and the first float's title, as one string.
   def self.prompt_and_title(h)
-    "#{h.message_row.rstrip}|#{first_title(h)}"
+    "#{prompt_row(h)}|#{first_title(h)}"
   end
 
   # The prompt row and the first word of the first float's title: Files,
   # Grep, Buffers, or Recent.
   def self.prompt_and_kind(h)
-    "#{h.message_row.rstrip}|#{first_title(h).split(" ")[0]}"
+    "#{prompt_row(h)}|#{first_title(h).split(" ")[0]}"
   end
 
   # The mode, the command-line row, and the floats.
   def self.view(h)
-    [h.mode, h.message_row.rstrip, floats(h)]
+    [h.mode, prompt_row(h), floats(h)]
   end
 
   # The column of every window of the current tab page.
@@ -389,7 +400,7 @@ module EditorFinderTest
     t.assert_equal([1, 60, 60, 119], boxes(h), "The finder boxes share an edge without a border: the host's frame closes the gap")
     # Scenario: Space f R resumes the grep picker.
     h = session("<Space>fgb<Esc><Space>fR", 80)
-    t.assert_equal([:cmdline, "> b", true], [h.mode, h.message_row.rstrip, floats(h)[0].to_s.include?("lib/beta.rb")], "Space f R resumes the grep picker: the prompt keeps b and the matching line of lib/beta.rb is listed")
+    t.assert_equal([:cmdline, "> b", true], [h.mode, prompt_row(h), floats(h)[0].to_s.include?("lib/beta.rb")], "Space f R resumes the grep picker: the prompt keeps b and the matching line of lib/beta.rb is listed")
 
     # Scenario: The buffer picker's rows in both themes.
     shown = []
@@ -398,17 +409,17 @@ module EditorFinderTest
       theme = Carat::Domain::Themes.find(name, "theme")
       top = h.row(1)
       at = top.index("Buffers").to_i
-      shown << "#{top}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}"
+      shown << "#{top}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(4)}\n#{h.row(20)}"
       t.assert_equal([theme.fg(Carat::Domain::Highlight::FLOAT_BORDER), theme.fg(Carat::Domain::Highlight::FLOAT_TITLE)], [theme.fg(h.frame.cell(1, 1).hl), theme.fg(h.frame.cell(1, at).hl)], "The buffer picker's rows in both themes: the edge in FloatBorder and the title in FloatTitle under #{name}")
     end
-    rounded = " ╭#{"─" * 31} Buffers 2/2 #{"─" * 32}╮\n~│ ▎ lib/alpha.rb#{" " * 61}│\n~│   lib/beta.rb#{" " * 62}│\n~╰#{"─" * 76}╯"
+    rounded = " ╭#{"─" * 31} Buffers 2/2 #{"─" * 32}╮\n~│ > #{" " * 73}│\n~│ ▎ lib/alpha.rb#{" " * 61}│\n~│   lib/beta.rb#{" " * 62}│\n~╰#{"─" * 76}╯"
     t.assert_equal([rounded, rounded], shown, "The buffer picker's rows in both themes: the same rows, the title on the top edge")
     # Scenario: The recent files picker's rows in ASCII.
     h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
-    t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| ▎ lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
+    t.assert_equal(" +#{"-" * 32} Recent 2/2 #{"-" * 32}+\n~| > #{" " * 73}|\n~| ▎ lib/beta.rb#{" " * 62}|\n~|   lib/alpha.rb#{" " * 61}|\n~+#{"-" * 76}+", "#{h.row(1)}\n#{h.row(2)}\n#{h.row(3)}\n#{h.row(4)}\n#{h.row(20)}", "The recent files picker's rows in ASCII: + and - on the edges, | at the sides")
 
     # The selected row: the sapphire bar, the selection fill, and a bold
-    # label (design section 5). The list float's first row is screen row 2,
+    # label (design section 5). The list float's first row after the query row is screen row 3,
     # its padding at column 2, the bar at 3, the label from 5.
     hl = Carat::Domain::Highlight
     mark = hl::POPUP_MENU_MARK_SELECTED
@@ -419,31 +430,31 @@ module EditorFinderTest
     # Scenario: The selected row under truecolor.
     h = session("<Space>ff", 80)
     sgr = Carat::Adapters::SgrTable.from_theme(dark, Carat::Domain::ColorDepth::TRUECOLOR)
-    t.assert_equal(["~│ ▎ docs/guide.md", "~│   lib/alpha.rb", [fill, mark, fill, label, label, fill], [menu, menu, menu]], [h.row(2)[0, 18], h.row(3)[0, 17], row_groups(h, 2, [2, 3, 4, 5, 17, 18]), row_groups(h, 3, [2, 3, 5])], "The selected row under truecolor: ▎ in PmenuMarkSel, the label in PmenuLabelSel, the padding in PmenuSel, the next row in Pmenu")
-    t.assert_equal([false, "\e[0;1;38;2;#{rgb(dark.fg(mark))};48;2;#{rgb(dark.bg(fill))}m", sgr.at(h.frame.hl_at(2, 2)).sub("\e[0", "\e[0;1")], [floats(h)[0].to_s.include?(">"), sgr.at(h.frame.hl_at(2, 3)), sgr.at(h.frame.hl_at(2, 5))], "no > on any row, the bar sapphire and bold and the label bold, in the selection fill's colors")
+    t.assert_equal(["~│ ▎ docs/guide.md", "~│   lib/alpha.rb", [fill, mark, fill, label, label, fill], [menu, menu, menu]], [h.row(3)[0, 18], h.row(4)[0, 17], row_groups(h, 3, [2, 3, 4, 5, 17, 18]), row_groups(h, 4, [2, 3, 5])], "The selected row under truecolor: ▎ in PmenuMarkSel, the label in PmenuLabelSel, the padding in PmenuSel, the next row in Pmenu")
+    t.assert_equal([false, "\e[0;1;38;2;#{rgb(dark.fg(mark))};48;2;#{rgb(dark.bg(fill))}m", sgr.at(h.frame.hl_at(3, 2)).sub("\e[0", "\e[0;1")], [floats(h)[0].to_s.include?(">"), sgr.at(h.frame.hl_at(3, 3)), sgr.at(h.frame.hl_at(3, 5))], "no > on any row, the bar sapphire and bold and the label bold, in the selection fill's colors")
     t.assert_equal([dark.fg(hl::DIRECTORY), dark.bg(fill), dark.bg(fill)], [dark.fg(mark), dark.bg(mark), dark.bg(label)], "the bar is the theme's sapphire on the selection color")
     # Scenario: The selected row at 16 colors.
     sgr16 = Carat::Adapters::SgrTable.from_theme(dark, Carat::Domain::ColorDepth::COLORS_16)
-    t.assert_equal([true, true], [sgr16.at(h.frame.hl_at(2, 3)).start_with?("\e[0;1;7"), sgr16.at(h.frame.hl_at(2, 5)).start_with?("\e[0;1;7")], "The selected row at 16 colors: the bar and the label reverse and bold, as the fill is reverse")
+    t.assert_equal([true, true], [sgr16.at(h.frame.hl_at(3, 3)).start_with?("\e[0;1;7"), sgr16.at(h.frame.hl_at(3, 5)).start_with?("\e[0;1;7")], "The selected row at 16 colors: the bar and the label reverse and bold, as the fill is reverse")
     # Scenario: The selected row under NO_COLOR.
     config = Carat::Doubles::FixedConfig.with("")
     h = Carat::Doubles::EditorHarness.new(files: disk, config: config, rows: 24, cols: 80, plugins: [Carat::Plugins::Finder::Plugin.new])
     h.terminal.no_color = true
     h.open("lib/alpha.rb")
     h.type("<Space>ff")
-    t.assert_equal(["~| ▎ docs/guide.md", [fill, mark, label, label], true], [h.row(2)[0, 18], row_groups(h, 2, [2, 3, 5, 17]), dark.attr(label) & Carat::Domain::Theme::BOLD != 0], "The selected row under NO_COLOR: ▎, the bar and the bold label in their groups, the edge in ASCII")
+    t.assert_equal(["~| ▎ docs/guide.md", [fill, mark, label, label], true], [h.row(3)[0, 18], row_groups(h, 3, [2, 3, 5, 17]), dark.attr(label) & Carat::Domain::Theme::BOLD != 0], "The selected row under NO_COLOR: ▎, the bar and the bold label in their groups, the edge in ASCII")
     # Scenario: The selected row under option.icons ascii.
     h = configured("option.icons ascii\n", ":e lib/beta.rb<CR><Space>fr", 80)
-    t.assert_equal(["~| ▎ lib/beta.rb", [fill, mark, label, label]], [h.row(2)[0, 16], row_groups(h, 2, [2, 3, 5, 15])], "The selected row under option.icons ascii: ▎ in PmenuMarkSel and the label in PmenuLabelSel")
+    t.assert_equal(["~| ▎ lib/beta.rb", [fill, mark, label, label]], [h.row(3)[0, 16], row_groups(h, 3, [2, 3, 5, 15])], "The selected row under option.icons ascii: ▎ in PmenuMarkSel and the label in PmenuLabelSel")
     # Scenario: The style follows the highlight.
     h = session("<Space>ff<C-n>", 80)
-    t.assert_equal(["~│   docs/guide.md", "~│ ▎ lib/alpha.rb", [menu, menu], [mark, label]], [h.row(2)[0, 18], h.row(3)[0, 17], row_groups(h, 2, [3, 5]), row_groups(h, 3, [3, 5])], "The style follows the highlight: Ctrl-N moves the bar, the fill, and the bold label to the second row")
+    t.assert_equal(["~│   docs/guide.md", "~│ ▎ lib/alpha.rb", [menu, menu], [mark, label]], [h.row(3)[0, 18], h.row(4)[0, 17], row_groups(h, 3, [3, 5]), row_groups(h, 4, [3, 5])], "The style follows the highlight: Ctrl-N moves the bar, the fill, and the bold label to the second row")
     # Scenario: A grep row is styled as a file row.
     h = session("<Space>fgb = 2", 80)
-    t.assert_equal(["~│ ▎ lib/beta.rb", [mark, label]], [h.row(2)[0, 16], row_groups(h, 2, [3, 5])], "A grep row is styled as a file row: ▎ in PmenuMarkSel and the row in PmenuLabelSel")
+    t.assert_equal(["~│ ▎ lib/beta.rb", [mark, label]], [h.row(3)[0, 16], row_groups(h, 3, [3, 5])], "A grep row is styled as a file row: ▎ in PmenuMarkSel and the row in PmenuLabelSel")
     # Scenario: No match shows no highlighted row.
     h = session("<Space>fflib zzz", 80)
-    t.assert_equal(["~│ No match", [hl::NORMAL_FLOAT, hl::NORMAL_FLOAT]], [h.row(2)[0, 11], row_groups(h, 2, [3, 5])], "No match shows no highlighted row: the float reads No match in NormalFloat")
+    t.assert_equal(["~│ No match", [hl::NORMAL_FLOAT, hl::NORMAL_FLOAT]], [h.row(3)[0, 11], row_groups(h, 3, [3, 5])], "No match shows no highlighted row: the float reads No match in NormalFloat")
 
     # Scenario: Ctrl-G switches the file finder to the grep picker.
     h = session("<Space>ffb<C-g>", 80)
@@ -496,6 +507,48 @@ module EditorFinderTest
     # Scenario: Ctrl-G after Space f w switches on the word.
     h = word_session("hello world\n", "<Space>fw<C-g>")
     t.assert_equal([:cmdline, "> hello|Files 0/3"], [h.mode, prompt_and_title(h)], "Ctrl-G after Space f w switches to the file finder on the word")
+    # Scenario: The query is the list float's first row (the finder).
+    # The first row is the prompt and the typed text, the cursor stands
+    # after it as a bar in the float's text area while the command-line
+    # row is blank, and the title carries the counts in the palette's form.
+    h = session("<Space>ffbe", 80)
+    float = h.state.tab.floats.at(0)
+    window = float.window
+    t.assert_equal(["> be", "> be", "Files 1/3", true, [window.row, window.col + 4, :bar]], [window.buffer.lines[0], h.row(window.row)[window.col, 4].to_s, float.spec.title, h.message_row.strip.empty?, [h.frame.cursor_row, h.frame.cursor_col, h.frame.cursor_shape]], "The query is the list float's first row: the text, the title counts, the cursor after the text")
+    h.type("<Left>")
+    t.assert_equal([window.row, window.col + 3], [h.frame.cursor_row, h.frame.cursor_col], "The query is the list float's first row: the cursor follows the command line's cursor")
+    h.type("x")
+    t.assert_equal(["> bxe", window.col + 4], [h.state.tab.floats.at(0).window.buffer.lines[0], h.frame.cursor_col], "The query is the list float's first row: a character typed at the cursor")
+    # Scenario: The query row is above the highlight.
+    h = session("<Space>ff<C-n>", 80)
+    t.assert_equal([2, "▎ lib/alpha.rb"], [h.state.tab.floats.at(0).selected, h.state.tab.floats.at(0).window.buffer.lines[2].to_s.rstrip], "The query row is above the highlight: the second file is on the third row")
+    # Scenario: Enter with no match keeps the query in the float.
+    h = session("<Space>ffzzz<CR>", 80)
+    float = h.state.tab.floats.at(0)
+    t.assert_equal([:cmdline, "> zzz", float.window.row, float.window.col + 5], [h.mode, float.window.buffer.lines[0], h.frame.cursor_row, h.frame.cursor_col], "Enter with no match keeps the query in the float: the prompt opens again on the same text with the cursor in the float")
+    # Edge cases: a wide character counts its cells before the cursor, and a
+    # query longer than the float keeps the cursor inside its text area.
+    h = session("<Space>ff\u65E5", 80)
+    window = h.state.tab.floats.at(0).window
+    t.assert_equal([window.row, window.col + 4], [h.frame.cursor_row, h.frame.cursor_col], "The query is the list float's first row: a wide character takes two cells")
+    h = session("<Space>ff" + "a" * 100, 80)
+    window = h.state.tab.floats.at(0).window
+    t.assert_equal([window.row, window.col + window.width - 1], [h.frame.cursor_row, h.frame.cursor_col], "The query is the list float's first row: a query wider than the float keeps the cursor in its text area")
+    # The attachment is asked once for each float, not at every refill: a
+    # response an allocation per key in a grep. A cleared attachment stays
+    # cleared while the float is the same, and the float's id is held again
+    # when the prompt reopens on it.
+    h = session("<Space>ffb", 80)
+    id = h.state.tab.floats.at(0).id
+    t.assert_equal(id, h.assembly.plugin_ui.prompt_float, "The finder attaches its prompt to the list float")
+    h.assembly.plugin_ui.prompt_float = 0
+    h.type("e")
+    t.assert_equal(0, h.assembly.plugin_ui.prompt_float, "The finder asks for the attachment once for each float, not at every refill")
+    h = session("<Space>ffzzz<CR>", 80)
+    t.assert_equal(h.state.tab.floats.at(0).id, h.assembly.plugin_ui.prompt_float, "The finder attaches the reopened prompt to the same float")
+    # Scenario: The prompt leaves the float when the finder closes.
+    h = session("<Space>ffbe<Esc>", 80)
+    t.assert_equal([0, :normal, 0], [h.state.tab.floats.count, h.mode, h.assembly.plugin_ui.prompt_float], "The prompt leaves the float when the finder closes")
     t.finish
   end
 end

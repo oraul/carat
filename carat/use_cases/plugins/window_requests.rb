@@ -348,6 +348,13 @@ module Carat
         PluginApi::Response.success("", 0)
       end
 
+      # Whether the id is a float the plugin opened, never 0 for the
+      # current window.
+      #: (String, Integer) -> bool
+      def holds_float?(name, id)
+        id != 0 && own_float_tab(name, id) >= 0
+      end
+
       private
 
       # Opens a file window beside the scratch window leaf, the editor's

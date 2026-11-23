@@ -68,7 +68,7 @@ module EditorCmdlineEditTest
       ["A visual range opens with the cursor at its end", "V:", "cmdline|:'<,'>|6|bar"],
       ["The command line keeps the cursor after an Esc and a new colon", ":ab<Left><Esc>:x", "cmdline|:x|2|bar"],
       ["A visual range after an Esc has the cursor at its end", ":ab<Home><Esc>V:", "cmdline|:'<,'>|6|bar"],
-      ["The palette's prompt has the cursor", "<F1>sp<Left>x", "cmdline|>sxp|3|bar"],
+      ["The palette's prompt has the cursor", "<F1>sp<Left>x", "cmdline||7|bar"],
       ["The search prompt has the cursor", "/ac<Left>b", "cmdline|/abc|3|bar"],
       ["The search prompt: Control-u", "/abc<Left><C-u>", "cmdline|/c|1|bar"]
     ]) { |keys| typed(keys) }
