@@ -17,3 +17,4 @@
 - Location: tools/agent_guard.sh, the read profile's `base-figures` form
 - Why: the form is shared by every agent of the read profile, though only the benchmark agent saves; save now builds and measures main's tracked tree itself, so a planted output no longer reaches the stored figures, but any read-profile agent can still trigger the build and the store.
 - Fix: give the benchmark its own guard profile (or an `only_profiles` check on `save`) and add the guard cases for the other profiles refusing it.
+none
