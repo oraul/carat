@@ -32,3 +32,6 @@
 - Location: tools/run_state.sh sprint_row_at, build/plan/sprint
 - Why: the marker lives in the ignored build/plan, so it cannot be committed; sprint-row checks the sprint it names against the committed sprint log and uses it for no other value, so a forged marker can only name the sprint in progress. Rows are now read from committed content and compared byte for byte; a branch's own appended history rows stay trusted since the package step appends the change's row after the review.
 - Fix: none needed unless the marker gains another value; then derive it from docs/sprints.tsv alone.
+# Backlog entries
+
+None: every finding and proposal of this plan is placed in the backlog queue.
