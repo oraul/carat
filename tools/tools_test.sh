@@ -3573,6 +3573,21 @@ commit "docs: the queues"
 state init facet-doc chore/facet-doc > /dev/null
 expect "run_state: a change named only in a queue's exception line takes that queue's lane" 0 "^feature$" state lane facet-doc
 
+# A stage recorded scoped (never run) is not carried as passed across a
+# tests-only commit; the path scope decides it again (scoped-carry).
+fresh scopedcarry
+state init scopedcarry chore/scopedcarry > /dev/null
+echo notes > docs/notes.md
+commit "docs: notes"
+scoped_stages="docs-lint dev-build test-run metrics tools-test gates"
+env BASE=main STAGES="$scoped_stages" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check scopedcarry > /dev/null
+scoped_at=$(git rev-parse --short=12 HEAD)
+mkdir -p test && echo t > test/own_test.rb
+commit "test: a tests-only commit"
+state phase scopedcarry check "$scoped_at" > /dev/null
+env BASE=main STAGES="$scoped_stages" MAKE="$work/bin/fake-make" sh "$here/run_state.sh" check scopedcarry "$scoped_at" > /dev/null
+expect "run_state: a stage recorded scoped is not carried across a tests-only commit, the scope deciding it again" 0 "^0 [0-9]+s [0-9a-f]{12} [^ ]+$" state get scopedcarry stage.dev-build
+
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a
 # proposal or finding to place.

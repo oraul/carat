@@ -897,11 +897,12 @@ stage_end() {
 STAGE_AFTER="test-run:test-build test-run:dev-build gates:test-build metrics:dev-build metrics:test-build metrics:bench-budget"
 STAGE_ALONE="metrics"
 
-# Prints why CHECK_JOBS is refused, nothing when it is a positive number.
+# Prints why CHECK_JOBS is refused, nothing when it is a positive number
+# (the waiter and the runner's start both read it, before any stage is
+# queued).
 jobs_refusal() {
   case "${CHECK_JOBS:-3}" in
-    *[!0-9]*|'') echo "check: refused: CHECK_JOBS is ${CHECK_JOBS}, not a positive number" ;;
-    *) [ "${CHECK_JOBS:-3}" -ge 1 ] || echo "check: refused: CHECK_JOBS is ${CHECK_JOBS}, not a positive number" ;;
+    *[!0-9]*|0|0[0-9]*) echo "check: refused: CHECK_JOBS is ${CHECK_JOBS:-3}, not a positive number" ;;
   esac
 }
 
@@ -1177,6 +1178,12 @@ check_stages() {
   # The recorded phase.check, twelve digits, which alone backs a pass of
   # RERUN_STAGES at the head.
   phase_check=$(recorded_check)
+  refused=$(jobs_refusal)
+  if [ -n "$refused" ]; then
+    echo "$refused"
+    verdict_failed
+    exit 1
+  fi
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
@@ -1190,7 +1197,7 @@ check_stages() {
           echo "stage $s: passed at $head, skipped"
           continue
         elif [ -n "$backed" ] && { [ "$at" = "$backed" ] || [ "$from" = "$backed" ]; } &&
-            ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
+            [ "${record% scoped}" = "$record" ] && ! one_of "$s" "$TEST_STAGES" && tests_only_since "$backed"; then
           stage_record "stage.$s" "0 0s $head $(utc_now) carried-from-$backed"
           echo "stage $s: passed at $backed, carried to $head (only tests changed since)"
           continue
@@ -1212,12 +1219,6 @@ check_stages() {
     fi
     queue="$queue $s"
   done
-  refused=$(jobs_refusal)
-  if [ -n "$refused" ]; then
-    echo "$refused"
-    verdict_failed
-    exit 1
-  fi
   # The stages left run at once (stages_start), each in its job; the runner
   # alone writes their records as they end (stages_reap).
   mkdir -p "$stage_dir/$change"
