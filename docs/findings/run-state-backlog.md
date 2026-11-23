@@ -568,3 +568,21 @@
 - Location: tools/run_state.sh plan_apply
 - Why: closed as fixed by run-state-backlog: plan-apply appends an entry only when the findings file lacks its heading, so notes the implement step appended are not appended again by the package step.
 - Fix: tools-test: a second plan-apply appends no entry twice
+
+### lane_of misses a queue item that estimate_of and exception_item find
+
+- Location: tools/run_state.sh item_named
+- Why: closed as fixed by run-state-backlog: The item test reads the name as estimate_of does, the name in backticks first in the item, so an item whose name is followed by a word gets its lane.
+- Fix: tools-test: lane takes a change whose queue item names it before a word
+
+### A concurrent lane's benchmark log fails another lane's check (pr-trust-lows check)
+
+- Location: tools/run_state.sh main_scan
+- Why: closed as fixed by run-state-backlog: A file build/NAME.log of the main checkout, where another lane's benchmark agent redirects its make output, no longer voids a lane's check; any other file under its build/ still does.
+- Fix: tools-test: a log written in the main checkout's build/ by another lane leaves a lane's check passing
+
+### A concurrent lane's benchmark log fails another lane's check
+
+- Location: tools/run_state.sh main_scan
+- Why: closed as fixed by run-state-backlog: As the entry above: build/NAME.log of the main checkout is left out of the scan.
+- Fix: tools-test: a log written in the main checkout's build/ by another lane leaves a lane's check passing

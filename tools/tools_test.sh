@@ -594,6 +594,7 @@ case "$REACH" in
   touch) touch "$TOP/build/plan/tracked" && sleep "${SLOW:-0}" ;;
   main) echo forged >> "$MAIN/README.md" ;;
   main-branch) git -C "$MAIN" checkout -q -b forged-branch ;;
+  main-log) mkdir -p "$MAIN/build" && echo log > "$MAIN/build/scratch-base-build.log" ;;
   main-tab) printf forged >> "$MAIN/$(printf 'tab\tfile')" ;;
   main-index) git -C "$MAIN" update-index --chmod=+x README.md ;;
   main-flag) git -C "$MAIN" update-index --assume-unchanged README.md && echo forged >> "$MAIN/README.md" ;;
@@ -766,6 +767,10 @@ expect "run_state: a stage that writes a tracked file with a tab in its name fro
 tab_reported() { grep -c "/tab$(printf '\t')file" build/stages/isolated/check.log || true; }
 expect "run_state: a tracked path holding a tab is not reported as an untracked file" 0 "^0$" tab_reported
 (cd "$iso_top" && git rm -q -f -- "$tab_name")
+# A log another lane's benchmark agent writes in the main checkout's build/
+# is no escape of this lane's check; a file under build/bin still is.
+expect "run_state: a log written in the main checkout's build/ by another lane leaves a lane's check passing" 0 "every stage passed" lane_reach main-log
+rm -f "$iso_top/build/scratch-base-build.log"
 # origin is a local bare repository from here, so the runner reads the
 # commit its branch names (main_moved); it holds the main checkout's
 # starting commit, so a stage that moves the main checkout elsewhere fails
@@ -3444,6 +3449,12 @@ expect "run_state: lane-close leaves the shared toolchain, cache, and run state"
 expect "run_state: lane-close with no worktree does nothing" 0 "^lane-close: no tmp/[.]lane-wa$" state lane-close wa
 state lane-close wb > /dev/null
 state lane-close wc > /dev/null
+# An item whose name is followed by a word, not a parenthesis, still names
+# the change, as estimate_of reads it.
+fresh qitem
+printf '1. `qitem` plugin (estimated small)\n' > docs/queue-backlog.md
+state init qitem feature/qitem > /dev/null
+expect "run_state: lane takes a change whose queue item names it before a word" 0 "^backlog$" state lane qitem
 # lane prints the lane and nothing else when a queue file is missing.
 fresh qless
 state init qless chore/qless > /dev/null

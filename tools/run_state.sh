@@ -1439,14 +1439,17 @@ tree_find() {
 }
 
 # The main checkout's files changed since escape_mark (tree_scan) that it
-# does not track, directories left out: the merger's fast-forward of its
+# does not track, directories left out, and the logs of its build/ itself
+# (build/NAME.log, which another lane's benchmark agent redirects its make
+# output into and nothing runs), but not the files under build/bin, build/dev,
+# or any other directory of it: the merger's fast-forward of its
 # branch changes only tracked files, which main_view compares.
 main_scan() {
   # Both lists NUL-separated, read by awk as records ended by a byte 1, so
   # a path holding a tab, newline, quote, or backslash, which git quotes
   # in its line form, still matches the one find prints.
   { git -C "$main_tree" ls-files -z 2> /dev/null | tr '\0' '\001' | MAIN="$main_tree" awk -v RS='\001' -v ORS='\001' '{ print "T " ENVIRON["MAIN"] "/" $0 }'
-    tree_find "$main_tree" -print0 ! -type d | tr '\0' '\001' | awk -v RS='\001' -v ORS='\001' '{ print "F " $0 }'; } |
+    tree_find "$main_tree" -print0 ! -type d ! '(' -path "$main_tree/build/*.log" ! -path "$main_tree/build/*/*" ')' | tr '\0' '\001' | awk -v RS='\001' -v ORS='\001' '{ print "F " $0 }'; } |
     awk -v RS='\001' -v ORS='\n' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
 }
 
@@ -2497,10 +2500,10 @@ lane_of() {
 }
 
 # True when the queue on stdin holds an item naming the change
-# ("N. `CHANGE` (").
+# ("N. `CHANGE`" and anything after), as estimate_of reads it.
 item_named() {
   C="$change" awk '
-    { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "` (") == 1) f = 1 }
+    { item = $0; if (sub(/^[0-9]+[.] /, "", item) && index(item, "`" ENVIRON["C"] "`") == 1) f = 1 }
     END { exit !f }'
 }
 
