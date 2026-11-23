@@ -10,3 +10,4 @@
 - Location: carat/use_cases/plugins/plugin_registry.rb (register, activate, disable, and the binding merge name an entry e)
 - Why: the brief's locals-named-e rename listed the host, events, buffer, ui, and router files; the registry's own locals keep the short name.
 - Fix: rename each to entry in the same way, a mechanical change with no behavior.
+None.
