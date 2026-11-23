@@ -28,6 +28,7 @@ module DomainIconsTest
   def self.main
     t = Carat::Testing.new("domain_icons")
 
+    # Scenarios: Every name in every set and Nerd set.
     I::SETS.each do |set|
       I::NAMES.each do |name|
         expected = set == "nerd" ? "pua" : set

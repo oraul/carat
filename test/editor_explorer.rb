@@ -217,6 +217,13 @@ module EditorExplorerTest
     h = session(":ExplorerFind<CR>")
     t.assert_equal([1, [2, 0], 2], [h.window_index, h.cursor, h.window_count], ":ExplorerFind opens a closed tree")
 
+    # The scenarios of the explorer's requirements are proven by the tables
+    # of this file: Revealed on open (the follow rows above), Enter toggles a
+    # directory, Expand and collapse with o, Only the tree is left, and
+    # Parent of a collapsed directory (the opening and directory tables),
+    # Create a file, Create a directory, Prompt cancelled, and Name taken
+    # (the create table), Rename an open file and Separator refused (the
+    # rename rows), and Movement falls through (j and G in the first table).
     # Opening files and directories: rows are [label, keys, [windows, current
     # window, tab pages, current buffer, message]].
     t.table([
@@ -426,7 +433,7 @@ module EditorExplorerTest
     t.assert_equal(["▎", H::POPUP_MENU_MARK_SELECTED, H::POPUP_MENU_SELECTED, H::POPUP_MENU_SELECTED, H::NORMAL, H::NORMAL], [h.row(3)[0, 1], H.base(h.frame.hl_at(3, 0)), H.base(h.frame.hl_at(3, 10)), H.base(h.frame.hl_at(3, 29)), H.base(h.frame.hl_at(4, 10)), H.base(h.frame.hl_at(2, 29))], "the current row is a full-width highlight with the bar in its first cell, the other rows are not")
     t.assert_equal([H::SIDEBAR_LAYER + H::POPUP_MENU_SELECTED, H::NORMAL], [h.frame.hl_at(3, 29), H.base(h.frame.hl_at(3, 30))], "the highlight keeps the sidebar's layer and ends at the window's edge")
     h.type("<C-w>l:e b.rb<CR>")
-    t.assert_equal([" ", "▎", H::POPUP_MENU_SELECTED, H::NORMAL], [h.row(3)[0, 1], h.row(4)[0, 1], H.base(h.frame.hl_at(4, 10)), H.base(h.frame.hl_at(3, 10))], "the highlight follows the file that becomes current")
+    t.assert_equal([" ", "▎", H::POPUP_MENU_SELECTED, H::NORMAL], [h.row(3)[0, 1], h.row(4)[0, 1], H.base(h.frame.hl_at(4, 10)), H.base(h.frame.hl_at(3, 10))], "The highlight follows the current file: it moves to the file that becomes current")
     h.type("<C-w>h")
     t.assert_equal(H::POPUP_MENU_SELECTED, H.base(h.frame.hl_at(4, 10)), "and stays on its row with the tree focused, the cursor line under it")
 
