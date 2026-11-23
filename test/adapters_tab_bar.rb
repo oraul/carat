@@ -167,18 +167,18 @@ module AdaptersTabBarTest
     f = paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 40)
     t.assert_equal([H::TAB_LINE_SELECTED, H::MESSAGE_DIM, H::MESSAGE_DIM, H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE, H::TAB_LINE_FILL], [f.cell(0, 1).hl, f.cell(0, 2).hl, f.cell(0, 3).hl, f.cell(0, 4).hl, f.cell(0, 9).hl, f.cell(0, 12).hl, f.cell(0, 13).hl, f.cell(0, 19).hl, f.cell(0, 20).hl], "the selected tab's folder is MsgDim and its name TabLineSel, the other tab's folder and name TabLine")
     frame = D::Frame.new(rows: 1, cols: 40)
-    plain = setup(["a/x.rb", "b/x.rb"], 0, 1)
-    plain_bar = Carat::Adapters::TabBar.new(buffers: plain.list)
-    plain_bar.bare = true
-    plain_bar.paint(frame, plain.state, 0, 40)
+    shared = setup(["a/x.rb", "b/x.rb"], 0, 1)
+    shared_bar = Carat::Adapters::TabBar.new(buffers: shared.list)
+    shared_bar.bare = true
+    shared_bar.paint(frame, shared.state, 0, 40)
     t.assert_equal([H::TAB_LINE_SELECTED, H::TAB_LINE_SELECTED, H::NORMAL, H::NORMAL], [frame.cell(0, 2).hl, frame.cell(0, 4).hl, frame.cell(0, 12).hl, frame.cell(0, 14).hl], "bare: the folder takes its tab's group, bold on the selected tab, Normal on the other")
     # Scenario "A shared name's folder counts in the overflow": 19 columns cannot hold both tabs of 10
     # cells, so the second is counted, and 20 columns show both whole.
     t.assert_equal(["  a/x.rb   1>", "  a/x.rb    b/x.rb"], [paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 19).row_text(0), paint(setup(["a/x.rb", "b/x.rb"], 0, 1), 20).row_text(0)], "a tab shared by name counts its folder in the overflow")
-    cut = D::Frame.new(rows: 1, cols: 40)
-    cut_bar = setup(["a/x.rb", "b/x.rb"], 0, 1)
-    Carat::Adapters::TabBar.new(buffers: cut_bar.list).paint(cut, cut_bar.state, 0, 5)
-    t.assert_equal("  a/x", cut.row_text(0)[0, 5], "a folder is cut at the row's end")
+    narrow = D::Frame.new(rows: 1, cols: 40)
+    narrow_setup = setup(["a/x.rb", "b/x.rb"], 0, 1)
+    Carat::Adapters::TabBar.new(buffers: narrow_setup.list).paint(narrow, narrow_setup.state, 0, 5)
+    t.assert_equal("  a/x", narrow.row_text(0)[0, 5], "a folder is cut at the row's end")
 
     # Scenario "Tabs under every icon set": no set draws a file icon or a gem, so the ascii `*` stays the modified
     # mark's alone and no separator ends a tab, in every icon set.
