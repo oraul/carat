@@ -49,4 +49,7 @@ ok   the feed reports to the list's tab list
 ok   Recent files most recent first: a.rb shown again moves to the top, b.rb stays after it leaves the list, the unnamed buffer never enters; the file paths are the listed named buffers
 ok   listing a buffer no window shows records no recent file
 ok   The recent files are bounded: 101 files keep 100 paths, the last opened first and the first opened gone
-domain_buffer_list: 51 passed, 0 failed
+ok   The recent files keep absolute paths: each resolved against the base when noted, an absolute path and a ./ path normalized, a path noted with no base kept as given
+ok   The recent files take the paths an earlier run kept: after this run's files, each once, normalized
+ok   the restored paths stop at the limit, this run's file first
+domain_buffer_list: 54 passed, 0 failed

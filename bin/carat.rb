@@ -6,7 +6,8 @@
 # holds a single call; the screen and the terminal's own cursor are
 # restored in an ensure that covers entering the screen, opening the
 # file, and the loop, so every exit path, an error included, reaches it,
-# and then asks the language servers to exit without waiting for them.
+# then writes the recent files for the next run, and asks the language
+# servers to exit without waiting for them.
 require "io/console"
 require_relative "../carat"
 
@@ -39,5 +40,6 @@ begin
   STDIN.raw { |io| main_loop.run }
 ensure
   assembly.screen_presenter.leave
+  assembly.close
   assembly.services.stop
 end

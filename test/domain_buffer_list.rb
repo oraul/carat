@@ -238,6 +238,34 @@ module DomainBufferListTest
     end
     recent = lists.buffers.recent
     t.assert_equal([100, "f100.rb", "f1.rb", false], [recent.length, recent[0].to_s, recent[99].to_s, recent.include?("f0.rb")], "The recent files are bounded: 101 files keep 100 paths, the last opened first and the first opened gone")
+    # Scenario: The recent files keep absolute paths. The base is the
+    # working directory the last file was opened in: a path is resolved
+    # against it when it is noted, so a later base never renames it.
+    lists = lists_over(buffer_named("a.rb"))
+    lists.buffers.load(buffer_named("rel.rb"))
+    lists.buffers.base = "/p"
+    lists.buffers.load(buffer_named("lib/b.rb"))
+    lists.buffers.base = "/q"
+    lists.buffers.load(buffer_named("c.rb"))
+    lists.buffers.load(buffer_named("/abs/d.rb"))
+    lists.buffers.load(buffer_named("./e.rb"))
+    t.assert_equal(["/q/e.rb", "/abs/d.rb", "/q/c.rb", "/p/lib/b.rb", "rel.rb"], lists.buffers.recent, "The recent files keep absolute paths: each resolved against the base when noted, an absolute path and a ./ path normalized, a path noted with no base kept as given")
+    # Scenario: The recent files take the paths an earlier run kept.
+    lists = lists_over(buffer_named("z.rb"))
+    lists.buffers.load(buffer_named("a.rb"))
+    lists.buffers.restore_recent(["/old/x.rb", "a.rb", "/old/../old/y.rb", "/old/x.rb"])
+    t.assert_equal(["a.rb", "/old/x.rb", "/old/y.rb"], lists.buffers.recent, "The recent files take the paths an earlier run kept: after this run's files, each once, normalized")
+    lists = lists_over(buffer_named("z.rb"))
+    lists.buffers.load(buffer_named("a.rb"))
+    kept = ["/old/f0.rb"]
+    kept.clear
+    i = 0
+    while i < 150
+      kept << "/old/f#{i}.rb"
+      i += 1
+    end
+    lists.buffers.restore_recent(kept)
+    t.assert_equal([100, "a.rb", "/old/f98.rb"], [lists.buffers.recent.length, lists.buffers.recent[0].to_s, lists.buffers.recent[99].to_s], "the restored paths stop at the limit, this run's file first")
     t.finish
   end
 end

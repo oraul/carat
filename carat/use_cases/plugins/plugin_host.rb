@@ -88,7 +88,7 @@ module Carat
         @registry = PluginRegistry.new(state: state, buffers: buffers, tabs: tabs, plugin_ui: plugin_ui, keymap: keymap, leader: leader)
         @router = PluginRouter.new(state: state, registry: @registry, plugin_ui: plugin_ui)
         @events = PluginEvents.new(state: state, buffers: buffers, tabs: tabs, registry: @registry)
-        @buffer_requests = BufferRequests.new(state: state, buffers: buffers, registry: @registry)
+        @buffer_requests = BufferRequests.new(state: state, buffers: buffers, registry: @registry, files: files)
         @window_requests = WindowRequests.new(state: state, buffers: buffers, tabs: tabs, registry: @registry, open_file: open_file, split_window: split_window, open_tab: open_tab, open_side_window: open_side_window, open_float: open_float, close_float: close_float, files: files)
         @file_requests = FileRequests.new(files: files, processes: processes, probe_path: @probe_path, make_path: @make_path, rename_path: @rename_path, delete_path: @delete_path, list_tree: ListTree.new(files: files))
         @ui_requests = UiRequests.new(state: state, registry: @registry, files: files, plugin_ui: plugin_ui, input: input, runner: runner)
