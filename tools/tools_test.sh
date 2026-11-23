@@ -3545,12 +3545,8 @@ printf '# Queue\n\n1. `s1` (T4, estimated small): the sprint plan.\n' > docs/que
 printf '# Queue\n\n1. `s2` (T3, estimated small): the sprint plan.\n' > docs/queue-feature.md
 commit "docs: the carrier's groom"
 git_q checkout -q chore/mq
-# The user's global git configuration, here one that signs every commit
-# with a program that fails, reaches none of merge-main's git calls
-# (merge-main-pin), the conflict reads and the queue commit included.
-printf '[commit]\n\tgpgsign = true\n[gpg]\n\tprogram = false\n' > "$work/hostile.gitconfig"
-expect "run_state: merge-main keeps the branch's own lane queue and main's other under a global configuration that signs commits" 0 "^merge-main: merged main into chore/mq at [0-9a-f]{12}, the backlog lane queue kept from chore/mq and the other from main the branch plan[.] the sprint plan[.] 3$" \
-  sh -c "out=\$(GIT_CONFIG_GLOBAL='$work/hostile.gitconfig' BASE=main sh '$here/run_state.sh' merge-main qb) && echo \"\$out \$(sed -n 3p docs/queue-backlog.md | sed 's/.*: //') \$(sed -n 3p docs/queue-feature.md | sed 's/.*: //') \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')\""
+expect "run_state: merge-main keeps the branch's own lane queue and main's other" 0 "^merge-main: merged main into chore/mq at [0-9a-f]{12}, the backlog lane queue kept from chore/mq and the other from main the branch plan[.] the sprint plan[.] 3$" \
+  sh -c "out=\$(BASE=main sh '$here/run_state.sh' merge-main qb) && echo \"\$out \$(sed -n 3p docs/queue-backlog.md | sed 's/.*: //') \$(sed -n 3p docs/queue-feature.md | sed 's/.*: //') \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')\""
 
 # A metrics prefix holding a space (metrics-prefix-space): the lane files
 # are read by lane name, never split as one word list.

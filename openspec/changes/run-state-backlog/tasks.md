@@ -26,4 +26,9 @@
 
 ## 6. Remaining work of the list
 
-- [ ] 6.1 Every heading of `docs/backlog/tools/run_state.sh.md` the findings file does not yet name: the check sandbox rest (stage process group, the runner from a copy, logged record writes, refs and lane branches from the mark, `lane_open` fetching first), the groom proofs, the plan-needed group, the budget and history group, and the comment tidy-ups
+- [x] 6.1 Every heading of `docs/backlog/tools/run_state.sh.md` the findings file does not yet name, each fixed with a tools-test case, shown already fixed or gone, merged, or recorded not fixed with its reason (the remaining check sandbox, groom proof, and workflow-bound entries go to their own changes): the check sandbox rest (stage process group, the runner from a copy, logged record writes, refs and lane branches from the mark, `lane_open` fetching first), the groom proofs, the plan-needed group, the budget and history group, and the comment tidy-ups
+
+## 7. Fixes of the last start
+
+- [x] 7.1 `squash_commit` and `merged_at` judge against BASE only; `moved` reruns the reviews when a merge kept the change's side of a file main edited; `lane_rows` reads lane files by name; `plan-apply` refuses a stale plan and `plan-apply` and `history` run only in the lane worktree; `lane_of` reads an exception paragraph; `groom` requires CHANGE; a scoped stage is decided again after a tests-only commit; `jobs_refusal` one pattern; `plan_needed` names every failing review; `push` refuses an untracked file; `file_entries` checks every target first (tests for each)
+- [x] 7.2 Quality review of the diff: two advisories recorded in `docs/findings/run-state-backlog.md`

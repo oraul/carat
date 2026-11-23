@@ -610,3 +610,591 @@
 - Location: tools/run_state.sh reviewed_edits
 - Why: closed as fixed by run-state-backlog: A failing git diff or ls-files returns 1 with a message; no empty list reads as none since the review.
 - Fix: tools-test: reviewed-edits fails when git cannot list the changed files
+
+## Agents leave scratch files in the repository root
+
+- Location: tools/run_state.sh push_branch
+- Why: closed as fixed by run-state-backlog: push refuses an untracked file outside the ignored paths (git ls-files --others --exclude-standard), naming up to three, so an agent's scratch file cannot be staged by a later git add; the agents' briefs are not edited here.
+- Fix: tools-test: push refuses an untracked file outside the ignored paths
+
+## The run state's writer has no lock beside the detached check runner
+
+- Location: tools/run_state.sh write_key, drop_key
+- Why: closed as not fixed by run-state-backlog: During a check only the runner writes the run state (stage_launch and stages_reap, as their comments say); a lock directory around write_key needs stale-lock handling after a killed writer and no tools-test case can show the race, so it is left for a change that can take both.
+- Fix: a lock directory with a retry and a stale-lock test
+
+## A lost check runner leaves its make running while a second one starts
+
+- Location: tools/run_state.sh check_lost, check_wait
+- Why: closed as not fixed by run-state-backlog: A runner killed by a signal it cannot trap leaves its stage's make in the dead runner's process group; stopping that group needs the group recorded in the pid file and a check that no other process reuses it, which is a design of its own with the check sandbox group.
+- Fix: record the runner's group in the pid file and stop it in check_lost after checking its members
+
+## A detached check runner outlives a stopped run and shares build/
+
+- Location: tools/run_state.sh clone_make, in_clone
+- Why: closed as already fixed by run-state-backlog: Every stage builds in the check clone's own build/ (clone_make, CLONE_EXEC), so a runner that outlives a stopped run no longer shares build/ with another change's check; a new check still stops a runner at another commit (check_wait).
+- Fix: tools-test: every check outside its clone removes the clone
+
+## The check verdict is read from a log read agents can write
+
+- Location: tools/run_state.sh check_verdict
+- Why: closed as not fixed by run-state-backlog: The verdict is still the last line of check.log under build/stages, which a same-user process can append to; deriving it from the stage records needs the records out of every stage's reach, which the check sandbox group cannot give without a separate user.
+- Fix: derive the verdict from the run state's stage records or keep the log where no stage writes
+
+## The check-pass budget line projects 6 total tokens per output token
+
+- Location: tools/run_state.sh OUTPUT_SHARE, spent_line
+- Why: closed as not fixed by run-state-backlog: The figure of total tokens per output token is a calibration decision (history rows run from 3.5 to 59 per output token), and SPENT_LINE of the workflow and the tools-test regex move with it; no value is chosen here. The entries of the same figure (the check-pass line changing no decision, the note firing under the total budget, the in-run line pricing 6 per output token) are merged into this one.
+- Fix: derive the share from the history rows' median or print the total-token figure, with SPENT_LINE and the regex in step
+
+## delivery-speed quality advisory at tools/run_state.sh:406
+
+- Location: tools/run_state.sh main_stages
+- Why: closed as not fixed by run-state-backlog: main_stages is still read by check_stages and carried_check and two tools-test cases pin it; deleting a shim with its readers and cases is a tidy-up for a change of its own.
+- Fix: remove main_stages, its two cases, and the STAGES fallbacks that call it
+
+## delivery-speed quality advisory at tools/run_state.sh:1217
+
+- Location: tools/run_state.sh history, late findings
+- Why: closed as not fixed by run-state-backlog: History appends late findings under one heading of bullets, which tools-test pins (the heading names the run); the Where, Why it matters, Fix outline shape per finding would change what the workflow writes.
+- Fix: write one entry per finding in the Where, Why, Fix shape, or document the grouped form
+
+### Groom lets every copy of a duplicated finding go (`sprint-planning` quality advisory)
+
+- Location: tools/run_state.sh groom, duplicate guard
+- Why: closed as not fixed by run-state-backlog: The guard still matches a location as a substring (grep -F of the location and a colon) and reads the unmodified file, so all copies of a finding can be removed together; an exact awk comparison and a refusal of removing every heading at a location need a fixture of two headings at one location.
+- Fix: compare the location field exactly and refuse a groom.txt that removes every heading at a location
+
+### plan-needed treats an unreviewed sprint plan as waiting (`sprint-planning` quality advisory)
+
+- Location: tools/run_state.sh plan_needed
+- Why: closed as not fixed by run-state-backlog: plan_needed still treats a waiting sprint plan as a plan without checking sprint_reviewed; one helper for review_due, groom, and plan_needed needs the planner's keep rule (planner.md) read together.
+- Fix: one helper over sprint_waiting and sprint_reviewed, used by the three
+
+### Sprint after a sixth merge reviews a change twice (`sprint-planning` quality advisory)
+
+- Location: tools/run_state.sh sprint_names, sprint_row
+- Why: closed as not fixed by run-state-backlog: sprint_names is still not cut at the sprint size, so a sixth merge is listed in the closing sprint and again in the next.
+- Fix: cut sprint_names at the sprint size and end the combined diff at the last counted change
+
+## records-once quality advisory at tools/run_state.sh:233
+
+- Location: tools/tools_test.sh, TEST_ONLY
+- Why: closed as not fixed by run-state-backlog: No case of a docs/sprints.tsv-only commit in the stage carry and the quality fix scope was added; TEST_ONLY reaches it through RECORDS_RE, which the carry cases of tools-test exercise with a test file.
+- Fix: expect that a docs/sprints.tsv-only commit carries a compile stage and is left out of the fix scope
+
+## records-once quality advisory at tools/run_state.sh:1586
+
+- Location: tools/run_state.sh records_excluded
+- Why: closed as not fixed by run-state-backlog: records_excluded and the dispatch still repeat the change-name case; a change_name helper is a refactor with no behavior to test.
+- Fix: one change_name helper called by both
+
+## history and groom skip on records of a branch that never merges (sprint-2 sweep)
+
+- Location: tools/run_state.sh history, groom
+- Why: closed as not fixed by run-state-backlog: history skips on a row recorded on any branch and groom retires the marker clone-wide; judging them against the current base changes how a stopped run is recovered and needs the carrier design (groom's carrier entries) first.
+- Fix: skip only when the row is on the current base, retire the marker when the sprint row reaches the base
+
+### Tests-only carry runs before the path scope in run_state.sh
+
+- Location: tools/run_state.sh check_stages
+- Why: closed as fixed by run-state-backlog: A stage recorded scoped is no longer carried across a tests-only commit; the path scope decides it again.
+- Fix: tools-test: a stage recorded scoped is not carried across a tests-only commit, the scope deciding it again
+
+### The ci-stages secs filter is never run by a test
+
+- Location: tools/run_state.sh ci_stages, tools/tools_test.sh
+- Why: closed as not fixed by run-state-backlog: The fake gh prints precomputed seconds, so the jq timestamp filter is still not run by a test.
+- Fix: feed a jobs JSON through the same filter
+
+### Planner does not know the beyond-the-sprint marker
+
+- Location: tools/run_state.sh EXCEPTION_MARK, the planner brief, docs/goals.md
+- Why: closed as not fixed by run-state-backlog: The planner brief and docs/goals.md are instruction records outside this change's scope, and the exception rules of review-due moved to queue_class since the entry.
+- Fix: name the beyond-the-sprint words in the planner brief and docs/goals.md
+
+### Three path classifiers decide which stages run
+
+- Location: tools/run_state.sh TEST_ONLY, NOT_COMPILED, TOOLS_RE
+- Why: closed as not fixed by run-state-backlog: Deriving the three path classifiers from the rules.sh classifiers touches the merge gate's rules, which go first and alone.
+- Fix: derive them from rules.sh or record why each differs
+
+### The sprint exception membership test is written three times
+
+- Location: tools/run_state.sh queue_class, sprint_state, groom
+- Why: closed as not fixed by run-state-backlog: The exception membership is now one function (queue_class) read by sprint_state, sprint_row, and groom through sprint_uncounted; the remaining index trick in the row filter is cosmetic and left.
+- Fix: one helper for the membership test
+
+### merged_since reads only the last metrics row's merged commit
+
+- Location: tools/run_state.sh merged_since
+- Why: closed as already fixed by run-state-backlog: merged_since walks every history row newest first up to the first one that does not descend from the reviewed commit, and the pending runs too, so a later merge in an earlier row is no longer missed.
+- Fix: tools-test: plan-needed keeps a failing periodic security review a merge planned before it followed
+
+### sprint_state picks an exception past the fifth counted row
+
+- Location: tools/run_state.sh sprint_state
+- Why: closed as gone by run-state-backlog: SPRINT_EXCEPTIONS and sprint_exceptions no longer exist; sprint_state classes each name of the window through queue_class, so review-due, groom, and the row read the same window.
+- Fix: none
+
+### history_rows walks the whole rev-list on every call
+
+- Location: tools/run_state.sh history_rows
+- Why: closed as not fixed by run-state-backlog: history_rows is still computed once per caller (groom calls it twice, status once); passing the rows is a speed change with no failing case.
+- Fix: compute the rows once per command
+
+### metrics_files breaks on a METRICS_PREFIX holding a space
+
+- Location: tools/run_state.sh lane_rows, append_history
+- Why: closed as fixed by run-state-backlog: The lane history files are read by lane name, so a metrics prefix holding a space no longer splits a file name.
+- Fix: tools-test: status reads the history rows of a metrics prefix holding a space
+
+### backlog-pick tries each backticked path twice
+
+- Location: tools/run_state.sh backlog_pick
+- Why: closed as not fixed by run-state-backlog: The bare-word pass still re-adds each backticked path, so each is looked up twice; a speed change with no failing case.
+- Fix: run the bare-word pass over the Location with the backticked spans removed
+
+### Top-level docs findings never reach a batch
+
+- Location: tools/run_state.sh backlog_pick, docs/codebase-map.md
+- Why: closed as not fixed by run-state-backlog: Mapping the top-level docs to an area of the code map is a change of the map and of the pick together, outside this file.
+- Fix: map the top-level docs in an area or batch unmapped entries as their own item
+
+### No case pins a bare directory word known only by its files
+
+- Location: tools/run_state.sh backlog_pick named_file
+- Why: closed as not fixed by run-state-backlog: No case pins a bare directory word known only by its files; the behavior is documented in the header and left as it is.
+- Fix: a tools-test case pinning the unmapped result
+
+### Concurrent lanes race on the shared origin/main ref lock
+
+- Location: tools/run_state.sh merge_main
+- Why: closed as not fixed by run-state-backlog: Two lanes fetching one ref at once can still fail on its lock; a retry cannot be tested without a race and merge-main keeps its plain git by the merge-main decision.
+- Fix: retry the fetch once or fetch into a per-lane ref
+
+### push --review-fix does not check that a review blocked
+
+- Location: tools/run_state.sh push_branch --review-fix
+- Why: closed as not fixed by run-state-backlog: A review fix push needs a marker the workflow writes when a review blocks, since the review record at the pushed head is rewritten by the re-review before the push. needs a change of the delivery workflow or of an agent brief, which this change leaves alone (its scope is tools/run_state.sh and its tools-test cases).
+- Fix: a run-state marker written by the workflow when a review blocks, required by the push
+
+### history writes late findings to a findings file the records change folded
+
+- Location: tools/run_state.sh history
+- Why: closed as not fixed by run-state-backlog: History still names the merged change's findings file; appending late findings to the packaging change's file changes the heading tools-test pins and the planner's reading of it.
+- Fix: append late findings under the packaging change's own file and heading
+
+### groom documents CHANGE as optional though it dies without one
+
+- Location: tools/run_state.sh header, dispatch
+- Why: closed as fixed by run-state-backlog: groom takes a required CHANGE in its usage and dispatch; a run with no change is a usage error.
+- Fix: tools-test: groom with no change is a usage error
+
+### plan-apply and history write into whatever checkout runs them
+
+- Location: tools/run_state.sh plan_apply, append_history
+- Why: closed as fixed by run-state-backlog: plan-apply and history for a change refuse, writing nothing, when its lane worktree tmp/.lane-CHANGE exists and the command runs elsewhere.
+- Fix: tools-test: plan-apply and history refuse outside the change's lane worktree, and plan-apply runs inside it
+
+### A merge that fails on a moved main has no push path
+
+- Location: tools/run_state.sh push_branch
+- Why: closed as already fixed by run-state-backlog: push --main-moved after merge-main is the push path of a merge that failed on a moved main, counted once, with its tools-test cases (a main-moved push needs a head holding main; a second one is refused).
+- Fix: tools-test: a moved-main merge is pushed once as a main-moved push
+
+### jobs_refusal has two arms for one message and runs twice (sprint-13 quality)
+
+- Location: tools/run_state.sh jobs_refusal, check_stages
+- Why: closed as fixed by run-state-backlog: jobs_refusal has one pattern (not a number, 0, or a leading zero) and the runner reads it once before any stage is queued, not after the compiled records were reset.
+- Fix: tools-test: check refuses a CHECK_JOBS that is no number and one of 0
+
+### squash_commit falls back to HEAD, so a branch commit can pass merged_at (security Low (4))
+
+- Location: tools/run_state.sh squash_commit
+- Why: closed as fixed by run-state-backlog: squash_commit reads only BASE (origin/main), never HEAD, so a branch commit titled like a squash commit is not one.
+- Fix: tools-test: set refuses a branch commit titled like the squash commit when main has none
+
+### merged_at without a pr accepts any ancestor of HEAD (sprint-14 review and sweep quality)
+
+- Location: tools/run_state.sh merged_at
+- Why: closed as fixed by run-state-backlog: With no pull request recorded, a merged value must be an ancestor of BASE whenever BASE names a commit, never of HEAD, where a lane's pushed head is; HEAD stands only where no main exists to compare, as the tools-test fixtures have none.
+- Fix: tools-test: set refuses a branch commit with no pull request recorded as merged
+
+### The security record keeps only the last review round (merge-record-check retro 7)
+
+- Location: tools/run_state.sh review, the workflow's re-review
+- Why: closed as not fixed by run-state-backlog: Keeping an earlier round's Lows counted after a re-review that found fewer changes how the security record is read by the gates and the workflow.
+- Fix: count the earlier round's findings in the stored record
+
+### The planner starts only to remove the delivered item (vim-line-commands-a retro 5)
+
+- Location: tools/run_state.sh plan_needed
+- Why: closed as already fixed by run-state-backlog: plan-needed answers not needed for a delivery of a queue's first item with an estimate and no pending change holding a proposal or finding, so the planner starts only for a decision.
+- Fix: tools-test: plan-needed takes the queue head as written
+
+### Records changes are judged against the small budget with the sprint reviews in their totals
+
+- Location: tools/run_state.sh budget_line
+- Why: closed as gone by run-state-backlog: budget_line reads metric.total_tokens, which only usage writes for the delivery's own starts; no sprint review phase is in it, so a records change is no longer judged with its sprint reviews in the total.
+- Fix: none
+
+### Two lanes' exception lines against one uncounted exception (sprint-size-six retro)
+
+- Location: tools/run_state.sh sprint_state
+- Why: closed as gone by run-state-backlog: SPRINT_EXCEPTIONS no longer exists; each exception line classes its own change through queue_class, so two lanes' lines no longer meet one uncounted exception.
+- Fix: none
+
+### A carried review trusts a moved record written by the branch's own run_state.sh
+
+- Location: tools/run_state.sh carried_backed
+- Why: closed as not fixed by run-state-backlog: The checker still runs the branch's copy of tools/run_state.sh; recomputing the moved comparison from the main checkout's copy needs the runner-from-a-copy design of the check sandbox group.
+- Fix: run the carried check from a trusted copy or refuse to carry across an edit of tools/run_state.sh
+
+### moved carries when the merge keeps the change's side of a file main also edited
+
+- Location: tools/run_state.sh moved_change
+- Why: closed as fixed by run-state-backlog: moved also reads the names main changed between the old and the new merge base and reruns the reviews when one is a file of the change, so a conflict resolved by keeping the change's side no longer carries.
+- Fix: tools-test: moved reruns the reviews when the merge kept the change's side of a file main edited
+
+### The merger reports the branch head as the merged commit
+
+- Location: tools/run_state.sh phase merged, merged_at
+- Why: closed as already fixed by run-state-backlog: phase merged records the squash commit read from main and notes a reported commit that differs as a merge-disagreement, so a branch head reported by the merger is never recorded; the entry's later copies (sprint-24-records note 13, 2 entries) are the same.
+- Fix: tools-test: phase merged notes the reported head beside the squash commit
+
+### The planner weighs quality-advisory notes the package step handled
+
+- Location: the planner's input of tools/run_state.sh show
+- Why: closed as not fixed by run-state-backlog: Leaving handled quality notes out of what the planner reads changes the planner's input and its brief. needs a change of the delivery workflow or of an agent brief, which this change leaves alone (its scope is tools/run_state.sh and its tools-test cases).
+- Fix: leave handled quality notes out of the planner's input
+
+### The planner runs on a first queue item already placed and estimated (secret-patterns retrospective)
+
+- Location: tools/run_state.sh plan_needed
+- Why: closed as already fixed by run-state-backlog: Same as the planner that starts only to remove the delivered item: plan-needed answers not needed for the first queue item with its estimate set and no pending note, while plan-apply still takes the delivered item out.
+- Fix: tools-test: plan-needed takes the queue head as written
+
+### plan-needed skips the planner for a security note recorded after a later sprint plan (pipeline-diet security Low (3))
+
+- Location: tools/run_state.sh plan_needed
+- Why: closed as not fixed by run-state-backlog: placed_by_sprint still applies to every note kind of PLAN_NOTES, a security note included; limiting it to retro and overrun notes changes which findings a planner places and needs the planner's rules read together.
+- Fix: apply placed_by_sprint only to retro and overrun notes
+
+### A lane's queue removal conflicts with a sprint-records rewrite of the queue (tab-close-d retro)
+
+- Location: tools/run_state.sh merge_main
+- Why: closed as already fixed by run-state-backlog: merge-main keeps the branch's own lane queue and main's other when only the queues conflict, so a lane whose base predates a records merge takes in main with no conflict and no contributor start.
+- Fix: tools-test: merge-main keeps the branch's own lane queue and main's other
+
+### The moved check reruns the reviews on a cleanly merged file and misses a hand-resolved one (tab-close-d retro)
+
+- Location: tools/run_state.sh moved_change
+- Why: closed as not fixed by run-state-backlog: Comparing the change's own diff of each file before and after the merge, a hand-resolved conflict file always counting, is a redesign of moved_change beyond the name comparison.
+- Fix: rerun the reviews exactly when the change's own diff of some file differs
+
+### Groom's listed proof still accepts a comma after an unquoted heading (`groom-proof` security Low (2))
+
+- Location: tools/run_state.sh item_lists
+- Why: closed as not fixed by run-state-backlog: A bare heading before a comma still counts as listed; accepting it only at the item's end changes how existing planner lines are read and needs a fixture with a heading that prefixes another.
+- Fix: accept a bare heading only at the item's end, or treat a single quote as the others
+
+### Groom's guard against a `#` before a listed heading has no test (`groom-proof` quality advisory)
+
+- Location: tools/run_state.sh item_lists
+- Why: closed as already fixed by run-state-backlog: The guard against a # before the heading is exercised by the case whose item holds a bare deeper heading before a comma, which only that guard refuses.
+- Fix: tools-test: groom refuses a listed heading standing only inside a deeper unquoted one before a comma
+
+### exception_item now counts a wrapped `beyond the sprint` mark without a test (`groom-proof` quality advisory)
+
+- Location: tools/run_state.sh exception_item
+- Why: closed as not fixed by run-state-backlog: No review-due case whose first parenthesis wraps before the mark was added.
+- Fix: a review-due case whose item's parenthesis wraps before the mark
+
+### Groom leaves references to the findings files it removes (sprint-17-records retro)
+
+- Location: tools/run_state.sh groom
+- Why: closed as fixed by run-state-backlog: groom writes a reference to a findings file it removes as the removed file, bare names included (removed_refs), the fix of the sprint-22-records entry of the same fold.
+- Fix: tools-test: the fold writes each findings reference as the removed file
+
+### The token weighting prices a mid-tier start at the cheap tier's price
+
+- Location: tools/run_state.sh add_tokens, TIER_PRICES
+- Why: closed as not fixed by run-state-backlog: Pricing each tier by its own price needs a price table the repository does not hold; no price figure is invented here.
+- Fix: a price per tier and a label by tier
+
+### Extra push allowed by push --pr-text without a blocked text review
+
+- Location: tools/run_state.sh push_branch --pr-text
+- Why: closed as not fixed by run-state-backlog: A pull request text push needs a marker the workflow writes when the text review blocks, and the push already refuses any change but the archived pr.md. needs a change of the delivery workflow or of an agent brief, which this change leaves alone (its scope is tools/run_state.sh and its tools-test cases).
+- Fix: a run-state marker written by the workflow when the text review blocks, required by the push
+
+### Shared state a check stage can still write without failing the check
+
+- Location: tools/run_state.sh escaped_paths
+- Why: closed as not fixed by run-state-backlog: Writes to shared state a stage can still make without failing the check (other run states, the compile records, the cache, the script itself) cannot be told from the runners' own writes without a sandbox of another user or a log no stage can write; none exists in a single-user checkout.
+- Fix: run the stages under an operating-system sandbox or compare against a log of the runners' writes
+
+### The checker's own figures stay writable by a stage during a check
+
+- Location: tools/run_state.sh state_view
+- Why: closed as merged by run-state-backlog: Merged into the entry on the run-state comparison leaving out every figure but the measurements: both need the log of caller writes that no stage can write.
+- Fix: as the entry it is merged into
+
+### Correction: an edit of tools/run_state.sh by a stage is listed by the scan
+
+- Location: tools/run_state.sh check_wait
+- Why: closed as merged by run-state-backlog: Merged into the entry on the check runner started from a copy of HEAD's blob (sprint-26 review security Low (3), note 3): both ask the runner to run from a copy made before the stages start.
+- Fix: as the entry it is merged into
+
+### The run-state comparison now leaves out every figure but the measurements (security Low (5), residual widened)
+
+- Location: tools/run_state.sh state_view
+- Why: closed as not fixed by run-state-backlog: A stage writes its own run state by an absolute path as the same user; accepting a changed figure only when a caller command logged writing it needs a log no stage can write, which a single-user checkout has none of. This entry stands for the group of run-state forgery entries (the checker's figures, forged metric lines, planted notes and closing phases).
+- Fix: snapshot the metric lines at escape_mark and accept only logged writes
+
+### Security: a stage's detached child can write after the escape scan (security Low (6), still present at package)
+
+- Location: tools/run_state.sh stage_launch
+- Why: closed as not fixed by run-state-backlog: A stage's detached child (setsid, nohup) can write after the escape scan; stopping it needs each stage in its own session and a kill of that group before the scan, which stage_launch cannot do without setsid in every environment.
+- Fix: run each stage in its own process group and kill it before escaped_paths
+
+### Security: a stage can forge its own run state's metric lines during a check (security Low (6), still present at package)
+
+- Location: tools/run_state.sh state_view
+- Why: closed as merged by run-state-backlog: Merged into the entry on the run-state comparison leaving out every figure but the measurements, whose design (a log of caller writes) covers forged metric lines.
+- Fix: as the entry it is merged into
+
+### Security: a stage can plant notes and closing phases in its own run state during a check (security Low (6), still present at package)
+
+- Location: tools/run_state.sh state_view
+- Why: closed as merged by run-state-backlog: Merged into the entry on the run-state comparison leaving out every figure but the measurements, whose design covers planted notes and closing phases.
+- Fix: as the entry it is merged into
+
+### The check-pass output budget line changed no decision
+
+- Location: tools/run_state.sh spent_line
+- Why: closed as merged by run-state-backlog: Merged into the entry on the check-pass budget line projecting 6 total tokens per output token: one figure, OUTPUT_SHARE.
+- Fix: as the entry it is merged into
+
+### An advisory-only fix round counts as rework and reruns every stage and review
+
+- Location: tools/run_state.sh metric.rework, the workflow's fix round
+- Why: closed as not fixed by run-state-backlog: Counting an advisory-only round apart is a rule of the delivery workflow and docs/goals.md. needs a change of the delivery workflow or of an agent brief, which this change leaves alone (its scope is tools/run_state.sh and its tools-test cases).
+- Fix: count an advisory-only round apart from a blocking one
+
+### review-due no longer bounds uncounted merges
+
+- Location: tools/run_state.sh review_due
+- Why: closed as not fixed by run-state-backlog: review-due still has no upper bound on uncounted merges; a bound needs a number the user decides, and the queue's exception rules moved since the entry.
+- Fix: an upper bound on the uncounted merges of a sprint, with a case
+
+### Security: a lane check accepts another lane's branch moved or its worktree files edited (security Low (6), reported three times, still present at package)
+
+- Location: tools/run_state.sh refs_view, lane_branches, tree_scan
+- Why: closed as not fixed by run-state-backlog: Recording each lane branch's object at escape_mark and scanning the other lanes' worktrees is a design of the check sandbox group still open.
+- Fix: record each lane branch at escape_mark and compare
+
+### Security: a stage-made worktree puts any local branch on the scan's skip list (security Low (6), reported twice, still present at package)
+
+- Location: tools/run_state.sh lane_branches, lane_open
+- Why: closed as not fixed by run-state-backlog: Skipping only the branches checked out at the mark, and refusing an existing branch with no run state, is a design of the check sandbox group still open.
+- Fix: skip only branches checked out at escape_mark
+
+### Quality: a check between the merger's lane-close and branch deletion fails as the references changed
+
+- Location: tools/run_state.sh refs_view
+- Why: closed as not fixed by run-state-backlog: A rare false failure between the merger's lane-close and the branch deletion; leaving a branch out needs the lane-close order changed.
+- Fix: leave out a branch present at the mark and gone at the scan only when no worktree held it
+
+### plan-needed names only the first failing review while merged_since clears every one before the planner's time
+
+- Location: tools/run_state.sh plan_needed
+- Why: closed as fixed by run-state-backlog: plan-needed names every failing review run, the first as before and each other after a semicolon, as merged_since clears each of them; the workflow's planReview text is not changed.
+- Fix: tools-test: plan-needed names every failing periodic security review
+
+### A lane's check fails on another lane's write into the main checkout's build/metrics
+
+- Location: tools/run_state.sh clone_drop, main_scan
+- Why: closed as already fixed by run-state-backlog: A lane's runner and bench write their figures under the lane's own build/ (METRICS_OUT is the lane's path while its worktree stands), and main_scan leaves the main checkout's build/ logs; a write there from another lane is not the lane's.
+- Fix: tools-test: a check's metrics land under the change's lane
+
+### A security review after a quality-only fix reads the whole branch again
+
+- Location: the backlog heading list under review-trust-lows
+- Why: closed as not fixed by run-state-backlog: A pointer entry to later parts of review-trust-lows, which name no code of tools/run_state.sh to change here.
+- Fix: the later parts of review-trust-lows
+
+### named_history and named_since repeat the groom pathspec (sprint-24 review quality)
+
+- Location: tools/run_state.sh named_history, named_since
+- Why: closed as not fixed by run-state-backlog: The groom pathspec is still written in both calls and a third place; building it once from queue_files is a refactor with no behavior to test.
+- Fix: build the pathspec once from queue_files
+
+### backlog-move's mismatch refusal has no test
+
+- Location: tools/run_state.sh backlog_move
+- Why: closed as not fixed by run-state-backlog: The mismatch refusal of backlog-move still has no case; no fixture makes the folder differ without a hook into the filing.
+- Fix: let a test inject a filing that drops a line
+
+### A refused filing leaves the entries filed before it in the folder
+
+- Location: tools/run_state.sh file_entries
+- Why: closed as fixed by run-state-backlog: file_entries checks every target (links, directories) in a first pass that writes none, so a refused filing leaves the earlier entries out of the folder and filing again files none twice.
+- Fix: tools-test: a refused later entry leaves the earlier entry out of the folder
+
+### plan-apply overwrote the lane queue with a plan older than the branch's queue
+
+- Location: tools/run_state.sh plan_apply
+- Why: closed as fixed by run-state-backlog: plan-apply refuses a lane queue plan that names, as a numbered item, a change the lane's history file already holds a row of, saying so and leaving the queue as it was.
+- Fix: tools-test: plan-apply refuses a plan that queues a change the lane's history holds a row of
+
+### plan-apply copies a plan older than the branch's queue
+
+- Location: tools/run_state.sh plan_apply
+- Why: closed as merged by run-state-backlog: Merged into the entry on plan-apply overwriting the queue with an older plan: the same refusal.
+- Fix: as the entry it is merged into
+
+### A change named only in a lane exception line resolves to the wrong lane (facet-design-doc retro note 16)
+
+- Location: tools/run_state.sh item_named, lane_of
+- Why: closed as fixed by run-state-backlog: A change named in backticks in a queue's The user-approved exception paragraph takes that queue's lane, so its history step writes that lane's file.
+- Fix: tools-test: a change named only in a queue's exception line takes that queue's lane
+
+### self_fix has no history column
+
+- Location: tools/run_state.sh HEADER, history_row
+- Why: closed as not fixed by run-state-backlog: A self_fix column adds a column 25 to both lane histories and the workflow's metric line, a records change.
+- Fix: append the column and pad both lane files
+
+### An exception paragraph naming a change without backticks leaves it counted in the sprint
+
+- Location: tools/run_state.sh queue_class, tools/docs_lint.sh
+- Why: closed as not fixed by run-state-backlog: Reading a bare change name in an exception paragraph, or refusing it in docs-lint, edits tools/docs_lint.sh, outside this file.
+- Fix: read the name with or without backticks or refuse the bare form in docs-lint
+
+### An exception paragraph naming a change without backticks leaves it counted
+
+- Location: tools/run_state.sh queue_class, tools/docs_lint.sh
+- Why: closed as merged by run-state-backlog: Merged into the entry on an exception paragraph naming a change without backticks leaving it counted in the sprint: the same two readers.
+- Fix: as the entry it is merged into
+
+### lane_of puts a docs change briefed to the feature lane in the backlog lane, so its history step writes a backlog file
+
+- Location: tools/run_state.sh lane_of
+- Why: closed as merged by run-state-backlog: Merged into the entry on a change named only in a lane exception line: the same fix, whose test is a docs change briefed to the feature lane.
+- Fix: as the entry it is merged into
+
+### A write outside the check clone is detected but never reverted (security Low (4))
+
+- Location: tools/run_state.sh escaped_records
+- Why: closed as not fixed by run-state-backlog: The escaped records are rewritten as escaped and the compile record cleared, but the planted file itself is not removed; deleting build outputs needs the list of those a stage may legitimately leave.
+- Fix: delete or quarantine the escaped outputs under the main checkout's build/
+
+### The merger reported a merged commit that is not the squash commit on main (sprint-24-records note 13)
+
+- Location: tools/run_state.sh phase merged (covers 2 identical entries)
+- Why: closed as already fixed by run-state-backlog: phase merged records the commit git gives for main (the squash commit) and notes the reported one that differs as a merge-disagreement, keeping main's commit.
+- Fix: tools-test: phase merged records the merge at the squash commit, not the reported head
+
+### backlog-move is a one-shot migration left in run_state.sh (sprint-25 review quality)
+
+- Location: tools/run_state.sh backlog_move
+- Why: closed as not fixed by run-state-backlog: backlog-move's cases also pin the filing (links, dotted names, Also and Category lines) that groom shares through file_entries; removing the command with them loses that coverage, and RECORDS_RE is the merge gate's rule.
+- Fix: remove backlog-move with its cases once the filing has its own
+
+### In this sprint's diff (contributor-self-check). The checker now skips at tools/run_state.sh:1077 (sprint-26 review security Low (3), note 3)
+
+- Location: tools/run_state.sh check_wait
+- Why: closed as not fixed by run-state-backlog: The runner still starts from the working tree's copy; copying HEAD's blob would move its sibling files (rules.sh, the pid file's process match) and is a design of the check sandbox group still open.
+- Fix: start the runner from a copy of HEAD's blob
+
+### The planner's sprint queues reach a records change failing the docs-lint queue check (sprint-26-records retro note 4)
+
+- Location: tools/run_state.sh plan_apply, tools/docs_lint.sh
+- Why: closed as not fixed by run-state-backlog: Refusing a planner queue that fails the docs-lint queue check needs that check callable from run_state.sh, which edits docs_lint.sh.
+- Fix: run the queue check on the planner's queue before copying it
+
+### Head-form notes record a head git confirms (folded-row retro note 4, notes 1 and 5)
+
+- Location: tools/run_state.sh, the workflow's head check
+- Why: closed as not fixed by run-state-backlog: The head-form note is written by the workflow's head check. needs a change of the delivery workflow or of an agent brief, which this change leaves alone (its scope is tools/run_state.sh and its tools-test cases).
+- Fix: no record when git corrects a head to the same commit
+
+### The budget line clips a records run's own tokens at zero (merge-gate-lows retro note 2)
+
+- Location: tools/run_state.sh budget_line (covers 2 identical entries)
+- Why: closed as gone by run-state-backlog: budget_line prints the recorded total tokens and no set-apart figure; the clipping at zero of the earlier line is gone with it.
+- Fix: none
+
+## tools/run_state.sh groom: security entries removed without a named fixing commit
+
+- Location: tools/run_state.sh groom
+- Why: closed as already fixed by run-state-backlog: A security entry leaves only by a merged item's heading (listed) or its fixing commit in the sprint (fixed); groom refuses any other kind for it, so no security entry goes without a named proof.
+- Fix: tools-test: groom keeps a disputed security entry and a security finding inside a group
+
+### The check-pass output-token note fires in runs that end under the total budget (ui-groups retro note 3)
+
+- Location: tools/run_state.sh spent_line
+- Why: closed as merged by run-state-backlog: Merged into the entry on the check-pass budget line projecting 6 total tokens per output token: one figure, OUTPUT_SHARE.
+- Fix: as the entry it is merged into
+
+### A records check is voided by build/dev/carat.timing escaping the check clone (sprint-27-records note 1)
+
+- Location: tools/run_state.sh escaped_note, clone_make
+- Why: closed as already fixed by run-state-backlog: dev-build writes build/dev/carat.timing in the check clone's own build/, which has no link to the lane's, so no stage writes the lane's file and the check records no security-escape note for it.
+- Fix: tools-test: check runs the metrics stage in its clone without METRICS_OUT
+
+### A check is voided as escaped for a file the dev-build stage is declared to write (sprint-27-records note 1, security-escape)
+
+- Location: tools/run_state.sh compile_outputs, escaped_paths
+- Why: closed as already fixed by run-state-backlog: The declared outputs of dev-build are read in the check clone, which holds its own build/; nothing in the lane's build/ is compared with them, so the declared output is not an escape.
+- Fix: tools-test: dev-build keeps its code key across a commit to test/ and bench/, its outputs read in the clone
+
+### A carrying delivery that never merges strands the sprint plan
+
+- Location: tools/run_state.sh groom, sprint.carrier
+- Why: closed as not fixed by run-state-backlog: A carrier that never merges still holds the plan until its file is removed by hand; releasing it by a run state check needs the carrier's lifecycle decided with the groom proof entries.
+- Fix: treat a carrier whose run state is gone or stopped as no carrier, or add a release command
+
+### groom-proof checks a carrier's plan line against evidence the carrier controls
+
+- Location: tools/run_state.sh groom_proof
+- Why: closed as not fixed by run-state-backlog: Judging a carrier's plan lines against the fork point is the design of the groom proof group still open (this entry, the fixed proof against the branch's commits, and the shared proof function).
+- Fix: judge fixed and listed lines against the fork point only
+
+### groom's fixed proof takes a commit of the carrying branch (sprint-29 review security Low (4))
+
+- Location: tools/run_state.sh groom_proof, groom
+- Why: closed as not fixed by run-state-backlog: Counting only commits merged before the carrier (merge-base --is-ancestor WORD FORK) needs the fork point passed to the proof and the gate's reading changed with it (tools/gates.sh).
+- Fix: require the fixing commit to be an ancestor of the fork point
+
+### groom and groom_proof copy the fixed proof (sprint-29 review quality)
+
+- Location: tools/run_state.sh groom, groom_proof
+- Why: closed as not fixed by run-state-backlog: One function returning the proof's failure reason for both callers is the refactor that lands with the fork-point proof of the entry above.
+- Fix: one function returning the reason, groom printing it and groom_proof testing it
+
+### Stored figures of main trust the saving lane's measuring script
+
+- Location: tools/run_state.sh base_figures save
+- Why: closed as already fixed by run-state-backlog: save measures with the script of tmp/.base, which it requires to be at origin/main with its tracked files unchanged and no untracked file, and with the outputs removed before the build, so the stored figures come from main's own script, never copied from a file anyone could write.
+- Fix: tools-test: base-figures save refuses an untracked source file in the base
+
+### The in-run budget line prices total tokens at 6 per output token (lsp-container-b retro note 13, sprint-security retro note 8)
+
+- Location: tools/run_state.sh OUTPUT_SHARE, spent_line
+- Why: closed as merged by run-state-backlog: Merged into the entry on the check-pass budget line projecting 6 total tokens per output token: one figure, OUTPUT_SHARE.
+- Fix: as the entry it is merged into
+
+### A change named in the other lane's exception paragraph takes that lane (run-state-backlog quality advisory)
+
+- Location: tools/run_state.sh item_named, lane_of
+- Why: item_named now counts a backticked name inside a paragraph of The user-approved exception as naming the change, and lane_of reads the feature queue first, so a change named in both queues' paragraphs, or only in the other lane's, takes the feature lane.
+- Fix: read the paragraph's own lane clause, or take the lane of the queue whose paragraph says the change runs first in it, with a tools-test case for a name in the other queue's paragraph
+
+### The first pass of file_entries creates directories before a refusal (run-state-backlog quality advisory)
+
+- Location: tools/run_state.sh file_entries, entries_awk
+- Why: the dry pass makes each backlog directory it checks, so a filing refused later leaves empty directories, no entry; harmless to the folder's entries but visible in git status of ignored paths only.
+- Fix: test the directory chain with test -d and test -L instead of mkdir in the dry pass

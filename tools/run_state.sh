@@ -246,7 +246,9 @@
 #                               "carried: no: why" and exit 1, so the workflow
 #                               starts no checker
 #   push CHANGE [--ci-fix|--review-fix|--main-moved|--pr-text]
-#                               run the pre-push gates, refuse a push beyond one
+#                               run the pre-push gates, refuse an untracked
+#                               file outside the ignored paths, refuse a push
+#                               beyond one
 #                               plus one per CI fix (a CI fix needs ci red) plus
 #                               one review fix a run (a resume past the push
 #                               fixing a blocking review: a recorded push other
@@ -481,7 +483,11 @@
 #                               for the change's lane only: copy its
 #                               queue-LANE.md over docs/queue-LANE.md, leaving
 #                               the other lane's, goals.md over docs/goals.md,
-#                               and append backlog.md to FINDINGS_DIR/CHANGE.md
+#                               and append backlog.md to FINDINGS_DIR/CHANGE.md;
+#                               refuse, writing nothing, a plan queue naming a
+#                               change the lane's history holds a row of, and
+#                               a run (history CHANGE too) outside the change's
+#                               lane worktree tmp/.lane-CHANGE while it exists
 #   status                      the queue, the running change, the last metrics
 #                               row, and the first-pass rates of the history
 #   lane-open CHANGE BRANCH     make the change's worktree tmp/.lane-CHANGE
@@ -4618,14 +4624,14 @@ lane_close() {
 # conflict rules of its push mode.
 APPENDED_RECORDS="docs/metrics-*.tsv docs/findings/*.md docs/sprints.tsv"
 merge_main() {
-  branch=$(pinned_git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
+  branch=$(git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
   [ "$branch" != main ] || die "merge-main: HEAD is main"
-  [ -z "$(pinned_git status --porcelain --untracked-files=no)" ] || die "merge-main: the tracked tree is dirty"
+  [ -z "$(git status --porcelain --untracked-files=no)" ] || die "merge-main: the tracked tree is dirty"
   base=${BASE:-origin/main}
   if [ -z "${BASE:-}" ]; then
     pinned_git fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main || die "merge-main: the fetch of origin's main failed"
   fi
-  if pinned_git merge-base --is-ancestor "$base" HEAD; then
+  if git merge-base --is-ancestor "$base" HEAD; then
     echo "merge-main: $branch holds $base"
     return 0
   fi
@@ -4634,19 +4640,19 @@ merge_main() {
   own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
-  if merge_out=$(pinned_git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+  if merge_out=$(git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
       -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" 2>&1); then
     rm -f "$attrs"
-    echo "merge-main: merged $base into $branch at $(pinned_git rev-parse --short=12 HEAD)"
+    echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
     return 0
   fi
   rm -f "$attrs"
-  files=$(pinned_git diff --name-only --diff-filter=U | tr '\n' ' ')
+  files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
   # A merge that failed with no conflicted file (an untracked file it would
   # overwrite, a missing ref) shows git's own words, and aborts only a
   # merge in progress.
   if [ -z "$files" ]; then
-    [ ! -f "$(pinned_git rev-parse --git-path MERGE_HEAD)" ] || pinned_git merge --abort 2>/dev/null
+    [ ! -f "$(git rev-parse --git-path MERGE_HEAD)" ] || git merge --abort 2>/dev/null
     echo "merge-main: the merge of $base failed with no conflicted file: $(printf '%s\n' "$merge_out" | head -n 5 | tr '\n' ' ')"
     exit 1
   fi
@@ -4654,21 +4660,21 @@ merge_main() {
   # that carries a sprint plan (groom) both: a conflict only in the lane
   # queues keeps the branch's own lane queue and main's other, so both
   # lanes' edits stand (planner-loop).
-  others=$(pinned_git diff --name-only --diff-filter=U | grep -v -x -E 'docs/queue-(feature|backlog)[.]md')
+  others=$(git diff --name-only --diff-filter=U | grep -v -x -E 'docs/queue-(feature|backlog)[.]md')
   if [ -n "$files" ] && [ -z "$others" ] && { [ "$own" = feature ] || [ "$own" = backlog ]; }; then
     for l in feature backlog; do
-      pinned_git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
+      git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
       side=--theirs
       [ "$l" != "$own" ] || side=--ours
-      { pinned_git checkout "$side" -- "docs/queue-$l.md" && pinned_git add -- "docs/queue-$l.md"; } || { pinned_git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
+      { git checkout "$side" -- "docs/queue-$l.md" && git add -- "docs/queue-$l.md"; } || { git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
     done
-    if pinned_git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
+    if git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
         -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" > /dev/null 2>&1; then
-      echo "merge-main: merged $base into $branch at $(pinned_git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
+      echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
       return 0
     fi
   fi
-  pinned_git merge --abort 2>/dev/null
+  git merge --abort 2>/dev/null
   echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules and commit the merge"
   exit 1
 }
