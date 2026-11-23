@@ -65,15 +65,15 @@ Once the server has answered `initialize`, the editor SHALL send `textDocument/d
 - **THEN** the server is sent nothing about that file, while a Ruby file under `/project` named with a `..` segment is opened on it
 
 ### Requirement: The slot shows the server's state
-The `lsp` slot SHALL show the server's name when ready, "starting" after it while it starts, "indexing" and the percent while a `$/progress` report runs, "stopped" after it was stopped, "crashed :LspRestart" after it ended on its own, and "untrusted :LspStart" while it waits for an explicit start in an untrusted directory. The name SHALL be the server's reported name, or the command's first word.
+The `lsp` slot SHALL show the server's name and one dot after it, colored by the state: ready, starting or indexing (while a `$/progress` report runs), stopped, crashed, or untrusted. A crash SHALL add "crashed :LspRestart" after the dot and an untrusted directory "untrusted :LspStart". The slot's label SHALL keep the state's words and the percent SHALL show on the progress segment. The name SHALL be the server's reported name, or the command's first word.
 
 #### Scenario: Indexing shows a percent
 - **WHEN** the server reports progress begin and then 42 percent
-- **THEN** the slot reads "ruby-lsp indexing 42%", and "ruby-lsp" after the progress ends
+- **THEN** the slot's label reads "ruby-lsp indexing 42%" and "ruby-lsp" after the progress ends, the bar drawing the dot in the starting color while the progress segment shows the percent
 
 #### Scenario: A crash names the restart command
 - **WHEN** the server's output ends without a shutdown
-- **THEN** the slot reads "ruby-lsp crashed :LspRestart" in the error group
+- **THEN** the slot's label reads "ruby-lsp crashed :LspRestart" and the bar draws the dot and the hint in the error group
 
 ### Requirement: :LspRestart restarts the servers
 `:LspRestart` SHALL stop every server, forget commands that could not start, and start the current buffer's server again, which reopens its documents once it answers. With no server configured for the current buffer it SHALL report so.
