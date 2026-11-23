@@ -1,4 +1,4 @@
-ok   two tabs, one modified: a tab per file with its icon and modified dot
+ok   two tabs, one modified: a tab per file with no icon and the modified dot
 ok   an unnamed buffer
 ok   a buffer at the root shows / in its tab
 ok   a scratch buffer has no tab
@@ -13,7 +13,9 @@ ok   a wider row starts its run as early as the current tab allows
 ok   a row narrower than the counts still shows the current tab, cut
 ok   unlisted buffers are neither shown nor counted
 ok   a leading unlisted buffer is neither shown nor counted
-ok   selected tab with its leading space and icon, the plain tab and its icon in TabLine, fill, and the tab-page numbers
+ok   selected tab with its leading space, the plain tab in TabLine, fill, and the tab-page numbers: the current one TabLineName, the other TabLine
+ok   bare: the selected tab and the current page in TabLineSel, the other tab, the fill, and the other page in Normal
+ok   not bare, the fill and the TabLineName page number are back
 ok   nerd
 ok   unicode
 ok   ascii
@@ -38,4 +40,4 @@ ok   showing?: two files at 1 show the row
 ok   showing?: one file on two tab pages at 1 shows the row
 ok   showing?: two files at 0 show no row
 ok   showing?: one file at 2 shows the row
-adapters_tab_bar: 40 passed, 0 failed
+adapters_tab_bar: 42 passed, 0 failed

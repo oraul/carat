@@ -184,7 +184,17 @@ module AdaptersScreenPresenterTest
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE)}tab"), "tab line labels have TabLine")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_SELECTED)}sel"), "the selected label has TabLineSel")
     t.assert_true(out.include?("#{sgr256(H::TAB_LINE_FILL)}fill"), "the tab line fill has TabLineFill")
-    t.assert_equal(["\e[0;38;5;247;48;5;235m", "\e[0;1;38;5;236;48;5;75m", "\e[0;48;5;235m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors, the selected one bold on the accent")
+    t.assert_equal(["\e[0;38;5;247;48;5;235m", "\e[0;1m", "\e[0;48;5;235m"], [sgr256(H::TAB_LINE), sgr256(H::TAB_LINE_SELECTED), sgr256(H::TAB_LINE_FILL)], "the tab line sequences at 256 colors, the selected one bold with no fill")
+
+    # Scenario "The selected tab is bold on the editor's background": the tab row's selected, name, and
+    # quiet groups at 24 bits, 256 colors, and 16 colors on carat-dark with the theme's background, none
+    # an accent fill (no blue 48 code), the selected one bold on Normal's own background.
+    painted = D::Themes.find("carat-dark", "theme")
+    [["24 bits", Carat::Domain::ColorDepth::TRUECOLOR, "\e[0;1;38;2;200;204;216;48;2;27;29;38m", "\e[0;1;38;2;200;204;216;48;2;21;23;30m", "\e[0;38;2;146;152;171;48;2;21;23;30m"], ["256 colors", Carat::Domain::ColorDepth::COLORS_256, "\e[0;1;38;5;252;48;5;234m", "\e[0;1;38;5;252;48;5;233m", "\e[0;38;5;247;48;5;233m"], ["16 colors", Carat::Domain::ColorDepth::COLORS_16, "\e[0;1;37;40m", "\e[0;1;30;47m", "\e[0;90;47m"]].each do |row|
+      colors = row[1].to_i
+      t.assert_equal([row[2], row[3], row[4]], [Carat::Adapters::SgrTable.sequence(painted, H::TAB_LINE_SELECTED, colors), Carat::Adapters::SgrTable.sequence(painted, H::TAB_LINE_NAME, colors), Carat::Adapters::SgrTable.sequence(painted, H::TAB_LINE, colors)], "the tab row's selected, name, and quiet groups: #{row[0]}")
+      t.assert_equal(Carat::Adapters::SgrTable.sequence(painted, H::NORMAL, colors).sub("\e[0", "\e[0;1"), Carat::Adapters::SgrTable.sequence(painted, H::TAB_LINE_SELECTED, colors), "the selected tab is Normal's colors in bold: #{row[0]}")
+    end
 
     # The visual selection has the theme's Visual background.
     selected = D::Frame.new(rows: 1, cols: 8)

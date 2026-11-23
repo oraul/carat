@@ -341,17 +341,21 @@ module Carat
       end
 
       # Whether the terminal has only the 16 basic colors, where a sidebar
-      # shows no background change, so the separator glyph stays at its edge.
+      # shows no background change, so the separator glyph stays at its edge
+      # and the tab row has no fill.
       #: (bool) -> void
       def basic_colors=(value)
         @basic_colors = value
+        @tab_bar.bare = value || @plain
       end
 
       # Draws the notification boxes and the status bar's progress with
-      # ASCII glyphs and no color when plain, as NO_COLOR asks.
+      # ASCII glyphs and no color when plain, as NO_COLOR asks, and the tab
+      # row with no fill.
       #: (bool) -> void
       def plain=(value)
         @plain = value
+        @tab_bar.bare = value || @basic_colors
         @status_bar.plain = value
         @float_painter.plain = value
       end
@@ -714,7 +718,7 @@ module Carat
 
       # The header row above each shown slot window that ArrangeView gave
       # one: the titles of the slot's views, each between spaces, the
-      # shown one in TabLineSel and the others in TabLine, the rest of the
+      # shown one in bold TabLineName and the others in TabLine, the rest of the
       # row in TabLineFill; a left sidebar with one view reads the project
       # and branch instead (TabBar#paint_head). The titles are the strings
       # the slot holds, so nothing is allocated.
@@ -771,7 +775,7 @@ module Carat
         c = x
         k = 0
         while k < views.length && c < limit
-          hl = views[k] == shown ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+          hl = views[k] == shown ? Domain::Highlight::TAB_LINE_NAME : Domain::Highlight::TAB_LINE
           c = frame.put_within(row, c, " ", hl, limit)
           c = frame.put_within(row, c, views[k], hl, limit)
           c = frame.put_within(row, c, " ", hl, limit)

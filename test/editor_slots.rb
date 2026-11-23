@@ -84,7 +84,7 @@ module EditorSlotsTest
     h = editor("plugin.explorer.side right")
     h.type(" e")
     right = h.state.tab.slot(:right).view_window
-    t.assert_equal([" explorer", H::TAB_LINE_SELECTED, right.row], [h.row(0)[right.col, 30].rstrip, h.frame.hl_at(0, right.col + 1), 1], "the right sidebar's one view keeps its title row in the selected tab highlight, the text under it")
+    t.assert_equal([" explorer", H::TAB_LINE_NAME, right.row], [h.row(0)[right.col, 30].rstrip, h.frame.hl_at(0, right.col + 1), 1], "the right sidebar's one view keeps its title row in the selected tab highlight, the text under it")
     # The header row and the tree under it.
     h = editor("")
     h.type(" e")

@@ -43,13 +43,13 @@ ok   A target with a dot segment is dropped: /project/lib/../b.rb
 ok   A target with a dot segment is dropped: /project/lib/%2E%2E/b.rb
 ok   A target with a dot segment is dropped: /project/./b.rb
 ok   A target with a dot segment is dropped: /project/lib/..
-ok   gd to another project file shows its tab, selected
-ok   gd outside the project shows the target's tab, selected
-ok   gd to a project file linked out of the project shows its tab, selected
-ok   gd to an outside file already listed shows that buffer and its tab
+FAIL gd to another project file shows its tab, selected: expected "  r a.rb     r b.rb | r b.rb | b.rb 1:4 | 2", got "  a.rb     b.rb | b.rb | b.rb 1:4 | 2"
+FAIL gd outside the project shows the target's tab, selected: expected "  r a.rb     r c.rb | r c.rb | /gems/c.rb 1:4 | 2", got "  a.rb     c.rb | c.rb | /gems/c.rb 1:4 | 2"
+FAIL gd to a project file linked out of the project shows its tab, selected: expected "  r a.rb     r out.rb | r out.rb | out.rb 1:4 | 2", got "  a.rb     out.rb | out.rb | out.rb 1:4 | 2"
+FAIL gd to an outside file already listed shows that buffer and its tab: expected "  r a.rb     r c.rb | r c.rb | /gems/c.rb 1:4 | 2", got "  a.rb     c.rb | c.rb | /gems/c.rb 1:4 | 2"
 ok   A read-only buffer in the listing
 ok   Filtered by the read-only flag
-ok   The read-only target's tab selects and closes like the others
+FAIL The read-only target's tab selects and closes like the others: expected ["  r a.rb     r c.rb | r a.rb | a.rb 3:0", "  r a.rb     r c.rb | r c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"], got ["  a.rb     c.rb | a.rb | a.rb 3:0", "  a.rb     c.rb | c.rb | /gems/c.rb 1:4", "a.rb 3:0 | 1"]
 ok   gd to a project file takes over the tab it leaves
 ok   The target takes the tab's position and a tab opened with :e stays
 ok   A jump to a buffer with its own tab selects it and keeps both
@@ -66,7 +66,7 @@ ok   Ctrl-O through a buffer switch shows the target first
 ok   Ctrl-O under keep leaves both tabs
 ok   :bn skips an unlisted buffer
 ok   :b N lists an unlisted buffer again
-ok   The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place
+FAIL The painted tab row leaves the buffer a jump left out and Ctrl-O paints it back in place: expected ["  r b.rb     r x.rb | r b.rb", "  r a.rb     r x.rb | r a.rb"], got ["  b.rb     x.rb | b.rb", "  a.rb     x.rb | a.rb"]
 ok   The listing hides an unlisted buffer and the bang shows it
 ok   Ctrl-O past the oldest entry does nothing in the editor
 ok   Ctrl-O refuses another buffer over a modified one
@@ -75,4 +75,4 @@ ok   Ctrl-I after a refused Ctrl-O returns to the start
 ok   Ctrl-O drops an entry whose buffer is gone and stays
 ok   Ctrl-O clamps the column to a line shortened since, in code points
 ok   the peek fits a narrow screen: a long line is 34 columns at 40, shown whole inside its border
-adapters_definitions: 77 passed, 0 failed
+adapters_definitions: 71 passed, 6 failed

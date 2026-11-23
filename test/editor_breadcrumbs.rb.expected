@@ -12,8 +12,8 @@ ok   always shows the winbar on one window
 ok   never hides the winbars of two windows
 ok   an unknown mode keeps auto
 ok   windows on different files name their own, under the buffer tabs
-ok   the current window's path with no symbol is the accent in TabLineSel, the other's in TabLine, the pad TabLine, the rest TabLineFill
-ok   the selected winbar follows the current window
+ok   the current window's path with no symbol is bold in TabLineName, the other's in TabLine, the pad TabLine, the rest TabLineFill
+ok   the bold winbar name follows the current window
 ok   :set breadcrumbs=never hides the winbars at once, the text taking their row
 ok   a split count counts text rows below the winbar
 ok   a window of one text row keeps its row and shows no winbar

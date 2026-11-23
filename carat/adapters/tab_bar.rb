@@ -9,34 +9,46 @@ require_relative "../domain/messages"
 module Carat
   module Adapters
     # Paints the top row of buffer tabs: one tab per listed file buffer in
-    # list order, a space, a space, its file icon, a space, the last
-    # segment of its path or [No Name], a space, the modified icon or a
-    # space (one cell either way), and a space, the tab of the current
-    # window's buffer selected, so the accent background and the bold
-    # carry the selection and no glyph separates two tabs; scratch and
-    # unlisted buffers get none. The row starts at the editor's first
-    # column, after a left sidebar, whose width above it holds the
-    # project and branch (paint_head). From two tab pages their
-    # numbers stand at the right end, " 1  2 ", the current
-    # one selected, and the tabs use the columns before them. Tabs that do
-    # not fit are counted, " <N " before the run shown and " N> " after
+    # list order, two spaces, the last segment of its path or [No Name],
+    # a space, the modified icon or a space (one cell either way), and a
+    # space, with no file icon, the tab of the current window's buffer
+    # selected in TabLineSel, bold on the editor's background, so the
+    # bold and the background carry the selection and no glyph or accent
+    # fill separates two tabs; scratch and unlisted buffers get none.
+    # The row starts at the editor's first column, after a left sidebar,
+    # whose width above it holds the project and branch (paint_head).
+    # From two tab pages their numbers stand at the right end, " 1  2 ",
+    # the current one bold in TabLineName and the others in TabLine, and
+    # the tabs use the columns before them. Under 16 colors and NO_COLOR
+    # (bare=) the row has no fill: the selected tab and page number stay
+    # bold and every other name is in Normal. Tabs that do not fit are counted, " <N " before the run shown and " N> " after
     # it; the run starts as early as keeping the current tab in it
     # allows. Names are written from the byte after the path's last slash
     # and every width is counted, so a row costs no object per frame.
     class TabBar
       MARK_CELLS = 1
-      # The cells of a tab besides its icon, name, and mark: the two
-      # leading spaces and the three after the icon, the name, and the
-      # mark.
-      FRAME_CELLS = 5
+      # The cells of a tab besides its name and mark: the two leading
+      # spaces and the two after the name and the mark.
+      FRAME_CELLS = 4
       HEAD_DOT = "·"
       HEAD_ASCII_DOT = "-"
 
       attr_reader :buffers #: Domain::BufferList
+      attr_reader :bare #: bool
+
+      # @rbs @bare: bool
 
       #: (buffers: Domain::BufferList) -> void
       def initialize(buffers:)
         @buffers = buffers
+        @bare = false
+      end
+
+      # Draws the row with no fill and Normal for every name but the
+      # selected ones, as 16 colors and NO_COLOR ask.
+      #: (bool) -> void
+      def bare=(value)
+        @bare = value
       end
 
       # Whether the row shows under showtabline with tab_count tab pages,
@@ -53,7 +65,8 @@ module Carat
         start = cols if start > cols
         start = 0 if start < 0
         frame.blank(0, start, cols)
-        frame.fill(0, start, cols, Domain::Highlight::TAB_LINE_FILL)
+        frame.fill(0, start, cols, Domain::Highlight::TAB_LINE_FILL) unless @bare
+        quiet = quiet_group
         right = paint_pages(frame, state, start, cols)
         room_width = right - start
         set = state.options.icons
@@ -69,19 +82,19 @@ module Carat
         while list.buffer_at(first).tabless?
           first += 1
         end
-        if span_width(first, last, set) > room_width
+        if span_width(first, last) > room_width
           files = list.file_count
           # Room for both counts, " <N " and " N> ", at the widest N
           # put_digits_within may write.
           room = room_width - 2 * (Domain::Frame.digits(files) + 3)
           anchor = list.index_of(current)
           anchor = first if anchor < 0 || current.tabless?
-          while first < anchor && span_width(first, anchor, set) > room
+          while first < anchor && span_width(first, anchor) > room
             first = next_file(first)
           end
           last = anchor
           following = next_file(last)
-          while following < count && span_width(first, following, set) <= room
+          while following < count && span_width(first, following) <= room
             last = following
             following = next_file(last)
           end
@@ -89,9 +102,9 @@ module Carat
         x = start
         hidden = files_between(0, first)
         if hidden > 0
-          x = frame.put_within(0, x, " <", Domain::Highlight::TAB_LINE, right)
-          x = frame.put_digits_within(0, x, hidden, Domain::Highlight::TAB_LINE, right)
-          x = frame.put_within(0, x, " ", Domain::Highlight::TAB_LINE, right)
+          x = frame.put_within(0, x, " <", quiet, right)
+          x = frame.put_digits_within(0, x, hidden, quiet, right)
+          x = frame.put_within(0, x, " ", quiet, right)
         end
         i = first
         while i <= last
@@ -101,9 +114,9 @@ module Carat
         end
         hidden = files_between(last + 1, count)
         return if hidden <= 0
-        x = frame.put_within(0, x, " ", Domain::Highlight::TAB_LINE, right)
-        x = frame.put_digits_within(0, x, hidden, Domain::Highlight::TAB_LINE, right)
-        frame.put_within(0, x, "> ", Domain::Highlight::TAB_LINE, right)
+        x = frame.put_within(0, x, " ", quiet, right)
+        x = frame.put_digits_within(0, x, hidden, quiet, right)
+        frame.put_within(0, x, "> ", quiet, right)
       end
 
       # Paints a sidebar's head on a row over the cells [from, to): a
@@ -151,7 +164,7 @@ module Carat
         x = start
         t = 0
         while t < pages
-          hl = t == tabs.tab_index ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+          hl = t == tabs.tab_index ? current_page_group : quiet_group
           x = frame.put_within(0, x, " ", hl, cols)
           x = frame.put_digits_within(0, x, t + 1, hl, cols)
           x = frame.put_within(0, x, " ", hl, cols)
@@ -162,10 +175,8 @@ module Carat
 
       #: (Domain::Frame, Integer, Integer, Domain::Buffer, bool, String) -> Integer
       def paint_tab(frame, x, limit, buffer, selected, set)
-        hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
+        hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : quiet_group
         x = frame.put_within(0, x, "  ", hl, limit)
-        x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), hl, limit)
-        x = frame.put_within(0, x, " ", hl, limit)
         path = buffer.path
         if path.nil?
           x = frame.put_within(0, x, Domain::Messages::NO_NAME, hl, limit)
@@ -185,23 +196,36 @@ module Carat
         Domain::DisplayWidth.text_width(glyph, 0) == 1 ? glyph : Domain::Icons.glyph("modified", "ascii")
       end
 
+      # The group of an unselected name: TabLine, or Normal when bare.
+      #: () -> Integer
+      def quiet_group
+        @bare ? Domain::Highlight::NORMAL : Domain::Highlight::TAB_LINE
+      end
+
+      # The group of the current tab page's number: bold TabLineName, or
+      # TabLineSel, also bold, when bare.
+      #: () -> Integer
+      def current_page_group
+        @bare ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE_NAME
+      end
+
       # The cells of one tab, its mark one cell whether modified or not.
-      #: (Domain::Buffer, String) -> Integer
-      def tab_width(buffer, set)
+      #: (Domain::Buffer) -> Integer
+      def tab_width(buffer)
         path = buffer.path
         name = path.nil? ? Domain::Messages::NO_NAME.length : Domain::DisplayWidth.text_width(path, buffer.name_start)
-        Domain::DisplayWidth.text_width(Domain::Icons.glyph(buffer.icon, set), 0) + name + MARK_CELLS + FRAME_CELLS
+        name + MARK_CELLS + FRAME_CELLS
       end
 
       # The cells of the file tabs from list position from to position to.
-      #: (Integer, Integer, String) -> Integer
-      def span_width(from, to, set)
+      #: (Integer, Integer) -> Integer
+      def span_width(from, to)
         list = @buffers
         total = 0
         i = from
         while i <= to && i < list.count
           buffer = list.buffer_at(i)
-          total += tab_width(buffer, set) unless buffer.tabless?
+          total += tab_width(buffer) unless buffer.tabless?
           i += 1
         end
         total
