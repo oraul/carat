@@ -113,8 +113,8 @@ module AdaptersTabBarTest
     bar.bare = true
     bar.paint(frame, bare.state, 0, 40)
     t.assert_equal(["  a.txt     b.txt", H::TAB_LINE_SELECTED, H::NORMAL, H::NORMAL, H::TAB_LINE_SELECTED, H::NORMAL], [frame.row_text(0)[0, 17], frame.cell(0, 3).hl, frame.cell(0, 13).hl, frame.cell(0, 25).hl, frame.cell(0, 35).hl, frame.cell(0, 38).hl], "bare: the selected tab and the current page in TabLineSel, the other tab, the fill, and the other page in Normal")
-    plain = paint(setup(["a.txt", "b.txt"], 0, 2), 40)
-    t.assert_equal([H::TAB_LINE_FILL, H::TAB_LINE_NAME], [plain.cell(0, 25).hl, plain.cell(0, 35).hl], "not bare, the fill and the TabLineName page number are back")
+    filled = paint(setup(["a.txt", "b.txt"], 0, 2), 40)
+    t.assert_equal([H::TAB_LINE_FILL, H::TAB_LINE_NAME], [filled.cell(0, 25).hl, filled.cell(0, 35).hl], "not bare, the fill and the TabLineName page number are back")
 
     # Scenario "The tab row at 16 colors and NO_COLOR", the overflow counts: bare, both counts are in Normal and the
     # current tab keeps its bold TabLineSel.
