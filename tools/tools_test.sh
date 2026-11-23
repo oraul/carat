@@ -1513,6 +1513,23 @@ expect "run_state: moved reruns the reviews when git diff fails" 1 "^moved: git 
 expect "run_state: moved leaves no record when git diff fails" 0 "^$" state get carry moved
 expect "run_state: a carried review is refused once moved failed at the head" 1 "needs tools/run_state[.]sh moved to have exited 0" \
   state review carry security pass "blocking=0 carried=1"
+# A file both the change and main edited, the merge conflict resolved by
+# keeping the change's text, drops main's landed fix: the reviews run again
+# though moved's own comparison of the reviewed commit with HEAD names nothing.
+fresh ours
+echo "line one" > shared.txt
+commit "chore: a shared file"
+state init ours chore/ours > /dev/null
+echo "the change" >> shared.txt
+commit "chore: the change edits the shared file"
+ours_reviewed=$(git rev-parse HEAD)
+git_q checkout -q main && echo "main fix" >> shared.txt && commit "fix: main edits the shared file" && git_q checkout -q chore/ours
+git_q merge -q --no-commit main > /dev/null 2>&1
+git_q checkout --ours shared.txt
+commit "chore: a merge of main keeping the change's side"
+expect "run_state: moved reruns the reviews when the merge kept the change's side of a file main edited" 1 "^moved: the merge changed files of the change: shared[.]txt; the reviews run again" \
+  env BASE=main sh "$here/run_state.sh" moved ours "$ours_reviewed"
+expect "run_state: moved leaves no record when the merge kept the change's side of a file main edited" 0 "^$" state get ours moved
 cd "$pushing_dir" || exit 1
 
 expect "run_state: abandon is no longer a command" 2 "" state abandon pushing
@@ -2592,6 +2609,15 @@ expect "run_state: set refuses a CI record before a push" 1 "no pushed head is r
 state set merges pushed "$pushed_full" > /dev/null
 state set merges ci "green $pushed_full" > /dev/null
 expect "run_state: set stores the pushed head as the CI head" 0 "^green $head12\$" state get merges ci
+# A commit of the branch is no merge, whatever its subject or its place in
+# HEAD's history (merged-from-main): merged names a commit of main only.
+echo branch > branch.txt
+commit "fix: a branch commit titled like a squash (#8)"
+branch_commit=$(git rev-parse --short=12 HEAD)
+state init branchpr chore/branchpr > /dev/null
+expect "run_state: set refuses a branch commit with no pull request recorded as merged" 1 "refused: $branch_commit is no commit on main" env BASE=main sh "$here/run_state.sh" set branchpr merged "$branch_commit"
+state set branchpr pr 8 > /dev/null
+expect "run_state: set refuses a branch commit titled like the squash commit when main has none" 1 "refused: $branch_commit is not the squash commit of pull request #8 on main, none" env BASE=main sh "$here/run_state.sh" set branchpr merged "$branch_commit"
 git_q checkout -q main
 echo squash >> README.md
 commit "fix: the work (#7)"
@@ -3502,8 +3528,12 @@ printf '# Queue\n\n1. `s1` (T4, estimated small): the sprint plan.\n' > docs/que
 printf '# Queue\n\n1. `s2` (T3, estimated small): the sprint plan.\n' > docs/queue-feature.md
 commit "docs: the carrier's groom"
 git_q checkout -q chore/mq
-expect "run_state: merge-main keeps the branch's own lane queue and main's other" 0 "^merge-main: merged main into chore/mq at [0-9a-f]{12}, the backlog lane queue kept from chore/mq and the other from main the branch plan[.] the sprint plan[.] 3$" \
-  sh -c "out=\$(BASE=main sh '$here/run_state.sh' merge-main qb) && echo \"\$out \$(sed -n 3p docs/queue-backlog.md | sed 's/.*: //') \$(sed -n 3p docs/queue-feature.md | sed 's/.*: //') \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')\""
+# The user's global git configuration, here one that signs every commit
+# with a program that fails, reaches none of merge-main's git calls
+# (merge-main-pin), the conflict reads and the queue commit included.
+printf '[commit]\n\tgpgsign = true\n[gpg]\n\tprogram = false\n' > "$work/hostile.gitconfig"
+expect "run_state: merge-main keeps the branch's own lane queue and main's other under a global configuration that signs commits" 0 "^merge-main: merged main into chore/mq at [0-9a-f]{12}, the backlog lane queue kept from chore/mq and the other from main the branch plan[.] the sprint plan[.] 3$" \
+  sh -c "out=\$(GIT_CONFIG_GLOBAL='$work/hostile.gitconfig' BASE=main sh '$here/run_state.sh' merge-main qb) && echo \"\$out \$(sed -n 3p docs/queue-backlog.md | sed 's/.*: //') \$(sed -n 3p docs/queue-feature.md | sed 's/.*: //') \$(git rev-list --parents -n 1 HEAD | wc -w | tr -d ' ')\""
 
 # The planner runs only when the queue needs a decision: the change is not
 # the queue's head, or a merged change without a history row holds a

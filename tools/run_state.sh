@@ -2685,17 +2685,17 @@ pushed_at() {
   printf '%s\n' "$pushed" | cut -c1-12
 }
 
-# The twelve-digit newest commit of BASE (origin/main), else of HEAD, whose
-# subject ends with " (#PR)", as the squash merge of pull request PR ($1)
-# titles it; fails when none does.
+# The twelve-digit newest commit of BASE (origin/main) whose subject ends
+# with " (#PR)", as the squash merge of pull request PR ($1) titles it;
+# fails when none does. Never a commit of HEAD: a branch commit can carry
+# that subject, and no branch commit is a merge.
 squash_commit() {
-  for ref in "${BASE:-origin/main}" HEAD; do
-    git rev-parse --verify -q --end-of-options "$ref^{commit}" > /dev/null 2>&1 || continue
-    found=$(git log --format='%H %s' --end-of-options "$ref" -- 2>/dev/null | S=" (#$1)" awk '
-      { s = ENVIRON["S"]; n = length($0) - length(s); if (n > 40 && substr($0, n + 1) == s) { print $1; exit } }')
-    [ -z "$found" ] || { git rev-parse --short=12 "$found"; return 0; }
-  done
-  return 1
+  ref=${BASE:-origin/main}
+  git rev-parse --verify -q --end-of-options "$ref^{commit}" > /dev/null 2>&1 || return 1
+  found=$(git log --format='%H %s' --end-of-options "$ref" -- 2>/dev/null | S=" (#$1)" awk '
+    { s = ENVIRON["S"]; n = length($0) - length(s); if (n > 40 && substr($0, n + 1) == s) { print $1; exit } }')
+  [ -n "$found" ] || return 1
+  git rev-parse --short=12 "$found"
 }
 
 # The twelve-digit squash commit when VALUE ($1) names it: a commit on main
@@ -2704,13 +2704,15 @@ squash_commit() {
 # no pushed head or mistyped hash an agent reported is recorded as merged.
 merged_at() {
   valid '[0-9a-f]{7,40}' "$1" || die "$2: refused: merged is a commit hash of 7 to 40 hexadecimal digits, not $1"
-  at=$(git rev-parse --verify -q --short=12 --end-of-options "$1^{commit}" 2>/dev/null) && merged_on_main "$at" || at=""
+  at=$(git rev-parse --verify -q --short=12 --end-of-options "$1^{commit}" 2>/dev/null) || at=""
   pr=$(read_key pr)
   if valid '[0-9]+' "$pr"; then
     squash=$(squash_commit "$pr") || squash="none"
     [ -n "$at" ] && [ "$at" = "$squash" ] || die "$2: refused: $1 is not the squash commit of pull request #$pr on main, $squash"
   else
-    [ -n "$at" ] || die "$2: refused: $1 is no commit on main"
+    # No pull request recorded: an ancestor of main itself, never of HEAD,
+    # where a lane's pushed head is.
+    [ -n "$at" ] && git merge-base --is-ancestor "$at" "${BASE:-origin/main}" 2>/dev/null || die "$2: refused: $1 is no commit on main"
   fi
   # The squash message ends with exactly the co-author trailer, trailing
   # blank lines aside: #307's squash commit ended with it and a stray
@@ -4554,14 +4556,14 @@ lane_close() {
 # conflict rules of its push mode.
 APPENDED_RECORDS="docs/metrics-*.tsv docs/findings/*.md docs/sprints.tsv"
 merge_main() {
-  branch=$(git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
+  branch=$(pinned_git symbolic-ref -q --short HEAD) || die "merge-main: HEAD is not on a branch"
   [ "$branch" != main ] || die "merge-main: HEAD is main"
-  [ -z "$(git status --porcelain --untracked-files=no)" ] || die "merge-main: the tracked tree is dirty"
+  [ -z "$(pinned_git status --porcelain --untracked-files=no)" ] || die "merge-main: the tracked tree is dirty"
   base=${BASE:-origin/main}
   if [ -z "${BASE:-}" ]; then
     pinned_git fetch -q --refmap= origin +refs/heads/main:refs/remotes/origin/main || die "merge-main: the fetch of origin's main failed"
   fi
-  if git merge-base --is-ancestor "$base" HEAD; then
+  if pinned_git merge-base --is-ancestor "$base" HEAD; then
     echo "merge-main: $branch holds $base"
     return 0
   fi
@@ -4570,19 +4572,19 @@ merge_main() {
   own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
-  if merge_out=$(git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+  if merge_out=$(pinned_git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
       -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" 2>&1); then
     rm -f "$attrs"
-    echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
+    echo "merge-main: merged $base into $branch at $(pinned_git rev-parse --short=12 HEAD)"
     return 0
   fi
   rm -f "$attrs"
-  files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+  files=$(pinned_git diff --name-only --diff-filter=U | tr '\n' ' ')
   # A merge that failed with no conflicted file (an untracked file it would
   # overwrite, a missing ref) shows git's own words, and aborts only a
   # merge in progress.
   if [ -z "$files" ]; then
-    [ ! -f "$(git rev-parse --git-path MERGE_HEAD)" ] || git merge --abort 2>/dev/null
+    [ ! -f "$(pinned_git rev-parse --git-path MERGE_HEAD)" ] || pinned_git merge --abort 2>/dev/null
     echo "merge-main: the merge of $base failed with no conflicted file: $(printf '%s\n' "$merge_out" | head -n 5 | tr '\n' ' ')"
     exit 1
   fi
@@ -4590,21 +4592,21 @@ merge_main() {
   # that carries a sprint plan (groom) both: a conflict only in the lane
   # queues keeps the branch's own lane queue and main's other, so both
   # lanes' edits stand (planner-loop).
-  others=$(git diff --name-only --diff-filter=U | grep -v -x -E 'docs/queue-(feature|backlog)[.]md')
+  others=$(pinned_git diff --name-only --diff-filter=U | grep -v -x -E 'docs/queue-(feature|backlog)[.]md')
   if [ -n "$files" ] && [ -z "$others" ] && { [ "$own" = feature ] || [ "$own" = backlog ]; }; then
     for l in feature backlog; do
-      git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
+      pinned_git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
       side=--theirs
       [ "$l" != "$own" ] || side=--ours
-      { git checkout "$side" -- "docs/queue-$l.md" && git add -- "docs/queue-$l.md"; } || { git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
+      { pinned_git checkout "$side" -- "docs/queue-$l.md" && pinned_git add -- "docs/queue-$l.md"; } || { pinned_git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
     done
-    if git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
+    if pinned_git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
         -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" > /dev/null 2>&1; then
-      echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
+      echo "merge-main: merged $base into $branch at $(pinned_git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
       return 0
     fi
   fi
-  git merge --abort 2>/dev/null
+  pinned_git merge --abort 2>/dev/null
   echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules and commit the merge"
   exit 1
 }
@@ -4634,12 +4636,16 @@ moved_change() {
   short_head=$(git rev-parse --short=12 HEAD)
   reviewed=$(git diff --no-renames --name-only "$old_base" "$at") &&
     current=$(git diff --no-renames --name-only "$new_base" HEAD) &&
-    moved_names=$(git diff --no-renames --name-only "$at" HEAD) || {
+    moved_names=$(git diff --no-renames --name-only "$at" HEAD) &&
+    base_names=$(git diff --no-renames --name-only "$old_base" "$new_base") || {
     echo "moved: git diff failed comparing $short_at, HEAD, and $base; the reviews run again at $short_head"
     exit 1
   }
+  # A file main changed (base_names) that the change also holds is as
+  # changed as one the merge moved, though a conflict kept the change's own
+  # text there and left it out of moved_names: the main fix is gone from HEAD.
   files=$(printf '%s\n%s\n' "$reviewed" "$current" | outside_records | sort -u)
-  changed=$( [ -z "$files" ] || printf '%s\n' "$moved_names" | grep -F -x -e "$files" | sort -u | tr '\n' ' ')
+  changed=$( [ -z "$files" ] || printf '%s\n%s\n' "$moved_names" "$(printf '%s\n' "$base_names" | outside_records)" | grep -F -x -e "$files" | sort -u | tr '\n' ' ')
   if [ -n "$changed" ]; then
     echo "moved: the merge changed files of the change: ${changed% }; the reviews run again at $short_head"
     exit 1
