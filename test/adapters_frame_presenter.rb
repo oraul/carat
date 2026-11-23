@@ -995,9 +995,9 @@ module AdaptersFramePresenterTest
     # its matches, so the next frame paints it again; a row painted
     # before the stop stays as it is.
     LAST.hide
-    wide = []
-    30.times { wide << ("b" * 600) }
-    s = state_for(wide, "a.txt")
+    long_lines = []
+    30.times { long_lines << ("b" * 600) }
+    s = state_for(long_lines, "a.txt")
     heavy = D::VimPattern.compile("a\\{1,1990\\}", false, false)
     t.assert_equal(true, heavy.size > 1900, "the pattern is large enough to stop the budget within the window")
     LAST.remember(heavy, true)
