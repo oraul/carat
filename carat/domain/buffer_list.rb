@@ -1,3 +1,4 @@
+require_relative "../plugin_api"
 require_relative "position"
 require_relative "buffer"
 require_relative "buffer_feed"
@@ -18,9 +19,12 @@ module Carat
     # text. It also keeps the recent files: the path of every file buffer
     # a window started showing, most recent first, at most RECENT_LIMIT,
     # kept after the buffer leaves the list, for the finder's recent
-    # picker.
+    # picker. A path is kept absolute, resolved against `base`, the
+    # working directory the last opened file was named in, so it names
+    # the same file after the directory changes; with no base it is kept
+    # as given. restore_recent adds the paths an earlier run kept.
     # A Struct record: mutable, with a reader and a writer per member.
-    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, :recent, keyword_init: true)
+    class BufferList < Struct.new(:tabs, :buffers, :next_id, :feed, :recent, :base, keyword_init: true)
       # The number of the buffer the editor starts with, listed first.
       STARTUP_ID = 1
       # The most paths the recent files keep.
@@ -31,6 +35,7 @@ module Carat
       # @rbs @next_id: Integer
       # @rbs @feed: BufferFeed
       # @rbs @recent: Array[String]
+      # @rbs @base: String
 
       # An empty list over the tab list. The list is stored through the
       # writer, so it takes the pinned type.
@@ -43,6 +48,7 @@ module Carat
         self.feed = BufferFeed.new
         self.recent = [""]
         recent.clear
+        self.base = ""
         feed.tabs = tabs
       end
 
@@ -515,6 +521,18 @@ module Carat
         withdraw(startup, opened)
       end
 
+      # Adds the paths an earlier run kept after the recent files this run
+      # already holds, each once, up to RECENT_LIMIT in all.
+      #: (Array[String]) -> void
+      def restore_recent(paths)
+        i = 0
+        while i < paths.length && recent.length < RECENT_LIMIT
+          path = PluginApi::Paths.normalize(paths[i].to_s)
+          recent << path unless recent.include?(path)
+          i += 1
+        end
+      end
+
       # Whether the tab page holds one file window beside side windows.
       #: (TabPage) -> bool
       def lone_file_window?(page)
@@ -523,13 +541,15 @@ module Carat
 
       private
 
-      # Moves the file buffer's path to the top of the recent files, the
-      # oldest dropped past RECENT_LIMIT; a scratch or unnamed buffer is
-      # never recorded, and a path already first costs one comparison.
+      # Moves the file buffer's path, absolute when there is a base, to the
+      # top of the recent files, the oldest dropped past RECENT_LIMIT; a
+      # scratch or unnamed buffer is never recorded, and a path already
+      # first costs one comparison.
       #: (Buffer) -> void
       def note_recent(target)
         path = target.path_text
         return if path.empty? || target.scratch?
+        path = PluginApi::Paths.absolute(base, path) unless base.empty?
         list = recent
         return if !list.empty? && list[0] == path
         at = list.index(path)

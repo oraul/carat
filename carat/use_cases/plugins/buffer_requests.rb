@@ -3,6 +3,8 @@ require_relative "../../domain/editor_state"
 require_relative "../../domain/buffer_list"
 require_relative "../../domain/buffer"
 require_relative "../../domain/icons"
+require_relative "../../domain/path_policy"
+require_relative "../../ports/file_port"
 require_relative "../../domain/position"
 require_relative "../../domain/range"
 require_relative "boundary"
@@ -19,12 +21,14 @@ module Carat
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
       attr_reader :registry #: PluginRegistry
+      attr_reader :files #: Ports::FilePort
 
-      #: (state: Domain::EditorState, buffers: Domain::BufferList, registry: PluginRegistry) -> void
-      def initialize(state:, buffers:, registry:)
+      #: (state: Domain::EditorState, buffers: Domain::BufferList, registry: PluginRegistry, files: Ports::FilePort) -> void
+      def initialize(state:, buffers:, registry:, files:)
         @state = state
         @buffers = buffers
         @registry = registry
+        @files = files
       end
 
       # A copy of the listed file buffers' paths, in list order.
@@ -33,10 +37,21 @@ module Carat
         PluginApi::Response.listing(Boundary.copied_lines(@buffers.file_paths))
       end
 
-      # A copy of the recent files, most recent first.
+      # A copy of the recent files, most recent first, each as the working
+      # directory shows it: relative below it, absolute elsewhere, so the
+      # path opens the file it names whatever the directory is.
       #: (String) -> PluginApi::Response
       def recent_files(name)
-        PluginApi::Response.listing(Boundary.copied_lines(@buffers.recent))
+        cwd = @files.cwd
+        shown = [""]
+        shown.clear
+        recent = @buffers.recent
+        i = 0
+        while i < recent.length
+          shown << Domain::PathPolicy.shown(cwd, recent[i].to_s)
+          i += 1
+        end
+        PluginApi::Response.listing(Boundary.copied_lines(shown))
       end
 
       # A copy of the buffer's lines and path, with the cursor when it is

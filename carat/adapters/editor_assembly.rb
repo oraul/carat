@@ -54,6 +54,7 @@ require_relative "../use_cases/history/travel_history"
 require_relative "../use_cases/history/restore_line"
 require_relative "../use_cases/history/list_undo"
 require_relative "../use_cases/repeat_last"
+require_relative "../domain/recent_files_text"
 require_relative "../use_cases/files/open_file"
 require_relative "../use_cases/files/save_file"
 require_relative "../use_cases/files/save_all"
@@ -352,6 +353,7 @@ module Carat
         first = Domain::Buffer.from_text("", nil)
         @tabs = Domain::TabList.new(window: Domain::Window.new(buffer: first))
         @buffers = Domain::BufferList.new(tabs: @tabs)
+        @buffers.base = files.cwd
         @buffers.add(first)
         @state = Domain::EditorState.new(tabs: @tabs, options: Domain::Options.from_config(value))
         @keymap = Domain::Keymap.new
@@ -604,9 +606,11 @@ module Carat
       # an empty path otherwise opens nothing. Then lets the plugins see
       # the buffer open, lays out the windows, and shows the first
       # configuration problem, if there is one, with the count of the
-      # others.
+      # others. The files an earlier run kept join the recent files first
+      # (restore_recent_files), the one opened here going above them.
       #: (String) -> void
       def open(path)
+        restore_recent_files
         options = @state.options
         @frame_presenter.plain = @terminal.no_color?
         @frame_presenter.basic_colors = @terminal.colors == Domain::ColorDepth::COLORS_16
@@ -621,6 +625,14 @@ module Carat
         more = @config_errors.length - 1
         first = @config_errors[0]
         report(@state, UseCases::Outcome.failure(more > 0 ? "#{first} (and #{more} more)" : first))
+      end
+
+      # Ends the session's records: writes the recent files for the next
+      # run (save_recent_files), which never fails. The entry point calls it
+      # on every way out of the loop.
+      #: () -> void
+      def close
+        save_recent_files
       end
 
       # Renders the state at the given size and writes it to the terminal:
@@ -645,6 +657,79 @@ module Carat
       end
 
       private
+
+      # Adds the files an earlier run kept to the recent files: reads the
+      # state file under the home directory (RecentFilesText), at most
+      # RecentFilesText::LIMIT bytes, and gives the paths it holds to
+      # BufferList#restore_recent. It never fails: no home directory, a
+      # missing file, one that is a directory or a FIFO or cannot be read,
+      # and a line that is not a usable path all read as no paths.
+      #: () -> void
+      def restore_recent_files
+        path = Domain::RecentFilesText.location(@files.home)
+        return if path.empty?
+        text = +""
+        begin
+          text = @files.read(path, Domain::RecentFilesText::LIMIT)
+        rescue StandardError
+          return
+        end
+        @buffers.restore_recent(Domain::RecentFilesText.parse(text, Domain::BufferList::RECENT_LIMIT))
+      end
+
+      # Writes the recent files to the state file under the home directory,
+      # creating the directories above it with mode 0700, so the next run
+      # lists them again. The text goes to a new file of mode 0600 beside
+      # the state file, which any file or link left there is removed
+      # before, and replaces the state file by a rename, which never writes
+      # through a link and never shows a half-written list. Nothing is
+      # written with no home directory or no recent file. It never fails: a
+      # directory or file that cannot be made or written, a read-only home
+      # included, is skipped, since the editor is ending and the list is a
+      # convenience.
+      #: () -> void
+      def save_recent_files
+        home = @files.home
+        path = Domain::RecentFilesText.location(home)
+        text = Domain::RecentFilesText.render(@buffers.recent)
+        return if path.empty? || text.empty?
+        temporary = "#{path}.tmp"
+        begin
+          make_state_directories(home)
+          remove_leftover(temporary)
+          @files.create_private(temporary, text)
+          @files.rename(temporary, path)
+        rescue StandardError
+          remove_leftover(temporary)
+        end
+      end
+
+      # Removes what is at path, a symbolic link included, which stat sees
+      # even when it leads nowhere; a failure is ignored, the caller's
+      # next step then failing as it would.
+      #: (String) -> void
+      def remove_leftover(path)
+        begin
+          @files.delete(path) if @files.stat(path).exists
+        rescue StandardError
+          return
+        end
+      end
+
+      # Makes the directories of the state file below home that are not
+      # there yet, one at a time with mode 0700, the port having no
+      # recursive make.
+      #: (String) -> void
+      def make_state_directories(home)
+        names = Domain::RecentFilesText::DIRECTORY.split("/")
+        dir = home
+        i = 0
+        while i < names.length
+          dir = "#{dir}/#{names[i]}"
+          @files.mkdir_private(dir) unless @files.exist?(dir)
+          i += 1
+        end
+      end
 
       # The action names a binding may use: every name the action table
       # registered and every action a registered plugin declares.

@@ -27,7 +27,8 @@ module Carat
     # Showing another buffer records the position left in the window's
     # jump list (BufferList#enter). Under option.gt buffers a file shown
     # in another window or tab page than the startup buffer's retires it
-    # (BufferList#retire_startup).
+    # (BufferList#retire_startup). The working directory now is the base
+    # BufferList keeps the recent files' paths absolute against.
     class OpenFile
       attr_reader :files #: Ports::FilePort
       attr_reader :buffers #: Domain::BufferList
@@ -42,6 +43,7 @@ module Carat
 
       #: (Domain::EditorState, String) -> Outcome
       def call(state, path)
+        @buffers.base = @files.cwd
         listed = @buffers.for_path(path)
         if !listed.nil? && !listed.equal?(state.buffer)
           @buffers.enter(listed)

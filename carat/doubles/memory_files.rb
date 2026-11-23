@@ -22,6 +22,7 @@ module Carat
       # @rbs @dirs: Hash[String, String]
       # @rbs @links: Hash[String, String]
       # @rbs @specials: Hash[String, String]
+      # @rbs @owner_only: Hash[String, String]
       # @rbs @dangling: Hash[String, String]
       # @rbs @padding: Hash[String, Integer]
       # @rbs @cwd: String
@@ -33,6 +34,7 @@ module Carat
         @dirs = {}
         @links = {}
         @specials = {}
+        @owner_only = {}
         @dangling = {}
         @padding = {}
         @unwritable = []
@@ -162,6 +164,24 @@ module Carat
         @files[k] = ""
       end
 
+      # Puts a file with the text at path as create does, marked as
+      # readable by its owner alone (owner_only?); raises on a path in
+      # unwritable.
+      #: (String, String) -> void
+      def create_private(path, text)
+        raise ArgumentError, "Permission denied" if @unwritable.include?(path)
+        create(path)
+        write(path, text)
+        @owner_only[key(path)] = ""
+      end
+
+      # Returns whether the file or directory at the path was made by
+      # create_private or mkdir_private, which only its owner may open.
+      # @rbs path: String
+      def owner_only?(path)
+        @owner_only.key?(key(path))
+      end
+
       # Returns whether a file or a directory is at the path.
       # @rbs path: String
       def exist?(path)
@@ -232,6 +252,13 @@ module Carat
         @dirs[k] = ""
       end
 
+      # Makes a directory as mkdir does, marked owner_only?.
+      #: (String) -> void
+      def mkdir_private(path)
+        mkdir(path)
+        @owner_only[key(path)] = ""
+      end
+
       # Moves a file, or a directory with everything under it.
       #: (String, String) -> void
       def rename(from, to)
@@ -239,10 +266,16 @@ module Carat
         t = key(to)
         raise ArgumentError, "No such file or directory: #{from}" unless @files.key?(f) || @dirs.key?(f)
         raise ArgumentError, "No such file or directory: #{to}" unless @dirs.key?(PluginApi::Paths.dirname(t))
+        raise ArgumentError, "Is a directory: #{to}" if @dirs.key?(t) && @files.key?(f)
+        if @files.key?(f)
+          @links.delete(t)
+          @owner_only.delete(t)
+        end
         move_keys(@files, f, t)
         move_keys(@dirs, f, t)
         move_keys(@links, f, t)
         move_keys(@specials, f, t)
+        move_keys(@owner_only, f, t)
       end
 
       #: (String) -> void
@@ -253,11 +286,14 @@ module Carat
           @dirs.delete(k)
         elsif @files.key?(k)
           @files.delete(k)
+        elsif @dangling.key?(k)
+          @dangling.delete(k)
         else
           raise ArgumentError, "No such file or directory: #{path}"
         end
         @links.delete(k)
         @specials.delete(k)
+        @owner_only.delete(k)
       end
 
       # Returns the working directory.

@@ -38,6 +38,15 @@ module Carat
         raise NotImplementedError, "FilePort#create"
       end
 
+      # Creates a regular file at path readable and writable by its owner
+      # alone (mode 0600) holding text, raising when anything is there, a
+      # symbolic link included, which it never follows: what it makes is
+      # always a new file, never a write through a planted link.
+      #: (String, String) -> void
+      def create_private(path, text)
+        raise NotImplementedError, "FilePort#create_private"
+      end
+
       # Returns whether a file or directory exists at path.
       # @rbs path: String
       def exist?(path)
@@ -83,6 +92,14 @@ module Carat
       #: (String) -> void
       def mkdir(path)
         raise NotImplementedError, "FilePort#mkdir"
+      end
+
+      # Creates one directory as mkdir does, openable by its owner alone
+      # (mode 0700, before the umask), for a state directory that names
+      # the files a user opened.
+      #: (String) -> void
+      def mkdir_private(path)
+        raise NotImplementedError, "FilePort#mkdir_private"
       end
 
       # Renames a file or a directory; raises when from is missing.

@@ -1,0 +1,5 @@
+# Brief
+
+recent-files-persist: the second Sprint 30 feature item in docs/queue-feature.md at 3fd3edd, after prompt-in-float (#314); run it exactly as its queue entry says, quoted below. Touch no file of the backlog lane (docs/queue-backlog.md, docs/metrics-backlog.tsv). No model name or alias anywhere in names or prose. If the change edits tools/rules.sh, stop and name it.
+
+The queue entry: `recent-files-persist` (T2, estimated medium, pushed back 1): Where: `carat/domain/buffer_list.rb:27` (`RECENT_LIMIT` 100), `:527` (recent); `carat/plugins/finder/plugin.rb` (`<leader>fr`). Why: the list holds this run's files only (Neovim's oldfiles survives a restart), and a relative path names another file after a `:cd`. Fix outline: absolute paths kept in a state file read at start and written on quit through the file port, bounded as now, a missing or unreadable file read as empty; the proposal decides its place and format. Accepted when a test restarting over a MemoryFiles state lists the earlier files and a `:cd` keeps each naming the same file. Backlog: "### The recent files are kept for one run only".
