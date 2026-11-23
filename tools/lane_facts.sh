@@ -20,8 +20,9 @@
 #             the workflow backs no contributor's pass; no otherwise;
 #             unknown without a base or when git diff fails
 #   ruby      yes when a path changed from base to HEAD lies under carat/,
-#             bin/, bench/, or config/, or is carat.rb, the Ruby code whose
-#             allocations and rounds the benchmark compares; no otherwise,
+#             bin/, bench/, config/, or tools/spinel/, or is carat.rb, the
+#             Makefile, or tools/metrics.sh, the Ruby code and the build and
+#             measurement the benchmark compares; no otherwise,
 #             so the workflow records the benchmark with no agent;
 #             unknown without a base or when git diff fails
 # Runs from the main checkout or any worktree of it: the lane and the check
@@ -78,7 +79,7 @@ if [ -n "${merge_base:-}" ] && changed=$(lane_git diff --no-renames --name-only 
   # A path git quotes (one with a special character) keeps its leading
   # quote, so it never reads as outside the Ruby code.
   ruby=no
-  ! printf '%s\n' "$changed" | grep -q -E '^"?(carat/|bin/|bench/|config/|carat[.]rb$)' || ruby=yes
+  ! printf '%s\n' "$changed" | grep -q -E '^"?(carat/|bin/|bench/|config/|carat[.]rb$|Makefile$|tools/spinel/|tools/metrics[.]sh$)' || ruby=yes
 fi
 
 # The verdict line: "check: every stage passed at C[; ...]" or

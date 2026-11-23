@@ -15,5 +15,10 @@
 
 ## Quality review
 
-- [x] 4.1 A `Makefile` or `tools/spinel/` change reads `ruby no`, so a Spinel bump skips the benchmark agent; outside the brief's paths, recorded in `docs/findings/bench-skip-nonruby.md`
+- [x] 4.1 A `Makefile` or `tools/spinel/` change reads `ruby no`, so a Spinel bump skips the benchmark agent; outside the brief's paths, recorded in `docs/findings/bench-skip-nonruby.md`; fixed in 5.1
 - [x] 4.2 The fact is relayed through a record start, as `machinery` is; a forged `no` would skip the gate; recorded in `docs/findings/bench-skip-nonruby.md` (a run-state command would need new code)
+
+## Review round
+
+- [x] 5.1 Read a `Makefile`, `tools/spinel/`, or `tools/metrics.sh` change as `ruby yes` so a Spinel bump or flag change keeps the benchmark gate (`tools/lane_facts.sh`, `tools/tools_test.sh`, README.md, `docs/codebase-map.md`); fixes task 4.1
+- [x] 5.2 The relayed fact (task 4.2) needs a run-state command computing and recording it, which is new code outside this change's files; left, as recorded in `docs/findings/bench-skip-nonruby.md`

@@ -3500,13 +3500,15 @@ cp "$work/facts.index" "$idx"
 # Makefile, or test/runner/, reads machinery yes; no base reads unknown.
 for p in tools/x.sh Makefile test/runner/x.rb; do
   (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
-  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes ruby no $" facts lf
+  expect "lane_facts: a change of $p reads machinery yes" 0 " machinery yes ruby $([ "$p" = Makefile ] && echo yes || echo no) $" facts lf
   (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
 done
 expect "lane_facts: a change outside the machinery reads machinery no" 0 " machinery no ruby no $" facts lf
 # bench-skip-nonruby: the Ruby code is what a file under carat/, bin/, bench/,
 # or config/ or carat.rb changes; tools, docs, and tests alone read ruby no.
-for p in carat/x.rb bin/x.rb bench/x.rb config/x.caratrc carat.rb; do
+# The Makefile, tools/spinel/, and tools/metrics.sh set the compiler, its flags,
+# and the measurement, so they keep the benchmark gate too.
+for p in carat/x.rb bin/x.rb bench/x.rb config/x.caratrc carat.rb Makefile tools/spinel/x.h tools/metrics.sh; do
   (cd tmp/.lane-lf && mkdir -p "$(dirname "$p")" && echo m >> "$p" && commit "chore: $p")
   expect "lane_facts: a change of $p reads ruby yes" 0 " ruby yes $" facts lf
   (cd tmp/.lane-lf && git_q revert --no-edit HEAD > /dev/null)
