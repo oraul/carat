@@ -29,4 +29,5 @@ Assumptions: `TERM=xterm` alone is detected as 256 colors (`Domain::ColorDepth` 
 - Tests: `test/smoke_editor.rb` and its snapshot, `test/adapters_frame_presenter.rb`, `test/domain_theme.rb`.
 - Docs: README.md (the palette paragraph's messages), `docs/compatibility.md` (the message row and the UI group paragraph) and `docs/codebase-map.md` (the message row and the smoke test).
 - docs/architecture.md: unchanged, its count of 69 UI groups is the count after the removal.
-- CLAUDE.md: unchanged, no agent, workflow, Makefile, or gate changes.
+- Tooling: `tools/run_state.sh` (`STAGE_AFTER`) starts the gates stage after test-run, since a changed smoke snapshot made the gates' snapshots gate and test-run run the smoke test at once, into the same `build/test` output file and `build/smoke` files, so the check failed on a corrupted output; `tools/tools_test.sh` proves the order.
+- CLAUDE.md: unchanged, the stage order is in the script's comment and the code map's flow names `STAGE_AFTER` without listing its pairs.

@@ -14,6 +14,10 @@
 - [x] 3.1 Update README.md, `docs/compatibility.md`, and `docs/codebase-map.md`
 - [x] 3.2 Append the findings to `docs/findings/ui-groups-c.md`
 
+## 4. Tooling
+
+- [x] 4.0 Start the gates stage after test-run (`tools/run_state.sh` `STAGE_AFTER`) and prove the order in `tools/tools_test.sh`
+
 ## Quality review
 
 - [x] 4.1 `design.md` said NO_COLOR writes no color, which the bytes contradict; corrected, the behavior recorded in `docs/findings/ui-groups-c.md`, fixed
