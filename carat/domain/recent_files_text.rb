@@ -63,8 +63,11 @@ module Carat
       #: (Array[String]) -> String
       def self.render(paths)
         text = +""
-        paths.each do |path|
+        i = 0
+        while i < paths.length
+          path = paths[i].to_s
           text << path << "\n" if usable?(path)
+          i += 1
         end
         text
       end
