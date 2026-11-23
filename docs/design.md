@@ -110,13 +110,12 @@ An empty surface says one dim sentence and names one key (`Empty folder`, `no ma
 
 ## 7. Known drift
 
-Where the shipped code differs from this file at `6bb8f2a`, and the item that closes it. `explorer-rows` and `float-polish` are in `docs/queue-feature.md`; `one-accent` and `glyph-audit` are planned items, which reach the queue through the planner's plan and are named here until then. A row leaves this table in the change that closes it.
+Where the shipped code differs from this file at `6bb8f2a`, and the item that closes it. `float-polish` is in `docs/queue-feature.md`; `one-accent` and `glyph-audit` are planned items, which reach the queue through the planner's plan and are named here until then. A row leaves this table in the change that closes it.
 
 | Gap | Where | Closing item |
 | --- | --- | --- |
 | The sidebar header is a sapphire fill | `carat/adapters/frame_presenter.rb:992` | `one-accent` |
 | Four selection marks: the palette band (PmenuSel) | `carat/adapters/frame_presenter.rb:714` | `one-accent` |
-| Four selection marks: the explorer's `›` | `carat/plugins/explorer/tree.rb:167`, the icon `current` at `carat/domain/icons.rb:63` | `explorer-rows` |
 | Float titles are centered | `carat/adapters/frame_presenter.rb:737`, `:744` | `float-polish` |
 | Notice titles are centered | `carat/adapters/frame_presenter.rb:550` | `float-polish` |
 | `◆` is information and constant | `carat/domain/icons.rb:66`, `:90` | `glyph-audit` |

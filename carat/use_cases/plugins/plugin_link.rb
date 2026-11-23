@@ -85,6 +85,15 @@ module Carat
 
       # Returns a Response.
       # @rbs title: String
+      # @rbs row: Integer
+      def mark_scratch_row(title, row)
+        why = refusal
+        return PluginApi::Response.failure(why) unless why.empty?
+        @windows.mark_scratch_row(@name, title, row)
+      end
+
+      # Returns a Response.
+      # @rbs title: String
       def close_scratch(title)
         why = refusal
         return PluginApi::Response.failure(why) unless why.empty?

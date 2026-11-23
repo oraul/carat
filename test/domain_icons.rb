@@ -80,7 +80,7 @@ module DomainIconsTest
     end
 
     t.assert_equal(38, I::NAMES.length, "thirty-eight icon names, twelve of them completion kinds, two the branch counts, and three the git line signs")
-    t.assert_equal(">", I.glyph("current", "ascii"), "the ascii current marker is >")
+    t.assert_equal(["|", "▎"], [I.glyph("current", "ascii"), I.glyph("current", "unicode")], "the current marker is the bar ▎, a vertical bar in ascii")
     t.assert_equal(true, I.set?("unicode"), "unicode is a set")
     t.assert_equal(false, I.set?("emoji"), "emoji is not a set")
 

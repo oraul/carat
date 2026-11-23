@@ -196,6 +196,7 @@ module Carat
             report_window(host, opened)
             return
           end
+          mark_current(host, tree)
           row = tree.row_of(@followed)
           host.move_cursor(row, 0) if row >= 0
         end
@@ -263,7 +264,6 @@ module Carat
           n = tree.at(row)
           return if n.nil?
           if n.directory
-            return if n.root?
             if how == :toggle
               tree.toggle(n.path)
             elsif how == :edit
@@ -309,13 +309,14 @@ module Carat
           tree.build(host)
           again = host.open_scratch(TITLE, side(host), width(host), tree_lines(host, tree), keymap)
           return unless again.ok
+          mark_current(host, tree)
           host.focus_window(host.editing_window.window)
         end
 
         #: (Carat::PluginApi::Host, Tree, Integer) -> void
         def collapse(host, tree, row)
           n = tree.at(row)
-          return if n.nil? || n.root?
+          return if n.nil?
           if n.directory && tree.expanded?(n.path)
             tree.collapse(n.path)
             refresh(host, tree)
@@ -339,7 +340,7 @@ module Carat
         #: (Carat::PluginApi::Host, Tree, Integer) -> void
         def root_at_cursor(host, tree, row)
           n = tree.at(row)
-          return if n.nil? || n.root?
+          return if n.nil?
           tree.reroot(n.directory ? n.path : PluginApi::Paths.dirname(n.path))
           refresh(host, tree)
           host.move_cursor(0, 0)
@@ -350,8 +351,8 @@ module Carat
         #: (Carat::PluginApi::Host, Tree, Integer) -> void
         def ask_create(host, tree, row)
           n = tree.at(row)
-          return if n.nil?
-          dir = n.directory ? n.path : PluginApi::Paths.dirname(n.path)
+          dir = tree.root
+          dir = n.directory ? n.path : PluginApi::Paths.dirname(n.path) unless n.nil?
           ask(host, "create", dir, "Create in #{label(tree, dir)}/: ", "")
         end
 
@@ -359,10 +360,6 @@ module Carat
         def ask_rename(host, tree, row)
           n = tree.at(row)
           return if n.nil?
-          if n.root?
-            host.message("Cannot rename the root", true)
-            return
-          end
           ask(host, "rename", n.path, "Rename to: ", n.name)
         end
 
@@ -370,10 +367,6 @@ module Carat
         def ask_delete(host, tree, row)
           n = tree.at(row)
           return if n.nil?
-          if n.root?
-            host.message("Cannot delete the root", true)
-            return
-          end
           ask(host, "delete", n.path, "Delete #{n.name}? (y/n): ", "")
         end
 
@@ -495,6 +488,15 @@ module Carat
         def refresh(host, tree)
           tree.build(host)
           host.set_scratch_lines(TITLE, tree_lines(host, tree))
+          mark_current(host, tree)
+        end
+
+        # Draws the row of the marked file as the current entry, none when
+        # it is not visible; set_scratch_lines clears the mark, so every
+        # refill calls this.
+        #: (Carat::PluginApi::Host, Tree) -> void
+        def mark_current(host, tree)
+          host.mark_scratch_row(TITLE, tree.row_of(tree.marked))
         end
 
         #: (Carat::PluginApi::Host) -> String

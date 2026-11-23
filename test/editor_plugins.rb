@@ -37,6 +37,10 @@ module EditorPluginsTest
           "plugin.side.close" => "Close the list",
           "plugin.side.lines" => "Replace the list's lines",
           "plugin.side.nope" => "Replace the lines of a list that does not exist",
+          "plugin.side.mark" => "Mark row 1 of the list as the current entry",
+          "plugin.side.unmark" => "Mark no row of the list",
+          "plugin.side.mark_far" => "Mark row 9 of the list",
+          "plugin.side.mark_nope" => "Mark a row of a list that does not exist",
           "plugin.side.file" => "Open b.txt in the editing window",
           "plugin.side.far" => "Focus window id 9",
           "plugin.side.count" => "Report the count and the register",
@@ -47,7 +51,7 @@ module EditorPluginsTest
           "plugin.side.boom" => "Raise"
         },
         commands: {},
-        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here", "keymap.normal <leader>tb plugin.side.panel", "keymap.normal <leader>tv plugin.side.other", "keymap.normal <leader>tu plugin.side.top", "keymap.normal <leader>tz plugin.side.boom"],
+        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>ta plugin.side.mark", "keymap.normal <leader>ts plugin.side.unmark", "keymap.normal <leader>td plugin.side.mark_far", "keymap.normal <leader>tg plugin.side.mark_nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here", "keymap.normal <leader>tb plugin.side.panel", "keymap.normal <leader>tv plugin.side.other", "keymap.normal <leader>tu plugin.side.top", "keymap.normal <leader>tz plugin.side.boom"],
         events: [], options: [], option_types: {}, filetypes: []
       )
     end
@@ -70,6 +74,10 @@ module EditorPluginsTest
       when "plugin.side.close" then report(host.close_scratch("list"))
       when "plugin.side.lines" then report(host.set_scratch_lines("list", ["x"]))
       when "plugin.side.nope" then report(host.set_scratch_lines("nope", ["x"]))
+      when "plugin.side.mark" then report(host.mark_scratch_row("list", 1))
+      when "plugin.side.unmark" then report(host.mark_scratch_row("list", -1))
+      when "plugin.side.mark_far" then report(host.mark_scratch_row("list", 9))
+      when "plugin.side.mark_nope" then report(host.mark_scratch_row("nope", 0))
       when "plugin.side.file" then report_window(host.open_file(host.editing_window.window, "b.txt"))
       when "plugin.side.far" then report_window(host.focus_window(9))
       when "plugin.side.here" then report_window(host.open_file(host.scratch_window("list").window, "b.txt"))
@@ -311,6 +319,23 @@ module EditorPluginsTest
     t.assert_equal("failed 0 No scratch buffer nope", h.message, "an unknown title fails")
     h.type(":w<CR>")
     t.assert_equal(E382, h.message, "writing a scratch buffer is refused")
+
+    # Marking a row (API 2.17). Scenarios: A plugin marks a row, A row
+    # outside the buffer, and Clearing the mark: the row is kept on the
+    # buffer, a row outside it or an unknown title fails, -1 clears it, and
+    # new lines clear it.
+    h = session(" to")
+    t.assert_equal(-1, h.buffer.marked_row, "a new scratch buffer has no marked row")
+    h.type(" ta")
+    t.assert_equal(["ok 0", 1], [h.message, h.buffer.marked_row], "mark_scratch_row marks the row")
+    h.type(" td")
+    t.assert_equal(["failed 0 Row 9 is outside the buffer", 1], [h.message, h.buffer.marked_row], "a row outside the buffer fails and changes nothing")
+    h.type(" tg")
+    t.assert_equal(["failed 0 No scratch buffer nope", 1], [h.message, h.buffer.marked_row], "an unknown title fails")
+    h.type(" ts")
+    t.assert_equal(["ok 0", -1], [h.message, h.buffer.marked_row], "-1 clears the mark")
+    h.type(" ta tl")
+    t.assert_equal(-1, h.buffer.marked_row, "set_scratch_lines clears the mark")
     h.type("x")
     t.assert_equal([[""], true], [h.lines, h.buffer.modified?], "editing the scratch buffer is allowed")
     h.type(":qa<CR>")

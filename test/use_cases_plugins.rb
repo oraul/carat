@@ -192,18 +192,18 @@ module UseCasesPluginsTest
     bad = Probe.new("probe", "3.0", [], ACTIONS, {}, [])
     rig = setup([bad], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 3.0, the host has 2.16"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
-    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.16"], host.errors, "the refusal is recorded")
+    t.assert_equal([false, "needs API 3.0, the host has 2.17"], [host.enabled?("probe"), host.reason("probe")], "a newer major version is refused with both versions")
+    t.assert_equal(["plugin probe: needs API 3.0, the host has 2.17"], host.errors, "the refusal is recorded")
     t.assert_equal([], bad.log, "a refused plugin is not activated")
 
-    minor = Probe.new("probe", "2.17", [], ACTIONS, {}, [])
+    minor = Probe.new("probe", "2.18", [], ACTIONS, {}, [])
     rig = setup([minor], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 2.17, the host has 2.16"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused, as in A plugin written against 2.10 still loads")
+    t.assert_equal([false, "needs API 2.18, the host has 2.17"], [host.enabled?("probe"), host.reason("probe")], "a newer minor version is refused, as in A plugin written against 2.10 still loads")
     older = Probe.new("probe", "1.3", [], ACTIONS, {}, [])
     rig = setup([older], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([false, "needs API 1.3, the host has 2.16"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
+    t.assert_equal([false, "needs API 1.3, the host has 2.17"], [host.enabled?("probe"), host.reason("probe")], "an older major version is refused")
     same = Probe.new("probe", "2.0", [], ACTIONS, {}, [])
     rig = setup([same], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
@@ -212,12 +212,12 @@ module UseCasesPluginsTest
     last = Probe.new("probe", "2.10", [], ACTIONS, {}, [])
     rig = setup([last], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([true, "", "2.16"], [host.enabled?("probe"), host.reason("probe"), Carat::PluginApi::VERSION], "A plugin written against 2.10 still loads on the 2.16 host")
+    t.assert_equal([true, "", "2.17"], [host.enabled?("probe"), host.reason("probe"), Carat::PluginApi::VERSION], "A plugin written against 2.10 still loads on the 2.17 host")
     # Scenario: A plugin written against 2.11 still loads.
     before = Probe.new("probe", "2.11", [], ACTIONS, {}, [])
     rig = setup([before], "")
     state, host, keymap, files, ex = rig.state, rig.host, rig.keymap, rig.files, rig.ex
-    t.assert_equal([true, ""], [host.enabled?("probe"), host.reason("probe")], "A plugin written against 2.11 still loads on the 2.16 host")
+    t.assert_equal([true, ""], [host.enabled?("probe"), host.reason("probe")], "A plugin written against 2.11 still loads on the 2.17 host")
     # Scenario: A plugin written against 2.12 still loads, its border bool
     # drawn in option.winborder.
     older_api = Probe.new("probe", "2.12", [], ACTIONS, {}, [])
@@ -226,7 +226,7 @@ module UseCasesPluginsTest
     boxed = older_api.host.open_float(A::FloatOptions.at(2, 0, 1, 4), ["y"]).window
     bare = older_api.host.open_float(A::FloatOptions.new(anchor: "editor", row: 5, col: 0, height: 1, width: 4, border: false, title: "", z: 50, enter: false), ["z"]).window
     floats = state.tab.floats
-    t.assert_equal([true, "", [boxed > 0, "rounded", 1], [bare > 0, 0]], [host.enabled?("probe"), host.reason("probe"), [boxed > 0, floats.at(0).style_under(state.options.winborder), floats.at(0).edge], [bare > 0, floats.at(1).edge]], "A plugin written against 2.12 still loads on the 2.16 host: its bordered float in option.winborder, its unbordered one with no edge")
+    t.assert_equal([true, "", [boxed > 0, "rounded", 1], [bare > 0, 0]], [host.enabled?("probe"), host.reason("probe"), [boxed > 0, floats.at(0).style_under(state.options.winborder), floats.at(0).edge], [bare > 0, floats.at(1).edge]], "A plugin written against 2.12 still loads on the 2.17 host: its bordered float in option.winborder, its unbordered one with no edge")
     # Scenario: A plugin requests a border style.
     styler = Probe.new("probe", "2.13", [], ACTIONS, {}, [])
     rig = setup([styler], "")

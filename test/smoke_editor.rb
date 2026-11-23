@@ -253,7 +253,7 @@ module SmokeEditorTest
     settle(reader, out, 0.5)
     drawn = out.byteslice(mark, out.bytesize - mark)
     t.assert_true(drawn.include?("explorer"), "<leader>e opens the tree, titled explorer")
-    t.assert_true(drawn.include?("▾".b), "the tree's root line has the open folder icon")
+    t.assert_true(drawn.include?("▸".b), "the tree starts at the root's entries: its first rows are the closed folders, with no open root folder")
     writer.write("\x17l")
     settle(reader, out, 0.5)
     writer.write(":q\r")

@@ -636,7 +636,8 @@ module Carat
           fold = folded && row < count ? folds.closed_at(row) : -1
           @mark_here = marked && fold < 0 && row < count
           # The row's guides and whether it draws marks, one repaint input.
-          guide = (guided ? @guides.key(i) : 0) * 2 + (@mark_here ? 1 : 0)
+          here = row < count && fold < 0 && buffer.marked_row == row
+          guide = ((guided ? @guides.key(i) : 0) * 2 + (@mark_here ? 1 : 0)) * 2 + (here ? 1 : 0)
           if fold >= 0
             shown_last = folds.last_of(fold)
             line = folds.label(fold, buffer.line(folds.first_of(fold)), text_width)
@@ -670,6 +671,7 @@ module Carat
             paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax, row, current, number_group(layer, cur, number, options))
             @repainted[frame_row] = 1 if @floating
             frame.lift(frame_row, x, x + width, layer) if layer > 0
+            paint_marked_row(frame, frame_row, x, width, surface) if here
             # A row painted after the highlighting budget stopped misses
             # matches, so its stamp is one no frame draws and the next
             # frame, with a fresh budget, paints it again.
@@ -876,6 +878,16 @@ module Carat
         paint_matches(frame, frame_row, x + gutter, decoded, text_width, left, line, row, current) if @drawn > 0
         paint_pair(frame, frame_row, x + gutter, decoded, text_width, left, row) if @pair_here > 0
         paint_selection(frame, frame_row, x + gutter, text_width, left) if @sel_from <= @sel_to || @sel_end >= 0
+      end
+
+      # Draws the row a plugin marked in its scratch buffer as the current
+      # entry (design section 8): the whole row over the selection fill,
+      # PmenuSel, and its first cell, which holds the bar, in PmenuMarkSel;
+      # under NO_COLOR only the bar. Both groups carry the window's layer.
+      #: (Domain::Frame, Integer, Integer, Integer, Integer) -> void
+      def paint_marked_row(frame, frame_row, x, width, surface)
+        frame.fill(frame_row, x, x + width, Domain::Highlight::POPUP_MENU_SELECTED + surface) unless @plain
+        frame.fill(frame_row, x, x + 1, Domain::Highlight::POPUP_MENU_MARK_SELECTED + surface)
       end
 
       # Gives the matches of the highlighted pattern on the row being

@@ -64,15 +64,15 @@ module EditorLazyPluginsTest
     # Scenario "The explorer activates on its key".
     h = editor_on("a.md")
     h.type(" e")
-    t.assert_equal([true, 2, "explorer", [2, 0]], [h.plugins.active?("explorer"), h.window_count, h.state.window.buffer.title, h.cursor], "the explorer activates on its key and opens focused on the current file")
-    t.assert_equal([" - proj", "   + lib", ">  m a.md", "   r b.rb"], h.lines, "the tree marks the file the editor was on before the explorer loaded")
+    t.assert_equal([true, 2, "explorer", [1, 0]], [h.plugins.active?("explorer"), h.window_count, h.state.window.buffer.title, h.cursor], "the explorer activates on its key and opens focused on the current file")
+    t.assert_equal([" + lib", "|m a.md", " r b.rb"], h.lines, "the tree marks the file the editor was on before the explorer loaded")
     h.type("j<CR>")
     t.assert_equal([2, "b.rb"], [h.window_count, h.buffer.path_text], "and works as before: Enter opens the file in the editing window")
 
     # Scenario "The explorer activates on its ex command".
     h = editor_on("a.md")
     h.type(":Explorer<CR>")
-    t.assert_equal([true, 2, "explorer", [2, 0]], [h.plugins.active?("explorer"), h.window_count, h.state.window.buffer.title, h.cursor], "the explorer activates on its ex command and opens its window")
+    t.assert_equal([true, 2, "explorer", [1, 0]], [h.plugins.active?("explorer"), h.window_count, h.state.window.buffer.title, h.cursor], "the explorer activates on its ex command and opens its window")
 
     # Scenario "The finder activates on its key".
     h = editor_on("a.md")

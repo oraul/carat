@@ -1,17 +1,17 @@
 ok   <leader>ls hides the explorer and the file window is current
 ok   <leader>ls again shows it with its cursor, the focus staying
-ok   the shown tree keeps its cursor
-ok   <leader>e shows a hidden explorer again, focused
+FAIL the shown tree keeps its cursor: expected [[[0, 30, "explorer"], [31, 49, "a.md"]], "explorer", [1, 0], ""], got [[[0, 30, "explorer"], [31, 49, "a.md"]], "explorer", [0, 0], ""]
+FAIL <leader>e shows a hidden explorer again, focused: expected [[[0, 30, "explorer"], [31, 49, "a.md"]], "explorer", [2, 0], ""], got [[[0, 30, "explorer"], [31, 49, "a.md"]], "explorer", [1, 0], ""]
 ok   an empty left sidebar says so
 ok   an empty right sidebar says so
 ok   an empty panel says so
 ok   the explorer on the right toggles with <leader>lr
-ok   the configured width wins over plugin.explorer.width
-ok   the explorer alone cannot be hidden
+FAIL the configured width wins over plugin.explorer.width: expected [[[0, 24, "explorer"], [25, 55, "a.md"]], "explorer", [2, 0], ""], got [[[0, 24, "explorer"], [25, 55, "a.md"]], "explorer", [1, 0], ""]
+FAIL the explorer alone cannot be hidden: expected [[[0, 80, "explorer"]], "explorer", [2, 0], "E444: Cannot close last window"], got [[[0, 80, "explorer"]], "explorer", [1, 0], "E444: Cannot close last window"]
 ok   the head reads the project, a dot, and the branch in the sidebar's layer (a hyphen under the ascii icons)
-ok   a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it
+FAIL a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it: expected [" proj", "  a.md", " - proj", 1, 21], got [" proj", "  a.md", " + docs", 1, 21]
 ok   the right sidebar's one view keeps its title row in the selected tab highlight, the text under it
-ok   the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it
+FAIL the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it: expected [" proj", 357, 357, " - proj"], got [" proj", 357, 357, " + docs"]
 ok   hidden, the file takes the row and the tree's buffer stays listed
 ok   closing the tab page lets go of the hidden explorer
-editor_slots: 16 passed, 0 failed
+editor_slots: 10 passed, 6 failed

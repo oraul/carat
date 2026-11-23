@@ -176,7 +176,7 @@ ok   the default git_added is one cell outside the private use areas
 ok   the default git_changed is one cell outside the private use areas
 ok   the default git_deleted is one cell outside the private use areas
 ok   thirty-eight icon names, twelve of them completion kinds, two the branch counts, and three the git line signs
-ok   the ascii current marker is >
+ok   the current marker is the bar ▎, a vertical bar in ascii
 ok   unicode is a set
 ok   emoji is not a set
 ok   default is unicode
