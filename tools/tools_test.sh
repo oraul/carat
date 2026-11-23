@@ -3190,7 +3190,7 @@ expect "run_state: a refused proof leaves the backlog" 0 "" diff -r docs/backlog
 # blocking sprint security review, or the plan's security first holds it.
 cp docs/sprints.tsv "$work/sprints.before"
 cp build/pipeline/sprint-2.json "$work/sprint-2.before"
-expect "run_state: groom refuses a run with no change" 1 "not by a run with no change" state groom
+expect "run_state: groom with no change is a usage error" 2 "groom CHANGE " state groom
 printf 'sprint-2 b7\n' > build/plan/sprint.carrier
 expect "run_state: groom stands down for another carrier" 0 "^groom: the plan of sprint-2 is carried by b7's package step; not applied again" state groom b6
 rm -f build/plan/sprint.carrier

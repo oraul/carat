@@ -350,14 +350,14 @@
 #                               before its " -- REASON", left out; the
 #                               entries the planner checks against HEAD
 #                               for evidence (groom's fixed and gone)
-#   groom [CHANGE]              nothing when CHANGE's run state sets
+#   groom CHANGE                nothing when CHANGE's run state sets
 #                               records=skip (the planning records excluded),
 #                               or, retiring the marker to sprint.applied,
 #                               when the sprint it names has its row in
 #                               BASE's sprints file (a row only in the
 #                               working tree's, the carrier's, keeps it,
 #                               so the other lane still reads the plan's
-#                               queues); refuse a run with no CHANGE; a
+#                               queues); a run with no CHANGE is a usage error; a
 #                               delivery's package step runs it
 #                               (planner-loop), the first while a plan
 #                               waits carrying it: nothing while
@@ -4721,7 +4721,7 @@ case "$command" in
   backlog-move) [ $# -eq 1 ] || usage; backlog_move "$1"; exit $? ;;
   backlog-pick) [ $# -ge 1 ] || usage; backlog_pick "$@"; exit $? ;;
   backlog-oldest) [ $# -ge 1 ] || usage; backlog_oldest "$@"; exit $? ;;
-  groom) [ $# -le 1 ] || usage; ! records_excluded groom "${1:-}" || exit 0; groom "${1:-}"; exit $? ;;
+  groom) [ $# -eq 1 ] || usage; ! records_excluded groom "$1" || exit 0; groom "$1"; exit $? ;;
   sprint-row)
     [ $# -eq 1 ] || { [ $# -eq 2 ] && [ "$2" = committed ]; } || usage
     [ $# -eq 1 ] || history_at=HEAD
