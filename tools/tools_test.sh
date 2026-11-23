@@ -3676,7 +3676,16 @@ expect "guard: merger refuses another gate of main's copy" 2 "other than merge B
 expect "guard: merger refuses another script under the worktree" 2 "the script tmp/.merge-gates/tools/run_state.sh is not one" guard merger 'sh tmp/.merge-gates/tools/run_state.sh show c'
 expect "guard: contributor refuses main's merge gates" 2 "is not a command of this profile" guard contributor 'sh tmp/.merge-gates/tools/gates.sh merge build/pipeline/c.body.md'
 expect "guard: merger verifies and records the merge" 0 "^$" guard merger 'git fetch -q --prune origin && git log -1 --format=%B origin/main && sh tools/run_state.sh set c merged abc1234 && git ls-remote --heads origin chore/x'
+# sprint-guard-lows: lane-close takes the change being merged, whose run state holds
+# the pushed head as gated: a real project with that run state, and one with a gate pass at another head.
+lcproj="$work/lcproj"
+mkdir -p "$lcproj/build/pipeline"
+h40=0123456789abcdef0123456789abcdef01234567
+printf '{\n  "pushed": "%s",\n  "gated": "%s"\n}\n' "$h40" "$h40" > "$lcproj/build/pipeline/c.json"
+printf '{\n  "pushed": "%s",\n  "gated": "none"\n}\n' "$h40" > "$lcproj/build/pipeline/other.json"
+PROJECT=$lcproj
 expect "guard: merger deletes the local branch and fast-forwards main" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+unset PROJECT
 # cheap-tier: the repository deletes a merged branch, so the merger runs
 # no git push at all, the remote branch deletion included.
 expect "guard: merger refuses the remote branch deletion" 2 "git push is not a command of this profile" guard merger 'git push origin --delete chore/x'
@@ -3733,7 +3742,9 @@ expect "guard: merger refuses open_pr message after a cd into a worktree, the br
 expect "guard: merger prints the squash message before a cd into a worktree" 0 "^$" guard merger 'sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567 && cd tmp/.lane-c'
 expect "guard: merger prints the squash message after a cd back to the project from a worktree" 0 "^$" guard merger 'cd tmp/.lane-c && cd /w && sh tools/open_pr.sh message c 0123456789abcdef0123456789abcdef01234567'
 expect "guard: merger refuses open_pr message of a path" 2 "tools/open_pr.sh message other than CHANGE SHA" guard merger 'sh tools/open_pr.sh message ../c 0123456789abcdef0123456789abcdef01234567'
+PROJECT=$lcproj
 expect "guard: merger records the merge and cleans up" 0 "^$" guard merger 'sh tools/run_state.sh set c merged abc1234 && sh tools/run_state.sh lane-close c && git ls-remote --heads origin chore/x && git checkout -q main && git merge -q --ff-only origin/main && git branch -D chore/x'
+unset PROJECT
 expect "guard: contributor merges a moved main into its worktree's branch" 0 "^$" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main c'
 expect "guard: merger refuses merge-main, the contributor's" 2 "tools/run_state.sh merge-main" guard merger 'sh tools/run_state.sh merge-main c'
 # sprint-guard-lows: lane-close and merge-main take only a change name.
@@ -3741,6 +3752,14 @@ expect "guard: merger refuses lane-close of a path" 2 "tools/run_state.sh lane-c
 expect "guard: merger refuses lane-close with no change or with two" 2 "tools/run_state.sh lane-close other than CHANGE" guard merger 'sh tools/run_state.sh lane-close c d'
 expect "guard: contributor refuses merge-main of a path" 2 "tools/run_state.sh merge-main other than CHANGE" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main ../c'
 expect "guard: contributor refuses merge-main with no change" 2 "tools/run_state.sh merge-main other than CHANGE" guard contributor 'cd tmp/.lane-c && sh tools/run_state.sh merge-main'
+# lane-close of a lane other than the one merged (its gated is none, or it has no run state) and merge-main outside its own worktree.
+PROJECT=$lcproj
+expect "guard: merger refuses lane-close of another lane whose run state is not gated" 2 "lane-close of other, whose run state does not record" guard merger 'sh tools/run_state.sh lane-close other'
+expect "guard: merger refuses lane-close of a change with no run state" 2 "lane-close of nope, whose run state does not record" guard merger 'sh tools/run_state.sh lane-close nope'
+expect "guard: merger lane-closes the change whose run state is gated at its pushed head" 0 "^$" guard merger 'sh tools/run_state.sh lane-close c'
+unset PROJECT
+expect "guard: contributor refuses merge-main of one lane in another lane's worktree" 2 "merge-main c outside its worktree tmp/.lane-c" guard contributor 'cd tmp/.lane-other && sh tools/run_state.sh merge-main c'
+expect "guard: contributor refuses merge-main with no cd into a worktree" 2 "merge-main c outside its worktree tmp/.lane-c" guard contributor 'sh tools/run_state.sh merge-main c'
 expect "guard: contributor proposes and validates" 0 "^$" guard contributor 'npx -y @fission-ai/openspec@2.1.1 new change c && npx @fission-ai/openspec@2.1.1 validate \"c\" --strict --no-interactive && openspec status --change c --json'
 expect "guard: contributor generates and checks" 0 "^$" guard contributor 'make new-ex-command NAME=sort SPEC=\"sor[t]\" AREA=12 && make test-one T=test/domain_buffer.rb && make diagnose-one T=carat/domain/buffer.rb && make -s lint docs-lint gates && make snapshots && make spec-validate'
 expect "guard: contributor commits" 0 "^$" guard contributor 'git add -A && git -c user.name=\"Claude\" -c user.email=\"noreply@anthropic.com\" commit -q -m \"feat: x\" -m \"Co-Authored-By: Claude <noreply@anthropic.com>\" && git commit -q -F tmp/message.txt'

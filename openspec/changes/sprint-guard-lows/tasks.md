@@ -15,3 +15,7 @@
 
 - [x] 3.1 `sprint-row COMMIT other` (a second word other than `committed`) had no test: added the usage case in `tools/tools_test.sh`
 - [x] 3.2 The headings whose fix the delivery cannot derive, the moved RISKY_CONFIG heading, and the untracked marker are recorded in `docs/findings/sprint-guard-lows.md`, recorded
+
+## Guard review round
+
+- [x] 4.1 Bind the merger's `lane-close` to the change whose run state holds the pushed head as gated, and the contributor's `merge-main` to a `cd` into `tmp/.lane-CHANGE` (`tools/agent_guard.sh`); proved by the guard cases of `tools/tools_test.sh` that refuse another lane's `lane-close` and a `merge-main` in another worktree or none

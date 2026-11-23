@@ -6,7 +6,7 @@ Five security Lows of the guard and gate scripts and four pipeline defects are q
 
 ## What Changes
 
-- Change `tools/agent_guard.sh`: the merger's `lane-close` and the contributor's `merge-main` take exactly one argument, a `CHANGE_NAME`, as every other run state command that names a change does.
+- Change `tools/agent_guard.sh`: the merger's `lane-close` and the contributor's `merge-main` take exactly one argument, a `CHANGE_NAME`, as every other run state command that names a change does, and bind it to the run: `lane-close CHANGE` only when `build/pipeline/CHANGE.json` is a regular file recording the pushed head as gated too (the merge gates reset every other run state's gated, so only the change being merged qualifies), and `merge-main CHANGE` only after a `cd` into `tmp/.lane-CHANGE`, the directory `merge-main` runs in.
 - Change `tools/gates.sh` (`groom_row`): compare the appended sprint row with groom's row byte for byte as files, so a trailing blank line no longer passes; refuse a branch whose lane history files were edited, not only appended to, since the security review's commit; read groom's row from HEAD's committed history rows (`sprint-row COMMIT committed`), never the working tree.
 - Add to `tools/run_state.sh`: `sprint-row COMMIT committed`, which reads the history rows with `git show HEAD:FILE` (`lane_rows`, `history_at`); `add_note` drops an exact repeat of a `quality` note as it drops one of a `security` note.
 - Confirm the Security line's suffix and the Sweep line are already proved by the cases added with 8b8e44e (#307): no code change.
