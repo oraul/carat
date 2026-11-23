@@ -87,7 +87,8 @@
 #   get CHANGE KEY              print one value, empty when absent
 #   gated CHANGE clear|pass     the merge gates' record: none (in every run
 #                               state), or HEAD's full sha
-#   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, gated,
+#   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, note.*, gated,
+#                               change, branch, and repo (init's, which open_pr wait checks the head by),
 #                               stage.*, at.*, and moved, which their own commands write,
 #                               a pushed value but a commit hash, a ci value
 #                               but "red|green COMMIT" at the pushed head, and
@@ -494,7 +495,9 @@
 #                               build/plan) into it, each target made first
 #                               when missing, so a lane opened before make
 #                               toolchain shares the one it installs; print
-#                               its path
+#                               its path; refuses, exit 1, a branch that
+#                               tracks one of those paths, commits a tmp or
+#                               build link, or a lane link to another target
 #   lane-close CHANGE           remove the change's worktree, after its merge
 #                               or when its run is replaced, never a link's
 #                               target; nothing when none stands
@@ -506,7 +509,8 @@
 #                               in the lane queues keeps the branch's own
 #                               lane queue (lane_of) and BASE's other; any
 #                               other conflict aborts the merge and names
-#                               its files, exit 1
+#                               its files, exit 1; git runs with no global
+#                               or system configuration and no hook
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
@@ -4292,6 +4296,18 @@ lane_open() {
   fi
   # Every target is made first, so a lane opened before make toolchain
   # still links the one toolchain the main checkout installs into later.
+  # The branch's tree is not trusted: a link target the branch commits (a
+  # tmp or build symlink out of the repository), or a path of the shared
+  # state the branch tracks (a build/pipeline of its own, read as the run
+  # state), would steer what the lane reads and writes, so it is refused.
+  for l in $LANE_LINKS; do
+    parent=$(dirname "$l")
+    [ ! -L "$dir/$parent" ] || die "lane-open: $dir/$parent is a link: the branch commits it; the lane's links go only into a real directory"
+    [ -z "$(git -C "$dir" ls-files -- "$l")" ] || die "lane-open: the branch tracks $l, a path of the shared state the lane links to the main checkout's"
+    if [ -L "$dir/$l" ] && [ "$(readlink "$dir/$l")" != "$top/$l" ]; then
+      die "lane-open: $dir/$l is a link to $(readlink "$dir/$l"), not to $top/$l"
+    fi
+  done
   for l in $LANE_LINKS; do
     mkdir -p "$l" || die "lane-open: cannot make $top/$l"
     mkdir -p "$dir/$(dirname "$l")"
@@ -4344,7 +4360,7 @@ merge_main() {
   own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
-  if git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+  if pinned_git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
       -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" > /dev/null 2>&1; then
     rm -f "$attrs"
     echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
@@ -4362,15 +4378,15 @@ merge_main() {
       git diff --name-only --diff-filter=U | grep -q -x -F "docs/queue-$l.md" || continue
       side=--theirs
       [ "$l" != "$own" ] || side=--ours
-      { git checkout "$side" -- "docs/queue-$l.md" && git add -- "docs/queue-$l.md"; } || { git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
+      { pinned_git checkout "$side" -- "docs/queue-$l.md" && pinned_git add -- "docs/queue-$l.md"; } || { pinned_git merge --abort 2>/dev/null; die "merge-main: docs/queue-$l.md not resolved"; }
     done
-    if git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
+    if pinned_git -c user.name=Claude -c user.email=noreply@anthropic.com commit -q --no-edit \
         -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" > /dev/null 2>&1; then
       echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD), the $own lane queue kept from $branch and the other from $base"
       return 0
     fi
   fi
-  git merge --abort 2>/dev/null
+  pinned_git merge --abort 2>/dev/null
   echo "merge-main: conflicts in ${files:-no file named}; merge $base by hand by the conflict rules, or stop and name each file where both sides changed the same logic"
   exit 1
 }
@@ -4512,7 +4528,8 @@ case "$command" in
     [ $# -eq 2 ] || usage
     value=$2
     case "$1" in
-      review.*|phase.*|stage.*|at.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, review and plan-needed, check, gated, moved)" ;;
+      review.*|phase.*|stage.*|at.*|note.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, review and plan-needed, note, check, gated, moved)" ;;
+      change|branch|repo) die "set: refused: $1 is written only by init, since open_pr wait and the merge read it" ;;
       pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
       hold) [ "$2" = security-first ] || die "set: refused: hold is security-first, the plan's security first sprint-planning records, not $2" ;;
       merged) value=$(merged_at "$2" set) || exit 1 ;;

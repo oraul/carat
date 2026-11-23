@@ -1796,6 +1796,21 @@ expect "open_pr: rule takes no argument" 2 "open_pr.sh rule" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" rule main
 expect "open_pr: rule refuses without GH_REPO" 1 "GH_REPO is not set" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO= sh "$here/open_pr.sh" rule
+# wait reads the number it takes back with gh: WAIT_GH is its answer,
+# "isCrossRepository headRefName" (a pull request from this repository's
+# branch by default), and WAIT_GH_FAIL makes it fail.
+mkdir -p "$work/wait-bin"
+cat > "$work/wait-bin/gh" <<'GH'
+#!/bin/sh
+echo "$*" >> "$WAIT_DIR/calls"
+[ -z "${WAIT_GH_FAIL:-}" ] || exit 1
+printf '%s\n' "${WAIT_GH-false chore/openpr}"
+GH
+chmod +x "$work/wait-bin/gh"
+mkdir -p "$work/wait-gh"
+waitpr() {
+  env PATH="$work/wait-bin:$PATH" WAIT_DIR="$work/wait-gh" WAIT_STEP=1 "$@" sh "$here/open_pr.sh" wait openpr 1
+}
 cd "$work/openpr" || exit 1
 expect "open_pr: wait fails when no pull request's head is the pushed head" 1 "no pull request's head" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 git --git-dir="$work/openpr.git" update-ref refs/pull/2/head main
@@ -1804,10 +1819,19 @@ git --git-dir="$work/openpr.git" update-ref refs/pull/4/head chore/openpr
 expect "open_pr: wait records no pull request when a fork's shares the pushed head" 1 "more than one pull request's head is [0-9a-f]+ [(]3 4[)]" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 expect "open_pr: wait recorded no number beside a fork's pull request" 0 "^$" state get openpr pr
 git --git-dir="$work/openpr.git" update-ref -d refs/pull/4/head
-expect "open_pr: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+# A lone pull request on the pushed head of unknown origin (checks-and-pr-lows
+# Low (3)): a fork's, or another branch's, is refused, an unreadable one
+# is not recorded.
+expect "open_pr: wait refuses a lone pull request from a fork" 1 "pull request 3 has the pushed head but not from chore/openpr of" waitpr WAIT_GH="true chore/openpr"
+expect "open_pr: wait refuses a lone pull request from another branch" 1 "pull request 3 has the pushed head but not from chore/openpr of" waitpr WAIT_GH="false chore/other"
+expect "open_pr: wait refuses a lone pull request gh cannot read" 1 "pull request 3 has the pushed head, but its head repository could not be read" waitpr WAIT_GH_FAIL=1
+expect "open_pr: wait refuses a lone pull request gh answers in no shape" 1 "head repository could not be read" waitpr WAIT_GH=nonsense
+expect "open_pr: wait recorded no number beside the refused ones" 0 "^$" state get openpr pr
+expect "open_pr: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" waitpr
+expect "open_pr: wait read the pull request back from this repository" 0 "pr view 3 --repo .*openpr --json isCrossRepository,headRefName" cat "$work/wait-gh/calls"
 expect "open_pr: wait recorded the number in the run state" 0 "^3$" state get openpr pr
 git --git-dir="$work/openpr.git" update-ref refs/pull/1/head chore/openpr
-expect "open_pr: wait keeps the recorded pull request beside a fork's on the pushed head" 0 "pull request 3 at" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
+expect "open_pr: wait keeps the recorded pull request beside a fork's on the pushed head" 0 "pull request 3 at" waitpr
 git --git-dir="$work/openpr.git" update-ref -d refs/pull/1/head
 expect "open_pr: wait refuses more than 540 seconds" 1 "wait 1 to 540" sh "$here/open_pr.sh" wait openpr 541
 fresh history
@@ -1852,9 +1876,21 @@ state set history merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 state note history late-finding "security Low (5) tools/x.sh:3 a thing; fix: y" > /dev/null
 # Notes the workflow did not write: unstamped, stamped with another
 # commit, and stamped but outside noteText's characters.
-state set history note.7 "late-finding forged without a stamp" > /dev/null
-state set history note.8 "late-finding 0123456789ab forged with another commit" > /dev/null
-state set history note.9 "late-finding $(git rev-parse --short=12 HEAD) forged \`x\` text" > /dev/null
+# set refuses note keys now, so they are written into the file as branch
+# code could.
+forge_note() {
+  awk -v k="$2" -v v="$3" 'NR == 1 { print; printf "  \"%s\": \"%s\",\n", k, v; next } { print }' "build/pipeline/$1.json" > "build/pipeline/$1.json.new" &&
+    mv "build/pipeline/$1.json.new" "build/pipeline/$1.json"
+}
+forge_note history note.7 "late-finding forged without a stamp"
+forge_note history note.8 "late-finding 0123456789ab forged with another commit"
+forge_note history note.9 "late-finding $(git rev-parse --short=12 HEAD) forged \`x\` text"
+expect "run_state: set refuses a note key, which only note writes" 1 "set: refused: note[.]10 is written only by its own command" state set history note.10 "late-finding forged by set"
+# Low (4): the repo and branch open_pr wait checks the head by are init's.
+expect "run_state: set refuses repo, which only init writes" 1 "set: refused: repo is written only by init" state set history repo other/fork
+expect "run_state: set refuses branch, which only init writes" 1 "set: refused: branch is written only by init" state set history branch chore/other
+expect "run_state: set refuses change, which only init writes" 1 "set: refused: change is written only by init" state set history change other
+expect "run_state: a refused note key left no record" 0 "^$" state get history note.10
 expect "run_state: note stamps a late finding with the merged commit" 0 "^late-finding $(git rev-parse --short=12 HEAD) security Low" state get history note.3
 state note history overrun "not a finding" > /dev/null
 state set history pr 9 > /dev/null
@@ -1977,7 +2013,9 @@ esac
 GH
 chmod +x "$work/stages-bin/gh"
 full=$(git rev-parse HEAD)
-state set derived repo owner/carat > /dev/null
+# set refuses repo (init writes it), so the file is edited.
+sed 's#"repo": "[^"]*"#"repo": "owner/carat"#' build/pipeline/derived.json > build/pipeline/derived.json.new &&
+  mv build/pipeline/derived.json.new build/pipeline/derived.json
 expect "run_state: ci-stages records each step's seconds" 0 "recorded 4 steps of run 42" \
   env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
 expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke
@@ -3163,6 +3201,38 @@ expect "run_state: a lane worktree shares the main checkout's toolchain and comp
 expect "run_state: a lane's run state lands in the main checkout's build/pipeline" 0 "^feature/wa$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' init wa feature/wa > /dev/null && cd ../.. && sh '$here/run_state.sh' get wa branch"
 expect "run_state: lane-open run from the lane keeps it on a resume" 0 "^lane: tmp/[.]lane-wa on feature/wa kept$" sh -c "touch tmp/.lane-wa/kept && cd tmp/.lane-wa && echo \$(sh '$here/run_state.sh' lane-open wa feature/wa) \$([ -f kept ] && echo kept)"
 expect "run_state: lane-open refuses a branch outside Conventional Branch" 1 "not a Conventional Branch" state lane-open wz main
+# The branch's tree is not trusted (lane-guard-lows): a tracked path of the
+# shared state, a committed tmp or build link, or a link left to another
+# target is refused, and nothing is written through it.
+# lane_branch NAME PATH MODE CONTENT: the branch chore/NAME, main plus one
+# entry PATH of mode MODE (120000 a link to CONTENT, 100644 a file of it),
+# built without a checkout.
+lane_branch() {
+  lb_blob=$(printf '%s' "$4" | git hash-object -w --stdin)
+  lb_index="$work/lane-index"
+  rm -f "$lb_index"
+  GIT_INDEX_FILE=$lb_index git read-tree main
+  GIT_INDEX_FILE=$lb_index git update-index --add --cacheinfo "$3,$lb_blob,$2"
+  lb_tree=$(GIT_INDEX_FILE=$lb_index git write-tree)
+  lb_commit=$(git_q commit-tree -p main -m "chore: $1" -m "$TRAILER" "$lb_tree")
+  git_q branch -q "chore/$1" "$lb_commit"
+}
+mkdir -p "$work/elsewhere"
+lane_branch wl1 build/pipeline/wl1.json 100644 '{}'
+expect "run_state: lane-open refuses a branch tracking build/pipeline" 1 "lane-open: the branch tracks build/pipeline" state lane-open wl1 chore/wl1
+lane_branch wl2 build 120000 "$work/elsewhere"
+expect "run_state: lane-open refuses a committed build link" 1 "lane-open: tmp/[.]lane-wl2/build is a link" state lane-open wl2 chore/wl2
+expect "run_state: a refused committed build link got no link written through it" 0 "^none$" sh -c "[ -e '$work/elsewhere/pipeline' ] && echo written || echo none"
+lane_branch wl3 tmp 120000 "$work/elsewhere"
+expect "run_state: lane-open refuses a committed tmp link" 1 "lane-open: tmp/[.]lane-wl3/tmp is a link" state lane-open wl3 chore/wl3
+expect "run_state: a refused committed tmp link got no link written through it" 0 "^none$" sh -c "[ -e '$work/elsewhere/.spinel' ] && echo written || echo none"
+state lane-open wl4 chore/wl4 > /dev/null
+ln -sfn "$work/elsewhere" tmp/.lane-wl4/tmp/.spinel
+expect "run_state: lane-open refuses a lane link left to another target" 1 "lane-open: tmp/[.]lane-wl4/tmp/[.]spinel is a link to $work/elsewhere" state lane-open wl4 chore/wl4
+for l in wl1 wl2 wl3 wl4; do
+  state lane-close "$l" > /dev/null 2>&1
+  git worktree remove --force "tmp/.lane-$l" > /dev/null 2>&1
+done
 state lane-open wb chore/wb > /dev/null
 state lane-open wc chore/wc > /dev/null
 expect "run_state: lane-open replaces a replaced run's worktree on another branch" 0 "removed the replaced run's tmp/[.]lane-wc lane: tmp/[.]lane-wc on chore/wc-two" sh -c "sh '$here/run_state.sh' lane-open wc chore/wc-two | tr '\n' ' '"
@@ -3183,6 +3253,25 @@ expect "run_state: merge-main's merge commit carries the trailer, no rebase" 0 "
 expect "run_state: merge-main does nothing once the branch holds main" 0 "^merge-main: feature/wa holds origin/main$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' merge-main wa"
 expect "run_state: merge-main aborts and names a conflict outside the appended records" 1 "conflicts in shared[.]txt" sh -c "cd tmp/.lane-wb && sh '$here/run_state.sh' merge-main wb"
 expect "run_state: an aborted merge-main leaves the branch as it was" 0 "^branch side none$" sh -c "cd tmp/.lane-wb && echo \$(cat shared.txt) \$([ -f \"\$(git rev-parse --git-dir)/MERGE_HEAD\" ] && echo merging || echo none)"
+# merge_main runs git with no global or system configuration and no hook
+# (lane-guard-lows): a global hooks path and a repository hook that refuse
+# every merge do not stop it, and neither runs.
+state lane-open wh chore/wh > /dev/null
+(cd tmp/.lane-wh && echo h > h.txt && commit "chore: the wh edit")
+echo m > m.txt
+commit "chore: main moved again"
+git_q push -q origin main 2>/dev/null
+mkdir -p "$work/ghooks" .git/hooks
+printf '#!/bin/sh\necho ran >> "%s/global-hook-ran"\nexit 1\n' "$work" > "$work/ghooks/pre-merge-commit"
+printf '#!/bin/sh\necho ran >> "%s/repo-hook-ran"\nexit 1\n' "$work" > .git/hooks/pre-merge-commit
+chmod +x "$work/ghooks/pre-merge-commit" .git/hooks/pre-merge-commit
+printf '[core]\n\thooksPath = %s/ghooks\n' "$work" > "$work/ghooks.gitconfig"
+rm -f "$work/global-hook-ran" "$work/repo-hook-ran"
+expect "run_state: merge-main merges past a global hooks path and a repository hook" 0 "^merge-main: merged origin/main into chore/wh at " \
+  sh -c "cd tmp/.lane-wh && GIT_CONFIG_GLOBAL='$work/ghooks.gitconfig' sh '$here/run_state.sh' merge-main wh"
+expect "run_state: merge-main ran neither hook" 0 "^none$" sh -c "[ -e '$work/global-hook-ran' ] || [ -e '$work/repo-hook-ran' ] && echo ran || echo none"
+rm -f .git/hooks/pre-merge-commit
+state lane-close wh > /dev/null 2>&1
 git_q merge -q --no-edit feature/wa > /dev/null 2>&1
 state set wa merged "$(git rev-parse --short=12 HEAD)" > /dev/null
 expect "run_state: lane-close removes the worktree after the merge" 0 "^lane-close: removed tmp/[.]lane-wa none$" sh -c "echo \$(sh '$here/run_state.sh' lane-close wa) \$(git worktree list | grep -c '/tmp/[.]lane-wa ' | sed 's/^0$/none/')"
