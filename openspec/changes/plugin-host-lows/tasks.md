@@ -15,3 +15,10 @@
 ## 3. Docs
 
 - [x] 3.1 Update `docs/codebase-map.md` and `docs/plugins.md`
+
+## Quality review
+
+- [x] 4.1 The grep header comment, README.md, and docs/plugins.md named only the line cap; they now name the byte budget
+- [x] 4.2 With `PATH` unset the runner starts nothing, where the default search used to run; recorded as the intended refusal in the proposal's assumptions, no change
+- [x] 4.3 The registry's own locals named `e` are not renamed; recorded in `docs/findings/plugin-host-lows.md`, recorded
+- [x] 4.4 The grep reads stay synchronous on the editor thread, bounded by bytes only; recorded in `docs/findings/plugin-host-lows.md`, recorded

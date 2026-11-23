@@ -35,6 +35,7 @@ ok   the width survives a split of the other window, the file windows under thei
 ok   reopening focuses the side window
 ok   no room reports E36
 ok   the plugin closes its window
+ok   the plugin closes the view a hidden slot keeps
 ok   closing a list that is not shown fails
 ok   :q closes the side window
 ok   Ctrl-W q closes the side window
@@ -49,6 +50,8 @@ ok   the first view comes back in the same window
 ok   an unknown side is refused
 ok   the panel toggles off and on
 ok   a closed slot window empties the slot
+ok   the plugin's close lets go of the view its hidden slot kept: the buffer leaves the list and the slot is empty
+ok   a plugin that raised leaves no hidden slot holding its view
 ok   the header lists both views, the shown one selected
 ok   the view let go leaves the buffer list
 ok   the configured sizes win over the sizes the views ask for
@@ -98,4 +101,4 @@ ok   a binding of a plugin action loads
 ok   every problem is reported in file and line order
 ok   the message row shows the first with the count of the others
 ok   the default configuration has no problem
-editor_plugins: 100 passed, 0 failed
+editor_plugins: 103 passed, 0 failed

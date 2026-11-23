@@ -11,7 +11,8 @@ module Carat
       # FILE_ROWS being as many lines as the request's 256 KiB can hold,
       # and only when the file is small enough for that request; a file
       # that cannot be read or holds a NUL byte is skipped, and a line is
-      # cut at MAX_BYTES. Loading stops at MAX_LINES stored lines.
+      # cut at MAX_BYTES. Loading stops at MAX_LINES stored lines or
+      # READ_BUDGET bytes read.
       #
       # The query is split at spaces into terms, and a line matches when
       # it holds every term as a substring, in any order, ASCII case
