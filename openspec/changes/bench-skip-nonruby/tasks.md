@@ -22,3 +22,8 @@
 
 - [x] 5.1 Read a `Makefile`, `tools/spinel/`, or `tools/metrics.sh` change as `ruby yes` so a Spinel bump or flag change keeps the benchmark gate (`tools/lane_facts.sh`, `tools/tools_test.sh`, README.md, `docs/codebase-map.md`); fixes task 4.1
 - [x] 5.2 The relayed fact (task 4.2) needs a run-state command computing and recording it, which is new code outside this change's files; left, as recorded in `docs/findings/bench-skip-nonruby.md`
+
+## Closing advisories
+
+- [x] 6.1 Update the comment and the recorded note of `benchWithoutRuby` to list every path the ruby fact reads (`.claude/workflows/deliver-change.js`, `tools/tools_test.sh`)
+- [x] 6.2 The Makefile, `tools/spinel/`, and `tools/metrics.sh` gap was fixed in 5.1; the relayed fact stays recorded in `docs/findings/bench-skip-nonruby.md` (a run-state command would need new code)

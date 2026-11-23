@@ -937,12 +937,13 @@ async function laneHead() {
 }
 
 // A change whose committed diff against its base touches no Ruby code (no file
-// under carat/, bin/, bench/, or config/, no carat.rb) cannot change the
-// allocations or rounds the benchmark compares (bench-skip-nonruby). The
-// fact is read from git by tools/lane_facts.sh in a record start, never
-// from a contributor's claim, and holds only for a clean lane at the commit
-// the check passed at: ruby no, any other value (yes, unknown), a dirty or
-// unread lane, or another head keeps the gate.
+// under carat/, bin/, bench/, config/, or tools/spinel/, no carat.rb,
+// Makefile, or tools/metrics.sh) cannot change the allocations or rounds the
+// benchmark compares (bench-skip-nonruby). The fact is read from git by
+// tools/lane_facts.sh in a record start, never from a contributor's claim,
+// and holds only for a clean lane at the commit the check passed at: ruby
+// no, any other value (yes, unknown), a dirty or unread lane, or another
+// head keeps the gate.
 function noRubyAt(lane, at) {
   return Boolean(lane) && lane.ruby === 'no' && lane.dirty === 0 && sameCommit(lane.head, at)
 }
@@ -951,7 +952,7 @@ function noRubyAt(lane, at) {
 async function benchWithoutRuby() {
   if (!doneAtHead('check') || !noRubyAt(await laneHead(), head)) return false
   verdict('bench', true)
-  note(`benchmark at ${head}: no Ruby code changed (no file under carat/, bin/, bench/, or config/, no carat.rb); no agent`)
+  note(`benchmark at ${head}: no Ruby code changed (no file under carat/, bin/, bench/, config/, or tools/spinel/, no carat.rb, Makefile, or tools/metrics.sh); no agent`)
   reviewed('bench', true, head, { blocking: 0 })
   return true
 }

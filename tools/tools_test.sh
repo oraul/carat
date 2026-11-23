@@ -5735,7 +5735,7 @@ bench_js() {
     $1
   })()"
 }
-expect "workflow: a docs-and-tools-only diff records the bench review passed at the head, noting no Ruby code changed, and starts no agent" 0 '^\{"ran":true,"starts":0,"recorded":\["verdict bench true","note benchmark at bbbbbbbbbbbb: no Ruby code changed [(]no file under carat/, bin/, bench/, or config/, no carat.rb[)]; no agent","review bench true bbbbbbbbbbbb 0"\]\}$' \
+expect "workflow: a docs-and-tools-only diff records the bench review passed at the head, noting no Ruby code changed, and starts no agent" 0 '^\{"ran":true,"starts":0,"recorded":\["verdict bench true","note benchmark at bbbbbbbbbbbb: no Ruby code changed [(]no file under carat/, bin/, bench/, config/, or tools/spinel/, no carat.rb, Makefile, or tools/metrics.sh[)]; no agent","review bench true bbbbbbbbbbbb 0"\]\}$' \
   bench_js "const ran = await benchWithoutRuby(); return { ran, starts, recorded }"
 expect "workflow: a diff touching carat/, bin/, bench/, or config/ (ruby yes) records nothing and keeps the benchmark gate" 0 '^\{"ran":false,"recorded":\[\]\}$' \
   bench_js "lane = { head: 'bbbbbbbbbbbb', dirty: 0, ruby: 'yes' }; const ran = await benchWithoutRuby(); return { ran, recorded }"
