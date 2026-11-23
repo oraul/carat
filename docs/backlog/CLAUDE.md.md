@@ -166,3 +166,12 @@
 - Also: docs/goals.md
 - Category: pipeline
 - Added: 2026-11-22
+
+### doctor fails without node, while CLAUDE.md Stack (line 213) at Makefile:228 (sprint-30 sweep quality, note 16)
+
+- Location: Makefile:228
+- Why: doctor fails without node, while CLAUDE.md Stack (line 213) says a clone needs a C compiler, make, git, and curl, and area 2 of the map does not name node; doctor also does not check spinel-doctor, which toolchain installs
+- Fix: name node (the tools-test js helpers) in Stack and area 2 or report it as optional, and add spinel-doctor to the loop
+- Also: Makefile
+- Category: pipeline
+- Added: 2026-11-23

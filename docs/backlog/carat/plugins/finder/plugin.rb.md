@@ -58,14 +58,6 @@
 - Category: plugins
 - Added: 2026-11-18
 
-### The grep picker reads every listed file synchronously on the editor (sprint-20 review security Low (3), plugin.rb:186)
-
-- Location: `carat/plugins/finder/plugin.rb:186`
-- Why: In this change: the grep picker reads every listed file synchronously on the editor thread when it opens (up to MAX_FILES files of up to READ_LIMIT bytes each). Pressing <leader>fg in a very large or hostile repository can freeze the editor for a long time; it is a local denial of service that only the user can trigger.
-- Fix: Cap the total bytes read across files (stop when MAX_LINES fills or a byte budget is spent), read only what FILE_ROWS needs, or load in steps between keys so Esc stays responsive.
-- Category: security
-- Added: 2026-11-19
-
 ### The file finder builds its empty lists with Grep.no_strings (sprint-20 sweep quality, plugin.rb:70)
 
 - Location: `carat/plugins/finder/plugin.rb:70`
@@ -96,13 +88,6 @@
 - Why: the grep rows and the grep preview's title show a path through `Grep#safe`, but the file finder's rows and preview title show the listed path as it is, so a file name with a control byte or a bidirectional override reaches the terminal there.
 - Fix: pass the file finder's row text and preview title through the same safe-text path (make it a public `Finder` helper shared with `Grep`); accepted when a test lists a file named with a tab and an escape and shows spaces in the list and the title.
 - Category: plugins
-- Added: 2026-11-20
-
-### File finder rows and preview title show the listed path unsanitized
-- Location: carat/plugins/finder/plugin.rb:333 (the preview title and the rows, through selected_path)
-- Why: the grep path now goes through Grep#safe, but the file finder still shows the listed path raw; in an untrusted repository a checked-in file name holding a bidirectional override (U+202E) or a zero-width character can make the finder show a different path than the one it opens. C0 controls are already shown as ^X by the frame presenter, so no escape sequence reaches the terminal. Security Low (confidence 5); the behavior predates this change.
-- Fix: move Grep#safe into a shared helper in carat/plugins/finder/ and apply it to the file finder's rows and preview title wherever selected_path is shown, keeping the raw path for open_path; add a test with a path holding U+202E and a control byte.
-- Category: security
 - Added: 2026-11-20
 
 ## Findings of finder-grep-preview after its package step
@@ -144,3 +129,19 @@
 none
 - Category: plugins
 - Added: 2026-11-22
+
+### The grep picker's title keeps its two-count form
+- Location: carat/plugins/finder/plugin.rb (refresh, GREP_TITLE and Grep#counts)
+- Why: the palette and the other pickers read `Name N/M`, the grep picker `Grep F of M files, L of N lines`, so the title form is not yet one for every picker.
+- Fix: decide one count for the grep title (matching lines over lines read) with the files count moved to the border or dropped, with float-polish's title work.
+- Category: plugins
+- Added: 2026-11-23
+
+### the file finder's preview rows from read_file go to at carat/plugins/finder/plugin.rb:516 (sprint-30 sweep quality, note 34)
+
+- Location: carat/plugins/finder/plugin.rb:516
+- Why: the file finder's preview rows from read_file go to the float unsanitized while the grep preview's rows and every title go through SafeText.of, and safe_text.rb:6 and the map (area 15) call SafeText the one sanitizer of the finder's rows, titles, and previews, so bidirectional and zero-width characters of a file's first rows reach the float only in this picker
+- Fix: map the read lines through SafeText.of in preview_lines, with a case in test/editor_finder.rb, or narrow the comment and the map to what is sanitized
+- Also: test/editor_finder.rb
+- Category: plugins
+- Added: 2026-11-23

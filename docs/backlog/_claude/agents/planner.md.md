@@ -113,3 +113,18 @@
 - Also: docs/goals.md
 - Category: pipeline
 - Added: 2026-11-22
+
+### The planner file sits at its byte budget
+- Location: .claude/agents/planner.md (Sprint mode step 1, step 3, step 5, and the head of Sprint mode), tools/docs_lint.sh BUDGETS
+- Why: the file was 3 bytes under its 8,192-byte budget, so adding the not_reviewed sentence meant dropping "a dropped one is not recorded" from step 1 (the PLAN schema description and CLAUDE.md still state it) and shortening three other phrases; the next addition to the file has no room.
+- Fix: move the Sprint mode section's prose into a document the planner reads at a sprint start (as docs/contributor-notes.md holds the contributor's), keeping the rules card short, and restore the dropped sentence.
+- Also: tools/docs_lint.sh, CLAUDE.md, docs/contributor-notes.md
+- Category: pipeline
+- Added: 2026-11-23
+
+### A feature is sized by its testable parts only, not by its map areas and code files (recent-files-persist retro note 6)
+- Location: .claude/agents/planner.md
+- Why: recent-files-persist touched 11 code files in 4 areas (ports, drivers, doubles, adapters) and was estimated medium; implement took 469,082 of 542,318 output tokens (86%) and 249 of 337 tool calls (74%), reached its cap once, 2.7x over the 200,000 medium output budget. Near the backlog-lane item `split-at-placement`.
+- Fix: count map areas and code files in the size check at placement; accepted when the next three features estimated medium stay under their output budget or are split at placement.
+- Category: pipeline
+- Added: 2026-11-23

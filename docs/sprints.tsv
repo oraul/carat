@@ -29,3 +29,4 @@ sprint-26	colorscheme-command	6	contributor-self-check,spinel-catchup-b,set-opti
 sprint-27	float-painter	6	config-guards-b,merge-gate-lows,buffer-picker,folded-row,drivers-lsp-lows,float-painter	488.3	81.4	7427809	0	check:6/6,security:6/6,bench:6/6,ci:6/6,gates:6/6
 sprint-28	files-ex-lows	6	sprint-close-lows,ui-groups,picker-speed,config-guards-d,finder-switch,files-ex-lows	466.2	77.7	5956118	0	check:6/6,security:6/6,bench:6/6,ci:6/6,gates:6/6
 sprint-29	window-surfaces	6	scout-drop,merge-path-lows,finder-rows,cheap-tier,contributor-tier-fixed,window-surfaces	538.0	89.7	5864665	1	check:6/6,security:6/6,bench:5/6,ci:6/6,gates:6/6
+sprint-30	plugin-host-lows	9	planner-loop,session-rules,cache-reuse,prompt-in-float,sprint-review-coverage,sprint-guard-lows,render-tidy,recent-files-persist,plugin-host-lows	1144.0	127.1	8224234	0	check:9/9,security:9/9,bench:7/9,ci:9/9,gates:9/9

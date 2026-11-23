@@ -33,3 +33,20 @@
 - Fix outline: normalize the state before the comparison.
 - Category: editor
 - Added: 2026-11-17
+
+### StatusSlots lsp_label is no longer read by the bar
+- Location: `carat/domain/status_slots.rb` (`lsp_label`, `label`), `test/adapters_language_gateway.rb:179`
+- Why: the status bar draws the name, a dot, and `hint(state)` from `lsp_name` and `lsp_state`, so the record member and its state words are read only by the gateway tests and `set_lsp`'s change check.
+- Fix: assert `lsp_state`, `hint`, and the progress percent in the gateway tests, then drop `lsp_label` and `label` from the record.
+- Also: test/adapters_language_gateway.rb
+- Category: editor
+- Added: 2026-11-23
+
+### lsp_label and StatusSlots.label are drawn nowhere since #321 (the at carat/domain/status_slots.rb:18 (sprint-30 sweep quality, note 32)
+
+- Location: carat/domain/status_slots.rb:18
+- Why: lsp_label and StatusSlots.label are drawn nowhere since #321 (the bar draws lsp_name, a dot, and StatusSlots.hint), yet set_lsp still builds a label string per call and the class comment (lines 10-12) still says it is the label the bar draws; only test/editor_lsp.rb and test/adapters_language_gateway.rb read it
+- Fix: drop the lsp_label member and label, compare name, state, and percent in set_lsp, and have the tests print lsp_name and lsp_state, or keep label as a test-only formatter and correct the comment
+- Also: test/editor_lsp.rb, test/adapters_language_gateway.rb
+- Category: editor
+- Added: 2026-11-23

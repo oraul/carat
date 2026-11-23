@@ -26,26 +26,11 @@
 - Category: pipeline
 - Added: 2026-11-12
 
-### The report's not-recorded suffix and new Sweep line have no test (`sprint-security` quality advisory)
-- Location: .claude/workflows/sprint-planning.js:267
-- Why: the Security line's "its findings were not recorded" suffix and the Sweep line's new text have no tools_test case, so a regression in what the report says goes unnoticed.
-- Fix: pass noted to securityLine so the existing tools_test case covers the suffix, and add a case for the Sweep line.
-- Category: pipeline
-- Added: 2026-11-17
-
 ### The Notes phase hands reviewer text to a general agent with Bash (sprint-13 security Low (3))
 - Location: .claude/workflows/sprint-planning.js:198 (sprint-security).
 - Why: shellWord protects the shell, but finding text echoed from the diff can still act as a prompt injection on the notes agent.
 - Fix: write the findings to a file under build/ and run one fixed command that reads them (a run_state.sh note-file subcommand), or start the notes agent limited to Bash and the guard hook; accepted when the notes prompt holds no finding text. Queue item `sprint-security-b`.
 - Category: security
-- Added: 2026-11-17
-
-### A rerun /sprint after a partial review records its notes twice (sprint-13 quality)
-- Location: .claude/workflows/sprint-planning.js:197; tools/run_state.sh:1375 (add_note).
-- Why: add_note drops repeats only for quality-advisory and init resumes the run state, so a partial review (missed above 0), which forces /sprint again, records the same security and quality notes a second time and the backlog fold gets duplicates.
-- Fix: skip Notes and the skeptic on a partial review, or have add_note drop a security or quality note already recorded; accepted when a tools-test rerun leaves one copy. Queue item `sprint-security-b`.
-- Also: tools/run_state.sh
-- Category: pipeline
 - Added: 2026-11-17
 
 ### .claude/workflows/sprint-planning.js:218: reviewed ignores the sprint quality review: a quality start (sprint-22 sweep quality)
@@ -97,3 +82,32 @@ none
 - Fix: one helper per workflow taking the command lines, the agent type, and the label
 - Category: pipeline
 - Added: 2026-11-22
+
+### The Notes phase hands reviewer text to a general agent with Bash (sprint-13 security Low (3))
+- Location: .claude/workflows/sprint-planning.js recordNotes
+- Why: not fixed here. The workflow script has no file access, so reading the notes from a file needs an agent to write the file, and a file run with sh would bypass the guard's per-command parse of the single quoted note command, the control that holds today; the finding text stays in the prompt of the read-profile record start.
+- Fix: decide whether the guard may accept a notes file under build/pipeline (checked line by line), or the run state may store a note read from a file the record start never writes; then test it.
+- Category: security
+- Added: 2026-11-23
+
+### The report's not-recorded suffix and new Sweep line have no test (sprint-security quality advisory)
+- Location: .claude/workflows/sprint-planning.js securityReport, sweepLine
+- Why: fixed already by 8b8e44e (#307): tools/tools_test.sh runs securityReport with the unrecorded suffix and the missed count, and sweepLine for a complete sweep, a partial one, one not run, and an odd sprint; no change needed here.
+- Fix: none.
+- Also: tools/tools_test.sh
+- Category: pipeline
+- Added: 2026-11-23
+
+### The continued quality review's findings do not shape the sprint's queue
+- Location: .claude/workflows/sprint-planning.js (the continued quality-reviewer start after the planner's start)
+- Why: the quality reviewer's continued start runs after the planner has written the next queue and the groomed findings, so a finding it keeps over the files the planner left is recorded as a quality note of the sprint's run state but cannot be queued or groomed by that planner; it is read by the next sprint's planning only.
+- Fix: run the continued review before the planner's queue step, for example by splitting the planner's sprint start into a review start and a planning start, or hand the continued findings to a second short planner start that appends them to the groomed findings.
+- Category: pipeline
+- Added: 2026-11-23
+
+### The continued start's file list is agent text in a prompt
+- Location: .claude/workflows/sprint-planning.js (the reviewTaskOf call for the quality continuation)
+- Why: the files the planner returned in not_reviewed are joined into the continued start's prompt unfiltered, as the security continuation's are; a file name carrying instructions would reach a reviewer that holds the read guard but can still read the repository.
+- Fix: pass each file through pathKey and keep only names matching a path pattern (no spaces or control characters) in both continuations.
+- Category: pipeline
+- Added: 2026-11-23

@@ -196,3 +196,35 @@
 - Location: `tools/ci_scope.sh:80`
 - Why: duplication: two gh api calls to the same commits/SHA/pulls endpoint for the head sha and the number
 - Fix: one call whose jq prints both, split with read
+
+### the loops over changed (and since at line 123) at tools/ci_scope.sh:99 (sprint-30 sweep security Low (2), note 4)
+
+- Location: tools/ci_scope.sh:99
+- Why: the loops over changed (and since at line 123) word-split and glob-expand pull request paths; examined: a name with a space, a glob, or a newline splits into or quotes as a code word, or keeps a .rb ending, so no code path reads as documentation and no scope bypass was found
+- Fix: read the paths with while IFS= read -r for robustness
+- Category: security
+- Added: 2026-11-23
+
+### for path in $changed (and line 123, $since) splits at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 17)
+
+- Location: tools/ci_scope.sh:99
+- Why: for path in $changed (and line 123, $since) splits paths on whitespace and expands globs, so a changed path with a space or a glob character is judged in pieces
+- Fix: set -f with IFS set to a newline, or read the list with while IFS= read -r path; lines 80 and 81 also call gh api commits/SHA/pulls twice, fix: one call printing both fields
+- Category: pipeline
+- Added: 2026-11-23
+
+### the unquoted for loops over changed (:99) and since at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 55)
+
+- Location: tools/ci_scope.sh:99
+- Why: quoting: the unquoted for loops over changed (:99) and since (:123) split the git path list on spaces and expand glob characters, so a path holding a space is judged by its pieces
+- Fix: read the list line by line with while IFS= read -r path, or set -f with IFS a newline (a possible security point, unexamined here)
+- Category: pipeline
+- Added: 2026-11-23
+
+### the push path calls gh api on commits/SHA/pulls twice at tools/ci_scope.sh:80 (sprint-30 sweep quality, note 56)
+
+- Location: tools/ci_scope.sh:80
+- Why: duplication: the push path calls gh api on commits/SHA/pulls twice (:80 and :81), once for the head sha and once for the number
+- Fix: one call whose jq prints both, split with read
+- Category: pipeline
+- Added: 2026-11-23

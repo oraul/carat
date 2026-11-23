@@ -64,3 +64,19 @@ Location: `carat/adapters/editor_assembly.rb` (582 lines), whose `initialize` bu
 - Fix: build the shipped options once into a reader, and take services: as a keyword
 - Category: editor
 - Added: 2026-11-22
+
+### Two editors ending together share one temporary state file name
+- Location: `carat/adapters/editor_assembly.rb`, `save_recent_files` (the `recent_files.tmp` beside the state file)
+- Why: the private write removes a leftover temporary file and then creates it exclusively, so two editors ending at the same moment can remove each other's file or fail the create, and one list is lost; the list is a convenience and every failure is skipped, so nothing breaks, but the later list may not be the one kept.
+- Fix: name the temporary file by the process id, or take an advisory lock on the state directory around the write.
+none
+- Category: editor
+- Added: 2026-11-23
+
+### make_state_directories skips a state directory that exists (exist?) without at carat/adapters/editor_assembly.rb:723 (sprint-30 sweep quality, note 20)
+
+- Location: carat/adapters/editor_assembly.rb:723
+- Why: possible security point, not examined: make_state_directories skips a state directory that exists (exist?) without checking it is not a symbolic link; for the security reviewer
+- Fix: judge the point named in Why against the code; fix it with a test or record why it holds
+- Category: editor
+- Added: 2026-11-23

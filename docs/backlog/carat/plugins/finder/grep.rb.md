@@ -39,3 +39,10 @@ none
 - Also: test/editor_finder_grep.rb
 - Category: security
 - Added: 2026-11-20
+
+### The grep picker's file reads stay synchronous on the editor thread
+- Location: carat/plugins/finder/grep.rb load (host.read_file per listed file)
+- Why: the byte budget (READ_BUDGET, 16 MiB) bounds the work of one opening but the reads still run on the editor thread; up to 16 MiB is read before the first frame of the picker.
+- Fix: read the files in slices across idle ticks, or lazily on the first typed key, with the cap mark shown while the load runs.
+- Category: plugins
+- Added: 2026-11-23

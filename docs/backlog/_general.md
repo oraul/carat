@@ -427,3 +427,10 @@ none
 - Fix: groom keeps one entry and drops the other as a repeat.
 - Category: code-quality
 - Added: 2026-11-21
+
+### The state file is written through a link and without a lock
+- Location: carat/use_cases/files/save_recent_files.rb
+- Why: `FilePort#write` follows a symbolic link at the state file and two editors ending together leave the later one's list. The file is in the user's own home and holds a convenience list, so neither loses anything that matters.
+- Fix: write a temporary file and rename it over the state file, and merge the file's current paths with the list at save.
+- Category: design
+- Added: 2026-11-23

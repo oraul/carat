@@ -1,13 +1,5 @@
 # Backlog: carat/use_cases/plugins/ui_requests.rb
 
-## The plugin prompt request names a local e
-
-- Where: `carat/use_cases/plugins/ui_requests.rb` line 92 at 38628bb (periodic quality). Queued in `discoverability-tidy`.
-- Why it matters: the naming rule forbids unclear abbreviations.
-- Fix outline: rename it entry.
-- Category: plugins
-- Added: 2026-11-09
-
 ## Plugin host requests answer shared strings and stale comments
 
 - Where: `carat/use_cases/plugins/ui_requests.rb` line 78 (`icon` answers the shared glyph) and 107 (`run_ex` answers the message uncopied); `window_requests.rb` line 90 (`open_scratch` keeps the plugin's title string); unused requires in `carat/adapters/status_bar.rb` line 1 and `plugin_syntax.rb` line 1, `plugin_events.rb` line 6 requires `buffer_feed` for `BufferNotice`; stale comments at `carat/adapters/sgr_table.rb` line 8, `plugin_syntax.rb` line 69, `ui_requests.rb` line 81; `plugin_registry.rb` line 175 repeats `cause`; `plugin_events.rb` line 142 queues a resize no plugin wants. Periodic quality at 8d8832f, queued in item 37.

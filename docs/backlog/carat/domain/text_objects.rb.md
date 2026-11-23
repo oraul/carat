@@ -96,3 +96,12 @@
 - Also: carat/domain/runs.rb, carat/use_cases/erase_character.rb, carat/use_cases/plugins/plugin_registry.rb, CLAUDE.md
 - Category: editor
 - Added: 2026-11-22
+
+### the parameter cls (and the local cls in carat/domain/text_objects.rb:89) at carat/domain/runs.rb:18 (sprint-30 sweep quality, note 47)
+
+- Location: carat/domain/runs.rb:18
+- Why: naming: the parameter cls (and the local cls in carat/domain/text_objects.rb:89) is the abbreviation CLAUDE.md names as forbidden (char_class, not cls)
+- Fix: rename both to char_class
+- Also: carat/domain/runs.rb, CLAUDE.md
+- Category: editor
+- Added: 2026-11-23

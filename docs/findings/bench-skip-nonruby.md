@@ -1,8 +1,10 @@
-### A Spinel bump or Makefile build flag change skips the benchmark agent
-- Location: `.claude/workflows/deliver-change.js` (`benchWithoutRuby`) and `tools/lane_facts.sh` (the `ruby` fact)
-- Why: the brief names only `carat/`, `bin/`, `bench/`, `config/`, and `carat.rb` as Ruby code, so a diff of the `Makefile` (`SPINEL_REF`, build flags) or `tools/spinel/` alone reads `ruby no` and records the bench review with no agent, though a new compiler or flag can change allocations and rounds; CI's metrics stage still compares them on the pull request.
-- Fix: add `Makefile`, `tools/spinel/`, and `tools/metrics.sh` to the pattern of the `ruby` fact (and its tools-test cases), or keep the gate when the `Makefile` diff touches `SPINEL_REF`.
-### The ruby fact is relayed through a record start
-- Location: `.claude/workflows/deliver-change.js` (`laneHead`, `noRubyAt`)
-- Why: the workflow has no shell, so a runner start relays `tools/lane_facts.sh`, as for `machinery`; a forged `ruby no` would record the bench review passed. The parse is strict (`yes` or `no`, else `unknown`) and the lane must be clean at the check's head, but the relay itself is trusted.
-- Fix: have `tools/run_state.sh` record the fact itself (a `ruby-scope` command the runner calls and the review gate reads) so no model output carries the decision.
+
+### Benchmark skip ignores Makefile, Spinel pin, and build flags (security Low, confidence 4)
+- Location: tools/lane_facts.sh:81
+- Why: the ruby fact once left out the Makefile (SPINEL_REF, build flags) and tools/spinel/, so a compiler bump or flag change could skip the benchmark agent with no local allocation or rounds comparison; CI's metrics stage still compares them. A gap in a quality gate, not a security boundary. A later commit on this branch added these paths to the pattern, so this entry stays only as a record of the review.
+- Fix: keep Makefile, tools/spinel/, and tools/metrics.sh in the ruby pattern with matching tools-test cases, or keep the gate only when the Makefile diff touches SPINEL_REF.
+
+### Benchmark skip decided from a relayed fact (security Low, confidence 3)
+- Location: .claude/workflows/deliver-change.js:949
+- Why: benchWithoutRuby decides from the lane_facts output relayed by a record start (an agent), so a forged "ruby no" line would record the bench review as passed without a benchmark. The parse is strict, the lane must be clean at the head where the check passed, and the machinery fact already trusts the same relay. Raised in three review rounds; the comment and note were updated to list every path the ruby fact reads, the relay itself is unchanged.
+- Fix: have tools/run_state.sh compute and record the ruby fact itself, through a command the review gate reads, so no model output carries the skip decision.

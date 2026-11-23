@@ -223,26 +223,11 @@
 - Category: pipeline
 - Added: 2026-11-17
 
-### groom_row trusts history rows the branch can append after review (security Low (3))
-- Location: tools/gates.sh:131
-- Why: groom_row compares the appended sprints row with sprint_row, which reads the lane history rows from the working tree; those are records-only paths a branch can append to after review, so a forged history row plus a matching sprints row still passes settled_at and moves the sprint base, which groom_row is meant to prevent.
-- Fix: compute the expected row from the history files at the reviewed COMMIT plus only the history row this change's own package step adds, or check that the history rows appended since COMMIT are this change's single row before trusting them.
-- Category: security
-- Added: 2026-11-17
-
 ### groom_row reads the shared sprint marker, refusing a records row merged from main (quality, behavior cost)
 - Location: tools/gates.sh:128
 - Why: groom_row reads the marker in the shared build/plan, so a lane that merged main's records-only sprint row after its reviews has it refused once the planner writes the next sprint's marker, and a review re-runs needlessly.
 - Fix: accept a sprint row already on BASE (brought by a merge from main), or name the cost in the design's Risks.
 - Category: pipeline
-- Added: 2026-11-17
-
-### groom_row compares newline-stripped rows and trusts untracked inputs (sprint-14 review security Low (3) and quality)
-
-- Location: tools/gates.sh:131 to :134.
-- Why: groom_row derives the expected sprint row from the untracked build/plan/sprint marker and the working tree's history rows, so a branch appending matching history rows can add a sprints.tsv row the records-only gate accepts and move the sprint base (security Low (3)); it compares command substitutions, which strip trailing newlines, so a row with extra blank lines or no final newline passes as the one row (found twice).
-- Fix outline: expected row from committed content only (git show HEAD:file) and only for the records change; compare appended bytes exactly. Queued in `sprint-security-b`.
-- Category: security
 - Added: 2026-11-17
 
 ### Tools gates fail open on edge inputs (sprint-14 sweep quality)
@@ -401,3 +386,19 @@
 none
 - Category: security
 - Added: 2026-11-22
+
+### The findings gate files a security entry by its heading alone at tools/gates.sh:662 (sprint-30 review security Low (6))
+
+- Location: tools/gates.sh:662 (carrier_unproven)
+- Why: the findings gate lets a branch carrying the sprint's groom row remove a docs/findings security entry when only its heading line stands anywhere under docs/backlog/, since carrier_unproven runs the heading check before the SECURITY_MARK check; a misled contributor can delete a High finding and add its bare heading to any backlog file, and its severity, location, and fix are lost, as nothing else gates docs/backlog.
+- Fix: run the security check first; count a security entry as filed only when its heading and its body lines stand under one security entry at HEAD (as merged_security_kept checks for Merged lines), else require a proven listed or fixed groom line; accepted when a tools-test case filing a security heading without its body is refused.
+- Category: security
+- Added: 2026-11-23
+
+### groom_row chains [ -z row_ok ] || test || at tools/gates.sh:172 (sprint-30 sweep quality, note 18)
+
+- Location: tools/gates.sh:172
+- Why: groom_row chains [ -z row_ok ] || test || row_ok= three times, which reads as cleverness
+- Fix: an if chain that sets row_ok once, the temporary files removed after it
+- Category: pipeline
+- Added: 2026-11-23

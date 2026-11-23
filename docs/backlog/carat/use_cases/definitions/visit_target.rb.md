@@ -73,3 +73,12 @@
 - Fix outline: push explicitly only in the same-file case and leave cross-file jumps to `enter`, with a row asserting one entry per cross-file `gd`. Queue item `definitions-tidy`.
 - Category: editor
 - Added: 2026-11-10
+
+### utf16_offset duplicates the UTF-16 unit scan of VisitTarget#column_of (carat/use_cases/definitions/visit_target.rb:204) at carat/adapters/json_rpc_language_gateway.rb:1132 (sprint-30 sweep quality, note 63)
+
+- Location: carat/adapters/json_rpc_language_gateway.rb:1132
+- Why: utf16_offset duplicates the UTF-16 unit scan of VisitTarget#column_of (carat/use_cases/definitions/visit_target.rb:204), beside Domain::Utf8.utf16_length
+- Fix: move both conversions (byte offset and code point column of a UTF-16 offset) into Domain::Utf8 and call them from both places
+- Also: carat/adapters/json_rpc_language_gateway.rb
+- Category: editor
+- Added: 2026-11-23

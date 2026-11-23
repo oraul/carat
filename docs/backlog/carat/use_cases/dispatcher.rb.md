@@ -79,3 +79,11 @@
 - Why: tabstop > 0 ? tabstop : 8 repeats Options#tab_width (carat/domain/options.rb:135), as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25, leave_insert.rb:71, operators.rb:172/251/272, and display_width.rb:57
 - Fix: call state.options.tab_width (or pass it) at each site
 - Also: carat/domain/options.rb
+
+### the tabstop > 0 guard is dead: Options refuses at carat/use_cases/dispatcher.rb:114 (sprint-30 sweep quality, note 12)
+
+- Location: carat/use_cases/dispatcher.rb:114
+- Why: the tabstop > 0 guard is dead: Options refuses a tabstop below 1 from a line and from :set
+- Fix: pass state.options.tabstop
+- Category: editor
+- Added: 2026-11-23

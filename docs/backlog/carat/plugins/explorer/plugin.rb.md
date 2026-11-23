@@ -91,3 +91,11 @@
 - Also: test/plugins_explorer.rb
 - Category: plugins
 - Added: 2026-11-21
+
+### the tree's file names reach the scratch buffer without at carat/plugins/explorer/plugin.rb:471 (sprint-30 sweep quality, note 45)
+
+- Location: carat/plugins/explorer/plugin.rb:471
+- Why: security, unexamined: the tree's file names reach the scratch buffer without the bidirectional and zero-width mapping the finder applies through SafeText; for the security reviewer
+- Fix: judge the point named in Why against the code; fix it with a test or record why it holds
+- Category: plugins
+- Added: 2026-11-23

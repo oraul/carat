@@ -92,3 +92,20 @@
 - Also: carat/use_cases/search/find_match.rb, carat/domain/command_line_text.rb
 - Category: editor
 - Added: 2026-11-22
+
+### vertical clamps row to 0..last and then to_row clamps at carat/domain/motions.rb:238 (sprint-30 sweep quality, note 50)
+
+- Location: carat/domain/motions.rb:238
+- Why: duplication: vertical clamps row to 0..last and then to_row clamps it again, and line_down (:269) repeats the same edge and clamp lines
+- Fix: drop the clamp in vertical and share one edge-and-clamp helper with line_down
+- Category: editor
+- Added: 2026-11-23
+
+### paragraph_forward and paragraph_backward never return nil, though the module at carat/domain/motions.rb:557 (sprint-30 sweep quality, note 51)
+
+- Location: carat/domain/motions.rb:557
+- Why: contract drift: paragraph_forward and paragraph_backward never return nil, though the module says nil when a motion cannot move, so { at 0,0 or } on an empty last line yields a Motion onto the cursor and Move records a jump (JUMP_NAMES) for a motion that did not move
+- Fix: return nil when the target equals the cursor position, with a row in test/editor_motions.rb
+- Also: test/editor_motions.rb
+- Category: editor
+- Added: 2026-11-23

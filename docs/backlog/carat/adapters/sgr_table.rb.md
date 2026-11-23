@@ -16,3 +16,12 @@
 - Fix: private_class_method them, keeping from_theme, sequence, and index_256 public
 - Category: editor
 - Added: 2026-11-20
+
+### the helpers basic, color, level (113), and distance are at carat/adapters/sgr_table.rb:70 (sprint-30 sweep quality, note 80)
+
+- Location: carat/adapters/sgr_table.rb:70
+- Why: the helpers basic, color, level (113), and distance are public class methods, and SymbolOutline's walk, keep, and line_of (carat/adapters/symbol_outline.rb) likewise, widening their surface beyond what the map lists
+- Fix: private_class_method for each helper
+- Also: carat/adapters/symbol_outline.rb
+- Category: editor
+- Added: 2026-11-23

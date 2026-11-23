@@ -50,14 +50,6 @@
 - Category: pipeline
 - Added: 2026-11-21
 
-### actions/checkout keeps the job token in .git/config (persist-credentials default) at .github/workflows/ci.yml:36 (sprint-26 sweep security Low (3), note 19)
-
-- Location: .github/workflows/ci.yml:36
-- Why: actions/checkout keeps the job token in .git/config (persist-credentials default) while make runs the pull request's code; the token is read-only, but nothing needs it after checkout
-- Fix: set persist-credentials: false on the checkout step
-- Category: security
-- Added: 2026-11-22
-
 ### The CI checkout keeps the job token in .git/config at .github/workflows/ci.yml:36 (sprint-28 sweep security Low (4), note 19)
 
 - Location: .github/workflows/ci.yml:36
@@ -66,3 +58,7 @@
 - Also: Makefile
 - Category: security
 - Added: 2026-11-22
+- Merged: ### actions/checkout keeps the job token in .git/config (persist-credentials default) at .github/workflows/ci.yml:36 (sprint-26 sweep security Low (3), note 19)
+- Location: .github/workflows/ci.yml:36
+- Why: actions/checkout keeps the job token in .git/config (persist-credentials default) while make runs the pull request's code; the token is read-only, but nothing needs it after checkout
+- Fix: set persist-credentials: false on the checkout step
