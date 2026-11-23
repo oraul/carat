@@ -17,3 +17,11 @@
 - Location: carat/adapters/key_decoder.rb decode_paste
 - Why: on a terminal that does not filter ESC [ 201 ~ out of the clipboard text, the paste ends there and the bytes after it decode as typed keys (security Low (4)); the decoder now documents the reliance and a decoder row shows it.
 - Fix: after a paste ends, flag or drop the keys read in the same feed straight after the mark, changing the "a key after the paste is a key again" and "keys before and after" rows and their scenarios.
+# Backlog
+
+none: every finding and proposal of this plan is placed in the backlog queue.
+
+### A paste can end itself early on a terminal that passes the end mark through (security Low (4))
+- Location: carat/adapters/key_decoder.rb:186 (decode_paste)
+- Why: If the clipboard text contains a literal ESC [ 201 ~ and the terminal does not strip it, decode_paste leaves paste mode there and decodes every byte after it as typed keys (for example Esc, then :w!, then Enter). Modern terminals filter this mark, so it only matters on terminals that do not. This change documents the reliance and adds a decoder test row showing it, which satisfies the fallback outline but does not remove the behavior.
+- Fix: As defense in depth, drop or flag keys that arrive in the same read straight after the end mark.
