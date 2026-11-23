@@ -10,3 +10,10 @@
 ## 2. Docs
 
 - [x] 2.1 Update `docs/compatibility.md`, `docs/codebase-map.md`, and the closed rows of `docs/design.md`
+
+## 3. Quality review
+
+- [x] 3.1 Wrap the overlong class comment of `TabBar` (fixed)
+- [x] 3.2 Rewrite the definition, slot, and flow tests' expectations for the icon-free row so no snapshot holds a failing line (fixed)
+- [x] 3.3 Record the stale group count of the color-themes requirement in `docs/findings/one-accent-tabs.md` (recorded)
+- [x] 3.4 Record the possibly unused `Buffer#icon` in `docs/findings/one-accent-tabs.md` (recorded)
