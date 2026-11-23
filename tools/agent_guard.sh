@@ -74,7 +74,7 @@
 #                build/metrics/current.tsv of the project or a worktree
 #                tmp/.NAME with no link on its way, and compare BASE CURRENT
 #   merger       adds sh tools/run_state.sh show status get trusted metric
-#                lane-close,
+#                lane-close CHANGE (the one merged: its run state holds the push and the gates' pass),
 #                set CHANGE ci "red|green HEX", set CHANGE merged HEX;
 #                CHANGE=NAME RECORDS=... sh tmp/.merge-gates/tools/gates.sh
 #                merge BODY, never the branch's tools/gates.sh merge; sh
@@ -97,7 +97,7 @@
 #                openspec and npx of the Makefile's OPENSPEC_PACKAGE
 #                alone; mkdir rm cp
 #                mv touch chmod; sh tools/run_state.sh show status pending
-#                get budget history groom plan-apply merge-main
+#                get budget history groom plan-apply merge-main CHANGE (after cd tmp/.lane-CHANGE)
 #                reviewed-edits, check CHANGE with no COMMIT (its own
 #                check, which backs no commit), push CHANGE
 #                [--ci-fix | --review-fix | --main-moved | --pr-text],
@@ -680,8 +680,25 @@ run_state_form() {
   verb=${1:-}
   case "$profile:$verb" in
     read:show|read:status|read:pending|read:get|read:trusted|read:check|read:scope|read:bench|read:base-figures|read:metrics|read:metric|read:budget|read:spent|read:review-due|read:backlog-dups|read:backlog-oldest) ;;
-    merger:show|merger:status|merger:get|merger:trusted|merger:metric|merger:lane-close) ;;
-    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:merge-main|contributor:reviewed-edits) ;;
+    merger:show|merger:status|merger:get|merger:trusted|merger:metric) ;;
+    merger:lane-close)
+      # The change's name is a path component of the worktree lane-close
+      # removes: it must be the change being merged, the one run state
+      # holding the pushed head as gated too (the merge gates reset every
+      # other run state's gated), not another lane's (sprint-guard-lows).
+      [ $# -eq 2 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh $verb other than CHANGE"
+      merged_head=$(sed -n 's/^  "pushed": "\([0-9a-f]\{40\}\)",\{0,1\}$/\1/p' "$project_dir/build/pipeline/$2.json" 2>/dev/null | sed -n 1p)
+      [ -f "$project_dir/build/pipeline/$2.json" ] && [ ! -L "$project_dir/build/pipeline/$2.json" ] && [ -n "$merged_head" ] &&
+        grep -q -E "^  \"gated\": \"$merged_head\",?\$" "$project_dir/build/pipeline/$2.json" ||
+        refuse "tools/run_state.sh lane-close of $2, whose run state does not record the push and the merge gates' pass at one head: only the change being merged" ;;
+    contributor:merge-main)
+      # merge-main merges into the branch of the directory it runs in: that
+      # directory must be this change's worktree tmp/.lane-CHANGE, so a
+      # name of another lane is no way to reach its worktree.
+      [ $# -eq 2 ] && matches "$2" "$CHANGE_NAME" || refuse "tools/run_state.sh $verb other than CHANGE"
+      [ -n "$cd_worktree" ] && worktree_name "$cd_worktree" && [ "$rel" = "tmp/.lane-$2" ] ||
+        refuse "tools/run_state.sh merge-main $2 outside its worktree tmp/.lane-$2" ;;
+    contributor:show|contributor:status|contributor:pending|contributor:get|contributor:budget|contributor:history|contributor:groom|contributor:plan-apply|contributor:reviewed-edits) ;;
     # The runner: the resume recipe and the records the workflow wrote
     # (cheap-tier), the note text data as for read. Sprint planning's notes
     # and plan notes, which quote reviewed code, run on the read profile

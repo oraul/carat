@@ -6,7 +6,7 @@ export const meta = {
     { title: 'Due', detail: 'one start runs review-due; not due ends the run' },
     { title: 'Review', detail: 'the security reviewer over the combined diff in its sprint mode, once more over the files it left, and in an even sprint the whole-tree sweep, in parallel' },
     { title: 'Notes', detail: 'each security finding of the reviewer\'s result in the sprint\'s run state, before the planner' },
-    { title: 'Plan', detail: 'the planner in its sprint mode: the quality review of the combined diff with the security findings read against the code, the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its three backlog items from backlog-pick; the workflow records the quality findings it keeps, each security finding it disputes, as disputed, and each one the reviewer missed, each one single-quoted shell word' },
+    { title: 'Plan', detail: 'the planner in its sprint mode: the quality review of the combined diff, once more by the quality reviewer over the files that start left, with the security findings read against the code, the backlog grooming with its one-time triage, and the next sprint\'s queue under build/plan/, its three backlog items from backlog-pick; the workflow records the quality findings it keeps, each security finding it disputes, as disputed, and each one the reviewer missed, each one single-quoted shell word' },
     { title: 'Record', detail: 'the review results, and the plan\'s security-first hold, in the sprint\'s run state; the next delivery\'s package step applies the plan with groom' },
   ],
 }
@@ -46,6 +46,22 @@ const SECURITY = {
     tool_calls: CALLS,
   },
   required: ['ran', 'head', 'findings', 'not_reviewed', 'tool_calls'],
+}
+// The quality reviewer's continued start over the files the planner's review
+// left: the planner's counts and notes over those files only.
+const QUALITY = {
+  type: 'object',
+  properties: {
+    head: { type: 'string', description: 'the tip your review read, from git rev-parse --short=12' },
+    quality_blocking: { type: 'integer', minimum: 0 }, quality_advisory: { type: 'integer', minimum: 0 },
+    not_reviewed: { type: 'array', items: { type: 'string' }, description: 'the files you were given and did not review, empty when none' },
+    notes: {
+      type: 'array', description: 'each quality finding you keep, the workflow records it',
+      items: { type: 'object', properties: { kind: { type: 'string', enum: ['quality'] }, text: { type: 'string' } }, required: ['kind', 'text'] },
+    },
+    tool_calls: CALLS,
+  },
+  required: ['head', 'quality_blocking', 'quality_advisory', 'not_reviewed', 'notes', 'tool_calls'],
 }
 const PLAN = {
   type: 'object',
@@ -152,6 +168,29 @@ function reviewNotes(change, notes) {
 // its counts and lists in their shapes.
 function qualityReviewed(plan) {
   return Boolean(plan && isCommit(plan.head) && Number.isInteger(plan.quality_blocking) && Number.isInteger(plan.quality_advisory) && Array.isArray(plan.not_reviewed))
+}
+// The planner's quality review gets one more start of the quality reviewer
+// over the files it left (sprint-review-coverage), merged as the security
+// review's is: counts added, notes joined, and not_reviewed what the
+// second start still names (stillLeft), so a missing continuation leaves
+// every file left and the review partial, never passed.
+// tools/tools_test.sh runs these helpers.
+function mergeQuality(first, again) {
+  if (!qualityReviewed(again)) return first
+  const more = Array.isArray(again.notes) ? again.notes : []
+  return {
+    head: first.head, quality_blocking: first.quality_blocking + again.quality_blocking, quality_advisory: first.quality_advisory + again.quality_advisory,
+    not_reviewed: stillLeft(first.not_reviewed, again.not_reviewed), notes: (Array.isArray(first.notes) ? first.notes : []).concat(more),
+  }
+}
+// The report's Quality line names the coverage: the files the first start
+// left, how many the continued start reviewed, and those still left.
+function qualityLine(q, firstLeft) {
+  const kept = `the planner kept ${q.quality_blocking} blocking and ${q.quality_advisory} advisory`
+  if (!firstLeft) return `${kept}; every file of the diff reviewed`
+  const left = q.not_reviewed.length
+  const names = q.not_reviewed.slice(0, 5).join(', ') + (left > 5 ? ', ...' : '')
+  return `${kept}; coverage: ${firstLeft - left} of ${firstLeft} file(s) the first start left reviewed in a continued start${left ? `, ${left} still not reviewed (${names}); partial` : ''}`
 }
 // The report's Security line: a partial review names the files it left
 // and asks for /sprint again, as one that did not run does.
@@ -279,12 +318,22 @@ const plan = !reviewed ? null : await agent(
   `Mode: sprint. ${sprint.sprint} closed with ${sprint.names.join(', ')}. First review ${scope} for quality as your Sprint mode section says, and read each security finding below against the code at origin/main; record nothing: return each quality finding you keep and each security finding you dispute in notes, each security finding the reviewer missed in security_missed, and the counts, which the workflow records in the run state \`${sprint.sprint}\`.\nSecurity findings (each already recorded from the reviewer's result; return again only one you dispute, as disputed with its reason, never dropping one):\n${listed(securityLines)}\nThen plan sprint-${sprint.number + 1} as your Sprint mode section says, writing \`${sprint.sprint}\` into build/plan/sprint: the security findings are in the run state \`${sprint.sprint}\`${sprint.sweep ? ` and the sweep's in \`${sweepName}\`` : ''}, the quality findings are those you keep, the duplicate candidates from \`sh tools/run_state.sh backlog-dups\` (a near-same note merged, never dropped), the oldest entries to check against HEAD from \`sh tools/run_state.sh backlog-oldest docs/backlog docs/findings/*.md\`, the three backlog items from \`sh tools/run_state.sh backlog-pick docs/backlog docs/findings/*.md\` (its one caller with the real files), and the one-time backlog triage unless done.${capLine(CAPS.plan)}`,
   { agentType: 'planner', schema: PLAN, label: 'planner: sprint' })
 const planned = qualityReviewed(plan)
+// The planner's quality review, capped with files left, gets one more start
+// of the quality reviewer over them, merged into one review (mergeQuality):
+// a review that still leaves files is recorded partial below, never passed.
+const firstLeft = planned ? plan.not_reviewed.length : 0
+let quality = plan
+if (firstLeft) {
+  const again = await agent(reviewTaskOf(`the files ${plan.not_reviewed.join(', ')} of ${scope}, which the planner's quality review left at its cap`, ' of these'), { agentType: 'quality-reviewer', schema: QUALITY, label: 'quality-reviewer: sprint, continued' })
+  reviewStarts.push(['quality continued', again])
+  quality = mergeQuality(plan, again)
+}
 // The planner's notes and the security findings it found the reviewer
 // missed reach the run state through a record start of the read profile;
 // each text one single-quoted shell word (reviewNotes).
 const missedReviewer = planned ? missedSecurity(plan) : []
 const sprintBlocking = blocking.concat(blockingOf(missedReviewer))
-const kept = planned ? reviewNotes(sprint.sprint, plan.notes).concat(securityNotes(sprint.sprint, missedReviewer, 'missed by the reviewer: ')) : []
+const kept = planned ? reviewNotes(sprint.sprint, quality.notes).concat(securityNotes(sprint.sprint, missedReviewer, 'missed by the reviewer: ')) : []
 const keptRun = await recordNotes(kept, 'sprint: plan notes')
 const planNoted = !kept.length || Boolean(keptRun && keptRun.ok)
 
@@ -301,7 +350,7 @@ if (ran) {
   const count = (severity) => security.findings.concat(missedReviewer).filter((f) => f.severity === severity).length
   record('periodic-security', result(sprintBlocking.length, missed), `diff high=${count('High')} medium=${count('Medium')} low=${count('Low')} blocking=${sprintBlocking.length} disputed=${planned ? plan.disputed : 0} not_reviewed=${missed}`, security.head)
 } else record('periodic-security', 'not-run', 'no result', '')
-if (planned && planNoted) record('periodic-quality', result(plan.quality_blocking, plan.not_reviewed.length), `diff blocking=${plan.quality_blocking} advisory=${plan.quality_advisory} missed=${missedReviewer.length} not_reviewed=${plan.not_reviewed.length}`, plan.head)
+if (planned && planNoted) record('periodic-quality', result(quality.quality_blocking, quality.not_reviewed.length), `diff blocking=${quality.quality_blocking} advisory=${quality.quality_advisory} missed=${missedReviewer.length} not_reviewed=${quality.not_reviewed.length}`, plan.head)
 else record('periodic-quality', 'not-run', planned ? 'the planner notes were not recorded' : 'no planner review', '')
 // A sweep that failed to start leaves its run state without a record;
 // this one says why, and holds the sprint as none does.
@@ -320,7 +369,7 @@ const report = [
   `${sprint.sprint}: ${sprint.names.join(', ')}`,
   planned && !planNoted ? `The planner's notes were not recorded: ${keptRun ? keptRun.output : 'no result'}` : '',
   securityReport(security, sprintBlocking.length, planned ? plan.disputed : null, missedReviewer.length, noted),
-  `Quality: ${planned ? `the planner kept ${plan.quality_blocking} blocking and ${plan.quality_advisory} advisory${plan.not_reviewed.length ? `, ${plan.not_reviewed.length} file(s) not reviewed` : ''}` : 'the planner returned no review; nothing recorded'}`,
+  `Quality: ${planned ? qualityLine(quality, firstLeft) : 'the planner returned no review; nothing recorded'}`,
   `Sweep: ${sweepLine(sprint.sweep, sweep)}`,
   `Plan: ${plan ? `${plan.paths.join(', ') || 'no file'}; ${plan.decisions.map((d) => `${d.decision} (${d.evidence})`).join('; ')}` : reviewed ? 'the planner returned no result; run /sprint again' : 'not started, the sprint review did not complete; run /sprint again'}`,
   plan && plan.security_first.length ? `Security first: deliver ${plan.security_first.join('; ')} before the sprint` : '',
