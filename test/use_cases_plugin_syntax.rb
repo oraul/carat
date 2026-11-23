@@ -132,6 +132,11 @@ module UseCasesPluginSyntaxTest
     t.assert_equal(7, syntax.tokenize(entry, "toy", line, 3), "the end state is returned")
     t.assert_equal("toy one 3", first.log.last, "the plugin gets the filetype, the text, and the start state")
     t.assert_equal([0, 2, H::COMMENT, 1, 1, H::STRING, 2, 1, H::ICON_RUBY], syntax.copied_tokens, "a negative start, an empty token, a UI group, and an unknown id are dropped; a file-icon group is kept")
+    # Scenario: A token starting past the longest span is dropped
+    first.tokens = [1_073_741_825, 1, H::STRING, 1_073_741_824, 5, H::COMMENT, 0, 9_000_000_000, H::STRING]
+    syntax.tokenize(entry, "toy", line, 0)
+    t.assert_equal([1_073_741_824, 5, H::COMMENT, 0, 1_073_741_824, H::STRING], syntax.copied_tokens, "a token starting past 1 << 30 is dropped and a length past it is cut to it")
+    first.tokens = [0, 2, H::COMMENT, -1, 2, H::STRING, 0, 0, H::STRING, 1, 2, 9999, 2, 1, H::NORMAL, 2, 1, H::CURSOR_LINE, 1, 1, H::STRING, 2, 1, H::ICON_RUBY]
     first.finish = -5
     t.assert_equal(0, syntax.tokenize(entry, "toy", line, 0), "a negative state counts as 0")
     first.tokens = Array.new(0, 0)

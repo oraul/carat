@@ -43,10 +43,11 @@ module EditorPluginsTest
           "plugin.side.here" => "Open b.txt in the side window itself",
           "plugin.side.panel" => "Open the log in the bottom panel",
           "plugin.side.other" => "Open another view on the left",
-          "plugin.side.top" => "Open the list at a side that does not exist"
+          "plugin.side.top" => "Open the list at a side that does not exist",
+          "plugin.side.boom" => "Raise"
         },
         commands: {},
-        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here", "keymap.normal <leader>tb plugin.side.panel", "keymap.normal <leader>tv plugin.side.other", "keymap.normal <leader>tu plugin.side.top"],
+        bindings: ["keymap.normal <leader>to plugin.side.open", "keymap.normal <leader>tr plugin.side.right", "keymap.normal <leader>tw plugin.side.wide", "keymap.normal <leader>tc plugin.side.close", "keymap.normal <leader>tl plugin.side.lines", "keymap.normal <leader>tn plugin.side.nope", "keymap.normal <leader>tf plugin.side.file", "keymap.normal <leader>tx plugin.side.far", "keymap.normal <leader>tt plugin.side.count", "keymap.normal <leader>th plugin.side.here", "keymap.normal <leader>tb plugin.side.panel", "keymap.normal <leader>tv plugin.side.other", "keymap.normal <leader>tu plugin.side.top", "keymap.normal <leader>tz plugin.side.boom"],
         events: [], options: [], option_types: {}, filetypes: []
       )
     end
@@ -74,6 +75,7 @@ module EditorPluginsTest
       when "plugin.side.here" then report_window(host.open_file(host.scratch_window("list").window, "b.txt"))
       when "plugin.side.panel" then report_window(host.open_scratch("log", "bottom", 6, LINES, nil))
       when "plugin.side.other" then report_window(host.open_scratch("other", "left", 20, LINES, nil))
+      when "plugin.side.boom" then raise "boom"
       when "plugin.side.top" then report_window(host.open_scratch("list", "top", 30, LINES, nil))
       when "plugin.side.count" then host.message("count #{context.count} register #{context.register.inspect} buffer #{context.buffer}", false)
       end
@@ -244,6 +246,7 @@ module EditorPluginsTest
       ["reopening focuses the side window", " to<C-w>l to", ["ok 2", LEFT, 1]],
       ["no room reports E36", " tw", ["failed 0 #{E36}", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["the plugin closes its window", " to tc", ["ok 0", [[0, 0, 22, 80, "a.txt"]], 1]],
+      ["the plugin closes the view a hidden slot keeps", " to ls tc", ["ok 0", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["closing a list that is not shown fails", " tc", ["failed 0 No window shows list", [[0, 0, 22, 80, "a.txt"]], 1]],
       [":q closes the side window", " to:q<CR>", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["Ctrl-W q closes the side window", " to<C-w>q", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
@@ -262,6 +265,13 @@ module EditorPluginsTest
       h = session(keys)
       [h.message, shape(h), h.window_index]
     end
+    # Scenario: a hidden slot's view is let go: closed by its plugin, or left by a plugin that raised
+    # Scenario: close_scratch lets go of a hidden slot's view
+    h = session(" to ls tc")
+    t.assert_equal([true, false], [h.assembly.buffers.scratch_for("side", "list").nil?, h.state.tab.slot(:left).occupied?], "the plugin's close lets go of the view its hidden slot kept: the buffer leaves the list and the slot is empty")
+    # Scenario: A disabled plugin leaves no hidden slot's view
+    h = session(" to ls tz")
+    t.assert_equal([true, false], [h.assembly.buffers.scratch_for("side", "list").nil?, h.state.tab.slot(:left).occupied?], "a plugin that raised leaves no hidden slot holding its view")
     h = session(" to tv")
     t.assert_equal([" list  other", Carat::Domain::Highlight::TAB_LINE, Carat::Domain::Highlight::TAB_LINE_SELECTED], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 7)], "the header lists both views, the shown one selected")
     t.assert_equal(true, h.assembly.buffers.scratch_for("side", "list").nil?, "the view let go leaves the buffer list")

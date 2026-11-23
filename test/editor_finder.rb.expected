@@ -42,6 +42,7 @@ ok   Typing keeps the list float: one float, the one the finder opened with
 ok   the kept list float shows each key's title
 ok   Moving the highlight keeps both floats
 ok   the kept preview float shows the highlighted file
+ok   a path holding U+202E shows it as a space in the row and in the preview title
 ok   The preview closes and returns beside the list float the finder opened with
 ok   the returned preview shows the highlighted file
 ok   A resize opens the floats at the new size, the list as wide as on an 80-column screen
@@ -118,4 +119,4 @@ ok   The finder attaches its prompt to the list float
 ok   The finder asks for the attachment once for each float, not at every refill
 ok   The finder attaches the reopened prompt to the same float
 ok   The prompt leaves the float when the finder closes
-editor_finder: 120 passed, 0 failed
+editor_finder: 121 passed, 0 failed

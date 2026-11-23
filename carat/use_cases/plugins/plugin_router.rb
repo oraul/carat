@@ -37,15 +37,15 @@ module Carat
         state = @state
         parts = name.split(".")
         plugin_name = parts.length > 1 ? parts[1] : ""
-        e = @registry.find(plugin_name)
-        return Outcome.failure("No plugin named #{plugin_name}") if e.nil?
-        return Outcome.failure("Plugin #{plugin_name} is disabled") unless e.enabled
-        actions = e.manifest.actions
+        entry = @registry.find(plugin_name)
+        return Outcome.failure("No plugin named #{plugin_name}") if entry.nil?
+        return Outcome.failure("Plugin #{plugin_name} is disabled") unless entry.enabled
+        actions = entry.manifest.actions
         return Outcome.failure("Plugin #{plugin_name} has no action #{name}") unless actions.is_a?(Hash) && actions.key?(name)
-        return Outcome.none unless @registry.activate(e)
+        return Outcome.none unless @registry.activate(entry)
         cursor = state.cursor
         context = PluginApi::Context.new(count: command.count, register: command.register, buffer: state.buffer.id, window: state.window.id, path: state.buffer.path_text.dup, row: cursor.row, col: cursor.col)
-        guarded(e) { e.plugin.on_action(name, context) }
+        guarded(entry) { entry.plugin.on_action(name, context) }
         Outcome.none
       end
 
@@ -60,11 +60,11 @@ module Carat
       # its first command; the plugin's own messages go through its requests, so the outcome is silent.
       #: (Domain::ExCommand) -> Outcome
       def command(ex_command)
-        e = @registry.owner_of_command(ex_command.name)
-        return Outcome.failure(Domain::Messages.not_an_editor_command(ex_command.name)) if e.nil?
-        return Outcome.success("") unless @registry.activate(e)
-        call = PluginApi::Command.new(name: e.full_command(ex_command.name), bang: ex_command.bang, args: ex_command.args.dup)
-        guarded(e) { e.plugin.on_command(call) }
+        entry = @registry.owner_of_command(ex_command.name)
+        return Outcome.failure(Domain::Messages.not_an_editor_command(ex_command.name)) if entry.nil?
+        return Outcome.success("") unless @registry.activate(entry)
+        call = PluginApi::Command.new(name: entry.full_command(ex_command.name), bang: ex_command.bang, args: ex_command.args.dup)
+        guarded(entry) { entry.plugin.on_command(call) }
         Outcome.success("")
       end
 
@@ -76,20 +76,20 @@ module Carat
         owner = ui.prompt_owner
         id = ui.prompt_id
         ui.close_prompt
-        e = @registry.find(owner)
-        return if e.nil? || !e.enabled
+        entry = @registry.find(owner)
+        return if entry.nil? || !entry.enabled
         input = PluginApi::Input.new(id: id, text: cancelled ? "" : text.dup, cancelled: cancelled)
-        guarded(e) { e.plugin.on_input(input) }
+        guarded(entry) { entry.plugin.on_input(input) }
       end
 
       # Reports a live prompt's changed text to the plugin that opened it.
       #: (String) -> void
       def follow_prompt(text)
         ui = @plugin_ui
-        e = @registry.find(ui.prompt_owner)
-        return if e.nil? || !e.enabled
+        entry = @registry.find(ui.prompt_owner)
+        return if entry.nil? || !entry.enabled
         input = PluginApi::Input.new(id: ui.prompt_id.dup, text: text.dup, cancelled: false)
-        guarded(e) { e.plugin.on_prompt_change(input) }
+        guarded(entry) { entry.plugin.on_prompt_change(input) }
       end
 
       private

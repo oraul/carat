@@ -35,10 +35,6 @@ module Carat
     # OpenSideWindow, files through OpenFile, SplitWindow, and OpenTab. The plugin link has checked that
     # the plugin is enabled.
     class WindowRequests
-      # The longest span a float row keeps: more than any line holds.
-      LONGEST_SPAN = 1 << 30
-      private_constant :LONGEST_SPAN
-
       attr_reader :state #: Domain::EditorState
       attr_reader :buffers #: Domain::BufferList
       attr_reader :tabs #: Domain::TabList
@@ -122,7 +118,12 @@ module Carat
         state = @state
         buffer = @buffers.scratch_for(name, title)
         leaf = buffer.nil? ? -1 : state.tab.layout.leaf_showing(buffer)
-        return PluginApi::Response.failure("No window shows #{title}") if leaf < 0
+        if leaf < 0
+          # a view a hidden slot keeps is let go, so the buffer leaves the list
+          return PluginApi::Response.failure("No window shows #{title}") if buffer.nil? || @tabs.drop_kept(buffer) == 0
+          @buffers.release(buffer)
+          return PluginApi::Response.success("", 0)
+        end
         if @tabs.total_windows <= 1
           refused = open_file_window(leaf)
           return PluginApi::Response.failure(refused) unless refused.empty?
@@ -418,7 +419,7 @@ module Carat
           length = spans[i + 2]
           group = spans[i + 3]
           return "No row #{row}" if row < 0 || row >= count
-          return "No span at column #{from} length #{length}" if from < 0 || length < 1
+          return "No span at column #{from} length #{length}" if from < 0 || from > Domain::SyntaxLine::LONGEST_SPAN || length < 1
           return "No float group #{group}" unless Domain::Highlight.float_style?(group)
           i += 4
         end
@@ -427,7 +428,7 @@ module Carat
 
       # A SyntaxLine per row of the buffer: for a row with spans, one made
       # for the row's own string holding them as (column, length, group)
-      # triples in their order, a length cut to LONGEST_SPAN so the
+      # triples in their order, a length cut to SyntaxLine::LONGEST_SPAN so the
       # painter's column plus length stays small; SyntaxLine::NONE for any
       # other row. The spans are chained per row first, so the work is one
       # pass over the rows and one over the spans.
@@ -456,7 +457,7 @@ module Carat
               group = Domain::Highlight::POPUP_MENU_MATCH_SELECTED if row == selected && group == Domain::Highlight::POPUP_MENU_MATCH
               length = spans[at + 2]
               tokens << spans[at + 1]
-              tokens << (length > LONGEST_SPAN ? LONGEST_SPAN : length)
+              tokens << (length > Domain::SyntaxLine::LONGEST_SPAN ? Domain::SyntaxLine::LONGEST_SPAN : length)
               tokens << group
               at = after[at / 4]
             end

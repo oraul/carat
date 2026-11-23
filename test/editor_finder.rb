@@ -252,6 +252,13 @@ module EditorFinderTest
     t.assert_equal([2, opened[0], opened[1]], [opened.length, float_ids(h)[0], float_ids(h)[1]], "Moving the highlight keeps both floats")
     t.assert_equal("lib/alpha.rb|a = 1", floats(h)[1], "the kept preview float shows the highlighted file")
 
+    # Scenario: A listed path is shown safely, in its row and the preview title.
+    files = disk
+    files.put("lib/ev\u202Eil.rb", "e = 1\n")
+    h = editor_on(files, 120)
+    h.type("<Space>ffev")
+    t.assert_equal(["Files 1/4|▎ lib/ev il.rb", "lib/ev il.rb|e = 1"], floats(h), "a path holding U+202E shows it as a space in the row and in the preview title")
+
     # Scenario: The preview closes and returns.
     h = editor_on(disk, 120)
     h.type("<Space>ff")

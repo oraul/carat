@@ -71,6 +71,7 @@ ok   the 400,000-line store cap is marked when it cuts a file
 ok   a match on line 1500 of a 2000-line file is listed
 ok   its pick opens the file on line 1500
 ok   150,001 lines are all stored with no cap mark, and a key checks 30,000 of them, its counts marked
+ok   the read stops once the files read hold 16 MiB, so the last file is never read, and the title marks the store cut
 ok   a checks 30,000 lines
 ok   ab checks the 29,999 matches of a again and one line more, the budget they leave
 ok   abc checks the kept matches again and scans on to the last line
@@ -78,4 +79,4 @@ ok   a backspace starts again from the first line, within the budget
 ok   the preview float shows beside the grep list at 120 columns
 ok   the grep list is about half of 120 columns
 ok   Space f f still opens the file finder
-editor_finder_grep: 80 passed, 0 failed
+editor_finder_grep: 81 passed, 0 failed

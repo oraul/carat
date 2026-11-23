@@ -1,5 +1,6 @@
 require_relative "../../plugin_api"
 require_relative "matcher"
+require_relative "safe_text"
 
 module Carat
   module Plugins
@@ -23,13 +24,14 @@ module Carat
       # it kept when it narrows them, which it checks again first, so a key
       # makes at most twice LINE_BUDGET line checks; the counts mark the
       # lines it left unchecked. Line text is untrusted, so a row or a
-      # preview line shown goes through safe. The preview of a row is built
+      # preview line shown goes through SafeText.of. The preview of a row is built
       # from the stored text, with no new file read.
       class Grep
         MAX_ROWS = 200
         MAX_LINES = 400_000
         MAX_BYTES = 400
         FILE_ROWS = 262_144
+        READ_BUDGET = 16_777_216
         HIT_ROOM = 255
         LINE_BUDGET = 30_000
 
@@ -63,13 +65,20 @@ module Carat
         end
 
         # Reads every file of paths, relative to root, until a line does not
-        # fit in MAX_LINES stored lines.
+        # fit in MAX_LINES stored lines, or the files read hold READ_BUDGET
+        # bytes: the reads run on the editor thread, and a listing of
+        # files of empty lines stores no line, so only the bytes bound them.
         #: (Carat::PluginApi::Host, String, Array[String]) -> void
         def load(host, root, paths)
           p = 0
+          bytes = 0
           while p < paths.length && !@capped
             read = host.read_file(PluginApi::Paths.join(root, paths[p]), FILE_ROWS)
-            add_file(paths[p], read.lines) if read.ok
+            if read.ok
+              add_file(paths[p], read.lines)
+              bytes += byte_size(read.lines)
+              @capped = true if bytes >= READ_BUDGET
+            end
             p += 1
           end
         end
@@ -151,8 +160,8 @@ module Carat
           i = @hits[row]
           file = @files[@file_of[i]]
           text = @texts[i]
-          return "#{mark}#{file}:#{@numbers[i]}: #{text}" if plain?(file) && plain?(text)
-          mark + safe("#{file}:#{@numbers[i]}: #{text}")
+          return "#{mark}#{file}:#{@numbers[i]}: #{text}" if SafeText.plain?(file) && SafeText.plain?(text)
+          mark + SafeText.of("#{file}:#{@numbers[i]}: #{text}")
         end
 
         #: (Integer) -> String
@@ -163,7 +172,7 @@ module Carat
         # The row's path as shown, safe for the terminal.
         #: (Integer) -> String
         def shown_path(row)
-          safe(path_at(row))
+          SafeText.of(path_at(row))
         end
 
         # The preview of the row's file from the stored text: height
@@ -194,7 +203,7 @@ module Carat
           n = top
           while n < top + height && n <= last
             if j < stop && @numbers[j] == n
-              out << (n == wanted ? mark : other) + safe(@texts[j])
+              out << (n == wanted ? mark : other) + SafeText.of(@texts[j])
               j += 1
             else
               out << ""
@@ -239,72 +248,6 @@ module Carat
         end
 
         private
-
-        # The text with each control character and each invisible format
-        # or separator character shown as a space and each byte that forms
-        # no valid UTF-8 sequence as "?", so the terminal gets no escape
-        # sequence from a file, a row cannot reorder its text to show
-        # another path or line, and a valid character beside an invalid
-        # byte stays whole.
-        #: (String) -> String
-        def safe(text)
-          return text if plain?(text)
-          out = +""
-          n = text.bytesize
-          i = 0
-          while i < n
-            b = text.getbyte(i).to_i
-            size = utf8_size(b)
-            if size == 1
-              out << (b < 0x20 || b == 0x7F ? " " : b.chr)
-              i += 1
-            elsif size > 1 && i + size <= n && text.byteslice(i, size).to_s.valid_encoding?
-              ch = text.byteslice(i, size).to_s
-              code = ch.ord
-              out << (code < 0xA0 || format_control?(code) ? " " : ch)
-              i += size
-            else
-              out << "?"
-              i += 1
-            end
-          end
-          out
-        end
-
-        # Whether the code point is an invisible format or separator
-        # character: a bidirectional embedding, override, isolate, or mark
-        # (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069), a
-        # zero-width character (U+200B to U+200D, U+FEFF), or the line or
-        # paragraph separator (U+2028, U+2029).
-        #: (Integer) -> bool
-        def format_control?(code)
-          code == 0x061C || code == 0xFEFF || (code >= 0x200B && code <= 0x200F) ||
-            (code >= 0x2028 && code <= 0x202E) || (code >= 0x2066 && code <= 0x2069)
-        end
-
-        # Whether the text holds only printable ASCII, which safe keeps as it
-        # is, so a plain line costs no copy.
-        #: (String) -> bool
-        def plain?(text)
-          i = 0
-          while i < text.bytesize
-            b = text.getbyte(i).to_i
-            return false if b < 0x20 || b > 0x7E
-            i += 1
-          end
-          true
-        end
-
-        # The length of the UTF-8 sequence a lead byte starts, 0 for a byte
-        # that starts none.
-        #: (Integer) -> Integer
-        def utf8_size(b)
-          return 1 if b < 0x80
-          return 2 if b >= 0xC2 && b <= 0xDF
-          return 3 if b >= 0xE0 && b <= 0xEF
-          return 4 if b >= 0xF0 && b <= 0xF4
-          0
-        end
 
         # The query's terms: its runs of bytes between spaces.
         #: (String) -> Array[String]
@@ -444,7 +387,7 @@ module Carat
             back += 1
           end
           stop = MAX_BYTES
-          stop = lead if lead < MAX_BYTES && lead + utf8_size(line.getbyte(lead).to_i) > MAX_BYTES
+          stop = lead if lead < MAX_BYTES && lead + SafeText.utf8_size(line.getbyte(lead).to_i) > MAX_BYTES
           line.byteslice(0, stop).to_s
         end
 
@@ -470,6 +413,18 @@ module Carat
             end
             i += 1
           end
+        end
+
+        # The bytes of the lines and the line breaks between them.
+        #: (Array[String]) -> Integer
+        def byte_size(lines)
+          total = lines.length
+          i = 0
+          while i < lines.length
+            total += lines[i].bytesize
+            i += 1
+          end
+          total
         end
 
         #: (Array[String]) -> bool

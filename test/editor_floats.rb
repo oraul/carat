@@ -330,7 +330,9 @@ module EditorFloatsTest
       ["a span row past the lines", [-1, 3, 0, 1, match], "No row 3"],
       ["a negative span row", [-1, -1, 0, 1, match], "No row -1"],
       ["a negative column", [-1, 0, -1, 2, match], "No span at column -1 length 2"],
-      ["a length of zero", [-1, 0, 0, 0, match], "No span at column 0 length 0"]
+      ["a length of zero", [-1, 0, 0, 0, match], "No span at column 0 length 0"],
+      # Scenario: A float span starting past the longest span is refused
+      ["a column past the longest span", [-1, 0, 1_073_741_825, 2, match], "No span at column 1073741825 length 2"]
     ]) do |row|
       values = ints(row)
       h.plugins.window_requests.style_float("test", id, values[0], values[1, 4]).message

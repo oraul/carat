@@ -1,6 +1,7 @@
 require_relative "../../plugin_api"
 require_relative "matcher"
 require_relative "grep"
+require_relative "safe_text"
 
 module Carat
   module Plugins
@@ -463,7 +464,7 @@ module Carat
             close_preview(host)
             return
           end
-          preview_title = grep? ? @index.shown_path(@matches[@selected]) : selected_path
+          preview_title = grep? ? @index.shown_path(@matches[@selected]) : SafeText.of(selected_path)
           shown = float_at(margin + width + frame, height, room - width - 2 * frame, preview_title)
           preview_box = box_key(shown)
           @preview_float = show_float(host, @preview_float, @preview_box == preview_box, shown, preview_lines(host, height))
@@ -540,7 +541,7 @@ module Carat
           r = top
           while r < top + height && r < matches.length
             mark = r == @selected ? MARK : SPACE
-            lines << (grep? ? @index.row_text(matches[r], mark) : mark + @paths[matches[r]])
+            lines << (grep? ? @index.row_text(matches[r], mark) : mark + SafeText.of(@paths[matches[r]]))
             r += 1
           end
           lines

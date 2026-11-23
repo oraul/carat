@@ -181,6 +181,29 @@ module Carat
         false
       end
 
+      # Lets go of every hidden slot window over the buffer, in every tab
+      # page, dropping its folds; how many there were.
+      #: (Buffer) -> Integer
+      def drop_kept(target)
+        dropped = 0
+        t = 0
+        while t < pages.length
+          page = tab_at(t)
+          i = 0
+          while i < TabPage::SLOT_COUNT
+            slot = page.slot_at(i)
+            if slot.keeps?(target)
+              slot.view_window.drop_folds
+              slot.clear
+              dropped += 1
+            end
+            i += 1
+          end
+          t += 1
+        end
+        dropped
+      end
+
       # How many windows of every tab page show the buffer.
       #: (Buffer) -> Integer
       def windows_showing(target)
