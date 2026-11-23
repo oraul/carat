@@ -8,7 +8,9 @@
 #   phase.NAME       the commit the phase finished at
 #   stage.NAME       "EXIT SECONDSs COMMIT UTC-TIME" of the last run at the
 #                    commit it started on, with "carried-from-COMMIT" when
-#                    check carried it (below); EXIT is "running" while it
+#                    check carried it (below), or "compiled-KEY" (twelve
+#                    digits of the code key) when check skipped a compile
+#                    stage on its code key; EXIT is "running" while it
 #                    runs, "killed" when a signal ended it, "superseded"
 #                    when HEAD moved while it ran, "escaped" when it passed
 #                    in a check that files outside its clone voided
@@ -76,8 +78,10 @@
 # Usage: sh tools/run_state.sh COMMAND ...
 #   init CHANGE BRANCH          create the state unless it exists, then show it;
 #                               on a BRANCH other than main, refuse a CHANGE
-#                               already merged (merged recorded or a lane
-#                               history row), which takes a unique name
+#                               the close recorded as merged (merged and
+#                               phase.retro) or with a lane history row,
+#                               which takes a unique name; a merged run with
+#                               no phase.retro resumes
 #   show CHANGE                 print the state
 #   trusted CHANGE              print the state a resume may trust: without a
 #                               phase.*, review.*, or merged record whose
@@ -96,9 +100,6 @@
 #                               (once pr is recorded, the commit whose subject
 #                               ends with " (#PR)") whose last line is exactly
 #                               the co-author trailer, each refusal naming both
-# Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
-# control character (newline, carriage return, tab, or another), so no write
-# adds a line of its own.
 #   phase CHANGE NAME [COMMIT]  record the phase (one of PHASES) done at
 #                               COMMIT, HEAD when omitted
 #                               (ci only at the pushed head, merge only at
@@ -512,6 +513,9 @@
 #                               its files, exit 1; only its fetch runs
 #                               with no global or system configuration
 #                               and no hook
+# Every write refuses a key outside [a-z0-9_.-] and a key or value holding a
+# control character (newline, carriage return, tab, or another), so no write
+# adds a line of its own.
 #
 # Environment: BASE (origin/main), RUN_STATE_DIR (build/pipeline),
 # STAGE_DIR (build/stages), STAGES (the stage list; make -s stages when
@@ -683,12 +687,11 @@ DIFF_REVIEW_RUN='sprint-[0-9]+'
 # distinct from "the user-approved exception" inside an item's parenthesis,
 # which lifts only the one-pipeline limit (docs_lint.sh) and leaves the
 # item counted.
-EXCEPTION_MARK='beyond the sprint'
+BEYOND_SPRINT_MARK='beyond the sprint'
 # The words of a paragraph starting "The user-approved exception" that put
 # the changes it names before "run" or "runs" in the same clause outside a
 # sprint's count (queue_class).
 OUTSIDE_MARK='outside the 3'
-SPRINT_HEADER="sprint${TAB}last${TAB}merges${TAB}changes${TAB}wall_min${TAB}min_per_change${TAB}total_tokens${TAB}over_budget${TAB}first_pass"
 
 die() {
   echo "run_state: $*" >&2
@@ -724,8 +727,7 @@ backed_commit() {
     echo "$backed_at"
     return
   fi
-  checked=$(read_key phase.check)
-  [ -z "$checked" ] || checked=$(git rev-parse --verify -q --short=12 "$checked^{commit}" 2>/dev/null) || checked=""
+  checked=$(recorded_check)
   if [ -n "$checked" ] && [ "$backed_at" = "$checked" ]; then
     echo "$backed_at"
     return
@@ -788,32 +790,33 @@ write_key() {
   [ -f "$file" ] || die "no run state for $change; run init first"
   plain_key "$1"
   plain "$2" "the value of $1"
-  K="$1" V=$(escape "$2") awk '
-    /^  "/ {
-      line = $0; sub(/,$/, "", line)
-      key = line; sub(/^  "/, "", key); sub(/".*/, "", key)
-      if (key == ENVIRON["K"]) { line = "  \"" key "\": \"" ENVIRON["V"] "\""; found = 1 }
-      lines[n++] = line
-    }
-    END {
-      if (!found) lines[n++] = "  \"" ENVIRON["K"] "\": \"" ENVIRON["V"] "\""
-      print "{"
-      for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
-      print "}"
-    }' "$file" > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+  state_rewrite set "$1" "$2"
 }
 
 # Remove KEY from the run state; nothing happens when it is absent.
 drop_key() {
   file=$(state_file)
   [ -f "$file" ] || die "no run state for $change; run init first"
-  K="$1" awk '
+  state_rewrite drop "$1"
+}
+
+# state_rewrite MODE KEY [VALUE]: the run state with KEY set to VALUE (MODE
+# set, added at the end when absent) or without it (MODE drop), written
+# through a temporary file and a rename: the one rewrite write_key and
+# drop_key share.
+state_rewrite() {
+  K="$2" V=$(escape "${3:-}") MODE="$1" awk '
     /^  "/ {
       line = $0; sub(/,$/, "", line)
       key = line; sub(/^  "/, "", key); sub(/".*/, "", key)
-      if (key != ENVIRON["K"]) lines[n++] = line
+      if (key == ENVIRON["K"]) {
+        if (ENVIRON["MODE"] == "drop") next
+        line = "  \"" key "\": \"" ENVIRON["V"] "\""; found = 1
+      }
+      lines[n++] = line
     }
     END {
+      if (ENVIRON["MODE"] == "set" && !found) lines[n++] = "  \"" ENVIRON["K"] "\": \"" ENVIRON["V"] "\""
       print "{"
       for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
       print "}"
@@ -1066,7 +1069,7 @@ stages_reap() {
       running=$(echo " $running " | sed "s/ $s / /; s/^ *//; s/ *\$//")
       ended=$s
       stage_end "$s" "$job_at" "$job_start" "$job_status" || return 1
-      ! one_of "$s" "$COMPILE_STAGES" || compiled_set "$s" "$key $(outputs_sum "$s")"
+      compile_passed "$s"
       return 0
     done
     pause
@@ -1099,7 +1102,7 @@ stages_stop() {
       wait "$job_pid"
       job_status=$?
       if ! one_of "$job_status" "$KILLED_STATUSES"; then
-        stage_end "$s" "$job_at" "$job_start" "$job_status" || :
+        if stage_end "$s" "$job_at" "$job_start" "$job_status" && [ "$stage_word" = 0 ]; then compile_passed "$s"; fi
         continue
       fi
     fi
@@ -1118,17 +1121,6 @@ tests_only_since() {
   [ -z "$(printf '%s\n' "$rest" | grep -v -E "$TEST_ONLY")" ]
 }
 
-# The stages in order: a stage record counts only at BACKED, the last
-# commit whose check the workflow recorded (empty: none), or carried from
-# it, so a record at HEAD that no workflow record backs runs again. A stage
-# passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
-# it reads no test program and only tests changed since BACKED.
-# The runner (check-run) runs them detached from the waiter (check_wait),
-# the ones not skipped at once (STAGE_AFTER); the first stage that does not
-# pass ends the run with its verdict line.
-# The merge gates run origin/main's copy (BASE), which requires the stages
-# of its Makefile: while that Makefile has CHECK_STAGES and no FAST_STAGES,
-# main's CHECK_STAGES; otherwise nothing, and make stages decides.
 # The paths changed from the merge base with BASE to HEAD, a rename
 # counting both; nothing when the merge base is unknown.
 scope_paths() {
@@ -1149,6 +1141,9 @@ out_of_scope() {
   done
 }
 
+# The merge gates run origin/main's copy (BASE), which requires the stages
+# of its Makefile: while that Makefile has CHECK_STAGES and no FAST_STAGES,
+# main's CHECK_STAGES; otherwise nothing, and make stages decides.
 main_stages() {
   file=$(git show "${BASE:-origin/main}:Makefile" 2> /dev/null) || return 0
   ! printf '%s\n' "$file" | grep -q '^FAST_STAGES := ' || return 0
@@ -1166,16 +1161,22 @@ head_fast_stages() {
   printf '%s\n' "$line"
 }
 
+# The stages in order: a stage record counts only at BACKED, the last
+# commit whose check the workflow recorded (empty: none), or carried from
+# it, so a record at HEAD that no workflow record backs runs again. A stage
+# passed at BACKED is skipped when BACKED is HEAD, and carried to HEAD when
+# it reads no test program and only tests changed since BACKED.
+# The runner (check-run) runs them detached from the waiter (check_wait),
+# the ones not skipped at once (STAGE_AFTER); the first stage that does not
+# pass ends the run with its verdict line.
 check_stages() {
   stages=${STAGES:-$(main_stages)}
   [ -n "$stages" ] || stages=$(in_clone "$make_cmd" -s --no-print-directory stages)
   backed=$1
-  key=$(code_key)
   paths=$(scope_paths)
   # The recorded phase.check, twelve digits, which alone backs a pass of
   # RERUN_STAGES at the head.
-  phase_check=$(read_key phase.check)
-  [ -z "$phase_check" ] || phase_check=$(git rev-parse --verify -q --short=12 "$phase_check^{commit}" 2>/dev/null) || phase_check=""
+  phase_check=$(recorded_check)
   for s in $stages; do
     record=$(read_key "stage.$s")
     at=$(echo "$record" | cut -d' ' -f3)
@@ -1200,18 +1201,21 @@ check_stages() {
       echo "stage $s: no path changed since the merge base is one it checks, skipped"
       continue
     fi
-    if one_of "$s" "$COMPILE_STAGES" && compiled_same "$s" "$key"; then
-      stage_record "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
-      echo "stage $s: passed on the same code (key $(echo "$key" | cut -c1-12)) with its outputs unchanged, skipped"
-      continue
+    if one_of "$s" "$COMPILE_STAGES"; then
+      key=$(stage_key "$s")
+      if compiled_same "$s" "$key"; then
+        stage_record "stage.$s" "0 0s $head $(utc_now) compiled-$(echo "$key" | cut -c1-12)"
+        echo "stage $s: passed on the same code (key $(echo "$key" | cut -c1-12)) with its outputs unchanged, skipped"
+        continue
+      fi
+      compiled_set "$s" ""
     fi
-    one_of "$s" "$COMPILE_STAGES" && compiled_set "$s" ""
     queue="$queue $s"
   done
   refused=$(jobs_refusal)
   if [ -n "$refused" ]; then
     echo "$refused"
-    echo "check: stage none failed at $head; read $(check_log)"
+    verdict_failed
     exit 1
   fi
   # The stages left run at once (stages_start), each in its job; the runner
@@ -1237,7 +1241,7 @@ check_stages() {
     if lane_written "$escaped"; then
       echo "check: stage none escaped at $head; read $(check_log)"
     else
-      echo "check: stage none failed at $head; read $(check_log)"
+      verdict_failed
     fi
     exit 1
   fi
@@ -1260,6 +1264,26 @@ check_log() {
 runner_alive() {
   [ -n "$1" ] && kill -0 "$1" 2>/dev/null &&
     ps -p "$1" -o args= 2>/dev/null | grep -q 'run_state[.]sh check-run'
+}
+
+# The tracked files that differ from HEAD, as status --porcelain lists
+# them, read with no optional lock: what the waiter and the runner refuse.
+dirty_tracked() {
+  GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no
+}
+
+# The verdict line of a check that failed before any stage ran or after
+# every one exited 0, at the runner's head (check_verdict reads it back).
+verdict_failed() {
+  echo "check: stage none failed at $head; read $(check_log)"
+}
+
+# The twelve-digit commit the recorded phase.check names, empty when none is
+# recorded or git knows no such commit.
+recorded_check() {
+  checked=$(read_key phase.check)
+  [ -z "$checked" ] || checked=$(git rev-parse --verify -q --short=12 "$checked^{commit}" 2>/dev/null) || checked=""
+  printf '%s\n' "$checked"
 }
 
 # The verdict line ending the runner's output, empty while it has none:
@@ -1294,10 +1318,10 @@ check_run() {
   # started over an edited tree (after the waiter's check, or by hand)
   # writes no record, so its pass backs no head; an edit after this line
   # is voided by the escape scan.
-  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  dirty=$(dirty_tracked)
   if [ -n "$dirty" ]; then
     echo "check: refused: tracked files differ from HEAD at the runner's start, so no stage record stands: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
-    echo "check: stage none failed at $head; read $(check_log)"
+    verdict_failed
     exit 1
   fi
   clone_make
@@ -1400,18 +1424,30 @@ index_view() {
 tree_scan() {
   scan_dir=$1
   shift
+  tree_find "$scan_dir" -print "$@"
+}
+
+# tree_find DIR ACTION [TEST...]: tree_scan's find with ACTION (-print, or
+# -print0 for names holding a newline) in place of -print.
+tree_find() {
+  scan_dir=$1
+  scan_action=$2
+  shift 2
   find "$scan_dir" \( -path "$scan_dir/.git" -type d -o -path "$scan_dir/tmp" -o -path "$scan_dir/build/pipeline" -o \
       -path "$scan_dir/build/stages" -o -path "$scan_dir/build/plan" -o -path "$scan_dir/build/spinel-cache" \) -prune -o \
-    "$@" -newerct "$escape_since" -print 2> /dev/null
+    "$@" -newerct "$escape_since" "$scan_action" 2> /dev/null
 }
 
 # The main checkout's files changed since escape_mark (tree_scan) that it
 # does not track, directories left out: the merger's fast-forward of its
 # branch changes only tracked files, which main_view compares.
 main_scan() {
-  { git -c core.quotePath=false -C "$main_tree" ls-files 2> /dev/null | MAIN="$main_tree" awk '{ print "T " ENVIRON["MAIN"] "/" $0 }'
-    tree_scan "$main_tree" ! -type d | sed 's/^/F /'; } |
-    awk '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
+  # Both lists NUL-separated, read by awk as records ended by a byte 1, so
+  # a path holding a tab, newline, quote, or backslash, which git quotes
+  # in its line form, still matches the one find prints.
+  { git -C "$main_tree" ls-files -z 2> /dev/null | tr '\0' '\001' | MAIN="$main_tree" awk -v RS='\001' -v ORS='\001' '{ print "T " ENVIRON["MAIN"] "/" $0 }'
+    tree_find "$main_tree" -print0 ! -type d | tr '\0' '\001' | awk -v RS='\001' -v ORS='\001' '{ print "F " $0 }'; } |
+    awk -v RS='\001' -v ORS='\n' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
 }
 
 # What the main checkout holds against its HEAD, which the merger's
@@ -1423,6 +1459,12 @@ main_view() {
   GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" ls-files -v 2> /dev/null | grep -v '^H '
 }
 
+# bounded COMMAND...: COMMAND with at most 60 seconds where timeout exists,
+# so a stalled connection or a prompt cannot hold a check.
+bounded() {
+  if command -v timeout > /dev/null 2>&1; then timeout 60 "$@"; else "$@"; fi
+}
+
 # True when the main checkout's HEAD names another commit than at
 # escape_mark and not the one origin's branch names, where the merger's
 # fast-forward takes it, read from origin itself (ls-remote): a stage can
@@ -1430,9 +1472,11 @@ main_view() {
 # origin, whose address config_view compares. An unreachable origin or a
 # detached main checkout, whose empty branch names no ref, counts as moved.
 main_moved() {
+  main_ref=$(git -C "$main_tree" symbolic-ref -q HEAD)
+  [ "$main_ref" = "$main_branch" ] || return 0
   main_head=$(git -C "$main_tree" rev-parse -q --verify HEAD)
   [ "$main_head" != "$escape_main_head" ] || return 1
-  origin_head=$(git -C "$main_tree" ls-remote origin "$main_branch" 2> /dev/null |
+  origin_head=$(GIT_TERMINAL_PROMPT=0 bounded git -C "$main_tree" ls-remote origin "$main_branch" 2> /dev/null |
     REF="$main_branch" awk '$2 == ENVIRON["REF"] { print $1; exit }')
   [ -z "$origin_head" ] || [ "$main_head" != "$origin_head" ]
 }
@@ -1456,7 +1500,16 @@ escaped_paths() {
   escape_scan "$common_dir/hooks"
   escape_scan "$common_dir/info"
   escape_scan "$common_dir/config.worktree"
-  [ -z "$HOME" ] || escape_scan "$HOME/.gitconfig"
+  # The files the user's later sessions run or read: the global git
+  # configuration (also under XDG_CONFIG_HOME and ~/.config/git), the shell
+  # startup files, and the agent hooks' settings. Not ~/.claude as a whole,
+  # which the session itself writes.
+  if [ -n "${HOME:-}" ]; then
+    for home_file in .gitconfig .config/git .profile .bash_profile .bash_login .bashrc .zprofile .zshenv .zshrc .claude/settings.json .claude/settings.local.json; do
+      escape_scan "$HOME/$home_file"
+    done
+  fi
+  [ -z "${XDG_CONFIG_HOME:-}" ] || [ "$XDG_CONFIG_HOME" = "${HOME:-}/.config" ] || escape_scan "$XDG_CONFIG_HOME/git"
   escape_scan "$top/tmp/.toolchain"
   escape_scan "$top/tmp/.spinel"
   if [ -n "$main_tree" ]; then
@@ -1522,7 +1575,7 @@ clone_make() {
   mkdir -p "$check_root/tmp" "$check_root/build"
   toolchain_copy
   carry=$stage_dir/$change/carry
-  [ ! -d "$carry" ] || cp -RP "$carry/." "$check_root/build/"
+  [ ! -d "$carry" ] || { cp -RP "$carry/." "$check_root/build/" && find "$check_root/build" -type l -exec rm -f {} +; }
   clone_plan
 }
 
@@ -1560,14 +1613,17 @@ toolchain_copy() {
 
 clone_refused() {
   echo "check: the check clone could not be made: $1"
-  echo "check: stage none failed at $head; read $(check_log)"
+  verdict_failed
   exit 1
 }
 
 # in_clone COMMAND...: runs COMMAND in the check clone, with no path to
-# the delivery clone's run state, stages, or project in its environment;
-# sh execs it, so a stage's parent stays the runner.
-CLONE_EXEC='cd "$1" && shift && unset RUN_STATE_DIR STAGE_DIR METRICS_OUT CLAUDE_PROJECT_DIR && exec "$@"'
+# the delivery clone's run state, stages, or project in its environment and
+# HOME a throwaway directory inside the clone (tmp/home) with no XDG
+# configuration directory, so a stage that writes "~" writes the clone, not
+# the profile, shell startup files, or git configuration of the user who ran
+# the check; sh execs it, so a stage's parent stays the runner.
+CLONE_EXEC='cd "$1" && shift && unset RUN_STATE_DIR STAGE_DIR METRICS_OUT CLAUDE_PROJECT_DIR XDG_CONFIG_HOME && HOME=$PWD/tmp/home && mkdir -p "$HOME" && export HOME && exec "$@"'
 in_clone() {
   sh -c "$CLONE_EXEC" in_clone "$check_root" "$@"
 }
@@ -1594,6 +1650,8 @@ clone_drop() {
     rm -rf "$carry"
     mkdir -p "$carry" && cp -RP "$root/repo/build/." "$carry/" 2> /dev/null
     rm -rf "$carry/pipeline" "$carry/stages" "$carry/plan"
+    # No link a stage planted in build/ reaches the carry and the next clone.
+    find "$carry" -type l -exec rm -f {} + 2> /dev/null
     if [ -f "$root/repo/build/metrics/current.tsv" ]; then
       mkdir -p "$(dirname "$metrics_out")" && cp "$root/repo/build/metrics/current.tsv" "$metrics_out"
     fi
@@ -1629,7 +1687,7 @@ check_signalled() {
 check_lost() {
   at=$1
   clone_lost
-  lost=$(grep -E '^  "stage\.[^"]*": "running ' "$(state_file)" | sed 's/^  "stage\.\([^"]*\)": "running \(.*\)",*$/\1 \2/')
+  lost=$(keys_under stage. | sed -n 's/^\([^=]*\)=running \(.*\)$/\1 \2/p')
   # Every stage the runner left running is recorded killed; the verdict
   # names the first.
   first=''
@@ -1650,7 +1708,6 @@ LOST
   echo "$line"
 }
 
-
 # check BACKED: refuse a dirty tree, then rejoin the runner running at
 # HEAD, stop one at another commit (its verdict reads superseded), or
 # start one detached from this shell (setsid), so the end of the caller's
@@ -1660,7 +1717,7 @@ LOST
 check_wait() {
   # No optional lock: a waiter rejoining a running check leaves the index,
   # which escaped_paths reads in a linked worktree's git directory.
-  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  dirty=$(dirty_tracked)
   [ -z "$dirty" ] || die "check: refused: tracked files differ from HEAD; commit them first: $(printf '%s\n' "$dirty" | head -3 | tr '\n' ' ')"
   loose=$(git ls-files --others --exclude-standard -- carat bin test bench)
   [ -z "$loose" ] || die "check: refused: untracked files under carat/, bin/, test/, or bench/, which spin compiles: $(printf '%s\n' "$loose" | head -3 | tr '\n' ' ')"
@@ -1681,12 +1738,10 @@ check_wait() {
   elif runner_alive "$pid"; then
     echo "check: the check running at $at is superseded by $head; stopping it"
     kill -TERM "$pid" 2>/dev/null
-    n=0
-    while runner_alive "$pid" && [ $n -lt 150 ]; do pause; n=$((n + 1)); done
+    runner_wait "$pid"
     echo "the superseded check: $(check_verdict)"
   elif [ -f "$pid_file" ]; then
     [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at")"
-    rm -f "$pid_file"
   fi
   if [ "$joined" = 0 ]; then
     rm -f "$pid_file"
@@ -1738,8 +1793,18 @@ read_pid() {
 # to exit, so a check returns with no runner behind it and the next check
 # neither rejoins a finished runner nor shares the carry it still writes.
 runner_finish() {
-  n=0
-  while runner_alive "$1" && [ -n "$(check_verdict)" ] && [ $n -lt 150 ]; do pause; n=$((n + 1)); done
+  runner_wait "$1" finished
+}
+
+# runner_wait PID [finished]: waits, at most 30 seconds by the clock, for
+# the runner PID to exit; with "finished", only while its output already
+# ends in its verdict. The one wait runner_finish and the superseding of a
+# runner in check_wait share.
+runner_wait() {
+  began=$(date +%s)
+  while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt 30 ]; do
+    pause
+  done
 }
 
 # A fifth of a second, or a second where sleep takes whole seconds only.
@@ -1750,13 +1815,32 @@ pause() {
 # The key of the code the compile stages read: the blobs of every tracked
 # path at HEAD but those NOT_COMPILED names (BUILD_TOOLS excepted), hashed.
 code_key() {
+  skip=$NOT_COMPILED
+  # dev-build compiles bin/carat.rb and what it requires, never a test or a
+  # benchmark, so a commit to test/ or bench/ keeps its key.
+  [ "${1:-}" != dev-build ] || skip="$NOT_COMPILED|^(test|bench)/"
   git ls-tree -r --full-tree HEAD |
-    awk -F'\t' -v skip="$NOT_COMPILED" -v keep="$BUILD_TOOLS" '$2 !~ skip || $2 ~ keep' |
+    awk -F'\t' -v skip="$skip" -v keep="$BUILD_TOOLS" '$2 !~ skip || $2 ~ keep' |
     git hash-object --stdin
 }
 
-# The editor binary every check stage gets as CARAT_BIN: DEV_BIN, which
-# dev-build writes before test-run's smoke test runs it.
+# stage_key STAGE: the key a pass of the compile stage STAGE is cached by,
+# its code key and the make command that ran it, so a pass under another
+# command (MAKE=true records a stage that never ran) skips no later run.
+stage_key() {
+  printf '%s\n%s\n' "$(code_key "$1")" "$make_cmd" | git hash-object --stdin
+}
+
+# compile_passed STAGE: records a passed compile stage on its key and its
+# outputs (compiled_set), as the one place that reaps or stops it does; a
+# stage outside COMPILE_STAGES is left alone.
+compile_passed() {
+  ! one_of "$1" "$COMPILE_STAGES" || compiled_set "$1" "$(stage_key "$1") $(outputs_sum "$1")"
+}
+
+# The editor binary every check stage gets as CARAT_BIN: the Makefile's
+# DEV_BIN, the one source, which dev-build writes before test-run's smoke
+# test runs it (tools/tools_test.sh fails when the two paths differ).
 CHECK_BIN=build/dev/carat
 
 # The outputs of a compile stage, which later stages read (test-run and
@@ -1911,6 +1995,12 @@ push_branch() {
       pushed=$(read_key pushed)
       [ -n "$pushed" ] && [ "$pushed" != "$(git rev-parse HEAD)" ] ||
         die "push: refused: a pull request text push needs a recorded push other than HEAD (pushed)"
+      # It rewrites the archived pr.md and nothing else: the records paths
+      # a review settles across hold specs and goals nobody reviewed again.
+      text_paths=$(git diff --no-renames --name-only --end-of-options "$pushed" HEAD --) ||
+        die "push: refused: git diff failed comparing the pushed head $pushed with HEAD"
+      text_other=$(printf '%s\n' "$text_paths" | grep -v -x -E "openspec/changes/archive/[0-9]{4}-[0-9]{2}-[0-9]{2}-$change/pr[.]md" | grep . | head -n 3 | tr '\n' ' ') || true
+      [ -z "$text_other" ] || die "push: refused: a pull request text push rewrites only the archived pr.md of $change, not ${text_other% }"
       texts=1 ;;
     "") ;;
     *) die "push: unknown push kind: $1 (--ci-fix, --review-fix, --main-moved, or --pr-text)" ;;
@@ -2121,6 +2211,8 @@ base_figures() {
             die "base-figures: refused: tmp/.base holds an untracked $planted, which make would read first"
         fi
       done
+      untracked=$(git -C tmp/.base ls-files --others --exclude-standard 2>/dev/null | head -n 3 | tr '\n' ' ')
+      [ -z "$untracked" ] || die "base-figures: refused: tmp/.base holds an untracked file, which the build would measure as main's: ${untracked% }"
       [ -f tmp/.base/tools/metrics.sh ] || die "base-figures: refused: tmp/.base has no tools/metrics.sh"
       measured=$(mktemp) || die "base-figures: no temporary file"
       rm -rf tmp/.base/build/dev/carat.timing tmp/.base/build/test/run_all.timing tmp/.base/build/bench/keys-budget tmp/.base/build/metrics
@@ -2155,7 +2247,7 @@ carried_check() {
   [ -z "$untracked" ] || { echo "carried: no: an untracked makefile stands: $untracked"; return 1; }
   want=$(commit_at "$1") || exit 1
   [ "$want" = "$head" ] || { echo "carried: no: $want is not HEAD $head"; return 1; }
-  dirty=$(GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no)
+  dirty=$(dirty_tracked)
   [ -z "$dirty" ] || { echo "carried: no: tracked files differ from HEAD"; return 1; }
   # The stage list is read as check_stages and gates.sh read it, as text and
   # never by running make in the working tree: a planted untracked GNUmakefile
@@ -2391,7 +2483,7 @@ lane_of() {
     fi
   else
     for l in feature backlog; do
-      if item_named < "docs/queue-$l.md" 2>/dev/null; then lane=$l; break; fi
+      if { item_named < "docs/queue-$l.md"; } 2>/dev/null; then lane=$l; break; fi
     done
     for l in feature backlog; do
       [ -z "$lane" ] || break
@@ -2490,12 +2582,29 @@ plan_apply() {
     [ "$l" = "$lane" ] || [ ! -f "$dir/queue-$l.md" ] || echo "plan-apply: left $dir/queue-$l.md, of the $l lane, which $change's package step never applies"
   done
   if [ -f "$dir/goals.md" ]; then
-    cp "$dir/goals.md" docs/goals.md || die "plan-apply: docs/goals.md not written"
-    echo "plan-apply: copied $dir/goals.md over docs/goals.md"
+    case "$(read_key review.security)" in
+      pass\ *)
+        # docs/goals.md is an instruction record: a security review that
+        # passed already makes any later edit of it stale, which reviewed-edits
+        # names for restoring, so the planned goals wait for their own delivery.
+        echo "plan-apply: left $dir/goals.md: a security review passed for $change and docs/goals.md is an instruction record the gates settle no pass across; the goals change needs its own delivery" ;;
+      *)
+        cp "$dir/goals.md" docs/goals.md || die "plan-apply: docs/goals.md not written"
+        echo "plan-apply: copied $dir/goals.md over docs/goals.md" ;;
+    esac
   fi
   if [ -f "$dir/backlog.md" ]; then
-    mkdir -p "$findings_dir" && cat "$dir/backlog.md" >> "$findings_dir/$change.md" || die "plan-apply: $findings_dir/$change.md not appended"
-    echo "plan-apply: appended $dir/backlog.md to $findings_dir/$change.md"
+    mkdir -p "$findings_dir" && touch "$findings_dir/$change.md" || die "plan-apply: $findings_dir/$change.md not appended"
+    # Each entry once, whoever appended it first (the implement step too),
+    # after a blank line, so a run's findings file holds no heading twice.
+    fresh_entries=$(T="$findings_dir/$change.md" awk 'BEGIN { while ((getline line < ENVIRON["T"]) > 0) if (line ~ /^#+ /) have[line] = 1 } /^#+ / { skip = ($0 in have) } !skip' "$dir/backlog.md")
+    if [ -z "$(printf '%s' "$fresh_entries" | tr -d ' \t\n')" ]; then
+      echo "plan-apply: $dir/backlog.md is already in $findings_dir/$change.md; not appended again"
+    else
+      { [ ! -s "$findings_dir/$change.md" ] || [ -z "$(tail -n 1 "$findings_dir/$change.md")" ] || echo; printf '%s\n' "$fresh_entries"; } >> "$findings_dir/$change.md" ||
+        die "plan-apply: $findings_dir/$change.md not appended"
+      echo "plan-apply: appended $dir/backlog.md to $findings_dir/$change.md"
+    fi
   fi
 }
 
@@ -2552,8 +2661,14 @@ queue_at() {
 # (origin/main): a merge, unlike a merged value naming no such commit.
 merged_on_main() {
   full=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  git merge-base --is-ancestor "$full" HEAD 2>/dev/null && return 0
-  git merge-base --is-ancestor "$full" "${BASE:-origin/main}" 2>/dev/null
+  on_head_or_base "$full" "${BASE:-origin/main}"
+}
+
+# True when the full commit $1 is an ancestor of HEAD or of $2, a commit or
+# ref ("" for none): merged_on_main and supported differ only in the base.
+on_head_or_base() {
+  git merge-base --is-ancestor "$1" HEAD 2>/dev/null && return 0
+  [ -n "$2" ] && git merge-base --is-ancestor "$1" "$2" 2>/dev/null
 }
 
 # The twelve-digit pushed head when VALUE ($1) is 7 to 40 of its leading
@@ -2631,13 +2746,20 @@ squash_of_change() {
 # (merged_on_main), is not a merge, so no history row, sprint, or bench
 # base takes it.
 pending_list() {
+  merged_rows | awk '$3 == "on" { print $1 }'
+}
+
+# Each run state with a merged value and no history row, classified once as
+# "NAME MERGED on" (a commit on main, merged_on_main) or "NAME MERGED off":
+# the one loop pending_list and unmerged_list filter.
+merged_rows() {
   for file in "$state_dir"/*.json; do
     [ -f "$file" ] || continue
     name=$(basename "$file" .json)
     merged=$(change=$name; merged_commit)
     [ -n "$merged" ] || continue
     has_row "$name" && continue
-    merged_on_main "$merged" && echo "$name"
+    if merged_on_main "$merged"; then echo "$name $merged on"; else echo "$name $merged off"; fi
   done
 }
 
@@ -2690,14 +2812,7 @@ reviewed_edits() {
 # The run states whose merged value is a commit hash naming no commit on
 # main and that have no history row, as "NAME VALUE" lines: never merged.
 unmerged_list() {
-  for file in "$state_dir"/*.json; do
-    [ -f "$file" ] || continue
-    name=$(basename "$file" .json)
-    merged=$(change=$name; merged_commit)
-    [ -n "$merged" ] || continue
-    has_row "$name" && continue
-    merged_on_main "$merged" || echo "$name $merged"
-  done
+  merged_rows | awk '$3 == "off" { print $1, $2 }'
 }
 
 # The keys of the run state under PREFIX as "suffix=value" lines.
@@ -2766,6 +2881,11 @@ estimate_of() {
   echo "${size:--}"
 }
 
+# budget_of SIZE: the total-token budget of a size (TOKEN_BUDGETS).
+budget_of() {
+  printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$1=//p"
+}
+
 # The budget line: the run's total tokens and wall minutes against the
 # budgets of its estimate (TOKEN_BUDGETS, MINUTE_BUDGETS), its output tokens
 # beside them, for the retrospective to flag an overrun.
@@ -2779,7 +2899,7 @@ budget_line() {
     echo "no estimate: neither the run state nor a queue item of $change states a size; $actual"
     return
   fi
-  limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
+  limit=$(budget_of "$size")
   time_limit=$(printf '%s\n' $MINUTE_BUDGETS | sed -n "s/^$size=//p")
   budget="budget $limit total tokens${time_limit:+ and $time_limit minutes}"
   if ! valid '[0-9]+' "$total"; then
@@ -2814,8 +2934,8 @@ add_usage() {
 # step's name in lowercase, every other character an underscore, cut at a
 # word within 32 characters), rounded to a tenth and written without a
 # point when whole, replacing the previous run's; a step rounding to 0 is
-# left out. The merger's green and red lines run it first, so it exits 0
-# when nothing could be read.
+# left out. The record or closing start runs it once CI finished (the
+# merger's lines never do), so it exits 0 when nothing could be read.
 ci_stages() {
   valid '[0-9a-f]{40}' "$1" || die "ci-stages: not a full commit: $1"
   [ -f "$(state_file)" ] || die "no run state for $change"
@@ -2828,7 +2948,7 @@ ci_stages() {
     $1 ~ /^[0-9]+([.][0-9]+)?$/ {
       s = tenth($1) + 0; $1 = ""; name = tolower($0)
       gsub(/[^a-z0-9]+/, "_", name); sub(/^_+/, "", name); sub(/_+$/, "", name)
-      if (length(name) > 32) { name = substr(name, 1, 33); sub(/_[^_]*$/, "", name) }
+      if (length(name) > 32) { name = substr(name, 1, 33); sub(/_[^_]*$/, "", name); if (length(name) > 32) name = substr(name, 1, 32) }
       if (name != "" && s > 0) { if (!(name in t)) order[++n] = name; t[name] += s }
     }
     END { for (i = 1; i <= n; i++) print order[i] "=" tenth(t[order[i]]) }')
@@ -2932,7 +3052,7 @@ spent_line() {
     echo "no estimate: $out output tokens so far; $earlier; neither the run state nor a queue item of $change states a size"
     return
   fi
-  limit=$(printf '%s\n' $TOKEN_BUDGETS | sed -n "s/^$size=//p")
+  limit=$(budget_of "$size")
   out_limit=$((limit / OUTPUT_SHARE))
   word=under
   if [ "$out" -gt "$out_limit" ] || [ "$total" -gt "$limit" ]; then word=over; fi
@@ -3041,11 +3161,11 @@ append_history() {
       echo "history: $change is of the $lane_now lane; left to that lane's next package step"
       continue
     fi
-    file=$metrics_prefix-$lane_now.tsv
-    [ -s "$file" ] || printf '%s\n' "$HEADER" > "$file"
-    history_row >> "$file"
+    row_file=$metrics_prefix-$lane_now.tsv
+    [ -s "$row_file" ] || printf '%s\n' "$HEADER" > "$row_file"
+    history_row >> "$row_file"
     write_key row "$branch_now"
-    echo "history: appended $change to $file"
+    echo "history: appended $change to $row_file"
     found=$(late_findings)
     [ -n "$found" ] || continue
     mkdir -p "$findings_dir" || die "history: no $findings_dir"
@@ -3155,13 +3275,13 @@ queue_records() {
 # outside, an exception paragraph names `NAME` in a clause between
 # semicolons holding OUTSIDE_MARK, before that clause's first " run " or
 # " runs " (so "`a` runs before `b`, outside the 3" puts out a, not b);
-# beyond, its item's first parenthesis carries EXCEPTION_MARK; sprint, its
+# beyond, its item's first parenthesis carries BEYOND_SPRINT_MARK; sprint, its
 # item sits under a "## Sprint N" heading; pool, under any other. Nothing
 # when neither queue names it or COMMIT is no hash.
 queue_class() {
   valid '[0-9a-f]{7,40}' "$2" || return 0
   for at in "$2^" "$2"; do queue_at "$at" | queue_records; done |
-    C="$1" M="$EXCEPTION_MARK" O="$OUTSIDE_MARK" awk '
+    C="$1" M="$BEYOND_SPRINT_MARK" O="$OUTSIDE_MARK" awk '
     BEGIN { C = ENVIRON["C"] }
     { text = $0; sub(/^[a-z]+ [a-z]+ /, "", text) }
     $1 == "item" && index(text, "`" C "` (") == 1 {
@@ -3431,15 +3551,32 @@ backlog_move() {
   echo "backlog-move: moved $src into $backlog_dir, $headings headings and $lines lines kept, $src removed"
 }
 
+# Standard input with every reference to a findings file, which groom
+# removes once it folded it, written as the removed file, so docs-lint
+# finds no path that is gone: `docs/findings/NAME.md` (a :LINE after it
+# too) and the directory `docs/findings/`. A heading line is left as it is.
+removed_refs() {
+  sed -e '/^#/!s#`\{0,1\}docs/findings/\([A-Za-z0-9._-][A-Za-z0-9._-]*\)[.]md\(:[0-9][0-9]*\)\{0,1\}`\{0,1\}#the removed findings file of \1#g' \
+    -e '/^#/!s#`docs/findings/\{0,1\}`#the removed findings directory#g'
+}
+
+# Standard input, a findings file's text, as groom folds it into the
+# backlog: a placeholder line (none or None, a period allowed, alone on its
+# line) dropped, and its references to findings files rewritten
+# (removed_refs).
+fold_clean() {
+  awk '!/^[ \t]*[Nn]one[.]?[ \t]*$/' | removed_refs
+}
+
 # The backlog files, then each findings file of FINDINGS_DIR in name order
 # after a blank line: the backlog as groom writes it, which the sprint
 # planner grooms.
 folded_backlog() {
-  backlog_files | while IFS= read -r f; do cat "$f"; echo; done
+  backlog_files | while IFS= read -r f; do cat "$f"; echo; done | removed_refs
   for f in "$findings_dir"/*.md; do
     [ -f "$f" ] || continue
     echo
-    awk 'NF { on = 1 } on' "$f"
+    awk 'NF { on = 1 } on' "$f" | fold_clean
   done
 }
 
@@ -3889,14 +4026,14 @@ EOF
   # The findings files are filed first, so the removals and merges below
   # reach their entries in the backlog files as well.
   if [ "$folded" -gt 0 ]; then
-    for f in "$findings_dir"/*.md; do cat "$f"; echo; done | file_entries > /dev/null || die "groom: the findings files not filed into $backlog_dir"
+    for f in "$findings_dir"/*.md; do cat "$f"; echo; done | fold_clean | file_entries > /dev/null || die "groom: the findings files not filed into $backlog_dir"
   fi
   # One pass over every backlog file, each after a marker line naming it,
   # so a repeated heading keeps its first entry across the folder and a
   # merged entry reaches its kept heading in any file; each file's text
   # goes to FILE.groom, then over FILE, a file left with no entry removed.
   mark=$(printf '\001')
-  backlog_files | while IFS= read -r f; do printf '%s%s\n' "$mark" "$f"; cat "$f"; done |
+  backlog_files | while IFS= read -r f; do printf '%s%s\n' "$mark" "$f"; cat "$f"; done | removed_refs |
     M="$mark" R="$removals" D="$repeats" A="$merges" awk '
     BEGIN {
       n = split(ENVIRON["R"], r, "\n"); for (i = 1; i <= n; i++) if (r[i] != "") gone[r[i]] = 1
@@ -4048,9 +4185,8 @@ records_excluded() {
 # nothing (review-coverage-b, periodic-clear-rules). A COMMIT git does
 # not know is never merged since.
 merged_since() {
-  valid '[0-9a-f]{7,40}' "$1" || return 1
   record_time "$2" || return 1
-  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
+  since=$(full_commit "$1") || return 1
   rows=$(history_rows | awk -F'\t' 'NR > 1 && $3 ~ /^[0-9a-f]+$/ { r[++n] = $1 ":" $3 } END { for (i = n; i > 0; i--) print r[i] }')
   after=
   for row in $rows; do
@@ -4078,9 +4214,8 @@ merged_since() {
 # strictly after TIME: a later whole-tree security review superseded the
 # failing one at COMMIT (review-coverage-b, periodic-clear-rules).
 passed_since() {
-  valid '[0-9a-f]{7,40}' "$1" || return 1
-  since=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  for later in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+  since=$(full_commit "$1") || return 1
+  for later in $(review_runs); do
     ! valid "$DIFF_REVIEW_RUN" "$later" || continue
     passed=$(change=$later; read_key review.periodic-security)
     case "$passed" in
@@ -4100,6 +4235,23 @@ passed_since() {
   return 1
 }
 
+# The names of the review runs (REVIEW_RUNS), one per line: the run states
+# no sprint counts, listed as pending_list lists the others.
+review_runs() {
+  for review_file in "$state_dir"/*.json; do
+    [ -f "$review_file" ] || continue
+    review_name=$(basename "$review_file" .json)
+    ! printf '%s\n' "$review_name" | grep -q -E "$REVIEW_RUNS" || echo "$review_name"
+  done
+}
+
+# The full commit COMMIT names when it is 7 to 40 hexadecimal digits
+# naming a commit; fails otherwise.
+full_commit() {
+  valid '[0-9a-f]{7,40}' "$1" || return 1
+  git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null
+}
+
 # True when TIME is a record time as utc_now writes it.
 record_time() {
   valid '[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z' "$1"
@@ -4112,20 +4264,14 @@ later_than() {
 
 # The change's merged and phase.plan commits, on one line, when both are 7
 # to 40 hexadecimal digits and its planner was not skipped (metric.planned
-# is not 0); nothing otherwise. One read of the run state.
+# is not 0); nothing otherwise.
 planned_commits() {
-  file=$(state_file)
-  [ -f "$file" ] || return 0
-  awk '
-    /^  "(merged|phase[.]plan|metric[.]planned)": "/ {
-      key = $0; sub(/^  "/, "", key); sub(/".*/, "", key)
-      value = $0; sub(/^  "[^"]*": "/, "", value); sub(/",?$/, "", value)
-      if (!(key in got)) got[key] = value
-    }
-    function commit(v) { return v ~ /^[0-9a-f]+$/ && length(v) >= 7 && length(v) <= 40 }
-    END {
-      if (got["metric.planned"] != "0" && commit(got["merged"]) && commit(got["phase.plan"])) print got["merged"], got["phase.plan"]
-    }' "$file"
+  [ -f "$(state_file)" ] || return 0
+  [ "$(read_key metric.planned)" != 0 ] || return 0
+  planned_merged=$(read_key merged)
+  planned_plan=$(read_key phase.plan)
+  valid '[0-9a-f]{7,40}' "$planned_merged" && valid '[0-9a-f]{7,40}' "$planned_plan" || return 0
+  echo "$planned_merged $planned_plan"
 }
 
 # True when COMMIT, a hexadecimal hash (planned_commits checked it), names
@@ -4136,31 +4282,32 @@ descends() {
 }
 
 # Whether the queue needs the planner before the change starts: needed,
-# first, when a review run (REVIEW_RUNS) records a failing periodic
-# security review (blocked, or blocking findings counted) and no change
-# planned after it was recorded merged since (merged_since) nor a later
-# whole-tree one passed (passed_since), the line naming that run, which the
-# workflow hands the planner so its security-first stop applies whatever
-# else needs it; then when the change is not the first item of
-# a lane queue (docs/queue-feature.md or docs/queue-backlog.md), or when another merged change without a history row
-# holds a note of a PLAN_NOTES kind (a retrospective proposal, an
-# overrun, a periodic finding) that only the planner places, unless a
-# sprint plan placed it (placed_by_sprint), or when the
-# head item names no estimate; otherwise the head item is taken as written, its size
-# printed for the run's estimate. It prints one line: a run whose brief is
-# only the change name has its agents read the item in its lane queue.
-# Before it reads the review runs it records the time, at.plan-needed, in
-# the change's run state while that holds no phase.plan, phase.implement,
-# or merged record, the condition the workflow runs the planner under, so
-# merged_since knows which reviews that planner was handed and a resume
-# past the plan keeps the last time it read them before the plan.
+# first, when a review run (REVIEW_RUNS) records a failing periodic security
+# review (blocked, or blocking findings counted) and no change planned after
+# it was recorded merged since (merged_since) nor a later whole-tree one
+# passed (passed_since), the line naming that run, which the workflow hands
+# the planner so its security-first stop applies whatever else needs it;
+# then when the change is not the first item of a lane queue
+# (docs/queue-feature.md or docs/queue-backlog.md), or when another merged
+# change without a history row holds a note of a PLAN_NOTES kind (a
+# retrospective proposal, an overrun, a periodic finding) that only the
+# planner places, unless a sprint plan placed it (placed_by_sprint), or when
+# the head item names no estimate; otherwise the head item is taken as
+# written, its size printed for the run's estimate. It prints one line: a
+# run whose brief is only the change name has its agents read the item in
+# its lane queue. Before it reads the review runs it records the time,
+# at.plan-needed, in the change's run state while that holds no phase.plan,
+# phase.implement, or merged record, the condition the workflow runs the
+# planner under, so merged_since knows which reviews that planner was handed
+# and a resume past the plan keeps the last time it read them before the
+# plan.
 plan_needed() {
   if [ -f "$(state_file)" ] && [ -z "$(read_key phase.plan)$(read_key phase.implement)$(read_key merged)" ]; then
     write_key at.plan-needed "$(utc_now)"
   fi
   queues=$queue_files
   ! sprint_waiting || queues="$plan_dir/queue-feature.md $plan_dir/queue-backlog.md"
-  for run in $(ls "$state_dir" 2>/dev/null | sed -n 's/[.]json$//p' | grep -E "$REVIEW_RUNS"); do
+  for run in $(review_runs); do
     record=$(change=$run; read_key review.periodic-security)
     case "${record%% *}: $record" in
       blocked:*|*" blocking="[1-9]*) ;;
@@ -4171,7 +4318,7 @@ plan_needed() {
     recorded=$(change=$run; read_key at.review.periodic-security)
     merged_since "$reviewed" "$recorded" && continue
     passed_since "$reviewed" "$recorded" && continue
-    echo "needed: $run records a failing periodic security review at $reviewed, and no change merged since"
+    echo "needed: $run records a failing periodic security review at $reviewed, and no change planned after it has merged since, nor has a later whole-tree security review passed"
     return 0
   done
   queue=""
@@ -4233,10 +4380,8 @@ placed_by_sprint() {
 # an ancestor of HEAD, or of the base (BASE, origin/main), where the merged
 # phases' squash commits are.
 supported() {
-  valid '[0-9a-f]{7,40}' "$1" || return 1
-  full=$(git rev-parse --verify -q --end-of-options "$1^{commit}" 2>/dev/null) || return 1
-  git merge-base --is-ancestor "$full" HEAD 2>/dev/null && return 0
-  [ -n "$base_commit" ] && git merge-base --is-ancestor "$full" "$base_commit" 2>/dev/null
+  full=$(full_commit "$1") || return 1
+  on_head_or_base "$full" "$base_commit"
 }
 
 # The state as a resume may trust it: one flat object of the lines
@@ -4307,10 +4452,18 @@ main_top() {
   dirname "$common"
 }
 
+# lane_remove DIR: removes a lane's worktree, its links first so no removal
+# can reach what they point at: the one step lane_open and lane_close share.
+lane_remove() {
+  for l in $LANE_LINKS; do
+    [ ! -L "$1/$l" ] || rm -f "$1/$l"
+  done
+  git worktree remove --force "$1"
+}
+
 lane_open() {
   branch=$1
-  matches_branch=$(printf '%s\n' "$branch" | grep -c -E '^(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*$')
-  [ "$matches_branch" = 1 ] || die "lane-open: not a Conventional Branch: $branch"
+  valid '(feature|bugfix|hotfix|release|chore)/[a-z0-9][a-z0-9-]*' "$branch" || die "lane-open: not a Conventional Branch: $branch"
   top=$(main_top) || exit 1
   cd "$top" || die "lane-open: cannot enter $top"
   dir=tmp/.lane-$change
@@ -4318,7 +4471,7 @@ lane_open() {
   if [ -e "$dir" ] || [ -L "$dir" ]; then
     [ -d "$dir" ] && [ ! -L "$dir" ] && [ -f "$dir/.git" ] || die "lane-open: $dir stands and is not a worktree"
     if [ "$(git -C "$dir" symbolic-ref -q --short HEAD)" != "$branch" ]; then
-      git worktree remove --force "$dir" || die "lane-open: the replaced run's $dir could not be removed"
+      lane_remove "$dir" || die "lane-open: the replaced run's $dir could not be removed"
       echo "lane-open: removed the replaced run's $dir"
     fi
   fi
@@ -4364,11 +4517,7 @@ lane_close() {
     return 0
   fi
   [ -d "$dir" ] && [ ! -L "$dir" ] && [ -f "$dir/.git" ] || die "lane-close: $dir is not a worktree"
-  # The links go first, so no removal can reach what they point at.
-  for l in $LANE_LINKS; do
-    [ ! -L "$dir/$l" ] || rm -f "$dir/$l"
-  done
-  git worktree remove --force "$dir" || die "lane-close: git worktree remove of $dir failed"
+  lane_remove "$dir" || die "lane-close: git worktree remove of $dir failed"
   git worktree prune
   echo "lane-close: removed $dir"
 }
@@ -4398,14 +4547,22 @@ merge_main() {
   own=$(lane_of 2>/dev/null) || own=""
   attrs=$(mktemp "${TMPDIR:-/tmp}/carat-union.XXXXXX") || die "merge-main: mktemp failed"
   (set -f; for p in $APPENDED_RECORDS; do echo "$p merge=union"; done) > "$attrs"
-  if git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
-      -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" > /dev/null 2>&1; then
+  if merge_out=$(git -c core.attributesFile="$attrs" -c user.name=Claude -c user.email=noreply@anthropic.com merge -q --no-ff --no-edit \
+      -m "chore: merge main into the branch" -m "Co-Authored-By: Claude <noreply@anthropic.com>" "$base" 2>&1); then
     rm -f "$attrs"
     echo "merge-main: merged $base into $branch at $(git rev-parse --short=12 HEAD)"
     return 0
   fi
   rm -f "$attrs"
   files=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+  # A merge that failed with no conflicted file (an untracked file it would
+  # overwrite, a missing ref) shows git's own words, and aborts only a
+  # merge in progress.
+  if [ -z "$files" ]; then
+    [ ! -f "$(git rev-parse --git-path MERGE_HEAD)" ] || git merge --abort 2>/dev/null
+    echo "merge-main: the merge of $base failed with no conflicted file: $(printf '%s\n' "$merge_out" | head -n 5 | tr '\n' ' ')"
+    exit 1
+  fi
   # Each lane's package step edits only its own lane queue, and the one
   # that carries a sprint plan (groom) both: a conflict only in the lane
   # queues keeps the branch's own lane queue and main's other, so both

@@ -593,6 +593,8 @@ case "$REACH" in
   slow) sleep "${SLOW:-0}" ;;
   touch) touch "$TOP/build/plan/tracked" && sleep "${SLOW:-0}" ;;
   main) echo forged >> "$MAIN/README.md" ;;
+  main-branch) git -C "$MAIN" checkout -q -b forged-branch ;;
+  main-tab) printf forged >> "$MAIN/$(printf 'tab\tfile')" ;;
   main-index) git -C "$MAIN" update-index --chmod=+x README.md ;;
   main-flag) git -C "$MAIN" update-index --assume-unchanged README.md && echo forged >> "$MAIN/README.md" ;;
   lane-index) git -C "$TOP" update-index --chmod=+x README.md ;;
@@ -602,13 +604,17 @@ case "$REACH" in
       git -C "$MAIN" merge -q --ff-only refs/remotes/origin/chore/isolated ;;
   info) mkdir -p "$MAIN/.git/info" && : > "$MAIN/.git/info/forged" ;;
   ref) git -C "$TOP" update-ref refs/heads/forged HEAD ;;
-  gitconfig) git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+  gitconfig) git config --file "$REAL_HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+  home) echo "$HOME" > "$REACH_OUT" ;;
+  link) mkdir -p build/dev && echo planted > build/dev/regular && ln -s /nonexistent-target build/dev/planted ;;
+  profile) echo forged >> "$REAL_HOME/.profile" ;;
+  xdg) mkdir -p "$XDG_REAL/git" && echo forged > "$XDG_REAL/git/config" ;;
   main-untracked) : > "$MAIN/forged" ;;
   main-build) mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" ;;
   main-bin) mkdir -p "$MAIN/build/bin" && echo forged > "$MAIN/build/bin/carat" ;;
   main-build-gitconfig)
     mkdir -p "$MAIN/build/metrics" && echo forged > "$MAIN/build/metrics/current.tsv" &&
-      git config --file "$HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
+      git config --file "$REAL_HOME/.gitconfig" core.hooksPath "$TOP/forged" ;;
   main-reset) git -C "$MAIN" reset -q --hard "$(git -C "$TOP" rev-parse HEAD)" ;;
   concurrent)
     touch "$TOP/build/plan/tracked" && git -C "$TOP" status --porcelain > /dev/null &&
@@ -628,6 +634,10 @@ expect "run_state: the clone's toolchain link names the copy" 0 "^$work/checks/c
 expect "run_state: a stage writing its clone's toolchain leaves the shared one" 0 "^spin spinel $" \
   sh -c 'cat tmp/.toolchain/lib/spin tmp/.toolchain/bin/spinel | tr "\n" " "'
 expect "run_state: check leaves Spinel's checkout out of its clone" 0 "every stage passed" reach no-spinel
+# A link a stage plants in the clone's build/ stays out of the carry.
+reach link > /dev/null 2>&1
+expect "run_state: a link a stage plants in build/ reaches no carry" 0 "^0$" sh -c 'find build/stages/isolated/carry -type l | wc -l | tr -d " "'
+expect "run_state: the carry of that check still holds the stage's regular files" 0 "^planted$" cat build/stages/isolated/carry/dev/regular
 expect "run_state: a stage that changes the shared toolchain by an absolute path fails the check" 1 "^[|] $iso_top/tmp/[.]toolchain/lib/spin$" reach toolchain
 # lane-isolation: a write outside the clone while every stage exited 0
 # that no other lane makes (the shared toolchain here) still fails the
@@ -734,8 +744,9 @@ expect "run_state: CLOSE_PHASES names the phases of the workflow's CLOSABLE line
 # checkout's branch to its remote-tracking ref, all during the check,
 # leave it passing.
 lane_reach() {
-  env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" TOP="$work/isolated-lane" MAIN="$iso_top" \
-    HOME="${REACH_HOME:-$HOME}" LANE_WRITTEN="${REACH_OWNED:-}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+  env STAGES=reach MAKE="$work/bin/reach-make" REACH="$1" REACH_OUT="$work/reach.out" TOP="$work/isolated-lane" MAIN="$iso_top" \
+    HOME="${REACH_HOME:-$HOME}" REAL_HOME="${REACH_HOME:-$HOME}" XDG_CONFIG_HOME="${REACH_XDG:-}" XDG_REAL="${REACH_XDG:-}" \
+    LANE_WRITTEN="${REACH_OWNED:-}" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
 }
 main_head=$(git -C "$iso_top" rev-parse HEAD)
 expect "run_state: a stage that writes a tracked file of the main checkout from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main
@@ -747,6 +758,14 @@ git -C "$iso_top" reset -q
 expect "run_state: a stage that hides a write to a tracked file of the main checkout behind an index flag from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main-flag
 git -C "$iso_top" update-index --no-assume-unchanged README.md
 git -C "$iso_top" checkout -q README.md
+# A tracked path holding a tab, which git quotes in its line form, is
+# compared as the name it is, not reported as an untracked file.
+tab_name=$(printf 'tab\tfile')
+(cd "$iso_top" && echo base > "$tab_name" && git add -- "$tab_name")
+expect "run_state: a stage that writes a tracked file with a tab in its name from a lane fails the check" 1 "^[|] $iso_top: the main checkout's files or staged files changed$" lane_reach main-tab
+tab_reported() { grep -c "/tab$(printf '\t')file" build/stages/isolated/check.log || true; }
+expect "run_state: a tracked path holding a tab is not reported as an untracked file" 0 "^0$" tab_reported
+(cd "$iso_top" && git rm -q -f -- "$tab_name")
 # origin is a local bare repository from here, so the runner reads the
 # commit its branch names (main_moved); it holds the main checkout's
 # starting commit, so a stage that moves the main checkout elsewhere fails
@@ -755,6 +774,24 @@ git init -q --bare "$work/origin.git"
 git -C "$iso_top" config remote.origin.url "$work/origin.git"
 git -C "$iso_top" push -q "$work/origin.git" "$main_head:refs/heads/chore/isolated"
 expect "run_state: a stage that moves the main checkout from a lane fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-reset
+git -C "$iso_top" reset -q --hard "$main_head"
+# The scan's ls-remote reaches the network with git's terminal prompt off.
+mkdir -p "$work/gitbin"
+cat > "$work/gitbin/git" <<EOF
+#!/bin/sh
+case " \$* " in *" ls-remote "*) echo "\$GIT_TERMINAL_PROMPT" > "$work/prompt.out" ;; esac
+exec $(command -v git) "\$@"
+EOF
+chmod +x "$work/gitbin/git"
+prompt_of() {
+  PATH="$work/gitbin:$PATH" lane_reach main-reset > /dev/null 2>&1
+  cat "$work/prompt.out"
+}
+expect "run_state: the scan's ls-remote runs with git's terminal prompt off" 0 "^0$" prompt_of
+# The main checkout switched to another branch at the same commit moves it.
+expect "run_state: a stage that switches the main checkout to another branch at the same commit fails the check" 1 "^[|] $iso_top/[.]git/HEAD: the main checkout moved$" lane_reach main-branch
+git -C "$iso_top" checkout -q chore/isolated
+git -C "$iso_top" branch -q -D forged-branch
 git -C "$iso_top" reset -q --hard "$main_head"
 expect "run_state: a stage that stages into the lane's index fails the check" 1 "^[|] .*/[.]git/worktrees/isolated-lane/index: the staged files changed$" lane_reach lane-index
 git_q reset -q
@@ -769,6 +806,26 @@ REACH_HOME="$work/home"
 expect "run_state: a stage that writes HOME's git configuration fails the check" 1 "^[|] $work/home/[.]gitconfig$" lane_reach gitconfig
 expect "run_state: a write to HOME's git configuration from a lane ends in a failed verdict line, never escaped" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
 rm "$work/home/.gitconfig"
+# The stages run with a throwaway HOME inside their clone and no XDG
+# configuration directory; a write by an absolute path to the real
+# profile, a shell startup file, or the XDG git configuration, which later
+# sessions run or read, fails the check, and an unset HOME skips only its
+# own files (sprint-22 review, security Medium).
+home_of() {
+  lane_reach home > /dev/null 2>&1
+  cat "$work/reach.out"
+}
+expect "run_state: a check stage's HOME is a throwaway directory inside its clone" 0 "^$work/checks/carat-check[.][^/]+/repo/tmp/home$" home_of
+expect "run_state: a stage that writes HOME's profile by an absolute path fails the check" 1 "^[|] $work/home/[.]profile$" lane_reach profile
+rm "$work/home/.profile"
+mkdir -p "$work/xdg"
+REACH_XDG="$work/xdg"
+expect "run_state: a stage that writes the XDG git configuration by an absolute path fails the check" 1 "^[|] $work/xdg/git/config$" lane_reach xdg
+REACH_XDG=
+rm -r "$work/xdg"
+expect "run_state: a check with HOME unset still reads the references and fails on a forged one" 1 "^[|] .*/[.]git/refs: the references changed$" \
+  env -u HOME STAGES=reach MAKE="$work/bin/reach-make" REACH=ref TOP="$work/isolated-lane" TMPDIR="$work/checks" sh "$here/run_state.sh" check isolated
+git_q update-ref -d refs/heads/forged
 # lane-isolation: from a lane, files changed only under a path of the main
 # checkout's build/ that LANE_WRITTEN names as another lane's end in an
 # escaped verdict, which the workflow reruns with no fix round; with none
@@ -1165,8 +1222,8 @@ cat > "$work/bin/build-make" <<'EOF'
 #!/bin/sh
 for arg in "$@"; do
   case "$arg" in
-    S=dev-build) mkdir -p build/dev && echo editor > build/dev/carat && echo report > build/dev/carat.timing ;;
-    S=test-build) mkdir -p build/test && echo runner > build/test/run_all && echo report > build/test/run_all.timing; exit "${FAIL_TB:-0}" ;;
+    S=dev-build) mkdir -p build/dev && echo editor > build/dev/carat && echo report > build/dev/carat.timing; sleep "${BUILD_SLEEP:-0}" ;;
+    S=test-build) mkdir -p build/test && echo runner > build/test/run_all && echo report > build/test/run_all.timing; sleep "${BUILD_SLEEP:-0}"; exit "${FAIL_TB:-0}" ;;
   esac
 done
 exit 0
@@ -1186,6 +1243,21 @@ expect "run_state: a tooling commit keeps the code key, diagnose runs again" 0 "
 expect "run_state: check runs the other stages on a tooling commit" 0 "^stage a: exit 0" cat "$work/compiled.out"
 expect "run_state: a skipped compile stage passes at the head" 0 "^0 0s $(git rev-parse --short=12 HEAD) [^ ]+ compiled-[0-9a-f]{12}$" state get compiled stage.test-build
 expect "run_state: check carries the compile outputs out of its clone" 0 "^runner$" cat build/stages/compiled/carry/test/run_all
+# A pass is keyed by the make command that ran it: a check under another
+# command (MAKE=true records a pass of a stage that never ran) skips no run
+# the first command's pass backs; the key of dev-build leaves out test/
+# and bench/, which it never compiles.
+cp "$work/bin/build-make" "$work/bin/other-make"
+compile_check MAKE="$work/bin/other-make" > "$work/compiled.out" 2>&1
+expect "run_state: a compile pass under one make command is not skipped under another" 0 "^stage dev-build: exit 0" cat "$work/compiled.out"
+compile_check > "$work/compiled.out" 2>&1
+mkdir -p test bench
+echo t > test/key_case.rb
+echo b > bench/key_case.rb
+commit "test: a test and a benchmark file"
+compile_check > "$work/compiled.out" 2>&1
+expect "run_state: dev-build keeps its code key across a commit to test/ and bench/" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
+expect "run_state: test-build runs again after a commit to test/" 0 "^stage test-build: exit 0" cat "$work/compiled.out"
 echo rebuilt > build/stages/compiled/carry/test/run_all
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage whose outputs changed" 0 "^stage test-build: exit 0" cat "$work/compiled.out"
@@ -1194,6 +1266,13 @@ echo more code > carat/x.rb
 commit "feat: more code"
 compile_check > "$work/compiled.out" 2>&1
 expect "run_state: check runs a compile stage after a code change" 0 "^stage diagnose: exit 0" cat "$work/compiled.out"
+# A stage that passed while the check stopped on a failing one is noted
+# as compiled too (both end within one pause, test-build is reaped first).
+echo stopped check > carat/x.rb
+commit "feat: a code change for the stopped check"
+expect "run_state: a check stopped by a failing stage fails on it" 1 "stage test-build failed" compile_check STAGES="test-build dev-build" FAIL_TB=1 BUILD_SLEEP=0.1
+compile_check STAGES="dev-build" > "$work/compiled.out" 2>&1
+expect "run_state: a compile stage that passed while the check stopped is skipped on the same code" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
 echo even more code > carat/x.rb
 commit "feat: even more code"
 expect "run_state: a compile stage can fail" 1 "stage test-build failed" compile_check FAIL_TB=1
@@ -1288,7 +1367,17 @@ expect "gates: pushes allow one review fix" 0 "3 push[(]es[)], 1 CI fix[(]es[)],
 # which needs no red CI.
 expect "run_state: a pull request text push needs a recorded push other than the head" 1 "needs a recorded push other than HEAD" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
+# It rewrites the archived pr.md and nothing else.
 echo text >> README.md
+commit "docs: rewrite the pull request text and the readme"
+state stage pushing lint true > /dev/null
+state phase pushing check > /dev/null
+state review pushing security pass "no finding" > /dev/null
+expect "run_state: a pull request text push refuses a commit that edits another file" 1 "rewrites only the archived pr[.]md of pushing, not README[.]md" \
+  env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
+git_q reset -q --hard HEAD~1
+mkdir -p openspec/changes/archive/2026-01-01-pushing
+echo text > openspec/changes/archive/2026-01-01-pushing/pr.md
 commit "docs: rewrite the pull request text"
 state stage pushing lint true > /dev/null
 state phase pushing check > /dev/null
@@ -1297,7 +1386,7 @@ expect "run_state: a pull request text push is allowed without a red CI" 0 "ok  
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
 expect "run_state: a pull request text push is counted" 0 "^1$" state get pushing pr_text_fixes
 expect "gates: pushes allow one pull request text push" 0 "4 push[(]es[)], 1 CI fix[(]es[)], 1 review fix[(]es[)], 0 main-moved push[(]es[)], 1 pull request text" gates pushes
-echo more >> README.md
+echo more >> openspec/changes/archive/2026-01-01-pushing/pr.md
 commit "docs: a second rewrite"
 expect "run_state: a second pull request text push is refused" 1 "refused: 1 pull request text push[(]es[)] made; one is allowed a run" \
   env BASE=main STAGES=lint sh "$here/run_state.sh" push pushing --pr-text
@@ -1925,7 +2014,7 @@ state set history pushes 1 > /dev/null
 state set history gates_failed 1 > /dev/null
 expect "run_state: pending names a merged change without a row" 0 "^history$" state pending
 expect "run_state: init resumes a merged run the close has not closed" 0 "resuming history" state init history chore/history
-expect "run_state: history appends the row" 0 "appended history" state history
+expect "run_state: history appends the row" 0 "appended history to docs/metrics-(feature|backlog)[.]tsv" state history
 # A delivery never reuses a merged name; an unmerged run resumes, and the
 # sprint and review run states at main keep resuming, and so does (above) a merged
 # run the close has not closed, whose restart reaches the retrospective
@@ -2035,7 +2124,7 @@ cat > "$work/stages-bin/gh" <<'GH'
 #!/bin/sh
 case "$*" in
   *"actions/runs?head_sha"*) echo "${FAKE_RUN:-}" ;;
-  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" "0.43999981880187988 Resolve the Spinel commit" "0.04 Restore the toolchain from cache" ;;
+  *"/jobs"*) printf '%s\n' "5 Docs lint" "0 Scope" "${FAKE_TEST:-115} Compile the tests" "45 Build the editor for the smoke test" "0.43999981880187988 Resolve the Spinel commit" "0.04 Restore the toolchain from cache" "7 Abcdefghijklmnopqrstuvwxyzabcdefghijkl" ;;
 esac
 GH
 chmod +x "$work/stages-bin/gh"
@@ -2043,9 +2132,10 @@ full=$(git rev-parse HEAD)
 # set refuses repo (init writes it), so the file is edited.
 sed 's#"repo": "[^"]*"#"repo": "owner/carat"#' build/pipeline/derived.json > build/pipeline/derived.json.new &&
   mv build/pipeline/derived.json.new build/pipeline/derived.json
-expect "run_state: ci-stages records each step's seconds" 0 "recorded 4 steps of run 42" \
+expect "run_state: ci-stages records each step's seconds" 0 "recorded 5 steps of run 42" \
   env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
 expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke
+expect "run_state: ci-stages cuts a long step name with no underscore at 32 characters" 0 "^7$" state get derived metric.ci.abcdefghijklmnopqrstuvwxyzabcdef
 expect "run_state: ci-stages records a fractional step, rounded to a tenth" 0 "^0[.]4$" state get derived metric.ci.resolve_the_spinel_commit
 expect "run_state: ci-stages leaves out a step that rounds to nothing" 0 "^$" state get derived metric.ci.restore_the_toolchain_from_cache
 env PATH="$work/stages-bin:$PATH" FAKE_RUN=43 FAKE_TEST=0 sh "$here/run_state.sh" ci-stages derived "$full" > /dev/null
@@ -2086,7 +2176,7 @@ expect "run_state: history groups the phase figures" 0 "^implement=1000/30,check
 expect "run_state: history sums the phase figures" 0 "^1200 40$" awk -F'\t' 'NR == 2 { print $11, $12 }' docs/metrics-backlog.tsv
 expect "run_state: history records no estimate without a queue item" 0 "^-$" awk -F'\t' 'NR == 2 { print $15 }' docs/metrics-backlog.tsv
 expect "run_state: history records the totals after the estimate" 0 "^7500 4[.]5$" awk -F'\t' 'NR == 2 { print $16, $17 }' docs/metrics-backlog.tsv
-expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45,resolve_the_spinel_commit=0[.]4 4 4628 implement=5163/4478/2,record=4400/150/1$" \
+expect "run_state: history records the CI stages, waiting calls, and weighted tokens" 0 "^docs_lint=5,build_the_editor_for_the_smoke=45,resolve_the_spinel_commit=0[.]4,abcdefghijklmnopqrstuvwxyzabcdef=7 4 4628 implement=5163/4478/2,record=4400/150/1$" \
   awk -F'\t' 'NR == 2 { print $19, $20, $21, $22 }' docs/metrics-backlog.tsv
 expect "run_state: history records the closing loop's advisories closed and left after the weighted phases" 0 "^3 2$" \
   awk -F'\t' 'NR == 2 { print $23, $24 }' docs/metrics-backlog.tsv
@@ -2393,6 +2483,10 @@ rm -f tmp/.base/GNUmakefile
 printf 'all:\n\ttrue\n' > tmp/.base/makefile
 expect "run_state: base-figures save refuses an untracked makefile in the base" 1 "untracked makefile" store_figures save
 rm -f tmp/.base/makefile
+# Nor may any other untracked file stand there: the build would read it.
+echo planted > tmp/.base/planted_source.rb
+expect "run_state: base-figures save refuses an untracked source file in the base" 1 "holds an untracked file, which the build would measure as main's: planted_source[.]rb" store_figures save
+rm -f tmp/.base/planted_source.rb
 store_figures_failing() {
   SAVE_MAKE="$work/bin/fail-make" store_figures "$@"
 }
@@ -3082,6 +3176,21 @@ printf '\n## Merged entry at tools/a.sh:3\n\n- Why: both names.\n' > build/plan/
 expect "run_state: a delivery's package step applies the sprint plan with groom" 0 "^groom: applied sprint-2: 13 headings groomed, 2 findings file[(]s[)] folded, its row appended to docs/sprints[.]tsv, carried by b6\$" state groom b6
 cat $(find docs/backlog -name '*.md' | LC_ALL=C sort) > backlog.all
 expect "run_state: groom removes a merged item's listed headings and no others" 0 "^## x quality advisory at tools/a[.]sh:3,### Kept entry at tools/b[.]sh:9,## w quality advisory at tools/e[.]sh:2,## v retro entry at tools/h[.]sh:4,## t near miss,## y quality advisory,## r skeptic entry at tools/k[.]sh:1,## o gone security entry,## n never a path,## m standing entry,## h prefixed at tools/c[.]sh:1,## k periodic low entry,## f periodic security note at tools/q[.]sh:8,## e rated entry at tools/q[.]sh:9,## d critical entry at tools/q[.]sh:10,## c critical pair at tools/q[.]sh:11,### Fb finding at tools/g[.]sh:2,## Merged entry at tools/a[.]sh:3,### Fa finding at tools/f[.]sh:1,$" sh -c "grep '^##' backlog.all | tr '\n' ','"
+# The fold's helpers: a placeholder line is dropped and a reference to a
+# findings file, which groom removes, is written as the removed file.
+sed -n '/^removed_refs() {/,/^}/p;/^fold_clean() {/,/^}/p' "$here/run_state.sh" > "$work/fold_clean.sh"
+fold_sample() {
+  sh -c '. "$1"; printf "%s\n" "### H docs/findings/x.md" "- Why: see \`docs/findings/check-runner-safety-c.md:36\` and docs/findings/y.md, and \`docs/findings/\` itself" "None" "- Fix: keep \`docs/findings.md\`" "none." | fold_clean' _ "$work/fold_clean.sh"
+}
+expect "run_state: the fold leaves a heading naming a findings file as it is" 0 "^### H docs/findings/x[.]md$" fold_sample
+expect "run_state: the fold writes each findings reference as the removed file" 0 "^- Why: see the removed findings file of check-runner-safety-c and the removed findings file of y, and the removed findings directory itself$" fold_sample
+expect "run_state: the fold keeps a path that only starts like the findings directory" 0 '^- Fix: keep `docs/findings[.]md`$' fold_sample
+fold_none() {
+  sh -c '. "$1"; printf "%s\n" None none. "- ok" | fold_clean | grep -c -i "^none" || true' _ "$work/fold_clean.sh"
+}
+expect "run_state: the fold drops the none and None placeholder lines" 0 "^0$" fold_none
+expect "run_state: groom and the folded backlog fold through fold_clean and removed_refs" 0 "^2 3$" \
+  sh -c 'echo $(grep -c "| fold_clean" "$1") $(grep -c "| removed_refs" "$1")' _ "$here/run_state.sh"
 expect "run_state: groom folds two changes' findings into the backlog and removes their files" 0 "^2 0$" sh -c "echo \$(grep -c -e '- Why: [ab][.]' backlog.all) \$(ls docs/findings | grep -c .)"
 expect "run_state: groom removes a security entry with its fixing commit" 1 "" grep -q quoting backlog.all
 expect "run_state: groom removes a group of findings with a commit touching a file it names" 1 "" grep -q 'Findings of z' backlog.all
@@ -3165,9 +3274,25 @@ git_q checkout -q -b chore/b2
 expect "run_state: plan-apply copies only its lane's queue" 0 "^plan-apply: copied build/plan/b2/queue-backlog[.]md over docs/queue-backlog[.]md$" state plan-apply b2
 expect "run_state: a backlog plan-apply leaves the feature lane's queue" 0 "^1[.] .f2. .*b3. " sh -c "echo \$(sed -n 3p docs/queue-feature.md) \$(sed -n 3p docs/queue-backlog.md)"
 expect "run_state: plan-apply copies the plan's goals" 0 "^# Goals of b2$" cat docs/goals.md
+# A planned goals.md waits for its own delivery once a security review passed.
+state init b2g chore/b2g > /dev/null
+mkdir -p build/plan/b2g
+echo "# Goals planned late" > build/plan/b2g/goals.md
+state review b2g security pass "no finding" > /dev/null
+expect "run_state: plan-apply leaves a planned goals.md once a security review passed" 0 "left build/plan/b2g/goals[.]md: a security review passed for b2g" state plan-apply b2g
+expect "run_state: plan-apply left docs/goals.md as it was" 0 "^# Goals of b2$" cat docs/goals.md
 state init zz feature/zz > /dev/null
 expect "run_state: lane takes a change its planner unqueued from BASE's queue, before its branch" 0 "^backlog feature$" sh -c "echo \$(BASE=$lanes_base sh '$here/run_state.sh' lane zz) \$(BASE=none sh '$here/run_state.sh' lane zz)"
 expect "run_state: plan-apply appends the plan's backlog to the change's findings file" 0 "^### Unplaced at tools/u[.]sh:1$" grep '^###' docs/findings/b2.md
+# The plan's backlog entries reach the findings file once, whoever appended
+# them first, and a new entry follows a blank line.
+cp docs/findings/b2.md "$work/b2.before"
+state plan-apply b2 > /dev/null
+expect "run_state: a second plan-apply appends no entry twice" 0 "^same$" sh -c 'cmp -s docs/findings/b2.md "$1" && echo same' _ "$work/b2.before"
+printf '\n### Second plan entry at tools/u.sh:2\n- Location: tools/u.sh:2\n' >> build/plan/b2/backlog.md
+state plan-apply b2 > /dev/null
+expect "run_state: plan-apply separates a new entry from the findings file's last line by a blank line" 0 "^blank$" \
+  sh -c "awk '/^### Second plan entry/ { print (prev == \"\" ? \"blank\" : \"text\"); exit } { prev = \$0 }' docs/findings/b2.md"
 expect "run_state: history appends only its lane's rows" 0 "f1 is of the feature lane; left to that lane's next package step" state history b2
 expect "run_state: a backlog package step writes no feature history" 0 "^b1 none$" sh -c "echo \$(cut -f1 docs/metrics-backlog.tsv | sed -n 2p) \$([ -f docs/metrics-feature.tsv ] && echo some || echo none)"
 commit "docs: the b2 records"
@@ -3228,6 +3353,16 @@ expect "run_state: a lane worktree shares the main checkout's toolchain and comp
 expect "run_state: a lane's run state lands in the main checkout's build/pipeline" 0 "^feature/wa$" sh -c "cd tmp/.lane-wa && sh '$here/run_state.sh' init wa feature/wa > /dev/null && cd ../.. && sh '$here/run_state.sh' get wa branch"
 expect "run_state: lane-open run from the lane keeps it on a resume" 0 "^lane: tmp/[.]lane-wa on feature/wa kept$" sh -c "touch tmp/.lane-wa/kept && cd tmp/.lane-wa && echo \$(sh '$here/run_state.sh' lane-open wa feature/wa) \$([ -f kept ] && echo kept)"
 expect "run_state: lane-open refuses a branch outside Conventional Branch" 1 "not a Conventional Branch" state lane-open wz main
+expect "run_state: lane-open refuses a branch whose first line is a Conventional Branch" 1 "not a Conventional Branch" state lane-open wz "$(printf 'chore/wz\nsecond line')"
+expect "run_state: run_state.sh is a plain file, never executable" 0 "^100644 " git -C "$here/.." ls-files -s tools/run_state.sh
+expect "run_state: the usage keeps every write refusal paragraph after the command list" 0 "^yes$" sh -c 'w=$(grep -n "^# Every write refuses a key" "$1" | cut -d: -f1); m=$(grep -n "^#   merge-main CHANGE" "$1" | cut -d: -f1); [ -n "$w" ] && [ -n "$m" ] && [ "$w" -gt "$m" ] && echo yes' _ "$here/run_state.sh"
+expect "run_state: the usage says init refuses a merged run the close recorded" 2 "phase[.]retro" sh "$here/run_state.sh"
+expect "run_state: SPRINT_HEADER, which nothing read, is gone" 0 "^0$" sh -c 'grep -c SPRINT_HEADER "$1" || true' _ "$here/run_state.sh"
+expect "run_state: CHECK_BIN is the Makefile's DEV_BIN" 0 "^build/dev/carat build/dev/carat$" sh -c 'echo "$(sed -n "s/^CHECK_BIN=//p" "$1/run_state.sh") $(sed -n "s/^DEV_BIN *:= *//p" "$1/../Makefile")"' _ "$here"
+expect "run_state: the runner's wait is one helper bounded by the clock, not 150 pauses" 0 "^0 1$" sh -c 'echo $(grep -c "lt 150" "$1") $(grep -c "^runner_wait() {" "$1")' _ "$here/run_state.sh"
+expect "run_state: the dirty-tree read, the failed verdict line, and the recorded check are one function each" 0 "^1 1 1$" \
+  sh -c 'echo $(grep -c "GIT_OPTIONAL_LOCKS=0 git status --porcelain --untracked-files=no" "$1") $(grep -c "echo \"check: stage none failed at" "$1") $(grep -c "read_key phase.check" "$1")' _ "$here/run_state.sh"
+expect "run_state: lane-open and lane-close remove a worktree by one step" 0 "^1$" grep -c 'git worktree remove --force' "$here/run_state.sh"
 # The branch's tree is not trusted (lane-guard-lows): a tracked path of the
 # shared state, a committed tmp or build link, or a link left to another
 # target is refused, and nothing is written through it.
@@ -3289,6 +3424,10 @@ state lane-open wh chore/wh > /dev/null
 echo m > m.txt
 commit "chore: main moved again"
 git_q push -q origin main 2>/dev/null
+# A merge that fails with no conflicted file shows git's words, not an
+# empty list of conflicts, and leaves the branch as it was.
+expect "run_state: merge-main shows git's message when a merge fails with no conflicted file" 1 "failed with no conflicted file: .*would be overwritten" \
+  sh -c "cd tmp/.lane-wh && echo mine > m.txt && sh '$here/run_state.sh' merge-main wh"
 state lane-close wh > /dev/null 2>&1
 git_q merge -q --no-edit feature/wa > /dev/null 2>&1
 state set wa merged "$(git rev-parse --short=12 HEAD)" > /dev/null
@@ -3297,6 +3436,10 @@ expect "run_state: lane-close leaves the shared toolchain, cache, and run state"
 expect "run_state: lane-close with no worktree does nothing" 0 "^lane-close: no tmp/[.]lane-wa$" state lane-close wa
 state lane-close wb > /dev/null
 state lane-close wc > /dev/null
+# lane prints the lane and nothing else when a queue file is missing.
+fresh qless
+state init qless chore/qless > /dev/null
+expect "run_state: lane prints the shell's error for no queue file" 0 "^backlog$" sh -c "out=\$(sh '$here/run_state.sh' lane qless 2>&1); [ \"\$out\" = backlog ] && echo backlog"
 cd "$work/lanes" || exit 1
 state init f9 feature/f9 > /dev/null
 state init b9 chore/b9 > /dev/null
@@ -3389,7 +3532,7 @@ expect "run_state: plan-needed leaves a change with a history row" 1 "^not neede
 # before prev's (review-coverage).
 state init review-20261116 main > /dev/null 2>&1
 state review review-20261116 periodic-security partial "high=0 medium=1 low=0 blocking=1 not_reviewed=2" > /dev/null
-expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change merged since\$" state plan-needed next
+expect "run_state: plan-needed names a failing periodic security review no merge followed" 0 "^needed: review-20261116 records a failing periodic security review at [0-9a-f]*, and no change planned after it has merged since, nor has a later whole-tree security review passed\$" state plan-needed next
 expect "run_state: plan-needed names a failing periodic security review before any other reason" 0 "^needed: review-20261116 records a failing periodic security review at " state plan-needed later
 expect "run_state: a periodic review records its time" 0 "^20[0-9][0-9]-[0-9][0-9]-[0-9][0-9]T[0-9][0-9]:[0-9][0-9]:[0-9][0-9]Z\$" state get review-20261116 at.review.periodic-security
 expect "run_state: set refuses a record time" 1 "set: refused: at[.]review[.]periodic-security is written only by its own command" state set review-20261116 at.review.periodic-security 2000-01-01T00:00:00Z
