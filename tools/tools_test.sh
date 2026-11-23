@@ -6891,5 +6891,42 @@ expect "make bench-budget: a doubled finder figure fails" 1 "exceeded: finder al
 expect "make bench-budget: a doubled palette figure fails" 1 "exceeded: palette allocates 561[.]0 objects" bench_run --budgets "$picker_budgets"
 MULT=1
 
+# ------------------------------------------------------------- brief.sh
+
+brief_sh="$here/brief.sh"
+brief() {
+  BASE=main sh "$brief_sh" "$@"
+}
+fresh brief-a
+state init brief-a chore/brief-a > /dev/null
+printf '# Queue: backlog\n\n## Sprint 1\n\n1. `brief-a` (T1, estimated small): Where: `tools/x.sh:12` and `docs/y.md:3`. Why: x drifts by 4 rows. Outcome: x stays equal to y. Accepted when a tools-test case fails before the change. Backlog: "### One heading".\n2. `other` (T2, estimated small): Where: `a.sh`. Why: w.\n' > docs/queue-backlog.md
+expect "brief: build names the header from the queue and run state" 0 "^CHANGE: brief-a   LANE: backlog   BRANCH: chore/brief-a   BASE: [0-9a-f]{12}$" brief build brief-a
+expect "brief: build cuts WHERE at its locations" 0 "^WHERE: .tools/x.sh:12. and .docs/y.md:3.[.]$" brief build brief-a
+expect "brief: build puts the outcome and the covered headings together" 0 "^OUTCOME: x stays equal to y[.] Covers the backlog entries: .### One heading.[.]$" brief build brief-a
+expect "brief: build keeps the failing test in ACCEPTED WHEN" 0 "^ACCEPTED WHEN: a tools-test case fails before the change[.]$" brief build brief-a
+expect "brief: build defaults the fields an item lacks" 0 "^USER DECISIONS: none$" brief build brief-a
+expect "brief: build ends with the standard tail" 0 "^RULES: no agent reads, greps, or opens docs/backlog/.*docs/findings/brief-a.md" brief build brief-a
+expect "brief: build refuses a change no queue item names" 1 "refused: no item .* names nothing-here" brief build nothing-here
+state init other chore/other > /dev/null
+expect "brief: build refuses an item that fails the check" 1 "refused: ACCEPTED WHEN is empty" brief build other
+brief build brief-a > "$work/brief-a.txt"
+expect "brief: check passes the brief build printed" 0 "^brief: complete$" brief check "$work/brief-a.txt"
+grep -v '^WHERE: ' "$work/brief-a.txt" > "$work/brief-nowhere.txt"
+expect "brief: check refuses a brief without WHERE" 1 "refused: WHERE is missing" brief check "$work/brief-nowhere.txt"
+sed 's/^WHERE: .*/WHERE: the finder code/' "$work/brief-a.txt" > "$work/brief-noline.txt"
+expect "brief: check refuses a WHERE with no path:line" 1 "refused: WHERE names no path:line" brief check "$work/brief-noline.txt"
+sed 's/^ACCEPTED WHEN: .*/ACCEPTED WHEN: it works well/' "$work/brief-a.txt" > "$work/brief-notest.txt"
+expect "brief: check refuses an ACCEPTED WHEN with no failing-before test" 1 "refused: ACCEPTED WHEN names no test, snapshot, or case that fails before" brief check "$work/brief-notest.txt"
+cat "$work/brief-a.txt" "$work/brief-a.txt" > "$work/brief-two.txt"
+expect "brief: check refuses two changes in one brief" 1 "refused: a second CHANGE line" brief check "$work/brief-two.txt"
+sed 's/^WHY: .*/WHY:/' "$work/brief-a.txt" > "$work/brief-empty.txt"
+expect "brief: check refuses an empty field" 1 "refused: WHY is empty" brief check "$work/brief-empty.txt"
+expect "brief: check refuses a brief that is only a change name" 1 "refused: no header line" sh -c "echo brief-a | BASE=main sh '$brief_sh' check"
+awk '/^WHY: /{why=$0; next} /^OUTCOME: /{print; print why; next} {print}' "$work/brief-a.txt" > "$work/brief-order.txt"
+expect "brief: check refuses fields out of order" 1 "refused: OUTCOME is out of order" brief check "$work/brief-order.txt"
+printf '1. `noinit` (T1, estimated small): Where: `a.sh:1`.\n' >> docs/queue-backlog.md
+expect "brief: build refuses a change with no run state" 1 "refused: noinit has no run state" brief build noinit
+expect "brief: a command it does not know is a usage error" 2 "usage: sh tools/brief.sh" brief frob
+
 echo "$passed/$total passed"
 test "$passed" -eq "$total"
