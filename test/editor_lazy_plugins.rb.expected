@@ -1,12 +1,12 @@
 ok   no plugin is active at startup: the first frame is drawn with none activated
 ok   after the first idle only git_signs, which declares no trigger, is active
 ok   keys that trigger none of them leave the explorer, finder, and ruby plugins inactive
-FAIL the explorer activates on its key and opens focused on the current file: expected [true, 2, "explorer", [2, 0]], got [true, 2, "explorer", [1, 0]]
-FAIL the tree marks the file the editor was on before the explorer loaded: expected [" - proj", "   + lib", ">  m a.md", "   r b.rb"], got [" + lib", "|m a.md", " r b.rb"]
+ok   the explorer activates on its key and opens focused on the current file
+ok   the tree marks the file the editor was on before the explorer loaded
 ok   and works as before: Enter opens the file in the editing window
-FAIL the explorer activates on its ex command and opens its window: expected [true, 2, "explorer", [2, 0]], got [true, 2, "explorer", [1, 0]]
+ok   the explorer activates on its ex command and opens its window
 ok   the finder activates on its key and opens its list and, on a wide screen it heard of at activation, its preview
 ok   and works as before: Enter opens the match
 ok   the ruby plugin is not active over a markdown file
 ok   the ruby plugin activates on its first ruby buffer, whose lines are highlighted
-editor_lazy_plugins: 8 passed, 3 failed
+editor_lazy_plugins: 11 passed, 0 failed

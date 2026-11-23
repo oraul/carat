@@ -849,13 +849,15 @@ module AdaptersFramePresenterTest
     f = draw(s, 6, 40)
     t.assert_equal([side_layer + D::Highlight::POPUP_MENU_MARK_SELECTED, side_layer + D::Highlight::POPUP_MENU_SELECTED], [f.cell(0, 0).hl, f.cell(0, 5).hl], "the highlight wins over the cursor-line layer")
     s.options.cursorline = false
+    scratch.marked_row = -1
+    f = draw(s, 6, 40)
+    t.assert_equal([side_layer + D::Highlight::SIGN_COLUMN, side_layer + D::Highlight::NORMAL], [f.cell(0, 0).hl, f.cell(0, 5).hl], "clearing the mark repaints the row plain, its sign cell as it was")
     P.plain = true
+    scratch.marked_row = 0
     f = draw(s, 6, 40)
     t.assert_equal([side_layer + D::Highlight::POPUP_MENU_MARK_SELECTED, side_layer + D::Highlight::NORMAL], [f.cell(0, 0).hl, f.cell(0, 5).hl], "Under NO_COLOR only the bar is drawn")
     P.plain = false
     scratch.marked_row = -1
-    f = draw(s, 6, 40)
-    t.assert_equal([side_layer + D::Highlight::NORMAL, side_layer + D::Highlight::NORMAL], [f.cell(0, 0).hl, f.cell(0, 5).hl], "clearing the mark repaints the row plain")
     s.tab.layout.split(0, true, 0, 5)
     f = draw(s, 6, 40)
     t.assert_equal([["\u2502"], " ", side_layer + D::Highlight::NORMAL], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl], "two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell")

@@ -32,7 +32,7 @@ ok   <C-w>, a pause past timeoutlen, and l move to the right window, under its w
 ok   the editor exits with status 0 after the slow window move
 ok   the editor drew its first frame for the tree check
 ok   <leader>e opens the tree, titled explorer
-FAIL the tree's root line has the open folder icon: expected true, got false
+ok   the tree starts at the root's entries: its first rows are the closed folders, with no open root folder
 ok   the editor exits with status 0 after :q in the file window beside the tree
 ok   quitting beside the tree restores the cursor and leaves the alternate screen
 ok   the editor drew its first frame for the page check
@@ -62,4 +62,4 @@ ok   SIGTERM restores the cursor and leaves the alternate screen
 ok   the editor shows the bar cursor before the interrupt
 ok   SIGINT ends the editor with status 0
 ok   SIGINT restores the cursor and leaves the alternate screen
-smoke_editor: 63 passed, 1 failed
+smoke_editor: 64 passed, 0 failed

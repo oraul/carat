@@ -83,7 +83,7 @@ ok   o toggles it closed again
 ok   o closes a directory Enter expanded
 ok   h collapses an expanded directory
 ok   h collapses a directory Enter expanded
-FAIL h on a collapsed top-level directory does nothing: expected [[" + docs", " + lib", "|m a.md", " r b.rb"], [0, 0]], got [[" + docs", " + lib", "|m a.md", " r b.rb"], [2, 0]]
+ok   h on a collapsed top-level directory does nothing
 ok   Enter expands a nested directory
 ok   Enter closes a nested directory
 ok   l leaves a nested directory expanded
@@ -145,7 +145,7 @@ ok   the tree starts at the root's entries: the first tree row is the first dire
 ok   no line of the tree repeats the root
 ok   the current row is a full-width highlight with the bar in its first cell, the other rows are not
 ok   the highlight keeps the sidebar's layer and ends at the window's edge
-ok   the highlight follows the file that becomes current
+ok   The highlight follows the current file: it moves to the file that becomes current
 ok   and stays on its row with the tree focused, the cursor line under it
 ok   the tree has no line numbers and no separator glyph at its right, a blank cell of its darker layer, and no tilde under its rows
 ok   the left slot's one view has no explorer title: its first row reads the project, the tree starts under it at the root's first entry
@@ -158,4 +158,4 @@ ok   the screen shows each illegal byte as one replacement character
 ok   the explorer stays enabled after listing them
 ok   Enter opens a name that is not UTF-8
 ok   the status line names the opened file with one replacement character per illegal byte
-editor_explorer: 159 passed, 1 failed
+editor_explorer: 160 passed, 0 failed
