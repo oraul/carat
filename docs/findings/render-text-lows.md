@@ -7,3 +7,10 @@
 - Location: `carat/domain/display_width.rb` `format_char?`
 - Why: U+00AD, U+180E, and U+034F take no cell or an uncertain one in some terminals; the set follows Vim's plus the finder's, so they are not marked
 - Fix: add them to `format_char?` after checking how Neovim draws each, with a row in the width table
+
+### Frame#put_from writes bidirectional and zero-width format code points raw (security Low (6))
+
+- Where: `carat/domain/frame.rb:195`.
+- Why it matters: `DisplayWidth.of` gives them width 1, so they are not skipped; a buffer name, a file name in the tab or status bar, or LSP hover and float text holding U+202E can make the terminal reorder or hide the row, a visual spoofing of what the user sees outside buffer lines.
+- Fix outline: in `put_from`, map `DisplayWidth.format_char?(raw)` to `REPLACEMENT` (or the `<xxxx>` marker) beside `control?`, and count the same in `text_width`, `bytes_within`, and `markdown_text`, with a frame test for each writer.
+None.
