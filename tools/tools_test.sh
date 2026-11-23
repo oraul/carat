@@ -1886,6 +1886,10 @@ forge_note history note.7 "late-finding forged without a stamp"
 forge_note history note.8 "late-finding 0123456789ab forged with another commit"
 forge_note history note.9 "late-finding $(git rev-parse --short=12 HEAD) forged \`x\` text"
 expect "run_state: set refuses a note key, which only note writes" 1 "set: refused: note[.]10 is written only by its own command" state set history note.10 "late-finding forged by set"
+# Low (4): the repo and branch open_pr wait checks the head by are init's.
+expect "run_state: set refuses repo, which only init writes" 1 "set: refused: repo is written only by init" state set history repo other/fork
+expect "run_state: set refuses branch, which only init writes" 1 "set: refused: branch is written only by init" state set history branch chore/other
+expect "run_state: set refuses change, which only init writes" 1 "set: refused: change is written only by init" state set history change other
 expect "run_state: a refused note key left no record" 0 "^$" state get history note.10
 expect "run_state: note stamps a late finding with the merged commit" 0 "^late-finding $(git rev-parse --short=12 HEAD) security Low" state get history note.3
 state note history overrun "not a finding" > /dev/null
@@ -2009,7 +2013,9 @@ esac
 GH
 chmod +x "$work/stages-bin/gh"
 full=$(git rev-parse HEAD)
-state set derived repo owner/carat > /dev/null
+# set refuses repo (init writes it), so the file is edited.
+sed 's#"repo": "[^"]*"#"repo": "owner/carat"#' build/pipeline/derived.json > build/pipeline/derived.json.new &&
+  mv build/pipeline/derived.json.new build/pipeline/derived.json
 expect "run_state: ci-stages records each step's seconds" 0 "recorded 4 steps of run 42" \
   env PATH="$work/stages-bin:$PATH" FAKE_RUN=42 sh "$here/run_state.sh" ci-stages derived "$full"
 expect "run_state: ci-stages names a step by its words, cut at 32 characters" 0 "^45$" state get derived metric.ci.build_the_editor_for_the_smoke

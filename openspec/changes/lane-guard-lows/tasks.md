@@ -14,3 +14,7 @@
 
 - [x] 3.1 Add the cases to `tools/tools_test.sh`, each failing before the change, and write forged notes by the file
 - [x] 3.2 Update the headers of `tools/run_state.sh` and `tools/open_pr.sh`
+
+## 4. Fix round: the repository and branch the head check reads
+
+- [x] 4.1 Refuse `change`, `branch`, and `repo` in `set` (`tools/run_state.sh`), so `open_pr.sh wait` reads the pair `init` wrote; proved by the three set cases in `tools/tools_test.sh` (the `ci-stages` case now edits the file)

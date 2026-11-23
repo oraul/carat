@@ -8,7 +8,7 @@ Branch code is untrusted, yet four steps of the delivery tools take decisions fr
 
 - Change `tools/run_state.sh` `lane_open`: refuse, before linking, a branch that tracks a path of `LANE_LINKS` (a `build/pipeline` of its own), a branch that commits a `tmp` or `build` link (so no link is written through it out of the repository), and an existing lane link pointing anywhere but the main checkout's path.
 - Change `merge_main` to run its merge, conflict checkout, add, commit, and abort through `pinned_git`: no global or system configuration, no hook.
-- Change `set` to refuse every `note.*` key, which only `note` writes.
+- Change `set` to refuse every `note.*` key, which only `note` writes, and `change`, `branch`, and `repo`, which only `init` writes, so the head check of `wait` cannot be pointed elsewhere (the merger's head-repository check stays the binding gate).
 - Change `tools/open_pr.sh wait`: the number taken (the lone one, or the recorded one among several) is read back with gh and recorded only when it is not cross-repository and its head branch is the run state's branch; a fork's or another branch's is refused, one gh cannot read is waited for and then refused.
 - Add tools-test cases for each (each fails before the change), and change the forged-note setup of the late-finding tests to write the file, since `set` no longer takes note keys.
 

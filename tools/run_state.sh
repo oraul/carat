@@ -88,6 +88,7 @@
 #   gated CHANGE clear|pass     the merge gates' record: none (in every run
 #                               state), or HEAD's full sha
 #   set CHANGE KEY VALUE        write one value; refuses review.*, phase.*, note.*, gated,
+#                               change, branch, and repo (init's, which open_pr wait checks the head by),
 #                               stage.*, at.*, and moved, which their own commands write,
 #                               a pushed value but a commit hash, a ci value
 #                               but "red|green COMMIT" at the pushed head, and
@@ -4528,6 +4529,7 @@ case "$command" in
     value=$2
     case "$1" in
       review.*|phase.*|stage.*|at.*|note.*|gated|moved) die "set: refused: $1 is written only by its own command (review, phase, stage, review and plan-needed, note, check, gated, moved)" ;;
+      change|branch|repo) die "set: refused: $1 is written only by init, since open_pr wait and the merge read it" ;;
       pushed) valid '[0-9a-f]{7,40}' "$2" || die "set: refused: $1 is a commit hash of 7 to 40 hexadecimal digits, not $2" ;;
       hold) [ "$2" = security-first ] || die "set: refused: hold is security-first, the plan's security first sprint-planning records, not $2" ;;
       merged) value=$(merged_at "$2" set) || exit 1 ;;
