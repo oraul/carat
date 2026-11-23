@@ -218,12 +218,13 @@ module EditorExplorerTest
     t.assert_equal([1, [2, 0], 2], [h.window_index, h.cursor, h.window_count], ":ExplorerFind opens a closed tree")
 
     # The scenarios of the explorer's requirements are proven by the tables
-    # of this file: Revealed on open (the follow rows above), Enter toggles a
-    # directory, Expand and collapse with o, Only the tree is left, and
-    # Parent of a collapsed directory (the opening and directory tables),
-    # Create a file, Create a directory, Prompt cancelled, and Name taken
-    # (the create table), Rename an open file and Separator refused (the
-    # rename rows), and Movement falls through (j and G in the first table).
+    # of this file:
+    # Revealed on open: the follow rows above.
+    # Enter toggles a directory, Expand and collapse with o: the directory table.
+    # Only the tree is left, Parent of a collapsed directory: the opening and directory tables.
+    # Create a file, Create a directory, Prompt cancelled, Name taken: the create table.
+    # Rename an open file, Separator refused: the rename rows.
+    # Movement falls through: j and G in the first table.
     # Opening files and directories: rows are [label, keys, [windows, current
     # window, tab pages, current buffer, message]].
     t.table([
