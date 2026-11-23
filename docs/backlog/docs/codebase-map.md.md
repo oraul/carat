@@ -487,21 +487,17 @@ Docs currency: the Tests line still describes test/editor_palette.rb as opening,
 - Also: tools/docs_lint.sh
 - Category: design
 - Added: 2026-11-22
+- Merged: ### the EditorState entry omits replace_cmdline and cmdline_position and its at docs/codebase-map.md:126 (sprint-30 sweep quality, note 14)
+- Location: docs/codebase-map.md:126
+- Why: area 4 drift: the EditorState entry omits replace_cmdline and cmdline_position and its writer, the Messages entry omits E16, E444, E477, E490, REPORT, unsaved_buffer, and invalid_argument; carat/domain/editor_state.rb:13 and 16 are unwrapped comment lines
+- Fix: update the entries and rewrap
+- Also: carat/domain/editor_state.rb
 
 ### the KeyDecoder entry says a CSI modifier is read at docs/codebase-map.md:148 (sprint-30 sweep quality, note 13)
 
 - Location: docs/codebase-map.md:148
 - Why: area 5 drift: the KeyDecoder entry says a CSI modifier is read only for Ctrl on the page keys, but arrow_key reads Shift and Ctrl on Left and Right; the Key entry omits PASTED, pasted?, and unmodified; the HandleKey entry omits the paste path
 - Fix: update the three entries
-- Category: design
-- Added: 2026-11-23
-
-### the EditorState entry omits replace_cmdline and cmdline_position and its at docs/codebase-map.md:126 (sprint-30 sweep quality, note 14)
-
-- Location: docs/codebase-map.md:126
-- Why: area 4 drift: the EditorState entry omits replace_cmdline and cmdline_position and its writer, the Messages entry omits E16, E444, E477, E490, REPORT, unsaved_buffer, and invalid_argument; carat/domain/editor_state.rb:13 and 16 are unwrapped comment lines
-- Fix: update the entries and rewrap
-- Also: carat/domain/editor_state.rb
 - Category: design
 - Added: 2026-11-23
 

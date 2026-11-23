@@ -43,6 +43,10 @@
 - Fix: col = Domain::DisplayWidth.text_width(state.cmdline[0, name_start].to_s, 0) - Domain::FloatWindow::PAD
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### the popup column is written 1 + width - at carat/use_cases/complete_command_line.rb:305 (sprint-30 sweep quality, note 27)
+- Location: carat/use_cases/complete_command_line.rb:305
+- Why: the popup column is written 1 + width - 1 - PAD, where the +1 and -1 cancel and hide which cell each stands for
+- Fix: compute width - PAD once with a comment naming the colon cell and the border
 
 ### collect_names and collect_themes are one loop at carat/use_cases/complete_command_line.rb:166 (sprint-28 sweep quality, note 27)
 
@@ -51,6 +55,10 @@
 - Fix: one private collect_prefixed(names, typed).
 - Category: editor
 - Added: 2026-11-22
+- Merged: ### collect_names and collect_themes (line 182) are the same prefix at carat/use_cases/complete_command_line.rb:166 (sprint-30 sweep quality, note 26)
+- Location: carat/use_cases/complete_command_line.rb:166
+- Why: collect_names and collect_themes (line 182) are the same prefix filter over a list of names
+- Fix: one private collect_prefixed(names, typed) called with ExTable#full_names and Themes::NAMES
 
 ### joined duplicates PluginApi::Paths.join (plugin_api.rb:368), which ListTree already uses at carat/use_cases/complete_command_line.rb:237 (sprint-30 sweep quality, note 25)
 
@@ -60,18 +68,3 @@
 - Category: editor
 - Added: 2026-11-23
 
-### collect_names and collect_themes (line 182) are the same prefix at carat/use_cases/complete_command_line.rb:166 (sprint-30 sweep quality, note 26)
-
-- Location: carat/use_cases/complete_command_line.rb:166
-- Why: collect_names and collect_themes (line 182) are the same prefix filter over a list of names
-- Fix: one private collect_prefixed(names, typed) called with ExTable#full_names and Themes::NAMES
-- Category: editor
-- Added: 2026-11-23
-
-### the popup column is written 1 + width - at carat/use_cases/complete_command_line.rb:305 (sprint-30 sweep quality, note 27)
-
-- Location: carat/use_cases/complete_command_line.rb:305
-- Why: the popup column is written 1 + width - 1 - PAD, where the +1 and -1 cancel and hide which cell each stands for
-- Fix: compute width - PAD once with a comment naming the colon cell and the border
-- Category: editor
-- Added: 2026-11-23

@@ -125,6 +125,10 @@
 - Fix: one private spawn_program(environment, argv, input, output) both call
 - Category: editor
 - Added: 2026-11-23
+- Merged: ### start_quiet and start (219) repeat the program_path lookup, the at carat/drivers/process_runner.rb:136 (sprint-30 sweep quality, note 74)
+- Location: carat/drivers/process_runner.rb:136
+- Why: start_quiet and start (219) repeat the program_path lookup, the empty check, the spawn, and the rescue, differing only in environment and streams
+- Fix: one private spawn helper taking the environment and the in/out streams
 
 ### the class comment and the map's area 17 entry at carat/drivers/process_runner.rb:10 (sprint-30 sweep quality, note 39)
 
@@ -142,14 +146,10 @@
 - Fix: judge the point named in Why against the code; fix it with a test or record why it holds
 - Category: editor
 - Added: 2026-11-23
-
-### start_quiet and start (219) repeat the program_path lookup, the at carat/drivers/process_runner.rb:136 (sprint-30 sweep quality, note 74)
-
-- Location: carat/drivers/process_runner.rb:136
-- Why: start_quiet and start (219) repeat the program_path lookup, the empty check, the spawn, and the rescue, differing only in environment and streams
-- Fix: one private spawn helper taking the environment and the in/out streams
-- Category: editor
-- Added: 2026-11-23
+- Merged: ### a program name with a slash is used as at carat/drivers/process_runner.rb:151 (sprint-30 sweep quality, note 82)
+- Location: carat/drivers/process_runner.rb:151
+- Why: possible security point, unexamined: a program name with a slash is used as given, so a relative one resolves against the project's working directory
+- Fix: for the security reviewer to judge
 
 ### the class comment has one overlong line and broken at carat/drivers/process_runner.rb:23 (sprint-30 sweep quality, note 75)
 
@@ -159,10 +159,3 @@
 - Category: editor
 - Added: 2026-11-23
 
-### a program name with a slash is used as at carat/drivers/process_runner.rb:151 (sprint-30 sweep quality, note 82)
-
-- Location: carat/drivers/process_runner.rb:151
-- Why: possible security point, unexamined: a program name with a slash is used as given, so a relative one resolves against the project's working directory
-- Fix: for the security reviewer to judge
-- Category: editor
-- Added: 2026-11-23

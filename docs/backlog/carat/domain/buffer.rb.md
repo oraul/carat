@@ -83,3 +83,13 @@ Docs currency: the styles comment (and FramePresenter#paint_float_row's at carat
 - Also: carat/adapters/frame_presenter.rb
 - Category: editor
 - Added: 2026-11-18
+
+### Buffer#icon may be unused after the tab icon is gone
+- Location: `carat/domain/buffer.rb` (`icon`, `Buffer.icon_of`), `test/domain_buffer.rb:92`.
+- Why: the tab row no longer draws the file icon, so `Buffer#icon` may be read by no production caller, and the field and its update in `path=` would be dead weight on a hot record.
+- Fix: search the adapters and plugins for a reader of `buffer.icon`; when none remains, remove the member, `icon_of`, and the test lines in one change.
+
+none
+- Also: test/domain_buffer.rb
+- Category: editor
+- Added: 2026-11-23

@@ -21,10 +21,9 @@
 #       is the pushed head, and records its number (tools/run_state.sh set
 #       CHANGE pr N): the one such pull request, or the one recorded at an
 #       earlier push among several; refuses several otherwise, since a
-#       fork's pull request can share the commit; the number taken is read
-#       back with gh and recorded only when its head is the run state's
-#       repo and branch (a fork's is refused, an unreadable one waited
-#       for); the merger checks the head repository again before the merge
+#       fork's pull request can share the commit; wait runs no gh, so the
+#       head repository and branch are confirmed by the merger's step 1
+#       before the merge, which returns stale for another's
 #   sh tools/open_pr.sh message CHANGE SHA   the merger, before its squash
 #       merge: prints the squash message, the body of the change's one
 #       archived pr.md at SHA (40 digits; the archive's own entries, as the
@@ -102,19 +101,6 @@ live_text() {
   gh pr view "$1" --repo "$GH_REPO" --json body --jq .body > "$2/body.live" || refuse "cannot read the body back"
 }
 
-# head_owned NUMBER REPO BRANCH: whether pull request NUMBER of REPO is
-# from BRANCH of REPO itself, as gh reads it: 0 yes, 1 no (a fork's or
-# another branch's), 2 unread (no gh, a failure, or an answer of no shape).
-head_owned() {
-  [ -n "$2" ] && [ -n "$3" ] || return 2
-  answer=$(gh pr view "$1" --repo "$2" --json isCrossRepository,headRefName --jq '"\(.isCrossRepository) \(.headRefName)"' 2>/dev/null) || return 2
-  case $answer in
-    "false $3") return 0 ;;
-    "true "*|"false "*) return 1 ;;
-  esac
-  return 2
-}
-
 # chomped FILE: the file's text without its trailing newlines.
 chomped() {
   printf '%s' "$(cat "$1")"
@@ -155,21 +141,16 @@ case "$cmd" in
     matches "$pushed" '[0-9a-f]{40}' || refuse "no pushed head in the run state"
     # Git shows no pull request's head repository, so a fork's pull request
     # on the pushed commit looks like ours: one number is taken, or the one
-    # the run state recorded at an earlier push; more are refused. The
-    # number taken is then read back with gh (head_owned): it is recorded
-    # only when its head is this repository's and the change's branch; a
-    # fork's is refused, one gh cannot read yet is waited for. The merger
-    # reads the head repository again before the merge.
+    # the run state recorded at an earlier push; more are refused. No gh
+    # runs here: the merger's step 1 reads the pull request's head
+    # repository and branch before the merge and returns stale for a
+    # fork's or another branch's.
     recorded=$(state pr)
-    repo=$(state repo)
-    branch=$(state branch)
-    unread=""
     waited=0
     while :; do
       refs=$(git ls-remote origin 'refs/pull/*/head') || refs=""
       numbers=$(printf '%s\n' "$refs" | awk -v sha="$pushed" '$1 == sha && $2 ~ /^refs\/pull\/[0-9]+\/head$/ { split($2, p, "/"); print p[3] + 0 }' | sort -n -u)
       number=""
-      unread=""
       if [ -n "$numbers" ] && [ "$(printf '%s\n' "$numbers" | wc -l)" -eq 1 ]; then
         number=$numbers
       elif [ -n "$numbers" ]; then
@@ -180,21 +161,14 @@ case "$cmd" in
         fi
       fi
       if [ -n "$number" ]; then
-        head_owned "$number" "$repo" "$branch"
-        case $? in
-          0)
-            sh "$here/run_state.sh" set "$change" pr "$number" >/dev/null || refuse "the run state did not take pr $number"
-            echo "open_pr: pull request $number at $pushed"
-            exit 0 ;;
-          1) refuse "pull request $number has the pushed head but not from $branch of $repo (a fork's, or another branch): none is recorded" ;;
-          *) unread=$number ;;
-        esac
+        sh "$here/run_state.sh" set "$change" pr "$number" >/dev/null || refuse "the run state did not take pr $number"
+        echo "open_pr: pull request $number at $pushed"
+        exit 0
       fi
       [ "$waited" -lt "$seconds" ] || break
       sleep "$step" || refuse "sleep failed"
       waited=$((waited + step))
     done
-    [ -z "$unread" ] || refuse "pull request $unread has the pushed head, but its head repository could not be read with gh after $seconds seconds: none is recorded"
     refuse "after $seconds seconds no pull request's head is $pushed: read the open-pr workflow's log, never open the pull request another way" ;;
   message)
     [ $# -eq 2 ] || usage

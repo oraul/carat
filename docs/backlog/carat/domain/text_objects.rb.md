@@ -1,14 +1,5 @@
 # Backlog: carat/domain/text_objects.rb
 
-## The local cls is the abbreviation the naming rule forbids
-
-- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324. Raised again at ce6abdb (periodic quality), queue item `editing-counts`. Raised again at be4b63a (owner `editing-counts`).
-- Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
-- Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
-- Also: carat/domain/runs.rb, CLAUDE.md
-- Category: editor
-- Added: 2026-11-04
-
 ## ci" on an empty string fails
 
 - Where: the inner quote object in `carat/domain/text_objects.rb` line 356 at 38628bb (periodic quality). In the backlog items of the queue.
@@ -96,12 +87,14 @@
 - Also: carat/domain/runs.rb, carat/use_cases/erase_character.rb, carat/use_cases/plugins/plugin_registry.rb, CLAUDE.md
 - Category: editor
 - Added: 2026-11-22
-
-### the parameter cls (and the local cls in carat/domain/text_objects.rb:89) at carat/domain/runs.rb:18 (sprint-30 sweep quality, note 47)
-
+- Merged: ### the parameter cls (and the local cls in carat/domain/text_objects.rb:89) at carat/domain/runs.rb:18 (sprint-30 sweep quality, note 47)
 - Location: carat/domain/runs.rb:18
 - Why: naming: the parameter cls (and the local cls in carat/domain/text_objects.rb:89) is the abbreviation CLAUDE.md names as forbidden (char_class, not cls)
 - Fix: rename both to char_class
 - Also: carat/domain/runs.rb, CLAUDE.md
-- Category: editor
-- Added: 2026-11-23
+- Merged: ## The local cls is the abbreviation the naming rule forbids
+- Where: the local `cls` in `carat/domain/text_objects.rb` (line 86 at 3895e21) and the parameter `cls` of `Runs#add` (`carat/domain/runs.rb:18`). Periodic quality at 0b17324. Raised again at ce6abdb (periodic quality), queue item `editing-counts`. Raised again at be4b63a (owner `editing-counts`).
+- Why it matters: `CLAUDE.md` names `cls` as the counterexample of its naming rule (`char_class`, not `cls`).
+- Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
+- Also: carat/domain/runs.rb, CLAUDE.md
+

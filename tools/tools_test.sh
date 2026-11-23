@@ -1796,15 +1796,13 @@ expect "open_pr: rule takes no argument" 2 "open_pr.sh rule" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO=o/r sh "$here/open_pr.sh" rule main
 expect "open_pr: rule refuses without GH_REPO" 1 "GH_REPO is not set" \
   env PATH="$work/openpr-bin:$PATH" GH_DIR="$work/openpr-gh" GH_REPO= sh "$here/open_pr.sh" rule
-# wait reads the number it takes back with gh: WAIT_GH is its answer,
-# "isCrossRepository headRefName" (a pull request from this repository's
-# branch by default), and WAIT_GH_FAIL makes it fail.
+# wait runs no gh (the merger's step 1 confirms the head repository): its
+# stub gh fails and logs every call, and a case below expects no call.
 mkdir -p "$work/wait-bin"
 cat > "$work/wait-bin/gh" <<'GH'
 #!/bin/sh
 echo "$*" >> "$WAIT_DIR/calls"
-[ -z "${WAIT_GH_FAIL:-}" ] || exit 1
-printf '%s\n' "${WAIT_GH-false chore/openpr}"
+exit 127
 GH
 chmod +x "$work/wait-bin/gh"
 mkdir -p "$work/wait-gh"
@@ -1819,16 +1817,10 @@ git --git-dir="$work/openpr.git" update-ref refs/pull/4/head chore/openpr
 expect "open_pr: wait records no pull request when a fork's shares the pushed head" 1 "more than one pull request's head is [0-9a-f]+ [(]3 4[)]" env WAIT_STEP=1 sh "$here/open_pr.sh" wait openpr 1
 expect "open_pr: wait recorded no number beside a fork's pull request" 0 "^$" state get openpr pr
 git --git-dir="$work/openpr.git" update-ref -d refs/pull/4/head
-# A lone pull request on the pushed head of unknown origin (checks-and-pr-lows
-# Low (3)): a fork's, or another branch's, is refused, an unreadable one
-# is not recorded.
-expect "open_pr: wait refuses a lone pull request from a fork" 1 "pull request 3 has the pushed head but not from chore/openpr of" waitpr WAIT_GH="true chore/openpr"
-expect "open_pr: wait refuses a lone pull request from another branch" 1 "pull request 3 has the pushed head but not from chore/openpr of" waitpr WAIT_GH="false chore/other"
-expect "open_pr: wait refuses a lone pull request gh cannot read" 1 "pull request 3 has the pushed head, but its head repository could not be read" waitpr WAIT_GH_FAIL=1
-expect "open_pr: wait refuses a lone pull request gh answers in no shape" 1 "head repository could not be read" waitpr WAIT_GH=nonsense
-expect "open_pr: wait recorded no number beside the refused ones" 0 "^$" state get openpr pr
-expect "open_pr: wait records the pull request whose head is the pushed head" 0 "pull request 3 at" waitpr
-expect "open_pr: wait read the pull request back from this repository" 0 "pr view 3 --repo .*openpr --json isCrossRepository,headRefName" cat "$work/wait-gh/calls"
+# A lone pull request on the pushed head is recorded with no gh (its stub
+# fails when run): the merger's step 1 confirms its head repository.
+expect "open_pr: wait records a lone pull request with gh failing" 0 "pull request 3 at" waitpr
+expect "open_pr: wait ran no gh" 1 "No such file" cat "$work/wait-gh/calls"
 expect "open_pr: wait recorded the number in the run state" 0 "^3$" state get openpr pr
 git --git-dir="$work/openpr.git" update-ref refs/pull/1/head chore/openpr
 expect "open_pr: wait keeps the recorded pull request beside a fork's on the pushed head" 0 "pull request 3 at" waitpr
