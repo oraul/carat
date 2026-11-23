@@ -2,7 +2,7 @@ fix(pipeline): bind the guard and gate scripts to committed content
 
 ## Summary
 
-Tightens the pipeline's guard and gate scripts so the merger's lane-close and the contributor's merge-main bind to the run's own change, the records-only gate reads the sprint row and history rows from committed content, and a rerun of the sprint review no longer records the planner's quality notes twice. These close four of the queued security Lows and one defect that a misled agent could reach or that refused a legitimate push.
+Tightens the pipeline's guard and gate scripts so the merger's lane-close and the contributor's merge-main bind to the run's own change, the records-only gate reads the sprint row and history rows from committed content, and a rerun of the sprint review no longer records the planner's quality notes twice. These close queued security Lows that a misled agent could reach, and the defect of a /sprint rerun recording the planner's quality notes twice.
 
 ---
 
