@@ -10,7 +10,7 @@ Moves the typed query of the command palette and of every finder picker onto the
 
 - Draw the prompt row, the prompt mark then the typed text, as the first row of the palette's float and of the files, grep, buffers, and recent pickers, with the cursor bar in it and the command-line row blank while the float is shown.
 - Add the plugin API request `float_prompt` (API 2.16, `PluginUi#prompt_float`, `Host#float_prompt`, `PluginLink`, `UiRequests`, `WindowRequests#holds_float?`), refused for a float the plugin does not hold and ended with the prompt.
-- Title the palette's float `Commands N/M` and share one prompt constant, `Domain::Palette::PROMPT`, between the palette and the finder.
+- Title the palette's float `Commands N/M`, and have the palette and the frame presenter share one prompt constant, `Domain::Palette::PROMPT`, with the finder's own `PROMPT` holding the same text since a plugin may not name a domain constant.
 - Keep the prompt on the command-line row when the screen has no room for a query row and a list row, and attach the finder's prompt to its float once for each float, not at every refill, to hold the grep allocation figure.
 - Update the snapshots and version lines of the plugin host, floats, palette, finder, and command-line tests, and add tests for a wide character before the cursor and a query wider than its float.
 - Update the command-palette, file-finder, and plugin-host specs, docs/plugins.md, docs/codebase-map.md, docs/compatibility.md, docs/actions.md, docs/design.md, and README.md.
