@@ -5331,6 +5331,29 @@ mkdir -p docs/backlog
 printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n\n### Old security entry\n- Location: a\n- Why: security Low (4) b\n' > docs/backlog/a.md
 commit "docs: groom files the findings under the backlog"
 expect "gates: findings lets the branch appending groom's sprint row remove entries it filed in docs/backlog" 0 "ok   findings: a branch carrying a sprint's groom removed only entries filed in docs/backlog/" gates findings
+# bench-skip-nonruby (the user's decision of 2026-11-23): the check clone holds
+# a copy of the plan's sprint marker and groom.txt, so the gates stage proves a
+# carrier's groomed findings there as in the delivery clone; a stage writing
+# them in the clone leaves the delivery clone's plan as it was.
+cat > "$work/bin/carrier-make" <<'EOT'
+#!/bin/sh
+ls build/plan | tr '\n' ' ' > "$CARRIER_OUT"
+git branch -q -f main "$CARRIER_BASE" || exit 1
+BASE=main sh "$CARRIER_GATES" findings
+status=$?
+printf 'forged\n' > build/plan/sprint
+exit $status
+EOT
+chmod +x "$work/bin/carrier-make"
+mkdir -p "$work/checks"
+printf 'gone ### Old groomed entry -- the code moved\n' > build/plan/groom.txt
+printf 'sprint-1 groomed\n' > build/plan/sprint.carrier
+touch build/plan/groomed.md
+expect "run_state: the gates stage in the check clone passes a records carrier's head, its plan copied in" 0 "every stage passed" \
+  env STAGES="gates" MAKE="$work/bin/carrier-make" CARRIER_OUT="$work/carrier.out" CARRIER_BASE="$groomed_base" CARRIER_GATES="$here/gates.sh" TMPDIR="$work/checks" sh "$here/run_state.sh" check groomed
+expect "run_state: the check clone holds the plan's sprint marker and groom.txt and no other plan file" 0 "^groom.txt sprint $" cat "$work/carrier.out"
+expect "run_state: a stage writing the clone's plan copy leaves the delivery clone's marker" 0 "^sprint-1$" cat build/plan/sprint
+rm -f build/plan/groom.txt build/plan/sprint.carrier build/plan/groomed.md "$work/carrier.out"
 # A security entry merges only into another security entry, its body kept
 # after the "- Merged:" line (groom's rule); a plain entry into any entry.
 printf '# Backlog: a\n\n### Old groomed entry\n- Location: a\n- Merged: ### Old security entry\n- Location: tools/code.sh\n- Why: security Low (4) b\n' > docs/backlog/a.md

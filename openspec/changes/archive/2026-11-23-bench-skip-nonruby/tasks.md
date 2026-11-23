@@ -27,3 +27,7 @@
 
 - [x] 6.1 Update the comment and the recorded note of `benchWithoutRuby` to list every path the ruby fact reads (`.claude/workflows/deliver-change.js`, `tools/tools_test.sh`)
 - [x] 6.2 The Makefile, `tools/spinel/`, and `tools/metrics.sh` gap was fixed in 5.1; the relayed fact stays recorded in `docs/findings/bench-skip-nonruby.md` (a run-state command would need new code)
+
+## Check fix
+
+- [x] 7.1 Copy the plan's sprint marker and `groom.txt` into the check clone (`clone_plan` in `tools/run_state.sh`) so the gates stage proves a records carrier's groomed findings there; prove it in `tools/tools_test.sh` (a carrier head passes the gates stage in the clone, failing before; a stage writing the copy leaves the delivery clone's plan)

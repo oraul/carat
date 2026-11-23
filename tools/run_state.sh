@@ -57,7 +57,9 @@
 # clone for each check (TMPDIR) and removes on exit; every stage runs in
 # it. build/stages/CHANGE/carry keeps its build/ between checks (without
 # pipeline, stages, and plan) and METRICS_OUT gets its metrics. The clone
-# holds its own copy of the toolchain; files changed outside the clone
+# holds its own copy of the toolchain and a copy of the plan's sprint
+# marker and groom.txt (clone_plan), which the gates stage reads to prove a
+# records carrier's groomed findings; files changed outside the clone
 # while every stage exited 0 (escaped_paths) void the check: its passes
 # are rewritten as not passing, the paths kept as a security-escape note,
 # and its verdict reads escaped when every path lies under a path of the
@@ -1479,6 +1481,19 @@ clone_make() {
   toolchain_copy
   carry=$stage_dir/$change/carry
   [ ! -d "$carry" ] || cp -RP "$carry/." "$check_root/build/"
+  clone_plan
+}
+
+# The plan files the gates stage reads to prove a records carrier's groomed
+# findings, the sprint marker and groom.txt, copied from the delivery
+# clone's plan directory into the clone: read there, never written back (a
+# regular file only, no link), the rest of the plan staying out.
+clone_plan() {
+  [ -d "$plan_dir" ] || return 0
+  for plan_file in sprint sprint.applied groom.txt; do
+    [ -f "$plan_dir/$plan_file" ] && [ ! -L "$plan_dir/$plan_file" ] || continue
+    mkdir -p "$check_root/build/plan" && cp "$plan_dir/$plan_file" "$check_root/build/plan/$plan_file"
+  done
 }
 
 # The clone's own copy of the shared toolchain, each absolute link into
