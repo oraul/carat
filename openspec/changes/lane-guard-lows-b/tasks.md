@@ -12,3 +12,5 @@
 ## Quality review
 
 - [x] 3.1 Self-review of the diff by the quality reviewer's checklist: no finding beyond the recorded security Low in docs/findings/lane-guard-lows-b.md
+
+- [x] 3.2 Review-round finding (security Low 6, merge hook pull request number and title check): its fix is in tools/agent_guard.sh, a file this change does not edit, and adds new code, so it is recorded in docs/findings/lane-guard-lows-b.md
