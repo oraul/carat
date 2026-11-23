@@ -6401,11 +6401,13 @@ expect "sprint: a due line names the sprint, its changes, and its diff" 0 '^[{]"
   sprint_js "parseDue('due: sprint-1 has 2 changes merged (a, b-c); combined diff abc1234..origin/main; sweep: no')"
 expect "sprint: the sweep runs in an even sprint" 0 '^true$' \
   sprint_js "parseDue('due: sprint-2 has 5 changes merged (a, b, c, d, e); combined diff abc1234..origin/main; sweep: yes').sweep"
-# planner-loop: a sprint close starts no quality reviewer, no skeptic, and
-# no records run; the next delivery's package step applies the plan.
-expect "sprint: a sprint close starts no quality reviewer, no skeptic, and no records run" 0 "^0 0 0 0 0$" \
+# planner-loop: a sprint close starts no skeptic and no records run; the next
+# delivery's package step applies the plan. The one quality-reviewer start is
+# the continued review over the files the planner's review left
+# (sprint-review-coverage).
+expect "sprint: a sprint close starts one quality reviewer, the continued start, no skeptic, and no records run" 0 "^1 0 0 0 0$" \
   sh -c 'echo "$(grep -c "agentType: .quality-reviewer." "$1") $(grep -c -i "skeptic" "$1") $(grep -c "deliver-change[.]js" "$1") $(grep -c "records-merged\|recordsRun\|recordsLine" "$1") $(grep -c "phase(.Records.)" "$1")"' _ "$swf"
-expect "sprint: the starts are the runner, the security reviewer, the sweep, and the planner" 0 "^runner security-reviewer planner$" \
+expect "sprint: the starts are the runner, the security reviewer, the planner, and the quality reviewer's continued start" 0 "^runner security-reviewer planner quality-reviewer$" \
   sh -c 'grep -o "agentType: .[a-z-]*." "$1" | grep -v "[$]" | sed "s/agentType: .//; s/.$//" | awk "!seen[\$0]++" | tr "\n" " " | sed "s/ $//"; echo' _ "$swf"
 # The report's next-queue line: applied by the next delivery's package
 # step, or held by a security finding until a change after it merged.
@@ -6474,13 +6476,57 @@ expect "sprint: the security reviewer gets one more start, its result merged bef
 # complete; a file the first start reviewed stays dropped.
 expect "sprint: a continuation's file left in another spelling stays left" 0 '^\["carat/a.rb","tools/b.sh","c.rb","d/"\]$' \
   sec_js "mergeSecurity({ ran: true, head: 'abc1234', findings: [], not_reviewed: ['carat/a.rb', 'tools/b.sh', 'c.rb', 'd/', 'e.rb'] }, { ran: true, head: 'abc1234', findings: [], not_reviewed: ['./carat/a.rb', ' \`tools//b.sh:12:3\` ', '/home/u/carat/tmp/.review-security-sprint/c.rb', './d', 'z.rb', ''] }).not_reviewed"
+# sprint-review-coverage: the planner's quality review left at its cap with
+# files not reviewed gets one more start of the quality reviewer over exactly
+# those files, merged into one review; files still left record it partial,
+# never passed, and the report's Quality line names the coverage. The
+# harness runs the whole workflow with each start answered from a table.
+sprint_close() {
+  node - "$swf" "$1" "$2" <<'JS'
+const fs = require('fs')
+const src = fs.readFileSync(process.argv[2], 'utf8').replace(/^export const meta = /m, 'const meta = ')
+const left = JSON.parse(process.argv[3])
+const again = JSON.parse(process.argv[4])
+const starts = []
+let recorded = ''
+const agent = async (prompt, o) => {
+  starts.push({ type: o.agentType, label: o.label, prompt })
+  if (o.label === 'sprint: due') return { line: 'due: sprint-5 has 6 changes merged (a, b, c, d, e, f); combined diff abc1234..origin/main; sweep: no', initialized: true, tool_calls: 1 }
+  if (o.agentType === 'security-reviewer' && prompt.startsWith('Mode: record')) { recorded += `\n${prompt}`; return { ok: true, output: 'ok' } }
+  if (o.agentType === 'security-reviewer') return { ran: true, head: 'abc1234', findings: [], not_reviewed: [], tool_calls: 1 }
+  if (o.agentType === 'planner') return { decisions: [], security_first: [], paths: [], head: 'abc1234', quality_blocking: 0, quality_advisory: 2, not_reviewed: left, disputed: 0, security_missed: [], notes: [{ kind: 'quality', text: 'first' }], tool_calls: 1 }
+  if (o.agentType === 'quality-reviewer') return again
+  if (o.label === 'sprint: record') { recorded += `\n${prompt}`; return { ok: true, output: 'ok' } }
+  return null
+}
+const run = new (Object.getPrototypeOf(async function () {}).constructor)('agent', 'phase', 'log', 'parallel', 'workflow', src)
+run(agent, () => {}, () => {}, (fns) => Promise.all(fns.map((f) => f())), async () => null).then((r) => {
+  const q = starts.filter((s) => s.type === 'quality-reviewer')
+  const line = r.report.split('\n').find((l) => l.startsWith('- Quality:'))
+  const record = (recorded.match(/review sprint-5 periodic-quality \S+ "[^"]*"/) || [''])[0]
+  console.log(JSON.stringify({ quality_starts: q.length, mentions: q.length ? ['test/a_test.rb', 'tools/tools_test.sh'].every((f) => q[0].prompt.includes(f)) && !q[0].prompt.includes('lib/other.rb') : null, noted: /note sprint-5 quality 'second'/.test(recorded), record, line }))
+})
+JS
+}
+expect "sprint: a first planner review that leaves test files gets a continued review over them, its notes recorded, and passes" 0 '^\{"quality_starts":1,"mentions":true,"noted":true,"record":"review sprint-5 periodic-quality pass \\"diff blocking=0 advisory=3 missed=0 not_reviewed=0\\"","line":"- Quality: the planner kept 0 blocking and 3 advisory; coverage: 2 of 2 file\(s\) the first start left reviewed in a continued start"\}$' \
+  sprint_close '["test/a_test.rb","tools/tools_test.sh"]' '{"head":"abc1234","quality_blocking":0,"quality_advisory":1,"not_reviewed":[],"notes":[{"kind":"quality","text":"second"}],"tool_calls":1}'
+expect "sprint: files the continued review still leaves are recorded partial and named in the report" 0 '^\{"quality_starts":1,"mentions":true,"noted":true,"record":"review sprint-5 periodic-quality partial \\"diff blocking=0 advisory=3 missed=0 not_reviewed=1\\"","line":"- Quality: the planner kept 0 blocking and 3 advisory; coverage: 1 of 2 file\(s\) the first start left reviewed in a continued start, 1 still not reviewed \(tools/tools_test.sh\); partial"\}$' \
+  sprint_close '["test/a_test.rb","tools/tools_test.sh"]' '{"head":"abc1234","quality_blocking":0,"quality_advisory":1,"not_reviewed":["tools/tools_test.sh"],"notes":[{"kind":"quality","text":"second"}],"tool_calls":1}'
+expect "sprint: a continued review without a result leaves every file and records partial" 0 '"record":"review sprint-5 periodic-quality partial \\"diff blocking=0 advisory=2 missed=0 not_reviewed=2\\"".*coverage: 0 of 2 file' \
+  sprint_close '["test/a_test.rb","tools/tools_test.sh"]' 'null'
+expect "sprint: a planner review that leaves no file starts no continued review" 0 '^\{"quality_starts":0,"mentions":null,"noted":false,"record":"review sprint-5 periodic-quality pass \\"diff blocking=0 advisory=2 missed=0 not_reviewed=0\\"","line":"- Quality: the planner kept 0 blocking and 2 advisory; every file of the diff reviewed"\}$' \
+  sprint_close '[]' 'null'
+expect "sprint: the quality continuation merges counts, notes, and the files still left" 0 '^\{"b":3,"a":2,"n":2,"left":\["z.rb"\],"head":"abc1234"\}$' \
+  js "$swf" "isCommit qualityReviewed pathKey stillLeft mergeQuality" "(m => ({ b: m.quality_blocking, a: m.quality_advisory, n: m.notes.length, left: m.not_reviewed, head: m.head }))(mergeQuality({ head: 'abc1234', quality_blocking: 1, quality_advisory: 1, not_reviewed: ['y.rb', 'z.rb'], notes: [{ kind: 'quality', text: 'a' }] }, { head: 'def5678', quality_blocking: 2, quality_advisory: 1, not_reviewed: ['./z.rb'], notes: [{ kind: 'quality', text: 'b' }] }))"
+expect "agents: the quality reviewer has a sprint mode, and the planner names the files its review left" 0 "^1 1$" \
+  sh -c 'echo "$(grep -c "^## Sprint mode$" "$1") $(grep -c "At your cap name each diff file not reviewed in .not_reviewed.; a continued start reviews them[.]" "$2")"' _ "$agents/quality-reviewer.md" "$agents/planner.md"
 # sprint-close-lows: a security finding the reviewer missed is asked of the
 # planner in its own field, recorded as a security note, and blocks as the
 # reviewer's would.
 expect "sprint: a security finding the reviewer missed is recorded and counts as blocking" 0 "^\[2,1,\"sh tools/run_state.sh note sprint-9 security 'missed by the reviewer: High [(]9[)] a.rb:2 it'.\\\\''s; fix: f'\"\]$" \
   js "$swf" "missedSecurity blockingOf shellWord findingLine securityNotes" "(m => [m.length, blockingOf(m).length, securityNotes('sprint-9', m, 'missed by the reviewer: ')[0]])(missedSecurity({ security_missed: [{ severity: 'High', confidence: 9, file: 'a.rb', line: 2, title: 'it\\'s', fix: 'f' }, { severity: 'Bad', confidence: 9, file: 'b', title: 'x', fix: 'y' }, { severity: 'Low', confidence: 5, file: 'c', title: 'u', fix: 'g' }] }))"
 expect "sprint: the missed findings are recorded with the planner's notes and block the record" 0 "^1 1 1$" \
-  sh -c 'echo "$(grep -c "^const kept = planned [?] reviewNotes(sprint.sprint, plan.notes).concat(securityNotes(sprint.sprint, missedReviewer, .missed by the reviewer: .)) : [[][]]$" "$1") $(grep -c "^const sprintBlocking = blocking.concat(blockingOf(missedReviewer))$" "$1") $(grep -c "result(sprintBlocking.length, missed)" "$1")"' _ "$swf"
+  sh -c 'echo "$(grep -c "^const kept = planned [?] reviewNotes(sprint.sprint, quality.notes).concat(securityNotes(sprint.sprint, missedReviewer, .missed by the reviewer: .)) : [[][]]$" "$1") $(grep -c "^const sprintBlocking = blocking.concat(blockingOf(missedReviewer))$" "$1") $(grep -c "result(sprintBlocking.length, missed)" "$1")"' _ "$swf"
 expect "sprint: the planner is asked for the security findings the reviewer missed and its quality review" 0 "^1 1$" \
   sh -c 'echo "$(grep -c "each security finding the reviewer missed in security_missed, and the counts" "$1") $(grep -c "required: [[].decisions., .security_first., .paths., .head., .quality_blocking., .quality_advisory., .not_reviewed., .disputed., .security_missed., .notes., .tool_calls.[]]," "$1")"' _ "$swf"
 # sprint-close-lows, planner-loop: a blocking sprint security finding or the
@@ -6521,7 +6567,7 @@ expect "sprint: the planner's notes are recorded after it returns and before the
 expect "sprint: the planner's notes run under the security reviewer's record mode" 0 "^1 1 1$" \
   sh -c 'echo "$(grep -c -F "recordNotes(kept, '"'"'sprint: plan notes'"'"')" "$1") $(grep -c "^async function recordNotes(lines, label) {$" "$1") $(grep -c "^When the input says .Mode: record. (.sprint-planning..s notes), run only the one command the input gives" "$2")"' _ "$swf" "$agents/security-reviewer.md"
 expect "agents: the sprint planner reviews quality, records nothing, and returns its notes" 0 "^1 1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "^1[.] Review, recording nothing: the combined diff the input names") $(printf "%s\n" "$s" | grep -c "a dropped one is not recorded") $(printf "%s\n" "$s" | grep -c "never drop one")"' _ "$agents/planner.md"
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "^1[.] Review, recording nothing: the combined diff the input names") $(printf "%s\n" "$s" | grep -c "At your cap name each diff file not reviewed in .not_reviewed.; a continued start reviews them[.]") $(printf "%s\n" "$s" | grep -c "never drop one")"' _ "$agents/planner.md"
 # sprint-close-lows: the quality reviewer leaves a security point to the
 # security reviewer, unexamined, and the sprint planner returns a security
 # finding the reviewer missed in its own field, which the workflow records.
@@ -6565,7 +6611,7 @@ expect "delivery: a Low passes and is kept for the findings file, and a pass at 
   review_js "globalThis.result = { ran: true, head: 'abc1234', findings: [{ severity: 'Low', confidence: 9, file: 'tools/x.sh', line: 3, in_change: true, title: 't', fix: 'f' }], not_reviewed: [] }; const m = await reviews(); await reviews(); return [m, kept.length, records, starts.length]"
 expect "delivery: a security review that did not run stops the run, never skipped" 0 '^\[null,true\]$' \
   review_js "globalThis.result = { ran: false, head: 'abc1234', findings: [] }; const m = await reviews(); return [m, stopped.includes('it cannot be skipped')]"
-expect "sprint: the planner reviews the combined diff's quality in its sprint start" 0 '^1 1 0$' \
+expect "sprint: the planner reviews the combined diff's quality in its sprint start" 0 '^1 2 0$' \
   sh -c 'echo "$(grep -c -F "First review \${scope} for quality as your Sprint mode section says" "$1") $(grep -c -F "quality_blocking: { type: '"'"'integer'"'"', minimum: 0 }" "$1") $(grep -c "reviewContinued(.quality." "$1")"' _ "$swf"
 expect "workflow: the delivery never starts the periodic review" 1 "" grep -q -E "periodic-review[.]js|phase[(]'Review'[)]" "$wf"
 # No delivery reads or greps the backlog: the contributor only appends.
@@ -6589,7 +6635,7 @@ expect "agents: the sprint planner merges near-same notes and checks the entries
 expect "workflow: sprint-planning hands the planner the oldest entries and the merge of near-same notes" 0 "^1 1$" \
   sh -c 'echo "$(grep -c -F "(a near-same note merged, never dropped), the oldest entries to check against HEAD from" "$1") $(grep -c -F "run_state.sh backlog-oldest docs/backlog docs/findings/*.md" "$1")"' _ "$swf"
 expect "agents: the sprint planner runs the pick over the backlog and findings files, the triage, and the calibration" 0 "^1 1 1$" \
-  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "3 backlog items, the first three batches of .sh tools/run_state[.]sh backlog-pick docs/backlog docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (total tokens, wall minutes, first-pass rates, entries closed per run)")"' _ "$agents/planner.md"
+  sh -c 's=$(sed -n "/^## Sprint mode/,/^## [^S]/p" "$1"); echo "$(printf "%s\n" "$s" | grep -c "3 backlog items, the first three batches of .sh tools/run_state[.]sh backlog-pick docs/backlog docs/findings/[*][.]md., each listing its batch.s headings in its Backlog part") $(printf "%s\n" "$s" | grep -c "Triage once, when .git log -S .Backlog triage:. -- docs/queue-backlog[.]md. prints nothing or the user asks") $(printf "%s\n" "$s" | grep -c "compares it with .docs/metrics-feature[.]tsv. (tokens, minutes, first-pass rates, entries closed)")"' _ "$agents/planner.md"
 
 # Spinel warnings (tools/spinel_warnings.sh): the real build targets run
 # against a stub toolchain under PREFIX, which the Makefile's PATH puts
