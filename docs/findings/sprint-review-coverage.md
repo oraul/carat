@@ -15,3 +15,4 @@
 - Location: tools/metrics.sh measure, the grep scenario of bench/keys.rb
 - Why: the metrics stage of the first check of this change read allocs.grep 685.3 against main's 685.0 though carat/, bench/, and the Makefile equal main's; three reruns of the same binary read 685.0 and the rerun check passed, so the allocation count of the grep scenario varies with load, which would block an unrelated change at random.
 - Fix: find what in the grep picker's setup varies (a reader thread's timing, or the stages running beside the metrics stage), make the count exact or have measure take the lowest of a few runs for grep.
+none
