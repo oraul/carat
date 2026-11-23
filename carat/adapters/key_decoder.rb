@@ -4,17 +4,29 @@ module Carat
   module Adapters
     # Turns terminal bytes into key codes. An incomplete escape or UTF-8
     # sequence stays pending until more bytes arrive or flush is called,
-    # which is how a lone Escape is told apart from a sequence.
+    # which is how a lone Escape is told apart from a sequence. Between
+    # the bracketed paste marks (ESC [ 200 ~ and ESC [ 201 ~) the bytes
+    # are text, never keys: each printable character becomes its code
+    # with Key::PASTED set, a tab a pasted tab, a carriage return, line
+    # feed, or CRLF one pasted CR, and every other control byte,
+    # Escape included, is dropped, so pasted text cannot leave insert
+    # mode or run a command. A paste that stops short waits for the rest
+    # however long it takes, and flush leaves it.
     class KeyDecoder
       # What is pending when nothing is: one string kept for that, since
       # most reads decode whole.
       NOTHING = "".b
+      PASTE_END = "\e[201~".b
 
       # @rbs @pending: String
+      # @rbs @pasting: bool
+      # @rbs @after_cr: bool
 
       #: () -> void
       def initialize
         @pending = "".b
+        @pasting = false
+        @after_cr = false
       end
 
       #: () -> bool
@@ -33,7 +45,7 @@ module Carat
       # byte is the Escape key; an incomplete character is dropped.
       #: () -> Array[Integer]
       def flush
-        return [] if @pending.empty?
+        return [] if @pending.empty? || @pasting
         codes = []
         if @pending.getbyte(0) == 27
           codes << Domain::Key::ESC
@@ -49,6 +61,7 @@ module Carat
       # FakeTerminal so tests type keys in Vim notation.
       #: (Integer) -> String
       def self.encode(code)
+        return "\e[200~" + encode(code & ~Domain::Key::PASTED) + "\e[201~" if Domain::Key.pasted?(code)
         return "\e" + encode(Domain::Key.base(code)) if Domain::Key.alt?(code)
         case code
         when Domain::Key::UP then "\e[A"
@@ -91,6 +104,10 @@ module Carat
         codes = []
         loop do
           break if @pending.empty?
+          if @pasting
+            break unless decode_paste(codes)
+            next
+          end
           b = @pending.getbyte(0)
           if b == 27
             break unless decode_escape(codes)
@@ -142,9 +159,73 @@ module Carat
         parts = params.split(";")
         number = parts.empty? ? 0 : parts[0].to_i
         modifier = parts.length > 1 ? parts[1].to_i : 1
-        codes << csi_key(final, number, modifier)
+        if final == 126 && params == "200"
+          @pasting = true
+          @after_cr = false
+        else
+          codes << csi_key(final, number, modifier)
+        end
         consume(i + 1)
         true
+      end
+
+      # Reads pasted text up to the end mark, leaving the paste when the
+      # mark is read. Returns false when the bytes so far stop inside the
+      # mark or a character, and more are needed.
+      #: (Array[Integer]) -> bool
+      def decode_paste(codes)
+        size = @pending.bytesize
+        i = 0
+        done = false
+        more = false
+        while i < size && !done && !more
+          b = @pending.getbyte(i)
+          if b == 27
+            left = size - i
+            if left >= 6 && @pending.byteslice(i, 6) == PASTE_END
+              i += 6
+              done = true
+            elsif left < 6 && PASTE_END.byteslice(0, left) == @pending.byteslice(i, left)
+              more = true
+            else
+              i += 1
+            end
+            @after_cr = false
+          elsif b < 128
+            i += 1
+            if b == 13 || (b == 10 && !@after_cr)
+              codes << (Domain::Key::CR | Domain::Key::PASTED)
+            elsif b == 9
+              codes << (Domain::Key::TAB | Domain::Key::PASTED)
+            elsif b >= 32 && b != 127
+              codes << (b | Domain::Key::PASTED)
+            end
+            @after_cr = b == 13
+          else
+            length = utf8_length(b)
+            if length > 0 && size < i + length
+              more = true
+            else
+              code = paste_char(i, length)
+              codes << ((code == 0 ? 0xFFFD : code) | Domain::Key::PASTED)
+              i += code == 0 ? 1 : length
+            end
+            @after_cr = false
+          end
+        end
+        @pasting = false if done
+        consume(i)
+        !more
+      end
+
+      # The code of the character of length bytes at offset, 0 for an
+      # illegal byte (length 0) or sequence, of which one byte is read, so
+      # a lead byte never swallows the end mark behind it.
+      #: (Integer, Integer) -> Integer
+      def paste_char(offset, length)
+        return 0 if length == 0
+        text = @pending.byteslice(offset, length).force_encoding("UTF-8")
+        text.valid_encoding? ? text.ord : 0
       end
 
       # The key of a CSI sequence; modifier is the second parameter, 1

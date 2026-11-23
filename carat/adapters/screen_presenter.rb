@@ -30,10 +30,14 @@ module Carat
     # Normal sequence in effect when the screen is cleared or scrolled, so
     # the terminal fills the cleared cells with the palette's background.
     class ScreenPresenter
-      ENTER = "\e[?1049h\e[H\e[2J"
-      # Leaving resets the colors, gives the cursor back the terminal's
-      # own shape (DECSCUSR 0), shows it, and restores the main screen.
-      LEAVE = "\e[0m\e[0 q\e[?25h\e[?1049l"
+      # Entering switches to the alternate screen and turns bracketed
+      # paste on, so pasted text arrives between marks and KeyDecoder
+      # reads it as text, never as keys.
+      ENTER = "\e[?1049h\e[?2004h\e[H\e[2J"
+      # Leaving turns bracketed paste off, resets the colors, gives the
+      # cursor back the terminal's own shape (DECSCUSR 0), shows it, and
+      # restores the main screen.
+      LEAVE = "\e[?2004l\e[0m\e[0 q\e[?25h\e[?1049l"
       # Unchanged cells fewer than this between two changed runs of a row
       # are written again to join the runs, which costs no more than the
       # cursor position between them.

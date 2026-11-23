@@ -228,6 +228,7 @@ module LintTest
     "begin_transaction" => "opens a transaction",
     "decode_escape" => "decodes an escape sequence",
     "decode_csi" => "decodes a CSI sequence",
+    "decode_paste" => "decodes pasted text",
     "decode_utf8" => "decodes a UTF-8 sequence",
     "reveal" => "expands the tree down to a path",
     "next_tab" => "moves to the next tab page",

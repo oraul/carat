@@ -150,10 +150,14 @@ module Carat
       # a binding ran out, which resolves the pending keys. The remap count
       # is the key's own and is restored when it is done, so a key :normal
       # feeds from inside a remap neither resets nor adds to the count of
-      # the key whose remap ran :normal.
+      # the key whose remap ran :normal. A key of a bracketed paste
+      # (Key::PASTED set) is text and is never looked up in a keymap:
+      # insert mode inserts it, the command line takes it into its text,
+      # and no other mode does anything with it.
       #: (Domain::EditorState, Integer) -> Symbol
       def call(state, code)
         return timeout(state) if code == Domain::Key::TIMEOUT
+        return paste(state, code) if Domain::Key.pasted?(code)
         @hide_key_hints.call(state) if @key_hints.showing?
         outer = @replays
         @replays = 0
@@ -169,6 +173,25 @@ module Carat
       end
 
       private
+
+      # One pasted character: text in insert mode, where a pasted newline
+      # breaks the line as Enter does, and in the command line, where a
+      # newline is dropped so a paste never runs the command; the
+      # completion popup is not asked for each character.
+      #: (Domain::EditorState, Integer) -> Symbol
+      def paste(state, code)
+        key = code & ~Domain::Key::PASTED
+        mode = state.mode
+        if mode == Domain::Mode::INSERT
+          return call(state, Domain::Key::CR) if key == Domain::Key::CR
+          @insert_text.call(state, key == Domain::Key::TAB ? "\t" : Domain::Key.char(key))
+          follow(state)
+        elsif mode == Domain::Mode::CMDLINE && Domain::Key.printable?(key)
+          @command_line.call(state, Domain::Key.char(key))
+          follow(state)
+        end
+        :handled
+      end
 
       # After the keys of a typed key or a timeout ran: the completion menu,
       # the documentation and definition floats, the signature help, the

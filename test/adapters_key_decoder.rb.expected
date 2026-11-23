@@ -42,6 +42,33 @@ ok   escape followed by a sequence in the next read
 ok   flush of a partial sequence yields escape and the bracket
 ok   flush drops an incomplete character
 ok   nothing pending after dropping
+ok   paste: plain text
+ok   paste: an Escape and a colon are text, not keys
+ok   paste: a lone Escape before the end mark is dropped
+ok   paste: an empty paste
+ok   paste: keys before and after
+ok   paste: a key after the paste is a key again
+ok   paste: two pastes in one read
+ok   paste: an arrow sequence inside is text
+ok   paste: LF is a newline
+ok   paste: CR is a newline
+ok   paste: CRLF is one newline
+ok   paste: two blank lines are two newlines
+ok   paste: a tab is kept
+ok   paste: other control bytes and DEL are dropped
+ok   paste: a multi-byte character
+ok   paste: an illegal byte is U+FFFD
+ok   paste: a lead byte does not swallow the end mark
+ok   paste: trailing blanks are kept
+ok   paste: the end mark outside a paste is an unknown key
+ok   paste: a paste split inside the mark and a character, flushed mid-mark, keeps its text
+ok   paste: the end mark finished in the next read ends the paste
+ok   paste: nothing pending after the paste
+ok   paste: flush does not turn a pasted Escape into the Escape key
+ok   paste: the text goes on after a pause; the Escape not starting the end mark is dropped
+ok   paste: a LF after a CR read apart is no second newline
+ok   paste: flush keeps an incomplete character of a paste
+ok   paste: the incomplete character stays pending
 ok   letter
 ok   escape
 ok   up
@@ -54,5 +81,6 @@ ok   shift right
 ok   Shift-Tab decodes to its own key: encode
 ok   alt x
 ok   unicode
+ok   pasted letter
 ok   every key round-trips through encode and feed
-adapters_key_decoder: 57 passed, 0 failed
+adapters_key_decoder: 85 passed, 0 failed
