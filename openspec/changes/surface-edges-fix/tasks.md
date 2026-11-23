@@ -9,7 +9,7 @@
 
 - [x] 2.1 Add `Slot#headed?` and use it in `ArrangeView#reserve_headers`; paint the head in a one-view left sidebar's header row (`paint_header`); prove it in `test/domain_slot.rb`, `test/editor_slots.rb`, and `test/editor_plugins.rb` (Scenarios: Header of one view; Header of two views)
 - [x] 2.2 Draw blank rows below a sidebar's text with `PaintedRows::BLANK`; prove it in `test/adapters_frame_presenter.rb` and `test/editor_explorer.rb` (Scenario: Rows past a sidebar's text are blank)
-- [x] 2.3 Update the expectations and snapshots the changes make stale (`test/editor_tabs.rb`, `test/editor_tab_flows.rb`, `make snapshots` diff read)
+- [x] 2.3 Update the expectations and snapshots the changes make stale (`test/editor_tabs.rb`, `test/editor_tab_flows.rb`, `test/adapters_definitions.rb`, `make snapshots` diff read)
 
 ## 3. Docs
 

@@ -29,7 +29,7 @@ Assumptions: the head's groups reuse `Normal` (bright), `NonText` (faint), and `
 ## Impact
 
 - Code: `carat/adapters/tab_bar.rb`, `carat/adapters/frame_presenter.rb`, `carat/adapters/painted_rows.rb`, `carat/domain/slot.rb`, `carat/use_cases/arrange_view.rb`.
-- Tests: `test/adapters_tab_bar.rb`, `test/adapters_frame_presenter.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`, `test/editor_plugins.rb`, `test/editor_explorer.rb`, `test/editor_tabs.rb`, `test/editor_tab_flows.rb` and their snapshots.
+- Tests: `test/adapters_tab_bar.rb`, `test/adapters_frame_presenter.rb`, `test/domain_slot.rb`, `test/editor_slots.rb`, `test/editor_plugins.rb`, `test/editor_explorer.rb`, `test/editor_tabs.rb`, `test/editor_tab_flows.rb`, `test/adapters_definitions.rb` and their snapshots.
 - Docs: README.md (the slots paragraph), `docs/compatibility.md` (the buffer tabs row and the layout slots paragraph), `docs/codebase-map.md` (slot, arrange view, frame presenter, tab bar, painted rows).
 - docs/architecture.md: unchanged, it names the tab bar, slot header, and presenter as parts and describes no separator, head, or tilde row.
 - docs/design.md: unchanged, it already describes the target look; its drift table is `design-drift-sync`'s.

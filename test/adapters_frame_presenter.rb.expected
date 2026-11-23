@@ -164,12 +164,21 @@ ok   the bar follows the current window to the scratch title
 ok   the side window has no line numbers while the file window keeps them
 ok   its one-cell sign column still shows
 ok   A sidebar beside the editor draws no separator glyph: a blank cell of the sidebar's layer, the editor's own gutter after it
-ok   the sidebar's text and tilde rows are in its layer, the editor's tilde rows are not
+ok   the sidebar's text and blank rows are in its layer, the editor's tilde rows are not
 ok   the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's
 ok   two editor splits keep the glyph in WinSeparator, the sidebar's edge stays a blank cell
 ok   NO_COLOR keeps the glyph at the sidebar's edge
 ok   16 colors keep the glyph at the sidebar's edge
 ok   256 colors draw the blank cell again, the stale glyph gone
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: 24 bits
+ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: 24 bits
+ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: 24 bits
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: 16 colors
+ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: 16 colors
+ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: 16 colors
+ok   the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: NO_COLOR
+ok   the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: NO_COLOR
+ok   no tilde stands in the sidebar's rows, the editor's own tilde rows stay: NO_COLOR
 ok   the prompt row and the cursor after it
 ok   a plugin's prompt is dim and its text is Normal
 ok   The bar counts wide characters and the prompt: after a wide character
@@ -259,4 +268,4 @@ ok   a block in visual line mode
 ok   a block in visual block mode
 ok   a block while an operator waits
 ok   Shape per mode: a bar on the command line, which every query prompt shares
-adapters_frame_presenter: 261 passed, 0 failed
+adapters_frame_presenter: 270 passed, 0 failed
