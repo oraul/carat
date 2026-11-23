@@ -35,7 +35,8 @@ module Carat
     # the buffer tabs on the top row when two file buffers are listed or
     # two tab pages exist (TabBar), every window of the current tab page
     # in its rectangle (sign column, line number gutter, text with tabs
-    # expanded and unprintable code points as markers, tilde rows), a
+    # expanded and unprintable code points as markers, tilde rows, blank in
+    # a sidebar), a
     # separator row under each window above another and a separator
     # column between windows side by side, both in WinSeparator, except
     # where a sidebar meets the editor: the sidebar is drawn on its
@@ -258,7 +259,8 @@ module Carat
         @chrome.clear
 
         if tabline == 1
-          @tab_bar.paint(back, state, cols)
+          first = paint_tab_head(back, tab, layout, options.icons)
+          @tab_bar.paint(back, state, first, cols)
           @chrome << 0
           @repainted[0] = 1 if @floating
         end
@@ -280,7 +282,7 @@ module Carat
         end
         ascii = options.icons == "ascii"
         paint_separators(back, layout, layout.root, ascii ? ASCII_SEPARATOR : SEPARATOR, !@plain && !@basic_colors)
-        paint_headers(back, tab)
+        paint_headers(back, tab, options.icons)
         paint_winbars(back, tab, in_float, ascii)
         if bar >= tabline
           @status_bar.paint(back, bar, cols, state)
@@ -614,7 +616,7 @@ module Carat
           frame_row = wrow + i
           shown_last = row
           seg = @back_rows.index(frame_row, slot)
-          line = PaintedRows::TILDE
+          line = window.fixed_width ? PaintedRows::BLANK : PaintedRows::TILDE
           syntax = Domain::SyntaxLine::NONE
           number = -1
           sign = ""
@@ -696,13 +698,28 @@ module Carat
         @chrome << below
       end
 
+      # Paints the project and branch over the left sidebar on the tab
+      # row and returns the column the tabs start at, the editor's first:
+      # the cell after the sidebar's, 0 with no left sidebar shown.
+      #: (Domain::Frame, Domain::TabPage, Domain::Layout, String) -> Integer
+      def paint_tab_head(frame, tab, layout, set)
+        slot = tab.slot(:left)
+        return 0 unless slot.shown?(layout)
+        window = slot.view_window
+        first = window.col + window.width + 1
+        first = frame.cols if first > frame.cols
+        @tab_bar.paint_head(frame, 0, window.col, first, @status_bar.slots.branch, set)
+        first
+      end
+
       # The header row above each shown slot window that ArrangeView gave
       # one: the titles of the slot's views, each between spaces, the
       # shown one in TabLineSel and the others in TabLine, the rest of the
-      # row in TabLineFill. The titles are the strings the slot holds, so
-      # nothing is allocated.
-      #: (Domain::Frame, Domain::TabPage) -> void
-      def paint_headers(frame, tab)
+      # row in TabLineFill; a left sidebar with one view reads the project
+      # and branch instead (TabBar#paint_head). The titles are the strings
+      # the slot holds, so nothing is allocated.
+      #: (Domain::Frame, Domain::TabPage, String) -> void
+      def paint_headers(frame, tab, set)
         layout = tab.layout
         i = 0
         while i < Domain::TabPage::SLOT_COUNT
@@ -710,7 +727,7 @@ module Carat
           if slot.shown?(layout)
             window = slot.view_window
             row = window.row - 1
-            paint_header(frame, slot, window, row) if layout.node(layout.leaf_holding(window)).row == row
+            paint_header(frame, slot, window, row, set) if layout.node(layout.leaf_holding(window)).row == row
           end
           i += 1
         end
@@ -737,10 +754,16 @@ module Carat
         end
       end
 
-      #: (Domain::Frame, Domain::Slot, Domain::Window, Integer) -> void
-      def paint_header(frame, slot, window, row)
+      #: (Domain::Frame, Domain::Slot, Domain::Window, Integer, String) -> void
+      def paint_header(frame, slot, window, row, set)
         x = window.col
         limit = x + window.width
+        if slot.side == :left && slot.views.length < 2
+          @tab_bar.paint_head(frame, row, x, limit, @status_bar.slots.branch, set)
+          @repainted[row] = 1 if @floating
+          @chrome << row
+          return
+        end
         frame.blank(row, x, limit)
         frame.fill(row, x, limit, Domain::Highlight::TAB_LINE_FILL)
         shown = window.buffer.title
@@ -806,8 +829,9 @@ module Carat
       end
 
       # One text row of a window, every cell written once: the tilde past
-      # the end of the buffer, or the one-cell sign column (the glyph in its
-      # sign's group, else a blank in SignColumn), the number, the text,
+      # the end of the buffer (a blank row in a sidebar), or the one-cell
+      # sign column (the glyph in its sign's group, else a blank in
+      # SignColumn), the number, the text,
       # and blanks between and after, then the token groups, the indent
       # guides, the whitespace marks, the search matches, the pair, and the
       # selection.
@@ -815,6 +839,10 @@ module Carat
       # current one, and number_hl the number's highlight group.
       #: (Domain::Frame, Integer, Integer, Integer, Integer, String, Integer, String, Integer, bool, Integer, Integer, Integer, Domain::SyntaxLine, Integer, bool, Integer) -> void
       def paint_row(frame, frame_row, x, width, gutter, line, number, sign, sign_group, signs, text_width, left, tabstop, syntax, row, current, number_hl)
+        if line.equal?(PaintedRows::BLANK)
+          frame.blank(frame_row, x, x + width)
+          return
+        end
         if line.equal?(PaintedRows::TILDE)
           frame.blank(frame_row, x, x + width)
           frame.put(frame_row, x, "~", Domain::Highlight::NON_TEXT)

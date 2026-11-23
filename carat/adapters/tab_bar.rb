@@ -11,10 +11,12 @@ module Carat
     # Paints the top row of buffer tabs: one tab per listed file buffer in
     # list order, a space, a space, its file icon, a space, the last
     # segment of its path or [No Name], a space, the modified icon or a
-    # space (one cell either way), a space, and SEPARATOR (ASCII_SEPARATOR)
-    # in TabLine, the tab of the current window's buffer selected, so the
-    # accent background and the bold carry the selection and no gem does;
-    # scratch and unlisted buffers get none. From two tab pages their
+    # space (one cell either way), and a space, the tab of the current
+    # window's buffer selected, so the accent background and the bold
+    # carry the selection and no glyph separates two tabs; scratch and
+    # unlisted buffers get none. The row starts at the editor's first
+    # column, after a left sidebar, whose width above it holds the
+    # project and branch (paint_head). From two tab pages their
     # numbers stand at the right end, " 1  2 ", the current
     # one selected, and the tabs use the columns before them. Tabs that do
     # not fit are counted, " <N " before the run shown and " N> " after
@@ -23,11 +25,12 @@ module Carat
     # and every width is counted, so a row costs no object per frame.
     class TabBar
       MARK_CELLS = 1
-      SEPARATOR = "│"
-      ASCII_SEPARATOR = "|"
-      # The cells of a tab besides its icon, name, and mark: the leading
-      # space, four spaces, and the separator.
-      FRAME_CELLS = 6
+      # The cells of a tab besides its icon, name, and mark: the two
+      # leading spaces and the three after the icon, the name, and the
+      # mark.
+      FRAME_CELLS = 5
+      HEAD_DOT = "·"
+      HEAD_ASCII_DOT = "-"
 
       attr_reader :buffers #: Domain::BufferList
 
@@ -43,12 +46,16 @@ module Carat
         @buffers.tab_row?(tab_count, showtabline)
       end
 
-      # Paints row 0 of a frame cols wide.
-      #: (Domain::Frame, Domain::EditorState, Integer) -> void
-      def paint(frame, state, cols)
-        frame.blank(0, 0, cols)
-        frame.fill(0, 0, cols, Domain::Highlight::TAB_LINE_FILL)
-        right = paint_pages(frame, state, cols)
+      # Paints row 0 of a frame cols wide from column start, the editor's
+      # first column, leaving the cells before it to the caller.
+      #: (Domain::Frame, Domain::EditorState, Integer, Integer) -> void
+      def paint(frame, state, start, cols)
+        start = cols if start > cols
+        start = 0 if start < 0
+        frame.blank(0, start, cols)
+        frame.fill(0, start, cols, Domain::Highlight::TAB_LINE_FILL)
+        right = paint_pages(frame, state, start, cols)
+        room_width = right - start
         set = state.options.icons
         current = state.window.buffer
         list = @buffers
@@ -62,11 +69,11 @@ module Carat
         while list.buffer_at(first).tabless?
           first += 1
         end
-        if span_width(first, last, set) > right
+        if span_width(first, last, set) > room_width
           files = list.file_count
           # Room for both counts, " <N " and " N> ", at the widest N
           # put_digits_within may write.
-          room = right - 2 * (Domain::Frame.digits(files) + 3)
+          room = room_width - 2 * (Domain::Frame.digits(files) + 3)
           anchor = list.index_of(current)
           anchor = first if anchor < 0 || current.tabless?
           while first < anchor && span_width(first, anchor, set) > room
@@ -79,7 +86,7 @@ module Carat
             following = next_file(last)
           end
         end
-        x = 0
+        x = start
         hidden = files_between(0, first)
         if hidden > 0
           x = frame.put_within(0, x, " <", Domain::Highlight::TAB_LINE, right)
@@ -99,12 +106,37 @@ module Carat
         frame.put_within(0, x, "> ", Domain::Highlight::TAB_LINE, right)
       end
 
+      # Paints a sidebar's head on a row over the cells [from, to): a
+      # space, the project (the last segment of the base directory,
+      # bright), a dot (faint), and the branch (dim) when there is one,
+      # in the sidebar's layer. set is the icon set: ascii draws a hyphen
+      # for the dot.
+      #: (Domain::Frame, Integer, Integer, Integer, String, String) -> void
+      def paint_head(frame, row, from, to, branch, set)
+        frame.blank(row, from, to)
+        path = @buffers.base
+        slash = path.byterindex("/")
+        name = slash.nil? ? 0 : slash + 1
+        name = 0 if name >= path.bytesize
+        x = frame.put_from(row, from + 1, path, name, Domain::Highlight::NORMAL, to)
+        unless branch.empty?
+          if !path.empty?
+            x = frame.put_within(row, x, " ", Domain::Highlight::NORMAL, to)
+            x = frame.put_within(row, x, set == "ascii" ? HEAD_ASCII_DOT : HEAD_DOT, Domain::Highlight::NON_TEXT, to)
+            x = frame.put_within(row, x, " ", Domain::Highlight::NORMAL, to)
+          end
+          frame.put_within(row, x, branch, Domain::Highlight::MESSAGE_DIM, to)
+        end
+        frame.lift(row, from, to, Domain::Highlight::SIDEBAR_LAYER)
+      end
+
       private
 
-      # The tab-page numbers at the right end from two tab pages; returns
-      # the column where they start, cols without them.
-      #: (Domain::Frame, Domain::EditorState, Integer) -> Integer
-      def paint_pages(frame, state, cols)
+      # The tab-page numbers at the right end from two tab pages, not
+      # before column from; returns the column where they start, cols
+      # without them.
+      #: (Domain::Frame, Domain::EditorState, Integer, Integer) -> Integer
+      def paint_pages(frame, state, from, cols)
         tabs = state.tabs
         pages = tabs.tab_count
         return cols if pages < 2
@@ -115,7 +147,7 @@ module Carat
           t += 1
         end
         start = cols - width
-        start = 0 if start < 0
+        start = from if start < from
         x = start
         t = 0
         while t < pages
@@ -131,7 +163,6 @@ module Carat
       #: (Domain::Frame, Integer, Integer, Domain::Buffer, bool, String) -> Integer
       def paint_tab(frame, x, limit, buffer, selected, set)
         hl = selected ? Domain::Highlight::TAB_LINE_SELECTED : Domain::Highlight::TAB_LINE
-        ascii = set == "ascii"
         x = frame.put_within(0, x, "  ", hl, limit)
         x = frame.put_within(0, x, Domain::Icons.glyph(buffer.icon, set), hl, limit)
         x = frame.put_within(0, x, " ", hl, limit)
@@ -143,8 +174,7 @@ module Carat
         end
         x = frame.put_within(0, x, " ", hl, limit)
         x = frame.put_within(0, x, buffer.modified? ? mark(set) : " ", hl, limit)
-        x = frame.put_within(0, x, " ", hl, limit)
-        frame.put_within(0, x, ascii ? ASCII_SEPARATOR : SEPARATOR, Domain::Highlight::TAB_LINE, limit)
+        frame.put_within(0, x, " ", hl, limit)
       end
 
       # The modified mark of the set, the ascii set's when the set's glyph

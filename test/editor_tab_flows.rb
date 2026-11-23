@@ -89,17 +89,10 @@ module EditorTabFlowsTest
     true
   end
 
-  # Row 0 squeezed, the tabs' separators (the only cells of the tab row
-  # that are not a name, an icon, a mark, or a counter) blanked when it is
-  # the tab row; they have their own test in adapters_tab_bar.
+  # Row 0 squeezed: the head over a sidebar, the tab names, icons, marks,
+  # and counters, with no separator between them.
   def self.top_row(h)
-    text = h.row(0)
-    text = blank_separators(text) if files(h).length > 1 || h.tab_count > 1
-    text.strip.squeeze(" ")
-  end
-
-  def self.blank_separators(text)
-    text.tr("|│", "  ")
+    h.row(0).strip.squeeze(" ")
   end
 
   # What a step checks, as strings.
@@ -128,32 +121,32 @@ module EditorTabFlowsTest
 
     # Opening.
     flow(t, "l from the explorer onto the startup buffer, then a new and a listed file", "", [
-      ["<Space>e", "explorer 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
-      ["3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gl", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<Space>e3Gl", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
+      ["<Space>e", "proj 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
+      ["3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gl", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gl", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
     ])
     flow(t, "Enter from the explorer onto the startup buffer and a listed file", "", [
-      ["<Space>e3G<CR>", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4G<CR>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<Space>e3G<CR>", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
+      ["<Space>e3G<CR>", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4G<CR>", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<Space>e3G<CR>", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"]
     ])
     flow(t, "s and v from the explorer, each split closed with Ctrl-W q", "", [
-      ["<Space>e3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gs", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<C-w>q", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e4Gv", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<C-w>q", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+      ["<Space>e3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gs", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<C-w>q", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e4Gv", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<C-w>q", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
     flow(t, "t from the explorer onto the startup buffer, a new file, and a listed file", "", [
-      ["<Space>e3Gt", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<Space>e3Gt", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["gT", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+      ["<Space>e3Gt", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gt", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["gT", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
     flow(t, "t from the explorer into a directory's file", "", [
-      ["<Space>e2Gl3Gt", "explorer 1 g1", "lib/gamma.rb", "lib/gamma.rb", "2", "1", "true", "\"lib/gamma.rb\" 1L, 3B", "false"],
-      ["<Space>e5Gt", "r gamma.rb . beta.txt", "beta.txt", "lib/gamma.rb,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+      ["<Space>e2Gl3Gt", "proj 1 g1", "lib/gamma.rb", "lib/gamma.rb", "2", "1", "true", "\"lib/gamma.rb\" 1L, 3B", "false"],
+      ["<Space>e5Gt", "proj r gamma.rb . beta.txt", "beta.txt", "lib/gamma.rb,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
     ])
     flow(t, ":e, :sp, and :vs from the file window", "", [
       [":e alpha.txt<CR>", "1 a1", "alpha.txt", "alpha.txt", "1", "1", "false", "\"alpha.txt\" 1L, 3B", "false"],
@@ -189,14 +182,14 @@ module EditorTabFlowsTest
       ["<C-PageDown>", ". alpha.txt . beta.txt r gamma.rb 1 2", "beta.txt", "alpha.txt,beta.txt,lib/gamma.rb", "1", "2", "false", "", "false"]
     ])
     flow(t, "gt, gT, :bn, :bp, :b N, and the tab-page keys from the explorer", "", [
-      [":e alpha.txt<CR>:e beta.txt<CR><Space>e", ". alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["gt", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>egT", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e:bn<CR>", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e:bp<CR>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e:b 1<CR>", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e<Space>bn", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e<C-PageDown>", ". alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+      [":e alpha.txt<CR>:e beta.txt<CR><Space>e", "proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["gt", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>egT", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e:bn<CR>", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e:bp<CR>", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e:b 1<CR>", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e<Space>bn", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e<C-PageDown>", "proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
 
     # Moving from a reading view, a window that is not a side window
@@ -228,10 +221,10 @@ module EditorTabFlowsTest
     # Scenario: A refused switch from a side window keeps the previous window.
     flow(t, "A refused switch from a side window keeps the previous window: :b 99 from the explorer, then Ctrl-W p", "", [
       [":e alpha.txt<CR>:sp notes.md<CR><Space>dr", ". alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "2", "1", "false", "", "false"],
-      ["<Space>e", ". alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
-      [":b 99<CR>", ". alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "E86: Buffer 99 does not exist", "false"],
-      ["<C-w>p", ". alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
-      ["<Space>e:bn<CR>", ". alpha.txt m notes.md", "notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
+      ["<Space>e", "proj . alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
+      [":b 99<CR>", "proj . alpha.txt m notes.md", "explorer", "alpha.txt,notes.md", "3", "1", "true", "E86: Buffer 99 does not exist", "false"],
+      ["<C-w>p", "proj . alpha.txt m notes.md", "[reading] notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"],
+      ["<Space>e:bn<CR>", "proj . alpha.txt m notes.md", "notes.md", "alpha.txt,notes.md", "3", "1", "true", "", "false"]
     ])
 
     # Closing.
@@ -258,33 +251,33 @@ module EditorTabFlowsTest
       [":q<CR>", "1 b1", "beta.txt", "beta.txt", "1", "1", "false", "", "true"]
     ])
     flow(t, "closing beside the explorer and toggling it down to the editor quitting", "", [
-      ["<Space>e3Gt", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      [":q<CR>", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
-      ["<Space>e4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      [":bd<CR>", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
-      ["<Space>e", "explorer 1 a1", "explorer", "alpha.txt", "2", "1", "true", "", "false"],
+      ["<Space>e3Gt", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      [":q<CR>", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
+      ["<Space>e4Gt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      [":bd<CR>", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
+      ["<Space>e", "proj 1 a1", "explorer", "alpha.txt", "2", "1", "true", "", "false"],
       ["<Space>e", "1 a1", "alpha.txt", "alpha.txt", "1", "1", "false", "", "false"],
       [":q<CR>", "1 a1", "alpha.txt", "alpha.txt", "1", "1", "false", "", "true"]
     ])
 
     # The user's reported sequences.
     flow(t, "the user's case D: gT from the explorer after :bd keeps the explorer", "", [
-      ["<Space>e", "explorer 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
-      ["jj", "explorer 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
-      ["t", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["gT", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
-      [":bd<CR>", "explorer 1", "[No Name]", "[No Name]", "2", "1", "true", "", "false"],
-      ["<Space>e", "explorer 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
-      ["gT", "explorer 1", "[No Name]", "[No Name]", "2", "1", "true", "", "false"]
+      ["<Space>e", "proj 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
+      ["jj", "proj 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
+      ["t", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["gT", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
+      [":bd<CR>", "proj 1", "[No Name]", "[No Name]", "2", "1", "true", "", "false"],
+      ["<Space>e", "proj 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
+      ["gT", "proj 1", "[No Name]", "[No Name]", "2", "1", "true", "", "false"]
     ])
     flow(t, "the user's case A: t opens buffer tabs that gt and gT move between", "", [
-      ["<Space>e", "explorer 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
-      ["jjt", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>ejt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["gt", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["gT", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>egt", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+      ["<Space>e", "proj 1", "explorer", "[No Name]", "2", "1", "true", "", "false"],
+      ["jjt", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>ejt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["gt", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["gT", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>egt", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
 
     # A lone tree: the file window closed with Ctrl-W c leaves only the
@@ -293,39 +286,39 @@ module EditorTabFlowsTest
     # Under tab pages the startup buffer stays listed once hidden, so
     # those flows leave the tree after opening a file.
     flow(t, "t from a lone tree opens a file window", "", [
-      ["<Space>e<C-w>l<C-w>c", "explorer", "explorer", "[No Name]", "1", "1", "true", "", "false"],
-      ["3Gt", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
+      ["<Space>e<C-w>l<C-w>c", "proj", "explorer", "[No Name]", "1", "1", "true", "", "false"],
+      ["3Gt", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"]
     ])
     flow(t, "t from a lone tree under tab pages opens a file window", tabpages, [
-      ["<Space>e3Gl<C-w>c", "explorer", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
-      ["4Gt", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gl<C-w>c", "proj", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
+      ["4Gt", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
       ["<Space>e3Gt", ". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"alpha.txt\" 1L, 3B", "false"]
     ])
     flow(t, "Ctrl-T from a lone tree", "", [
-      ["<Space>e<C-w>l<C-w>c", "explorer", "explorer", "[No Name]", "1", "1", "true", "", "false"],
+      ["<Space>e<C-w>l<C-w>c", "proj", "explorer", "[No Name]", "1", "1", "true", "", "false"],
       ["<C-p>beta<C-t>", "1 b1", "beta.txt", "beta.txt", "1", "1", "false", "", "false"]
     ])
     flow(t, "Ctrl-T from a lone tree under tab pages", tabpages, [
-      ["<Space>e3Gl<C-w>c", "explorer", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
+      ["<Space>e3Gl<C-w>c", "proj", "explorer", "alpha.txt", "1", "1", "true", "", "false"],
       ["<C-p>beta<C-t>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "1", "1", "false", "", "false"]
     ])
     flow(t, "Ctrl-T opens a buffer tab beside the explorer", "", [
-      ["<Space>e3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<C-p>beta<C-t>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
+      ["<Space>e3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<C-p>beta<C-t>", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"]
     ])
     flow(t, "Ctrl-T opens it in a tab page beside the explorer", tabpages, [
-      ["<Space>e3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
       ["<C-p>beta<C-t>", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"]
     ])
 
     # The same flows under option.gt tabpages.
     flow(t, "tab pages: opening with l, s, v, and t", tabpages, [
-      ["<Space>e3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
-      ["<Space>e4Gs", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<C-w>q", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<Space>e4Gv", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      ["<C-w>q", ". alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e4Gs", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<C-w>q", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<Space>e4Gv", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "3", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      ["<C-w>q", "proj . alpha.txt . beta.txt", "alpha.txt", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
       ["<Space>e4Gt", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"],
       [":tabe alpha.txt<CR>", ". alpha.txt . beta.txt 1 2 3", "alpha.txt", "alpha.txt,beta.txt", "1", "3", "false", "\"alpha.txt\" 1L, 3B", "false"],
       [":tabe<CR>", ". alpha.txt . beta.txt . [No Name] 1 2 3 4", "[No Name]", "alpha.txt,beta.txt,[No Name]", "1", "4", "false", "", "false"],
@@ -339,20 +332,20 @@ module EditorTabFlowsTest
       ["<C-PageDown>", ". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"],
       ["<C-PageUp>", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"],
       ["g<Tab>", ". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"],
-      ["1gt<Space>e", ". alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
+      ["1gt<Space>e", "proj . alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
       ["gt", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "", "false"],
-      ["1gt", ". alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
-      [":bn<CR>", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
-      ["<Space>e:bp<CR>", ". alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
+      ["1gt", "proj . alpha.txt . beta.txt 1 2", "explorer", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
+      [":bn<CR>", "proj . alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"],
+      ["<Space>e:bp<CR>", "proj . alpha.txt . beta.txt 1 2", "alpha.txt", "alpha.txt,beta.txt", "2", "2", "true", "", "false"]
     ])
     flow(t, "tab pages: closing down to the editor quitting", tabpages, [
-      ["<Space>e3Gl", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
+      ["<Space>e3Gl", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "\"alpha.txt\" 1L, 3B", "false"],
       ["<Space>e4Gt", ". alpha.txt . beta.txt 1 2", "beta.txt", "alpha.txt,beta.txt", "1", "2", "false", "\"beta.txt\" 1L, 3B", "false"],
-      [":tabc<CR>", ". alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
-      ["<C-w>l:e beta.txt<CR>", ". alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
-      [":bd<CR>", "explorer 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
-      ["x:q<CR>", "explorer 1 1", "alpha.txt", "alpha.txt", "2", "1", "true", "E37: No write since last change (add ! to override)", "false"],
-      [":q!<CR>", "explorer 1 1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "true"]
+      [":tabc<CR>", "proj . alpha.txt . beta.txt", "explorer", "alpha.txt,beta.txt", "2", "1", "true", "", "false"],
+      ["<C-w>l:e beta.txt<CR>", "proj . alpha.txt . beta.txt", "beta.txt", "alpha.txt,beta.txt", "2", "1", "true", "\"beta.txt\" 1L, 3B", "false"],
+      [":bd<CR>", "proj 1 a1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "false"],
+      ["x:q<CR>", "proj 1 1", "alpha.txt", "alpha.txt", "2", "1", "true", "E37: No write since last change (add ! to override)", "false"],
+      [":q!<CR>", "proj 1 1", "alpha.txt", "alpha.txt", "2", "1", "true", "", "true"]
     ])
 
     t.finish

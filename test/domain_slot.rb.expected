@@ -5,6 +5,9 @@ ok   a second view is listed after the first, once
 ok   a hidden slot keeps its window
 ok   a closed window ends the slot
 ok   a window that took a file ends the slot
+ok   a left sidebar with one view has its head row only without a tab row
+ok   two views keep the header row
+ok   the right sidebar and the panel always keep theirs
 ok   a hidden slot's buffer counts as shown, by identity
 ok   a cleared slot forgets its window and views
-domain_slot: 9 passed, 0 failed
+domain_slot: 12 passed, 0 failed

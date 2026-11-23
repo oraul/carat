@@ -732,7 +732,7 @@ module AdaptersFramePresenterTest
     LISTED.add(other)
     s.options.icons = "unicode"
     f = draw(s, 7, 30)
-    t.assert_equal("  • a.txt   │  • b.txt   │", f.row_text(0), "two listed files show their tabs, the current one selected")
+    t.assert_equal("  • a.txt     • b.txt", f.row_text(0), "two listed files show their tabs, the current one selected")
     t.assert_equal([D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE], [f.cell(0, 0).hl, f.cell(0, 2).hl, f.cell(0, 13).hl], "the selected tab's icon is in the selected group, TabLineSel")
     LISTED.remove(other)
     LISTED.remove(s.buffer)
@@ -749,10 +749,10 @@ module AdaptersFramePresenterTest
       ["0 shows no row with one file", [0, 1, 0], "  1 one|~"],
       ["0 shows no row with two files", [0, 2, 0], "  1 one|~"],
       ["1 shows no row with one file", [1, 1, 0], "  1 one|~"],
-      ["1 shows the row with two files, the current tab first", [1, 2, 0], "  • a.txt   │  • b.txt   │|  1 one"],
-      ["2 shows the row with one file", [2, 1, 0], "  • a.txt   │|  1 one"],
-      ["2 shows the row with two files", [2, 2, 0], "  • a.txt   │  • b.txt   │|  1 one"],
-      ["2 shows the modified mark after the name of the one file", [2, 1, 1], "  • a.txt ● │|  1 one"],
+      ["1 shows the row with two files, the current tab first", [1, 2, 0], "  • a.txt     • b.txt|  1 one"],
+      ["2 shows the row with one file", [2, 1, 0], "  • a.txt|  1 one"],
+      ["2 shows the row with two files", [2, 2, 0], "  • a.txt     • b.txt|  1 one"],
+      ["2 shows the modified mark after the name of the one file", [2, 1, 1], "  • a.txt ●|  1 one"],
       ["2 shows the row with no file listed", [2, 0, 0], "|  1 one"]
     ]) { |input| tabline_rows(input[0].to_i, input[1].to_i, input[2].to_i) }
 
@@ -829,12 +829,12 @@ module AdaptersFramePresenterTest
     # (NO_COLOR, or 16 colors) the sidebar keeps the glyph too.
     side_layer = D::Highlight::SIDEBAR_LAYER
     t.assert_equal([[], " ", side_layer + D::Highlight::NORMAL, D::Highlight::LINE_NUMBER], [separator_chars(f), f.cell(0, 12).char, f.cell(0, 12).hl, f.cell(0, 13).hl], "A sidebar beside the editor draws no separator glyph: a blank cell of the sidebar's layer, the editor's own gutter after it")
-    t.assert_equal([side_layer + D::Highlight::NORMAL, side_layer + D::Highlight::NON_TEXT, D::Highlight::NON_TEXT], [f.cell(0, 5).hl, f.cell(3, 0).hl, f.cell(3, 13).hl], "the sidebar's text and tilde rows are in its layer, the editor's tilde rows are not")
+    t.assert_equal([side_layer + D::Highlight::NORMAL, side_layer + D::Highlight::NORMAL, " ", D::Highlight::NON_TEXT], [f.cell(0, 5).hl, f.cell(3, 0).hl, f.cell(3, 0).char, f.cell(3, 13).hl], "the sidebar's text and blank rows are in its layer, the editor's tilde rows are not")
     # The cursor row of the current sidebar keeps the cursor-line layer
     # alone, the rows under it the sidebar's.
     s.options.cursorline = true
     f = draw(s, 6, 40)
-    t.assert_equal([D::Highlight::CURSOR_LINE_LAYER + D::Highlight::NORMAL, side_layer + D::Highlight::NON_TEXT], [f.cell(0, 5).hl, f.cell(3, 0).hl], "the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's")
+    t.assert_equal([D::Highlight::CURSOR_LINE_LAYER + D::Highlight::NORMAL, side_layer + D::Highlight::NORMAL], [f.cell(0, 5).hl, f.cell(3, 0).hl], "the current sidebar's cursor row is on the cursor-line layer, never lifted twice, its other rows on the sidebar's")
     s.options.cursorline = false
     f = draw(s, 6, 40)
     s.tab.layout.split(0, true, 0, 5)
@@ -851,6 +851,51 @@ module AdaptersFramePresenterTest
     P.basic_colors = false
     f = draw(s, 6, 40)
     t.assert_equal(" ", f.cell(0, 12).char, "256 colors draw the blank cell again, the stale glyph gone")
+
+    # Scenarios "The tab row beside a sidebar", "The sidebar's head reads the project and branch", and
+    # "Rows past a sidebar's text are blank": a frame 80 columns wide with a 30-column sidebar and
+    # two tabs, at 24 bits, at 16 colors, and under NO_COLOR, shows no separator glyph in the tab row, the
+    # first tab at the editor's first column (31), the head over the sidebar, and no tilde in the sidebar.
+    s = state_for(["one", "two"], "a.txt")
+    s.options.icons = "unicode"
+    other = D::Buffer.new(lines: ["zz"], path: "b.txt", line_ending: "\n")
+    LISTED.add(s.buffer)
+    LISTED.add(other)
+    LISTED.base = "/work/carat"
+    SLOTS.branch = "main"
+    tree = D::Buffer.new(lines: ["item"], path: nil, line_ending: "\n")
+    tree.owner = "test"
+    tree.title = "list"
+    sidebar = D::Window.new(buffer: tree)
+    sidebar.fixed_width = true
+    draw(s, 8, 80)
+    s.tab.layout.split_edge(sidebar, 30, true)
+    s.tab.slot(:left).attach(sidebar, "list", 30)
+    [["24 bits", false, false], ["16 colors", false, true], ["NO_COLOR", true, false]].each do |mode|
+      P.plain = mode[1]
+      P.basic_colors = mode[2]
+      f = draw(s, 8, 80)
+      label = mode[0]
+      t.assert_equal([false, " carat · main", "  • a.txt     • b.txt", D::Highlight::TAB_LINE_SELECTED, D::Highlight::TAB_LINE_FILL], [f.row_text(0).include?("\u2502"), f.row_text(0)[0, 13], f.row_text(0)[31, 21], f.cell(0, 31).hl, f.cell(0, 79).hl], "the tab row has no separator glyph, the head over the sidebar, the first tab at the editor's first column: #{label}")
+      t.assert_equal([" ", D::Highlight::SIDEBAR_LAYER + D::Highlight::NORMAL, D::Highlight::SIDEBAR_LAYER + D::Highlight::NON_TEXT, D::Highlight::SIDEBAR_LAYER + D::Highlight::MESSAGE_DIM], [f.cell(0, 30).char, f.cell(0, 0).hl, f.cell(0, 7).hl, f.cell(0, 9).hl], "the head's cells are in the sidebar's layer, the project, the dot, and the branch in their groups: #{label}")
+      sidebar_tildes = 0
+      r = 1
+      while r <= 5
+        c = 0
+        while c < 30
+          sidebar_tildes += 1 if f.cell(r, c).char == "~"
+          c += 1
+        end
+        r += 1
+      end
+      t.assert_equal([0, "item", "~"], [sidebar_tildes, f.row_text(1)[0, 4], f.cell(4, 31).char], "no tilde stands in the sidebar's rows, the editor's own tilde rows stay: #{label}")
+    end
+    P.plain = false
+    P.basic_colors = false
+    LISTED.remove(other)
+    LISTED.remove(s.buffer)
+    LISTED.base = ""
+    SLOTS.branch = ""
 
     # A plugin's prompt takes the place of the colon, with the cursor after
     # the text.

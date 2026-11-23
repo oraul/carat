@@ -13,7 +13,7 @@ ok   a wider row starts its run as early as the current tab allows
 ok   a row narrower than the counts still shows the current tab, cut
 ok   unlisted buffers are neither shown nor counted
 ok   a leading unlisted buffer is neither shown nor counted
-ok   selected tab with its leading space and icon, its separator and the plain tab and its icon in TabLine, fill, and the tab-page numbers
+ok   selected tab with its leading space and icon, the plain tab and its icon in TabLine, fill, and the tab-page numbers
 ok   nerd
 ok   unicode
 ok   ascii
@@ -21,11 +21,21 @@ ok   the counts are plain
 ok   no gem, separator, unicode
 ok   no gem, separator, nerd
 ok   no gem, separator, ascii
-ok   the selected tab's leading space is in the selected group, the other tab and the separators in TabLine
+ok   the selected tab's cells are in the selected group, the other tab's in TabLine, no separator between or after them
 ok   under ascii the only * in a row is the modified mark
+ok   the first tab starts at the start column and the cells before it are left alone
+ok   no fill before the start column, the first tab selected from it
+ok   overflow and the tab-page numbers stay in the columns from the start
+ok   a start past the width paints no tab
+ok   the project, the dot, and the branch in their groups on the sidebar's layer
+ok   no branch leaves the project alone
+ok   the ascii icons draw a hyphen for the dot
+ok   the head is cut at the sidebar's edge
+ok   the root directory is its own name
+ok   no base shows the branch alone
 ok   showing?: one file at 1 shows no row
 ok   showing?: two files at 1 show the row
 ok   showing?: one file on two tab pages at 1 shows the row
 ok   showing?: two files at 0 show no row
 ok   showing?: one file at 2 shows the row
-adapters_tab_bar: 30 passed, 0 failed
+adapters_tab_bar: 40 passed, 0 failed

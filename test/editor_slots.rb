@@ -71,10 +71,24 @@ module EditorSlotsTest
       after(input[0], input[1])
     end
 
+    # Scenario "A one-view left sidebar reads the head": the project and the branch, bright, faint, dim, over the tree.
+    h = editor("")
+    h.assembly.status_slots.branch = "main"
+    h.type(" e")
+    t.assert_equal([" proj - main", H::SIDEBAR_LAYER + H::NORMAL, H::SIDEBAR_LAYER + H::NON_TEXT, H::SIDEBAR_LAYER + H::MESSAGE_DIM], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 6), h.frame.hl_at(0, 8)], "the head reads the project, a dot, and the branch in the sidebar's layer (a hyphen under the ascii icons)")
+    # Scenario "A one-view left sidebar reads the head": with a tab row the head stands on it, the tabs start at the editor's first column, and the tree under it.
+    h = editor("")
+    h.type(":e b.rb<CR> e")
+    t.assert_equal([" proj", "  m a.md", " - proj", 1, 21], [h.row(0)[0, 5], h.row(0)[31, 8].rstrip, h.row(1)[0, 7].rstrip, h.state.tab.slot(:left).view_window.row, h.state.tab.slot(:left).view_window.height], "a tab row heads the sidebar with the project, the tabs start at its first column, and the tree starts under it")
+    # Scenario "Header of one view": the right sidebar keeps its title row, the view's text under it.
+    h = editor("plugin.explorer.side right")
+    h.type(" e")
+    right = h.state.tab.slot(:right).view_window
+    t.assert_equal([" explorer", H::TAB_LINE_SELECTED, right.row], [h.row(0)[right.col, 30].rstrip, h.frame.hl_at(0, right.col + 1), 1], "the right sidebar's one view keeps its title row in the selected tab highlight, the text under it")
     # The header row and the tree under it.
     h = editor("")
     h.type(" e")
-    t.assert_equal([" explorer", H::TAB_LINE_SELECTED, H::TAB_LINE_FILL, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 20), h.row(1)[0, 30].rstrip], "the left sidebar's header names the explorer, the tree under it")
+    t.assert_equal([" proj", H::SIDEBAR_LAYER, H::SIDEBAR_LAYER, " - proj"], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 20), h.row(1)[0, 30].rstrip], "the left sidebar's one view has no title row of its own: the first row reads the project, the tree under it")
     h.type(" ls")
     t.assert_equal(["alpha", true], [h.row(0)[4, 5], h.assembly.buffers.scratch_for("explorer", "explorer").nil? == false], "hidden, the file takes the row and the tree's buffer stays listed")
 

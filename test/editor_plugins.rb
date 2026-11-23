@@ -250,7 +250,7 @@ module EditorPluginsTest
       ["closing a list that is not shown fails", " tc", ["failed 0 No window shows list", [[0, 0, 22, 80, "a.txt"]], 1]],
       [":q closes the side window", " to:q<CR>", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
       ["Ctrl-W q closes the side window", " to<C-w>q", ["", [[0, 0, 22, 80, "a.txt"]], 1]],
-      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[2, 0, 20, 30, "list"], [1, 31, 21, 49, "b.txt"]], 2]],
+      ["open a file in the file window, id 1", " to tf", ["ok 1 \"b.txt\" 1L, 3B", [[1, 0, 21, 30, "list"], [1, 31, 21, 49, "b.txt"]], 2]],
       ["focusing a missing window fails", " to tx", ["failed 0 No window 9", LEFT, 1]],
       ["a panel at the bottom, its header on its first row", " tb", ["ok 2", [[0, 0, 16, 80, "a.txt"], [18, 0, 4, 80, "log"]], 2]],
       ["the panel keeps its height through a split and equalize, the file windows under their winbars", " tb<C-w>k<C-w>s<C-w>=", ["", [[1, 0, 7, 80, "a.txt"], [10, 0, 6, 80, "a.txt"], [18, 0, 4, 80, "log"]], 1]],
@@ -275,6 +275,13 @@ module EditorPluginsTest
     h = session(" to tv")
     t.assert_equal([" list  other", Carat::Domain::Highlight::TAB_LINE, Carat::Domain::Highlight::TAB_LINE_SELECTED], [h.row(0)[0, 30].rstrip, h.frame.hl_at(0, 1), h.frame.hl_at(0, 7)], "the header lists both views, the shown one selected")
     t.assert_equal(true, h.assembly.buffers.scratch_for("side", "list").nil?, "the view let go leaves the buffer list")
+    # Scenarios "A one-view left sidebar reads the head" and "The head over the header of two views", under a tab row: the project heads the tab row, the views' header
+    # stands under it, and the window starts below both; with one view the window starts under the tab row.
+    h = session(":e b.txt<CR> to tv")
+    t.assert_equal([" proj", " list  other", [2, 0, 20, 30, "other"]], [h.row(0)[0, 5], h.row(1)[0, 12], shape(h)[0]], "two views under a tab row keep the header under the project head")
+    h = session(":e b.txt<CR> to")
+    t.assert_equal([" proj", "l0", [1, 0, 21, 30, "list"]], [h.row(0)[0, 5], h.row(1)[0, 2], shape(h)[0]], "one view under a tab row has no header row: its text starts under the head")
+
     h = editor_with(Carat::Doubles::FixedConfig.with("option.layout.left_width 24\noption.layout.panel_height 4\n"), 24, 80)
     h.type(" to tb")
     t.assert_equal([[1, 0, 21, 24, "list"], [0, 25, 18, 55, "a.txt"], [20, 25, 2, 55, "log"]], shape(h), "the configured sizes win over the sizes the views ask for")
@@ -359,7 +366,7 @@ module EditorPluginsTest
 
     # A side window has no line numbers.
     h = session(" to")
-    t.assert_equal([" list", "l0", "l1"], [h.row(0)[0, 5], h.row(1)[0, 2], h.row(2)[0, 2]], "the side window's rows start at its first column, under its header")
+    t.assert_equal([" proj", "l0", "l1"], [h.row(0)[0, 5], h.row(1)[0, 2], h.row(2)[0, 2]], "the side window's rows start at its first column, under its head")
 
     files = Carat::Doubles::MemoryFiles.new
     files.put("a.txt", "one\ntwo\n")
