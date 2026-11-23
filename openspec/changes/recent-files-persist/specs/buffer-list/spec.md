@@ -30,7 +30,7 @@ A missing file, a file that is not a regular file or holds more than 1 MiB, and 
 - **THEN** nothing is written, no message or error follows, and the file that was in the way is unchanged
 
 ### Requirement: The state file is private to the user and never written through a link
-The editor SHALL make each directory it creates for the state file with mode 0700 and write the state file as a new file of mode 0600 beside it, replacing the state file by a rename, so that a link at the state file's path or at the temporary path is replaced or removed and never written through, its target keeping its text, and no half-written list is ever the state file. A leftover of an earlier run at the temporary path, a link included, SHALL be removed first, and a temporary file whose rename failed SHALL not be left.
+The editor SHALL make each directory it creates for the state file with mode 0700 and write the state file as a new file of mode 0600 beside it, replaced over the state file by a rename, so a link is never written through. A leftover at the temporary path SHALL be removed first, and a temporary file whose rename failed SHALL not be left.
 
 #### Scenario: The state file and its directories are private to the user
 - **WHEN** the editor ends after opening a file with no state directory under the home directory
