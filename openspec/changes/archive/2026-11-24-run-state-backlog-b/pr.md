@@ -10,8 +10,8 @@ Gives every heading of the run_state.sh backlog work list for the check runner a
 
 - Add a lock directory holding a pid file beside the run state, so the detached runner and a caller rewriting it at once lose no record; a live holder makes a write wait and refuse, and a dead holder's lock is taken over.
 - Fix a lost check runner: its process group is stopped before a second runner starts, and each stage job runs in its own session whose group is killed when the job ends.
-- Change the escape scan so a branch is skipped only when it is new and its worktree lies under a lane path, the escaped-path list is filtered before it reaches the terminal, the remote probe has a time limit, and a file a stage planted under the main checkout's build directory is removed.
-- Add tools-test cases for the earlier fixes that had a grep or none, each recorded failing at the commit before the earlier change and passing at the head.
+- Change the escape scan so a branch is skipped only when it is new and its worktree lies under a lane path, the escaped-path list is filtered before it reaches the terminal, a file a stage planted under the main checkout's build directory is removed, and the existing 60-second limit of its remote probe can be set through SCAN_TIMEOUT.
+- Add tools-test cases for the earlier fixes that had a grep or none, including one for the remote probe's time limit, each recorded failing at the commit before the earlier change and passing at the head.
 - Record every heading of the work list exactly once in docs/findings/run-state-backlog-b.md with its outcome, correct the ten claims the code did not back, and record the groom, plan, and push themes as not fixed and queued.
 - Append the planner's queue and the metrics history rows, and update the run_state.sh entry of the code map.
 
