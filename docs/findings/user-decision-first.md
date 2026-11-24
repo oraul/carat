@@ -12,3 +12,5 @@
 - Location: docs/goals.md:21, docs/brief-standard.md:18
 - Why: TOOLS_RE in tools/rules.sh does not match docs/goals.md, so a tools-test case reading it fails the rules check and the sentence after the security-first step and T0 can drift from the agent file's.
 - Fix: land a small change that adds docs/goals.md to TOOLS_RE (an edit of the merge gate's rules goes first, alone), then pin the sentence with a tools-test case.
+
+none
