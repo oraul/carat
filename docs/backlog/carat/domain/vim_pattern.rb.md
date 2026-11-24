@@ -17,3 +17,9 @@
 - Also: carat/domain/search.rb
 - Category: editor
 - Added: 2026-11-09
+
+### the class comment lists the escapes \t \e \r twice at carat/domain/vim_pattern.rb:22 (sprint-32 sweep quality, note 62)
+- Location: carat/domain/vim_pattern.rb:22
+- Why: the class comment lists the escapes \t \e \r twice (as escapes on line 21 and again after the class escapes on line 23)
+- Fix: drop the second mention
+- Category: quality

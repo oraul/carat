@@ -159,3 +159,9 @@
 - Category: editor
 - Added: 2026-11-23
 
+
+### duplication: start_quiet and start (219) are the same program lookup at carat/drivers/process_runner.rb:136 (sprint-32 sweep quality, note 74)
+- Location: carat/drivers/process_runner.rb:136
+- Why: duplication: start_quiet and start (219) are the same program lookup, spawn, and SystemCallError rescue, differing only in the environment and the stdin
+- Fix: one private start(argv, environment, input, output) that capture passes File::NULL and spawn passes an empty environment
+- Category: quality

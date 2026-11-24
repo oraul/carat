@@ -98,3 +98,10 @@
 - Fix outline: rename both to `char_class`. Queued as a fold of `search-structure`.
 - Also: carat/domain/runs.rb, CLAUDE.md
 
+
+### the parameter cls, and the local cls at carat/domain/text_objects.rb:89 and at carat/domain/runs.rb:18 (sprint-32 sweep quality, note 7)
+- Location: carat/domain/runs.rb:18
+- Why: the parameter cls, and the local cls at carat/domain/text_objects.rb:89 and the parameter cclass at carat/domain/motions.rb:400, break the naming rule CLAUDE.md states with this very example (char_class, not cls)
+- Fix: rename each to char_class
+- Merged: sprint-32 sweep note 60, the same finding
+- Category: quality

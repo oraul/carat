@@ -185,3 +185,9 @@
 - Also: tools/agent_guard.sh
 - Category: security
 - Added: 2026-11-23
+
+### WAIT_STEP passes the check [0-9]{1,3} with 0, and then wait at tools/open_pr.sh:138 (sprint-32 sweep quality, note 52)
+- Location: tools/open_pr.sh:138
+- Why: WAIT_STEP passes the check [0-9]{1,3} with 0, and then wait with no matching pull request loops forever because waited never grows
+- Fix: refuse a step of 0 (match [1-9][0-9]{0,2})
+- Category: quality

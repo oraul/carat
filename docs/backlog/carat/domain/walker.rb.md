@@ -67,3 +67,9 @@
 - Fix: say it serves the word motions and the bracket text objects
 - Category: editor
 - Added: 2026-11-23
+
+### Walker calls Motions.code_class, but motions.rb requires walker.rb and walker.rb does at carat/domain/walker.rb:63 (sprint-32 sweep quality, note 59)
+- Location: carat/domain/walker.rb:63
+- Why: Walker calls Motions.code_class, but motions.rb requires walker.rb and walker.rb does not require motions, so the two files depend on each other and it works only by load order; text_objects.rb:255 also uses Walker without requiring walker.rb
+- Fix: move code_class (and blank?) into a small domain module that walker, motions, text_objects, find_match, and command_line_text require
+- Category: quality

@@ -17,3 +17,9 @@
 - Also: carat/use_cases/repeat_last.rb, carat/use_cases/insert_tab.rb, carat/use_cases/arrange_view.rb
 - Category: editor
 - Added: 2026-11-22
+
+### duplication: re-inlines the tabstop fallback (tabstop > 0 ? tabstop at carat/use_cases/leave_insert.rb:71 (sprint-32 sweep quality, note 24)
+- Location: carat/use_cases/leave_insert.rb:71
+- Why: duplication: re-inlines the tabstop fallback (tabstop > 0 ? tabstop : 8) that Options#tab_width (carat/domain/options.rb:173) already provides, as do repeat_last.rb:105, arrange_view.rb:50, insert_tab.rb:25 (and dispatcher.rb:114)
+- Fix: call state.options.tab_width at each site
+- Category: quality

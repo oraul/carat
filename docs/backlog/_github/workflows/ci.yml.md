@@ -62,3 +62,9 @@
 - Location: .github/workflows/ci.yml:36
 - Why: actions/checkout keeps the job token in .git/config (persist-credentials default) while make runs the pull request's code; the token is read-only, but nothing needs it after checkout
 - Fix: set persist-credentials: false on the checkout step
+
+### the checkout keeps the default persist-credentials, so the job token at .github/workflows/ci.yml:36 (sprint-32 sweep security Low (4), note 2)
+- Location: .github/workflows/ci.yml:36
+- Why: the checkout keeps the default persist-credentials, so the job token sits in .git/config while pull request code runs through make; it is read-only (contents: read) but needlessly exposed
+- Fix: set persist-credentials: false on the ci.yml and main.yml checkouts and pass GH_TOKEN only to the scope step that needs it
+- Category: security

@@ -17,3 +17,9 @@
 - Also: test/editor_leader.rb, test/editor_tabs.rb
 - Category: editor
 - Added: 2026-11-14
+
+### redraw is a public twin of the private render with at carat/doubles/editor_harness.rb:91 (sprint-32 sweep quality, note 87)
+- Location: carat/doubles/editor_harness.rb:91
+- Why: redraw is a public twin of the private render with the same body, two names for one frame
+- Fix: make render public under one name (redraw) and call it from type, raw, wait, and resize
+- Category: quality

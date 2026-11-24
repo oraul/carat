@@ -128,3 +128,11 @@
 - Fix: count map areas and code files in the size check at placement; accepted when the next three features estimated medium stay under their output budget or are split at placement.
 - Category: pipeline
 - Added: 2026-11-23
+
+### Medium estimate too small for a change crossing plugin API, presenter, domain, and plugin (explorer-rows retro 15)
+
+- Location: the planner's size check (`.claude/agents/planner.md` step 3); explorer-rows 49 files, 280,557 output, implement 193,556 (69 percent), 113 of 203 calls, rework 2.
+- Why: a host request plus its renderer and its plugin consumer ran 1,412,911 total against medium's 1.2M.
+- Fix: near `split-at-placement` (Pool 18): size by the layers a change crosses; a brief adding a host request, a presenter path, and a plugin consumer is split or sized large; accepted when the next such brief's parts stay under 200,000 output each.
+- Category: pipeline
+- Added: 2026-11-24

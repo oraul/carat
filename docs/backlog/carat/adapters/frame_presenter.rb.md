@@ -281,14 +281,6 @@ Location: `carat/adapters/frame_presenter.rb` (1,274 lines); `TabBar`, `StatusBa
 - Category: editor
 - Added: 2026-11-22
 
-### The visual indicator is dim but ModeMsg and MoreMsg are still unused
-- Location: `carat/adapters/frame_presenter.rb` (`paint_message`), `carat/domain/themes.rb` (`MESSAGE_MODE`, `MESSAGE_MORE` rows)
-- Why: the `-- VISUAL --` indicators now use `MsgDim`, so `ModeMsg` (bold) has no caller and `MoreMsg` still has none; the theme rows are dead until a change uses or drops them.
-- Fix: either draw the indicator in `ModeMsg` with a dim row, or remove the two groups with the renumbering, and add a `-- More --` pager only with a change that needs it.
-- Also: carat/domain/themes.rb
-- Category: editor
-- Added: 2026-11-22
-
 ### The bottom panel is not on the darker surface
 - Location: `carat/adapters/frame_presenter.rb`, `paint_window` (the sidebar layer is chosen by `window.fixed_width`, which the bottom panel's window does not set)
 - Why: `docs/design.md` section 1 lists the panels (row 0, sidebars, the bottom panel) as one surface level behind the status bar; the panel still draws on `Normal` with a separator row above it, so only the sidebars follow the Edges-by-background rule.
@@ -336,3 +328,30 @@ none
 - Fix: give the presenter the StatusSlots it shares, or pass the branch in, so neither bar reaches into the other.
 - Category: editor
 - Added: 2026-11-23
+
+### The current row's icon loses its file-type color
+- Location: `carat/adapters/frame_presenter.rb` (`paint_marked_row`)
+- Why: the fill puts the whole row in `PmenuSel`, so the icon cell is drawn in the selection group, not its `DevIcon` group; a cell holds one group and no selection layer exists.
+- Fix: a selection layer beside the cursor-line and sidebar layers in `Highlight` and `Themes.from_palette`, so any group keeps its foreground over the selection background.
+- Category: editor
+- Added: 2026-11-24
+
+### The current row's label is not bold
+- Location: `carat/adapters/frame_presenter.rb` (`paint_marked_row`)
+- Why: `docs/design.md` section 5 gives a selected row a bold label; only the fill and the bar are drawn.
+- Fix: also fill the cells after the icon with `PmenuLabelSel`, or fold it into the `one-accent` change that unifies the four selection marks.
+- Also: docs/design.md
+- Category: editor
+- Added: 2026-11-24
+
+### public display_col and display_width wrap Domain::DisplayWidth, used only at line at carat/adapters/frame_presenter.rb:334 (sprint-32 sweep quality, note 41)
+- Location: carat/adapters/frame_presenter.rb:334
+- Why: public display_col and display_width wrap Domain::DisplayWidth, used only at line 517 and by test/adapters_frame_presenter.rb:599
+- Fix: make them private (or inline) and have the test call Domain::DisplayWidth.column
+- Category: quality
+
+### The marked-row test repeats the mark test beside it at carat/adapters/frame_presenter.rb:642 (sprint-32 review quality)
+- Location: carat/adapters/frame_presenter.rb:639 (@mark_here) and :642 (here)
+- Why: both test row < count && fold < 0 on adjacent lines, so a change to which rows draw marks can leave the marked row's rule behind.
+- Fix: one local for a shown, unfolded row both read.
+- Category: quality

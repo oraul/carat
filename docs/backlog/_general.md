@@ -194,7 +194,7 @@
 
 ## Findings append can duplicate a heading on a retried delivery
 
-- Location: docs/findings/ux-fixes-a.md:1 (removed by groom)
+- Location: the removed findings file of ux-fixes-a (removed by groom)
 - Why: it held the ProcessPort and benchmark-phase entries twice each, appended twice by a retried or resumed delivery, and only the planner hand-listing them as duplicates kept them out of the backlog.
 - Fix: make the findings append (or groom when folding) skip a heading already present, with a tools-test case.
 - Category: pipeline
@@ -273,7 +273,7 @@
 - Added: 2026-11-17
 
 ### A base defect a contributor names is not recorded
-- Location: the contributor's return and docs/findings/CHANGE.md; git-signs-transport retro note 7.
+- Location: the contributor's return and the removed findings file of CHANGE; git-signs-transport retro note 7.
 - Why: 1 base defect reported (the test file above), 0 recorded.
 - Fix: the contributor appends a named pre-existing defect to its findings file; accepted when the next such defect appears there.
 - Category: pipeline
@@ -324,7 +324,7 @@
 - Added: 2026-11-19
 
 ### Findings file holds a fixed entry and a stale duplicate
-- Location: docs/findings/finder-grep.md, the entries Grep helper duplication with the plugin and No bench scenario for the grep search
+- Location: the removed findings file of finder-grep, the entries Grep helper duplication with the plugin and No bench scenario for the grep search
 - Why: the duplication entry is fixed and the older bench entry (its Why still says it sorts every match) is superseded by the No grep scenario entry, so the file holds a fixed entry and a stale duplicate
 - Fix: drop the fixed duplication entry and the older bench entry, keeping the new one (a grooming step, as no agent removes entries during a delivery)
 - Category: pipeline
@@ -358,11 +358,11 @@ none
 - Why: the Location names a file this change removes, so it points at no file
 - Fix: point it at the backlog entry '### Shared state a check stage can still write without failing the check'
 - Merged: ### Backlog Correction entry names a removed findings file
-- Location: docs/backlog.md:9262, the folded Correction entry whose Location names docs/findings/check-runner-safety.md, which this change removes.
+- Location: docs/backlog.md:9262, the folded Correction entry whose Location names the removed findings file of check-runner-safety, which this change removes.
 - Why: the Location points at no file once the findings file is gone.
 - Fix: point it at the backlog entry "Shared state a check stage can still write without failing the check".
 - Merged: ### Backlog Correction entry location still stale after the fix round
-- Location: docs/backlog.md:9262, the folded Correction entry naming docs/findings/check-runner-safety.md, still present; the fix commit recorded it here instead of fixing it in the change's own file.
+- Location: docs/backlog.md:9262, the folded Correction entry naming the removed findings file of check-runner-safety, still present; the fix commit recorded it here instead of fixing it in the change's own file.
 - Why: the Location points at no file.
 - Fix: point it at the backlog entry "Shared state a check stage can still write without failing the check" and drop the entry recorded above.
 - Category: pipeline
@@ -385,7 +385,7 @@ none
 
 ### The second groom-stale-prune finding lacks a blank line and names an absolute path
 
-- Location: docs/findings/groom-stale-prune.md:8, the second entry (reported by two quality review passes, unchanged between them).
+- Location: the removed findings file of groom-stale-prune, the second entry (reported by two quality review passes, unchanged between them).
 - Why: it has no blank line after its heading, unlike the first entry and the other findings files, and it names the absolute checkout path of build/metrics/current.tsv, which ties the note to one machine.
 - Fix: in the grooming that folds this file in, add the blank line after the heading and name the path relative to the main checkout (build/metrics/current.tsv).
 - Category: design
@@ -401,7 +401,7 @@ none
 
 ### sprint-24-records repeats entry names no headings
 
-- Location: docs/findings/sprint-24-records.md, the repeats entry names only the three headings at the end of docs/backlog.md, not which headings they are nor the earlier entries they repeat (the review-trust-lows-b headings folded at the end of docs/backlog.md repeat the entries near lines 3905, 4026, and 4564).
+- Location: the removed findings file of sprint-24-records, the repeats entry names only the three headings at the end of docs/backlog.md, not which headings they are nor the earlier entries they repeat (the review-trust-lows-b headings folded at the end of docs/backlog.md repeat the entries near lines 3905, 4026, and 4564).
 - Why it matters: the next grooming must rediscover the three headings and their earlier twins before merging them.
 - Fix outline: in the next grooming, list each folded review-trust-lows-b heading beside the earlier heading it repeats, and merge each pair.
 - Category: pipeline
@@ -422,7 +422,7 @@ none
 - Added: 2026-11-21
 
 ### Findings file for tabs-only-dot repeats the scenario-title entry
-- Location: docs/findings/tabs-only-dot.md, the earlier entry about the scenario keeping a name that no longer fits and the later 'The MODIFIED scenario title still says gem'
+- Location: the removed findings file of tabs-only-dot, the earlier entry about the scenario keeping a name that no longer fits and the later 'The MODIFIED scenario title still says gem'
 - Why: two entries share the location and fix; the proposed new title, spec path, and test line are folded into the entry above.
 - Fix: groom keeps one entry and drops the other as a repeat.
 - Category: code-quality

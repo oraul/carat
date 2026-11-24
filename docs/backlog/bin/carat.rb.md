@@ -7,3 +7,9 @@
 - Fix outline: stop the services even when leaving raises, with a case. Queue item: `lsp-client-tidy`.
 - Category: editor
 - Added: 2026-11-10
+
+### in the ensure, assembly.close (writing the state file) runs before at bin/carat.rb:43 (sprint-32 sweep quality, note 17)
+- Location: bin/carat.rb:43
+- Why: in the ensure, assembly.close (writing the state file) runs before assembly.services.stop, so a raise from close leaves the language servers running
+- Fix: stop the services first or nest the close in its own begin/ensure
+- Category: quality

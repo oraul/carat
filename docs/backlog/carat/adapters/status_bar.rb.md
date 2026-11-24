@@ -79,10 +79,8 @@
 - Fix: add a named icon for the state dot to Domain::Icons with its nerd, unicode, and ascii forms and use it in paint_lsp and lsp_width; accepted when an ascii status bar snapshot shows the state glyph apart from the modified mark.
 - Category: editor
 - Added: 2026-11-23
-
-### The server state dot borrows the modified icon at carat/adapters/status_bar.rb:346 (sprint-31 review quality)
+- Merged: ### The server state dot borrows the modified icon at carat/adapters/status_bar.rb:346 (sprint-31 review quality)
 - Location: carat/adapters/status_bar.rb:346 and :360 (`Icons.glyph("modified", set)` in paint_lsp and lsp_width)
 - Why: the lsp slot draws its state dot with the glyph named for the buffer's modified mark, so a change to the modified icon restyles the server state too, and the name hides what the dot means.
 - Fix: an icon name of its own for the state dot in Icons, with the status bar test reading it.
-- Category: editor
-- Added: 2026-11-23
+

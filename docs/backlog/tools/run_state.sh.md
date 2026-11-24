@@ -664,21 +664,6 @@ none
 - Category: pipeline
 - Added: 2026-11-17
 
-### A stage's branch code can forge its pass record through the runner's job files (security Medium, confidence 6)
-- Location: tools/run_state.sh:637 (stages_reap and the jobs directory beside the check clone)
-- Why: a stage runs the branch's own code in the check clone, and the runner's job files sit in ../jobs/ beside it; the code can overwrite ../jobs/NAME.start with a PID the runner did not start plus the current commit and write 0 to ../jobs/NAME.status, so stages_reap records stage.NAME as passed at HEAD for its own stage or any stage running beside it, and gate_stages in tools/gates.sh accepts it, weakening the clone isolation the README promises; before this change the exit status came straight from `wait`. Not blocking since a deliberate stage could already reach the run state through the tmp/.toolchain symlink.
-- Fix: keep each job's PID, start second, and commit in runner shell variables, take the exit status from `wait PID` on the runner's own child (poll with `kill -0`, then `wait`), or keep status files in a runner-owned mktemp -d outside the clone's parent, and trust only a PID the runner launched.
-- Also: tools/gates.sh
-- Category: security
-- Added: 2026-11-17
-
-### A failing stage's log excerpt reaches the terminal unfiltered (security Low, confidence 4)
-- Location: tools/run_state.sh:778
-- Why: the last 20 lines of a failing stage's log go to the check's stdout and check.log as they are; branch code controls that log, so terminal escape sequences such as OSC 52 clipboard writes or title changes reach whoever runs the check or cats check.log.
-- Fix: strip control characters from the excerpt before printing it, for example through `LC_ALL=C tr -d '\000-\010\013-\037\177'` ahead of the sed prefix, or print it with `cat -v`.
-- Category: security
-- Added: 2026-11-17
-
 ### stages_stop does not record a passed compile stage as compiled
 - Location: tools/run_state.sh:666
 - Why: a compile stage that passed while the check was stopping is recorded through stage_end but compiled_set is never called, so the next check compiles it again, costing minutes of a stage the cache already holds.
@@ -706,20 +691,6 @@ none
 - Why: 2 of the last 3 records runs hand-edited docs/backlog.md after groom (a backticked path to a findings file groom deleted, docs-lint refusing it), and all 3 of sprint-12-records' quality advisories were groom output (headings folded twice from a double append, no blank line before folded headings); reviews took 9,975 of 36,282 output (27.5%).
 - Fix: groom leaves no backticked path to a removed findings file, no repeated folded heading, and a blank line before each folded heading; accepted when a tools-test case shows all three and the next records run applies groom with no hand edit.
 - Category: pipeline
-- Added: 2026-11-17
-
-### A check stage can fake a sibling stage's pass through the job files (sprint-13 security Medium (6))
-- Location: tools/run_state.sh:639 (check-parallel, sprint-13 review).
-- Why: the job files sit in ../jobs beside the check clone, writable by stage code; a stage's test writing 0 to ../jobs/SIBLING.status, or rewriting SIBLING.start, while the sibling runs makes stages_reap record it (for example diagnose) passed at HEAD, and gate_stages accepts that record; before check-parallel the status came from wait. Not blocking: a hostile stage could already reach the run state through the tmp/.toolchain symlink.
-- Fix: take each exit status only from wait on a PID the runner itself started (poll with kill -0), or keep the status files in a runner-owned mktemp -d outside the clone's parent; accepted when a tools-test stage writing a sibling's status file cannot turn the sibling into a pass. Queue item `check-runner-safety`.
-- Category: security
-- Added: 2026-11-17
-
-### The failing stage's log excerpt reaches the terminal unfiltered (sprint-13 security Low (4))
-- Location: tools/run_state.sh:778 (check-parallel, sprint-13 review).
-- Why: tail -n 20 of a log the branch code controls goes to the check's stdout and check.log as is, so test output can carry OSC 52 clipboard writes or title and terminal-state sequences to whoever runs the check or reads check.log.
-- Fix: strip control characters before the prefix (LC_ALL=C tr -d of 000-010, 013-037, 177) or print through cat -v; accepted when a tools-test excerpt holding an escape prints none. Queue item `check-runner-safety`.
-- Category: security
 - Added: 2026-11-17
 
 ### jobs_refusal has two arms for one message and runs twice (sprint-13 quality)
@@ -1040,7 +1011,7 @@ none
 - Added: 2026-11-20
 
 ### Correction: an edit of tools/run_state.sh by a stage is listed by the scan
-- Location: docs/findings/check-runner-safety.md, the entry listing tools/run_state.sh among the paths a stage can write without failing the check (quality advisory)
+- Location: the removed findings file of check-runner-safety, the entry listing tools/run_state.sh among the paths a stage can write without failing the check (quality advisory)
 - Why: escaped_paths scans the delivery clone's tools/ (only tmp/, .git, and four build/ directories are pruned), so such an edit is listed; the narrower risk is an edit that changes the runner's behavior before the running shell reaches escaped_paths, since sh reads the script as it runs.
 - Fix: read that entry with this narrower risk; have the runner run from a copy of the script made before the stages start, so an edit of the delivery clone's copy cannot change the running check.
 - Category: pipeline
@@ -1378,7 +1349,7 @@ None
 - Added: 2026-11-21
 
 ### Plan notes reach the findings file twice (facet-design-doc retro note 17)
-- Location: tools/run_state.sh plan-apply, the implement step's findings append; docs/findings/facet-design-doc.md at 4a84ecee96f8
+- Location: tools/run_state.sh plan-apply, the implement step's findings append; the removed findings file of facet-design-doc at 4a84ecee96f8
 - Why: the file holds 13 headings, the 6 plan retro notes each written twice (implement appended them, package plan-apply again) plus 1 lane note; the miscount fed a blocked pull request text round (prtext 4,870 output, 10 tool calls, a second push).
 - Fix: append each plan note once; accepted when a run whose implement step appends the plan notes and whose package step runs plan-apply ends with each heading once, a tools-test case or docs-lint refusing a repeated heading in a findings file.
 - Category: pipeline
@@ -1609,3 +1580,45 @@ none
 - Fix: run every git call of merge_main through pinned_git, with the tools-test case that sets a global configuration covering a conflicted merge.
 - Category: pipeline
 - Added: 2026-11-23
+
+### The escape scan's changed-path list reaches the terminal unfiltered (Low)
+- Location: tools/run_state.sh, check_run, the escaped paths printed with head and sed 's/^/| /'.
+- Why: a path changed outside the clone can hold a control byte, so it reaches the terminal as the failing stage's log excerpt did before this change; it is outside this change's outcome.
+- Fix: pipe the list through visible_text before the sed, as the excerpt now is, with a tools-test case for a path holding an ESC byte.
+- Category: pipeline
+- Added: 2026-11-24
+
+### merge_main runs git with the global configuration and hooks again
+
+- Location: `tools/run_state.sh`, `merge_main` (the merge, the queue checkout, add, commit, and abort after its fetch), reopened from #328 by the user's decision of 2026-11-23 ("Remove the pinned git only").
+- Why it matters: a global or system git configuration or a repository hook (for example a refusing `pre-merge-commit`) can again change or stop the merge of a moved main, and branch code could have planted a hook.
+- Fix outline: if the user lifts the decision, restore `pinned_git` on these calls and the two hook cases of #328 in `tools/tools_test.sh`.
+- Also: tools/tools_test.sh
+- Category: pipeline
+- Added: 2026-11-24
+
+### Overrun notes repeat within a run (explorer-rows retro 14)
+
+- Location: `tools/run_state.sh` budget notes; explorer-rows notes 8, 11, 12.
+- Why: 3 output overrun notes (205,733, 257,796, 263,364 against medium's 200,000) in one run changed no decision while the total stayed under 1.2M; 4 of the last 6 feature rows exceed 200,000 output.
+- Fix: near the backlog lane's `budget-recalibrate` (Pool 18): at most one overrun note per budget per run; accepted when a tools-test case with two passes over the output budget records one note.
+- Category: pipeline
+- Added: 2026-11-24
+
+### merge_main aborts a conflicted merge and then tells the contributor at tools/run_state.sh:4430 (sprint-32 sweep quality, note 14)
+- Location: tools/run_state.sh:4430
+- Why: merge_main aborts a conflicted merge and then tells the contributor to merge by hand, so the hand merge runs without the union attributes for APPENDED_RECORDS and the lane-queue rule merge_main applied, and since #334 a merge failing for a reason other than a conflict (a hook now runs) is reported as conflicts in no file named
+- Fix: name the attributes the hand merge needs (or leave the union-merged state in place for resolution), and report a failure with no unmerged path as a failed merge
+- Category: quality
+
+### merge_main repeats the identity and message flags (-c user.name=Claude -c at tools/run_state.sh:4403 (sprint-32 sweep quality, note 53)
+- Location: tools/run_state.sh:4403
+- Why: merge_main repeats the identity and message flags (-c user.name=Claude -c user.email=..., -m chore: merge main into the branch, -m the trailer) in the merge and in the queue commit on line 4423, and the merge's output goes to /dev/null, so a failure that is not a conflict (an untracked file in the way) is reported as conflicts in no file named
+- Fix: keep the flags in one helper and print the merge's error when no conflicted file is named
+- Category: quality
+
+### lane-open leaves a real directory at a shared-state path unchecked at tools/run_state.sh:4354 (sprint-32 security Low (4))
+- Location: tools/run_state.sh:4354 (lane_open's trust checks), :531 (state_dir defaults to the relative build/pipeline)
+- Why: the checks refuse a tracked path, a committed parent link, and a link to another target, but a real untracked directory or file standing at a LANE_LINKS path (build/pipeline in the lane) is neither refused nor linked, so run_state.sh run in the lane reads that directory's run states, forged review records included.
+- Fix: refuse any $dir/$l that exists and is not a link to $top/$l, a non-link included, or resolve state_dir and stage_dir from main_top; a tools-test case with a real build/pipeline directory in a lane.
+- Category: security

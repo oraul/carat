@@ -93,8 +93,8 @@
 ## Findings of finder-grep-preview after its package step
 
 - security Low (5) carat/plugins/finder/plugin.rb:333 The file finder's preview title and rows still show the listed path without sanitizing it. A file name checked into an untrusted repository can contain U+202E or a zero-width character and make the finder display a different path from the one it opens. C0 control bytes are already shown as X by the frame presenter, so no escape sequence reaches t
-- quality advisory docs/findings/finder-grep-preview.md:35 duplication: the entries at lines 35, 40, and 45 repeat the entries at lines 1, 6, and 11 verbatim (the retro notes appended twice); fix: drop lines 35 to 48
-- quality advisory docs/findings/finder-grep-preview.md:31 duplication: the entry 'File finder rows and preview title show the listed path unsanitized' restates the entry at line 26 ('The file finder shows paths as the file lists them') with the same fix; fix: merge the two into one entry, keeping the security rating and the U+202E test outline
+- quality advisory the removed findings file of finder-grep-preview duplication: the entries at lines 35, 40, and 45 repeat the entries at lines 1, 6, and 11 verbatim (the retro notes appended twice); fix: drop lines 35 to 48
+- quality advisory the removed findings file of finder-grep-preview duplication: the entry 'File finder rows and preview title show the listed path unsanitized' restates the entry at line 26 ('The file finder shows paths as the file lists them') with the same fix; fix: merge the two into one entry, keeping the security rating and the U+202E test outline
 - Category: security
 - Added: 2026-11-20
 

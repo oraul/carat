@@ -23,3 +23,9 @@ Location: `carat/domain/hover_request.rb`, `definition_request.rb`, `signature_r
 - Also: carat/domain/definition_request.rb
 - Category: ide
 - Added: 2026-11-18
+
+### the LSP request records (hover, definition, completion, signature, symbol) repeat at carat/domain/hover_request.rb:72 (sprint-32 sweep quality, note 44)
+- Location: carat/domain/hover_request.rb:72
+- Why: the LSP request records (hover, definition, completion, signature, symbol) repeat the want, sent, sent_id, languages bookkeeping, waiting? identical in four and the languages predicate under four names (hovers?, offers?, completes?, helps?)
+- Fix: a domain concern per architecture 5.4 with waiting? and one predicate name
+- Category: quality

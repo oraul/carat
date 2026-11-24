@@ -112,3 +112,15 @@
 - Fix: tell a refused or failed cat-file from a file missing at HEAD and show no signs for the former, with a test.
 - Category: plugins
 - Added: 2026-11-22
+
+### duplication: BRANCH, COUNTS, and TEXT each spell the same git at carat/plugins/git_signs/plugin.rb:43 (sprint-32 sweep quality, note 81)
+- Location: carat/plugins/git_signs/plugin.rb:43
+- Why: duplication: BRANCH, COUNTS, and TEXT each spell the same git -c protocol.ext.allow=never -c core.fsmonitor=false prefix, so a fourth command or a new hardening option must be added three times
+- Fix: one GIT constant holding the prefix and the commands built as GIT + [...]
+- Category: quality
+
+### four parallel arrays (@buffers, @keys, @paths, @texts) kept in step at carat/plugins/git_signs/plugin.rb:275 (sprint-32 sweep quality, note 82)
+- Location: carat/plugins/git_signs/plugin.rb:275
+- Why: four parallel arrays (@buffers, @keys, @paths, @texts) kept in step by keep, drop, held?, and held_text
+- Fix: one list of a small held-text record (buffer, key, path, text) with a typed reader, as PluginEntries does
+- Category: quality

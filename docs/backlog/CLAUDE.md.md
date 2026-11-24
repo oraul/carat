@@ -175,3 +175,15 @@
 - Also: Makefile
 - Category: pipeline
 - Added: 2026-11-23
+
+### positional constructor initialize(root, show_hidden, ignore) though CLAUDE.md requires keyword constructors at carat/plugins/explorer/tree.rb:23 (sprint-32 sweep quality, note 37)
+- Location: carat/plugins/explorer/tree.rb:23
+- Why: positional constructor initialize(root, show_hidden, ignore) though CLAUDE.md requires keyword constructors, and test/lint.rb:1355 exempts plugins without CLAUDE.md saying so
+- Fix: take root:, show_hidden:, ignore: or document the plugin exemption
+- Category: quality
+
+### drift between CLAUDE.md and lint: CLAUDE.md lists Carat::Testing among the at carat/testing.rb:13 (sprint-32 sweep quality, note 78)
+- Location: carat/testing.rb:13
+- Why: drift between CLAUDE.md and lint: CLAUDE.md lists Carat::Testing among the behavior classes whose constructors take required keywords, but Testing.new(name) is positional because test/lint.rb:1355 applies the keyword rule only to layer files and records (so carat/testing.rb and plugin classes escape it)
+- Fix: make it initialize(name:) and widen the rule to carat/testing.rb, or state the exemption in CLAUDE.md Coding conventions
+- Category: quality

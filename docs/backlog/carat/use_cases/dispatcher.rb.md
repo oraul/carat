@@ -84,3 +84,9 @@
 - Why: the tabstop > 0 guard is dead: Options refuses a tabstop below 1 from a line and from :set
 - Fix: pass state.options.tabstop
 
+
+### an action no handler takes reports Not implemented as a at carat/use_cases/dispatcher.rb:62 (sprint-32 sweep quality, note 12)
+- Location: carat/use_cases/dispatcher.rb:62
+- Why: an action no handler takes reports Not implemented as a success, so it is drawn and kept as a plain message, not an error
+- Fix: Outcome.failure, or say in the class comment why it is not an error
+- Category: quality

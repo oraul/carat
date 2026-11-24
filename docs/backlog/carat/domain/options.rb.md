@@ -31,3 +31,9 @@
 - Fix: stop = item_stop(text, at) and loop while at < stop.
 - Category: editor
 - Added: 2026-11-22
+
+### the class comment grew by insertions and now breaks lines at carat/domain/options.rb:17 (sprint-32 sweep quality, note 58)
+- Location: carat/domain/options.rb:17
+- Why: the class comment grew by insertions and now breaks lines mid-sentence (line 17 ends in the middle of the undolevels sentence, line 33 ends with winborder is the)
+- Fix: rewrap the paragraph
+- Category: quality

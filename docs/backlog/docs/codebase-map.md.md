@@ -550,3 +550,45 @@ Docs currency: the Tests line still describes test/editor_palette.rb as opening,
 - Fix: name PATH in ProcessRunner beside HOME
 - Category: design
 - Added: 2026-11-23
+
+### the Options entry omits the public guide_code, scope_guide_code, guide_char?, and at docs/codebase-map.md:103 (sprint-32 sweep quality, note 18)
+- Location: docs/codebase-map.md:103
+- Why: the Options entry omits the public guide_code, scope_guide_code, guide_char?, and slot_size, and the InputController entry (codebase-map.md:150) omits ShowDefinition at the idle tick
+- Fix: add them to the two entries
+- Category: quality
+
+### map drift: the Buffer entry omits its public tabless?, display_name at docs/codebase-map.md:265 (sprint-32 sweep quality, note 30)
+- Location: docs/codebase-map.md:265
+- Why: map drift: the Buffer entry omits its public tabless?, display_name, path_text, byte_count, signs?, and layer_at, which other layers call
+- Fix: add them to the entry
+- Category: quality
+
+### map drift: the BufferRequest entry lists targets without :tab and at docs/codebase-map.md:392 (sprint-32 sweep quality, note 31)
+- Location: docs/codebase-map.md:392
+- Why: map drift: the BufferRequest entry lists targets without :tab and :alternate, which buffer_request.rb and SwitchBuffer handle (SwitchBuffer, line 394, also omits the alternate buffer and E23), and the Delivered changes buffer-list row (line 771) still lists the alternate buffer as left
+- Fix: add both targets and E23, and drop the alternate buffer from the left items
+- Category: quality
+
+### map drift: public methods other areas call are missing from at docs/codebase-map.md:367 (sprint-32 sweep quality, note 32)
+- Location: docs/codebase-map.md:367
+- Why: map drift: public methods other areas call are missing from their entries: Window#open_cursor_folds, BufferList#drop_slot_folds, Folds#open_all, close_all, next_fold_row, open_fold_row, Layout#leaf_showing, sidebar?, leaf_number
+- Fix: name them in the Window, BufferList, Folds, and Layout entries
+- Category: quality
+
+### map drift: area 15 gives PluginApi VERSION 2.16, the code at docs/codebase-map.md:562 (sprint-32 sweep quality, note 63)
+- Location: docs/codebase-map.md:562
+- Why: map drift: area 15 gives PluginApi VERSION 2.16, the code (carat/plugin_api.rb:12) and docs/plugins.md say 2.17, and the Paths list omits absolute (used by VisitTarget, named in area 17) and segments
+- Fix: write 2.17 and add absolute and segments to the Paths list
+- Category: quality
+
+### duplication in the map: the Finder::Grep entry restates SafeText's whole at docs/codebase-map.md:588 (sprint-32 sweep quality, note 83)
+- Location: docs/codebase-map.md:588
+- Why: duplication in the map: the Finder::Grep entry restates SafeText's whole sanitizing rule, which the next entry (589) states again, so the two drift apart on the next change
+- Fix: say Grep shows its rows through SafeText.of and keep the rule in the SafeText entry alone
+- Category: quality
+
+### map drift: the EditorHarness method list omits redraw, state, buffer at docs/codebase-map.md:712 (sprint-32 sweep quality, note 85)
+- Location: docs/codebase-map.md:712
+- Why: map drift: the EditorHarness method list omits redraw, state, buffer, plugins, quit?, window_index, windows, buffer_paths, and message_row, which tests call, so the area no longer says what the harness offers
+- Fix: list every public method, or say and the rest as the Host entry does
+- Category: quality

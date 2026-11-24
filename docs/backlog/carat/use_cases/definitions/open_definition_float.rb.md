@@ -8,3 +8,9 @@
 - Also: carat/use_cases/docs/show_hover.rb, carat/use_cases/definitions/walk_jumps.rb, docs/architecture.md
 - Category: editor
 - Added: 2026-11-10
+
+### duplication: ShowHover#open repeats OpenDefinitionFloat#call (carat/use_cases/definitions/open_definition_float.rb:30) line for line, the screen at carat/use_cases/docs/show_hover.rb:75 (sprint-32 sweep quality, note 84)
+- Location: carat/use_cases/docs/show_hover.rb:75
+- Why: duplication: ShowHover#open repeats OpenDefinitionFloat#call (carat/use_cases/definitions/open_definition_float.rb:30) line for line, the screen row, the below and above room, the up choice, the height cap, the widest row, and the cursor-anchored bordered FloatSpec, but without OpenDefinitionFloat's cap of the width at FloatWindow.text_room, so the two placements can drift
+- Fix: one shared cursor-float placement (a domain function or OpenDefinitionFloat renamed OpenCursorFloat and given the rows' styles) that both call
+- Category: quality

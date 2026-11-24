@@ -63,3 +63,9 @@
 - Also: carat/use_cases/ex/buffer_command_handler.rb, carat/use_cases/ex/lsp_start_command_handler.rb, carat/use_cases/ex/lsp_restart_command_handler.rb, carat/domain/substitute_args.rb, carat/domain/register_count.rb
 - Category: editor
 - Added: 2026-11-19
+
+### duplication: digits? is copied byte for byte in buffer_command_handler.rb:102 and at carat/use_cases/ex/tab_command_handler.rb:102 (sprint-32 sweep quality, note 25)
+- Location: carat/use_cases/ex/tab_command_handler.rb:102
+- Why: duplication: digits? is copied byte for byte in buffer_command_handler.rb:102 and history_command_handler.rb:61 (self.digits?)
+- Fix: one domain helper (for example a digits? on ExGrammar or RegisterCount) the three handlers call
+- Category: quality

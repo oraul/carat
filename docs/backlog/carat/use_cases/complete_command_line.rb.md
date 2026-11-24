@@ -68,3 +68,9 @@
 - Category: editor
 - Added: 2026-11-23
 
+
+### duplication: collect_names and collect_themes (line 182) are the same prefix-filter at carat/use_cases/complete_command_line.rb:166 (sprint-32 sweep quality, note 26)
+- Location: carat/use_cases/complete_command_line.rb:166
+- Why: duplication: collect_names and collect_themes (line 182) are the same prefix-filter loop over different name lists
+- Fix: one private collect_prefixed(names, typed) called with ExTable#full_names and Themes::NAMES
+- Category: quality

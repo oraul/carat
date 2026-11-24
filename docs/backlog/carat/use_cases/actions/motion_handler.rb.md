@@ -22,3 +22,9 @@
 - Fix: "in a visual mode a motion moves the cursor, the moving end of the selection".
 - Category: editor
 - Added: 2026-11-17
+
+### the loop that registers each name with its description is at carat/use_cases/actions/motion_handler.rb:35 (sprint-32 sweep quality, note 61)
+- Location: carat/use_cases/actions/motion_handler.rb:35
+- Why: the loop that registers each name with its description is written five times (motion_handler.rb:35 and 42, search_handler.rb:36 and 43, text_object_handler.rb:36)
+- Fix: one ActionTable method register_each(names, handler, descriptions) that all five call
+- Category: quality

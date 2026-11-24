@@ -119,3 +119,9 @@
 - Fix: read the library once into a path-to-text table.
 - Category: code-quality
 - Added: 2026-11-21
+
+### constructor_problem reads only a one-line def initialize( and the text at test/lint.rb:378 (sprint-32 sweep quality, note 79)
+- Location: test/lint.rb:378
+- Why: constructor_problem reads only a one-line def initialize( and the text before its first ), so a parameter list over several lines, or a positional parameter after a default with parentheses (b: Foo.new(1), c), passes unchecked
+- Fix: join the def's lines up to the closing paren at depth zero and split the parameters at top-level commas, with a self-check row for each case
+- Category: quality

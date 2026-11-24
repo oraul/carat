@@ -22,3 +22,9 @@ Location: `carat/domain/filetype.rb:8-11` (`EXTENSIONS`, `NAMES`) and `carat/plu
 - Fix: drop config.ru, and record a backlog item to let a manifest declare its extensions
 - Category: editor
 - Added: 2026-11-23
+
+### NAMES entry config.ru is redundant with EXTENSIONS ru at carat/domain/filetype.rb:13 (sprint-32 sweep quality, note 43)
+- Location: carat/domain/filetype.rb:13
+- Why: NAMES entry config.ru is redundant with EXTENSIONS ru
+- Fix: drop it
+- Category: quality

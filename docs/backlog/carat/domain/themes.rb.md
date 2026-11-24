@@ -35,3 +35,11 @@
 - Fix: give it a bold attribute or a basic-index accent there.
 - Category: editor
 - Added: 2026-11-19
+
+### At 16 colors StatusLine and StatusLineDim differ only by bold
+- Location: `carat/domain/themes.rb` (the `STATUS` and `STATUS_DIM` rows), `carat/adapters/sgr_table.rb`
+- Why: the bytes at `TERM=xterm-color` are `\e[0;1;30;47m` and `\e[0;30;47m`, the same foreground and background; a terminal that draws bold as bright, as xterm does by default, shows the file name in a lighter color than the quiet text, the reverse of the design's order
+- Fix: give `STATUS_DIM` a 16-color foreground of its own (bright black on the bar's background, as `TabLine` has) and add a sequence row for it in `test/adapters_screen_presenter.rb`
+- Also: carat/adapters/sgr_table.rb, test/adapters_screen_presenter.rb
+- Category: editor
+- Added: 2026-11-24

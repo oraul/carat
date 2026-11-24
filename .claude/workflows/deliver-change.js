@@ -1725,7 +1725,7 @@ if (!resume || resume.status !== 'done') {
 // starts; an unresolved blocking security finding goes first. It runs only
 // when the queue needs a decision, which plan-needed alone finds (the change
 // is not the queue's head, a proposal or finding waits, or a periodic
-// security review failed with no merge since): a brief for the
+// security review failed with no change planned after it merged since): a brief for the
 // head item keeps the order, so it plans no more than the change's name
 // would (planSkipped). Otherwise the head item is taken as written, with its
 // size as the estimate, and the brief still reaches the contributor. A

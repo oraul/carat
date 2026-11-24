@@ -402,3 +402,10 @@ none
 - Fix: an if chain that sets row_ok once, the temporary files removed after it
 - Category: pipeline
 - Added: 2026-11-23
+
+### the tools/gates.sh entry lists every gate but findings (gate_findings, gates.sh:552 at docs/codebase-map.md:51 (sprint-32 sweep quality, note 19)
+- Location: docs/codebase-map.md:51
+- Why: the tools/gates.sh entry lists every gate but findings (gate_findings, gates.sh:552: findings append-only, a groom carrier's removals proven by carrier_unproven, groom_removals, and merged_security_kept), which the static, pre-push, and merge groups all run
+- Fix: add the findings gate and its helpers to the entry
+- Merged: sprint-32 sweep note 55, the same finding
+- Category: quality

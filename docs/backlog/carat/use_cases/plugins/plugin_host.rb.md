@@ -52,3 +52,15 @@
 - Also: carat/use_cases/handle_key.rb
 - Category: plugins
 - Added: 2026-11-21
+
+### builds its own ResolveInside (and wires MakePath, RenamePath, DeletePath, ListTree) at carat/use_cases/plugins/plugin_host.rb:84 (sprint-32 sweep quality, note 35)
+- Location: carat/use_cases/plugins/plugin_host.rb:84
+- Why: builds its own ResolveInside (and wires MakePath, RenamePath, DeletePath, ListTree) while EditorAssembly builds another ResolveInside at carat/adapters/editor_assembly.rb:484, against everything shared built once in EditorAssembly
+- Fix: build it once in the assembly and pass it to PluginHost
+- Category: quality
+
+### entry, count, errors, enabled?, reason, and describe only delegate to at carat/use_cases/plugins/plugin_host.rb:154 (sprint-32 sweep quality, note 36)
+- Location: carat/use_cases/plugins/plugin_host.rb:154
+- Why: entry, count, errors, enabled?, reason, and describe only delegate to the registry the host also exposes as a reader, two ways to reach it
+- Fix: keep one (callers use host.registry, or drop the reader)
+- Category: quality
