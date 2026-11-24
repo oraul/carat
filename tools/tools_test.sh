@@ -595,6 +595,10 @@ case "$REACH" in
   main) echo forged >> "$MAIN/README.md" ;;
   main-branch) git -C "$MAIN" checkout -q -b forged-branch ;;
   main-log) mkdir -p "$MAIN/build" && echo log > "$MAIN/build/scratch-base-build.log" ;;
+  main-nl)
+    nl=$(printf '\nx'); nl=${nl%x}
+    mkdir -p "$MAIN/build/zz$nl$MAIN/build" && echo planted > "$MAIN/build/zz$nl$MAIN/build/victim.log" ;;
+  new-lane-wt) git -C "$TOP" worktree add -q -b chore/new-lane-wt "$MAIN/tmp/.lane-newlane" ;;
   main-log-link) mkdir -p "$MAIN/build" && ln -s "$REACH_OUT.target" "$MAIN/build/planted-link.log" ;;
   main-log-hardlink) mkdir -p "$MAIN/build" && echo user > "$REACH_OUT.hard" && ln "$REACH_OUT.hard" "$MAIN/build/planted-hard.log" ;;
   main-tab) printf forged >> "$MAIN/$(printf 'tab\tfile')" ;;
@@ -782,6 +786,18 @@ expect "run_state: a log in the main checkout's build/ outside LANE_WRITTEN ends
 # stage planted under the main checkout's build/, but not a path LANE_WRITTEN
 # names, which another lane owns.
 expect "run_state: a log planted in the main checkout's build/ from a lane is removed by the voided check" 1 "^$" test -e "$iso_top/build/scratch-base-build.log"
+# The voided check lists each removal in its log.
+expect "run_state: the voided check lists the file it removed in the check log" 1 "^check: removed $iso_top/build/scratch-base-build[.]log$" lane_reach main-log
+# run-state-backlog-b (security Low (4)): a planted name holding a newline is
+# one path, so its second line, the path of a file the stage did not plant,
+# is not removed in its place.
+echo user > "$iso_top/build/victim.log"
+expect "run_state: a planted name holding a newline lists as one removal" 1 "^check: removed .*/build/zz[?].*/build/victim[.]log$" lane_reach main-nl
+expect "run_state: a planted name whose second line names a file leaves that file" 0 "^$" test -e "$iso_top/build/victim.log"
+nl_char=$(printf '\nx')
+nl_char=${nl_char%x}
+expect "run_state: a planted name holding a newline is removed whole" 1 "^$" test -e "$iso_top/build/zz$nl_char$iso_top/build/victim.log"
+rm -rf "$iso_top/build/victim.log" "$iso_top/build/zz"*
 REACH_OWNED=build/scratch-base-build.log
 expect "run_state: a log named by LANE_WRITTEN in the main checkout's build/ from a lane ends in an escaped verdict line" 1 "^[|] $iso_top/build/scratch-base-build[.]log$" lane_reach main-log
 expect "run_state: a log named by LANE_WRITTEN in the main checkout's build/ ends in an escaped verdict" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
@@ -855,6 +871,17 @@ export WT_OUT
 expect "run_state: a stage that forges a branch through a worktree it adds outside tmp/.lane- fails the check" 1 "^[|] $iso_top/[.]git/refs: the references changed$" lane_reach worktree-branch
 git_q worktree remove --force "$WT_OUT"
 git_q branch -q -D chore/forged-wt
+# run-state-backlog-b (security Low (5)): a worktree at any path ending in
+# tmp/.lane-NAME, not the main checkout's, hides no branch either; one at the
+# main checkout's tmp/.lane-NAME, which lane-open makes, still does.
+WT_OUT="$work/orphan-two/tmp/.lane-y"
+expect "run_state: a stage that forges a branch through a worktree at another checkout's tmp/.lane-NAME fails the check" 1 "^[|] $iso_top/[.]git/refs: the references changed$" lane_reach worktree-branch
+git_q worktree remove --force "$WT_OUT"
+git_q branch -q -D chore/forged-wt
+echo "tmp/" >> "$iso_top/.git/info/exclude"
+expect "run_state: a lane the main checkout's tmp/.lane-NAME opened during a check leaves it passing" 0 "every stage passed" lane_reach new-lane-wt
+git_q worktree remove --force "$iso_top/tmp/.lane-newlane"
+git_q branch -q -D chore/new-lane-wt
 # A stage's escaped path holding a control byte reaches the terminal as text.
 esc_bytes() { lane_reach main-esc 2>&1 | grep -c "$(printf '\033')" || true; }
 expect "run_state: the escaped-path list holds no escape byte" 0 "^0$" esc_bytes
@@ -1153,6 +1180,36 @@ echo "$lock_holder" > build/pipeline/state.json.lock
 expect "run_state: a write takes over the lock of a process that is gone" 0 "^$" env STATE_LOCK_WAIT=1 sh "$here/run_state.sh" set state x.held v
 expect "run_state: the write took over keeps its record" 0 "^v$" state get state x.held
 expect "run_state: a write leaves no lock behind" 1 "^$" test -e build/pipeline/state.json.lock
+# run-state-backlog-b (security Low (3)): a waiter that read a dead owner
+# does not remove the lock another process took in between: the lock it
+# moved aside turns out to be live and goes back. The stand-in cat swaps a
+# live lock in after the waiter read the dead owner.
+sh -c 'exit 0' &
+lock_dead=$!
+wait "$lock_dead"
+sleep 30 &
+lock_live=$!
+mkdir -p "$work/catbin"
+real_cat=$(command -v cat)
+cat > "$work/catbin/cat" <<EOF
+#!/bin/sh
+case "\$1" in
+  *state.json.lock)
+    if [ ! -e "$work/cat.swapped" ]; then
+      $real_cat "\$1"
+      echo "$lock_live" > "\$1"
+      : > "$work/cat.swapped"
+      exit 0
+    fi ;;
+esac
+exec $real_cat "\$@"
+EOF
+chmod +x "$work/catbin/cat"
+echo "$lock_dead" > build/pipeline/state.json.lock
+expect "run_state: a waiter does not take a lock a live process retook after it read the dead owner" 1 "run state of state is locked by pid $lock_live" env PATH="$work/catbin:$PATH" STATE_LOCK_WAIT=1 sh "$here/run_state.sh" set state x.race v
+kill "$lock_live"
+wait "$lock_live" 2> /dev/null
+rm -f build/pipeline/state.json.lock "$work/cat.swapped"
 # A runner gone past its trap leaves the make it started in its process
 # group; the next check stops that group before it starts its own runner.
 lost_child() {
@@ -1173,6 +1230,19 @@ lost_child() {
   if proc_alive "$lost_pid"; then echo alive; kill -KILL "$lost_pid"; else echo gone; fi
 }
 expect "run_state: a check that finds its runner gone stops the processes the runner left" 0 "^gone$" lost_child
+# run-state-backlog-b (security Low (5)): a pid of 0 in the pid file is not
+# a runner; the group signal it would make hits the waiter's own group, so
+# the check, which runs in a session of its own here, must survive it.
+group_zero() {
+  rm -f "$work/gz.status"
+  echo "0 $at" > build/stages/state/check.pid
+  : > build/stages/state/check.log
+  setsid -f sh -c 'env CHECK_JOBS=1 STAGES="settle" MAKE="$1" MOVE_IN="$2" TMPDIR="$3" sh "$4" check state > /dev/null 2>&1; echo $? > "$5"' gz "$work/bin/stop-make" "$work/state" "$work/checks" "$here/run_state.sh" "$work/gz.status"
+  gz_n=0
+  while [ ! -s "$work/gz.status" ] && [ $gz_n -lt 150 ]; do sleep 0.2; gz_n=$((gz_n + 1)); done
+  if [ -s "$work/gz.status" ]; then echo survived; else echo killed; fi
+}
+expect "run_state: a pid file naming pid 0 does not make the check signal its own process group" 0 "^survived$" group_zero
 # The wait on a runner is bounded by the clock (RUNNER_WAIT, 30 seconds),
 # not by a count of pauses, so a sleep taking whole seconds only waits no
 # longer than it says.

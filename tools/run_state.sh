@@ -812,15 +812,25 @@ drop_key() {
 # state_lock: takes the run state's lock, a file "FILE.lock" holding the
 # pid of its owner and created exclusively, so the runner and a caller
 # rewriting the run state at once do not lose a record; waits at most
-# STATE_LOCK_WAIT seconds (20), removes a lock whose owner is gone, and
-# stops with a message when a live process still holds it.
+# STATE_LOCK_WAIT seconds (20) and stops with a message when a live process
+# still holds it. A lock whose owner is gone is taken over by renaming it to
+# a name of this process (one rename finds it): a lock moved that turns out
+# to have a live owner, another process having retaken it meanwhile, is
+# linked back, so no waiter removes a lock it did not judge stale.
 state_lock() {
   lock_file="$file.lock"
   lock_tries=$(( ${STATE_LOCK_WAIT:-20} * 5 ))
   while ! ( set -C; echo "$$" > "$lock_file" ) 2> /dev/null; do
     lock_owner=$(cat "$lock_file" 2> /dev/null)
     if [ -n "$lock_owner" ] && ! kill -0 "$lock_owner" 2> /dev/null; then
-      rm -f "$lock_file"
+      lock_stale="$lock_file.stale.$$"
+      if mv "$lock_file" "$lock_stale" 2> /dev/null; then
+        moved_owner=$(cat "$lock_stale" 2> /dev/null)
+        if [ -z "$moved_owner" ] || kill -0 "$moved_owner" 2> /dev/null; then
+          ln "$lock_stale" "$lock_file" 2> /dev/null
+        fi
+        rm -f "$lock_stale"
+      fi
       continue
     fi
     [ "$lock_tries" -gt 0 ] || die "the run state of $change is locked by pid ${lock_owner:-unknown}; try again"
@@ -976,21 +986,45 @@ escaped_note() {
     LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
 }
 
-# escaped_revert PATHS: removes each escaped file, one path per line, that
-# a stage planted under the main checkout's build/ and no LANE_WRITTEN path
-# names (lane_written), a regular file or a link only, so a forged log or
-# binary there is not left for a later reader to trust; the check is void
-# either way. Nothing else outside the clone is touched.
+# escaped_revert: removes each file a stage planted under the main
+# checkout's build/ that no LANE_WRITTEN path names (lane_written), a
+# regular file or a link only, so a forged log or binary there is not left
+# for a later reader to trust; the check is void either way. The paths come
+# from main_scan_raw, NUL-separated, so a name holding a newline is one
+# path; a file goes only when its directory resolved with cd -P still lies
+# under the main checkout's build/ and its own change time is newer than
+# escape_since, and each removal is listed in the check log. Nothing else
+# outside the clone is touched.
 escaped_revert() {
   [ -n "$main_tree" ] || return 0
-  printf '%s\n' "$1" | while IFS= read -r planted; do
-    case "$planted" in "$main_tree/build/"*) ;; *) continue ;; esac
-    case "$planted" in */../*|*/..) continue ;; esac
-    { [ -f "$planted" ] || [ -L "$planted" ]; } || continue
-    ! lane_written "$planted" || continue
-    rm -f "$planted"
-  done
+  main_real=$(cd -P "$main_tree" 2> /dev/null && pwd -P) || return 0
+  main_scan_raw | MAIN="$main_tree/" OWNED="$lane_written_paths" awk -v RS='\001' -v ORS='\001' "$OWNED_AWK"' !lane_owned($0)' | tr '\001' '\000' |
+    ROOT="$main_tree" REAL="$main_real" SINCE="$escape_since" xargs -0 -r sh -c '
+      for planted do
+        case "$planted" in "$ROOT/build/"*) ;; *) continue ;; esac
+        case "$planted" in */../*|*/..|*/./*|*/.) continue ;; esac
+        { [ -f "$planted" ] || [ -L "$planted" ]; } || continue
+        planted_dir=$(cd -P -- "${planted%/*}" 2> /dev/null && pwd -P) || continue
+        case "$planted_dir" in "$REAL/build"|"$REAL/build/"*) ;; *) continue ;; esac
+        [ -n "$(find "$planted" -maxdepth 0 -newerct "$SINCE" -print 2> /dev/null)" ] || continue
+        rm -f -- "$planted" && printf "check: removed %s\n" "$(printf %s "$planted" | tr "\n" "?")"
+      done' sh | visible_text
 }
+
+# The awk text lane_written and escaped_revert share: lane_owned(PATH) is 1
+# when PATH is a path of OWNED (LANE_WRITTEN) under MAIN, or lies under one.
+OWNED_AWK='
+  BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
+  function lane_owned(path,   i, p, full) {
+    for (i = 1; i <= n; i++) {
+      p = owned[i]
+      if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
+      sub(/\/+$/, "", p)
+      full = ENVIRON["MAIN"] p
+      if (path == full || index(path, full "/") == 1) return 1
+    }
+    return 0
+  }'
 
 # lane_written PATHS: true when every escaped path, one per line, is a
 # path of LANE_WRITTEN under the main checkout seen from a lane, or lies
@@ -1007,18 +1041,7 @@ escaped_revert() {
 # build/ or naming a . or .. segment is ignored.
 lane_written() {
   [ -n "$main_tree" ] && [ -n "$lane_written_paths" ] || return 1
-  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk '
-    BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
-    { ok = 0
-      for (i = 1; i <= n; i++) {
-        p = owned[i]
-        if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
-        sub(/\/+$/, "", p)
-        full = ENVIRON["MAIN"] p
-        if ($0 == full || index($0, full "/") == 1) ok = 1
-      }
-      if (!ok) other = 1 }
-    END { exit other }'
+  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk "$OWNED_AWK"' !lane_owned($0) { other = 1 } END { exit other }'
 }
 
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
@@ -1298,7 +1321,7 @@ check_stages() {
     echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
     printf '%s\n' "$escaped" | head -n 20 | visible_text | sed 's/^/| /'
     escaped_note "$escaped"
-    escaped_revert "$escaped"
+    escaped_revert
     escaped_records
     if lane_written "$escaped"; then
       echo "check: stage none escaped at $head; read $(check_log)"
@@ -1459,14 +1482,16 @@ lane_branches() {
     OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++ } /^branch / && n > 1 && $2 != ENVIRON["OWN"] { print $2 }'
 }
 
-# The branches of the linked worktrees lane-open makes (a path ending in
-# tmp/.lane-NAME) among lane_branches: the only ones a scan takes as a
-# lane opened since the mark, so a worktree a stage makes elsewhere hides
-# no branch.
+# The branches of the linked worktrees lane-open makes (the path
+# MAIN/tmp/.lane-NAME of the main checkout, NAME holding no slash) among
+# lane_branches: the only ones a scan takes as a lane opened since the
+# mark, so a worktree a stage makes elsewhere, one ending in tmp/.lane-NAME
+# included, hides no branch.
 new_lane_branches() {
   git -C "$top" worktree list --porcelain 2> /dev/null |
-    OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++; path = substr($0, 10) }
-      /^branch / && n > 1 && $2 != ENVIRON["OWN"] && path ~ /\/tmp\/[.]lane-[^\/]+$/ { print $2 }'
+    OWN=$(git -C "$top" symbolic-ref -q HEAD) LANES="${main_tree:-$top}/tmp/.lane-" awk '/^worktree / { n++; path = substr($0, 10) }
+      /^branch / && n > 1 && $2 != ENVIRON["OWN"] && index(path, ENVIRON["LANES"]) == 1 &&
+        length(path) > length(ENVIRON["LANES"]) && substr(path, length(ENVIRON["LANES"]) + 1) !~ /\// { print $2 }'
 }
 
 # The references of the common repository, name and object, less the
@@ -1521,12 +1546,18 @@ tree_find() {
 # could forge text a later reader trusts there; a lane that owns one names
 # it in LANE_WRITTEN (lane_written) for an escaped verdict.
 main_scan() {
+  main_scan_raw | tr '\001' '\n'
+}
+
+# main_scan's paths ended by a byte 1 each, so a name holding a newline
+# stays one path (escaped_revert).
+main_scan_raw() {
   # Both lists NUL-separated, read by awk as records ended by a byte 1, so
   # a path holding a tab, newline, quote, or backslash, which git quotes
   # in its line form, still matches the one find prints.
   { git -C "$main_tree" ls-files -z 2> /dev/null | tr '\0' '\001' | MAIN="$main_tree" awk -v RS='\001' -v ORS='\001' '{ print "T " ENVIRON["MAIN"] "/" $0 }'
     tree_find "$main_tree" -print0 ! -type d | tr '\0' '\001' | awk -v RS='\001' -v ORS='\001' '{ print "F " $0 }'; } |
-    awk -v RS='\001' -v ORS='\n' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
+    awk -v RS='\001' -v ORS='\001' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
 }
 
 # What the main checkout holds against its HEAD, which the merger's
@@ -1760,6 +1791,14 @@ check_signalled() {
   exit 1
 }
 
+# valid_pid WORD: prints WORD when it is a process id a group signal may
+# name (digits, no leading zero, above 1), nothing otherwise, so a pid file
+# a stage wrote cannot make a signal reach the waiter's own group (0) or
+# every process (1).
+valid_pid() {
+  case "$1" in ''|*[!0-9]*|0*|1) ;; *) printf '%s' "$1" ;; esac
+}
+
 # runner_group_stop PID: stops the processes the dead runner PID left in its
 # process group (the runner leads one: setsid), a make still running its
 # stages, so no second runner shares the clone's carry with it. Only when no
@@ -1767,7 +1806,7 @@ check_signalled() {
 # signalled, and while a member stays in the group the kernel does not give
 # the pid to another process.
 runner_group_stop() {
-  [ -n "$1" ] || return 0
+  [ -n "$(valid_pid "$1")" ] || return 0
   group_state=$(ps -o stat= -p "$1" 2> /dev/null)
   case "$group_state" in ''|Z*) ;; *) return 0 ;; esac
   kill -s 0 -- "-$1" 2> /dev/null || return 0
@@ -1828,6 +1867,7 @@ check_wait() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ < "$pid_file"
+  pid=$(valid_pid "$pid")
   runner_finish "$pid"
   joined=0
   if runner_alive "$pid" && [ "$at" = "$head" ]; then
@@ -1884,6 +1924,7 @@ read_pid() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ 2>/dev/null < "$pid_file" || true
+  pid=$(valid_pid "$pid")
 }
 
 # runner_finish PID: a runner prints its verdict, then drops its clone and

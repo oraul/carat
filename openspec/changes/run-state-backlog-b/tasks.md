@@ -227,3 +227,10 @@
 - [x] 6.2 Two writers can both retake a stale run state lock (recorded in docs/findings/run-state-backlog-b.md)
 - [x] 6.3 The removal of a planted file may delete a concurrent lane's build file (recorded in docs/findings/run-state-backlog-b.md)
 - [x] 6.4 A stage that starts its own session leaves the group kill (recorded in docs/findings/run-state-backlog-b.md)
+
+## 7. Review round: the four security Lows, each case failing at the earlier commit first
+
+- [x] 7.1 test fails at the earlier commit, then fix: security Low (5), runner_group_stop signals a pid read from check.pid unvalidated: a pid file naming pid 0 does not make the check signal its own process group (valid_pid, applied in both pid reads and in runner_group_stop)
+- [x] 7.2 test fails at the earlier commit, then fix: security Low (4), escaped_revert reads paths one per line: a planted name holding a newline lists as one removal and leaves the file its second line names; the voided check lists each removal in its log; the removal checks the directory with cd -P under the main checkout's build/ and the change time against escape_since
+- [x] 7.3 test fails at the earlier commit, then fix: security Low (5), new_lane_branches matches any path ending in tmp/.lane-NAME: a stage that forges a branch through a worktree at another checkout's tmp/.lane-NAME fails the check, and a lane at the main checkout's tmp/.lane-NAME leaves it passing
+- [x] 7.4 test fails at the earlier commit, then fix: security Low (3), state_lock takes over a stale lock without an atomic step: a waiter does not take a lock a live process retook after it read the dead owner (rename aside, recheck the owner, link back)
