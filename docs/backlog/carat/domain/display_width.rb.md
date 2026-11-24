@@ -1,21 +1,5 @@
 # Backlog: carat/domain/display_width.rb
 
-## code_of decodes UTF-8 inside DisplayWidth
-
-- Where: `DisplayWidth.code_of` in `carat/domain/display_width.rb` (line 54), a decoding helper in the width table. Advisory of the periodic quality review at 6ea61b1; `feedback` deleted its only `Motions` caller, the dead `Motions.keyword?` and `char_class`, with the `display_width` require.
-- Why it matters: a decoding helper kept in the width table hides the dependency and invites another copy.
-- Fix outline: move it to `Utf8` (for example `Utf8.first_code`) and call it from `DisplayWidth`.
-- Category: editor
-- Added: 2026-11-03
-
-## DisplayWidth.of_char has no caller
-
-- Where: `DisplayWidth.of_char` in `carat/domain/display_width.rb` (line 37 at `start-screen`), called nowhere in `carat/`, `bin/`, `test/`, or `bench/`, yet named as a key method on the map's `display_width.rb` line. Periodic quality at 5ac9674.
-- Why it matters: the map points readers at a method nothing uses, and it can drift from the width rule the callers rely on.
-- Fix outline: delete it and drop it from the map's line.
-- Category: editor
-- Added: 2026-11-05
-
 ## Bidi and zero-width format characters reach the terminal raw
 
 - Where: `carat/domain/display_width.rb` line 66 (`control?` and `code_cells`), at 31919d9; reached from buffer text, server text, and names through `carat/adapters/frame_presenter.rb`. Periodic security Medium (5). Queue item `bidi-controls`.
@@ -42,11 +26,15 @@
 - Category: editor
 - Added: 2026-11-14
 
-### File text paints Unicode format characters raw (sprint-22 sweep security Low (6))
+### Soft hyphen and other invisible code points stay raw
+- Location: `carat/domain/display_width.rb` `format_char?`
+- Why: U+00AD, U+180E, and U+034F take no cell or an uncertain one in some terminals; the set follows Vim's plus the finder's, so they are not marked
+- Fix: add them to `format_char?` after checking how Neovim draws each, with a row in the width table
+- Category: editor
+- Added: 2026-11-24
 
-- Location: `carat/domain/display_width.rb:12`
-- Why: Unicode format characters (bidi overrides U+202A-U+202E, isolates U+2066-U+2069, zero-width U+200B-U+200F, U+FEFF) in file text are painted raw as one-cell glyphs by FramePresenter#paint_text (carat/adapters/frame_presenter.rb:1103), so a crafted file can display differently from its content (Trojan Source) and shift columns
-- Fix: treat general category Cf as control in DisplayWidth.control?/code_cells and paint it as <u+xxxx> like the C1 controls, as Finder::Grep#safe already does for the picker
-- Also: carat/adapters/frame_presenter.rb
-- Category: security
-- Added: 2026-11-20
+### Two tables of the format code points drift apart at carat/domain/display_width.rb:190 (sprint-32 review quality)
+- Location: carat/domain/display_width.rb:190 (format_char?, render-text-lows), carat/plugins/finder/safe_text.rb:71 (format_control?)
+- Why: the editor marks U+2060 to U+206F while the finder blanks only U+2066 to U+2069, and nothing keeps the two lists in step, so a word joiner or invisible operator is marked in file text but passes raw through the finder's rows.
+- Fix: one table offered to plugins through the plugin API that both read, with a test row per range.
+- Category: quality

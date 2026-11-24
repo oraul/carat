@@ -482,3 +482,33 @@ Location: `carat/adapters/json_rpc_language_gateway.rb`. Why: lifecycle, documen
 - Fix: name the definition ask in the comment
 - Category: ide
 - Added: 2026-11-23
+
+### path_of decodes percent-escaped UTF-8 by hand (lead size, continuation, overlong at carat/adapters/json_rpc_language_gateway.rb:838 (sprint-32 sweep quality, note 45)
+- Location: carat/adapters/json_rpc_language_gateway.rb:838
+- Why: path_of decodes percent-escaped UTF-8 by hand (lead size, continuation, overlong, surrogate checks), duplicating Domain::Utf8
+- Fix: unescape to bytes, then validate them with Utf8
+- Category: quality
+
+### duplication: send_definition and send_hover (881) are the same 23 lines at carat/adapters/json_rpc_language_gateway.rb:733 (sprint-32 sweep quality, note 70)
+- Location: carat/adapters/json_rpc_language_gateway.rb:733
+- Why: duplication: send_definition and send_hover (881) are the same 23 lines but for the ask, its offers?/hovers? predicate, and the method name, and cancel, cancel_hover, cancel_definition, cancel_symbols, cancel_signature, and cancel_resolve are one shape six times
+- Fix: one private send_at_cursor taking the ask, the offered flag, and the method, and one cancel per ask through a shared reader pair, or split each request kind into its own adapter
+- Category: quality
+
+### a 1536-line adapter with 13 collaborators serving the lifecycle, sync at carat/adapters/json_rpc_language_gateway.rb:142 (sprint-32 sweep quality, note 71)
+- Location: carat/adapters/json_rpc_language_gateway.rb:142
+- Why: a 1536-line adapter with 13 collaborators serving the lifecycle, sync, diagnostics, progress, completion, resolve, hover, definition, signature, and symbols; every new request kind grows it further
+- Fix: move each request kind (sender, canceller, answer reader) into its own class under adapters/ the gateway delegates to, the lifecycle and sync staying
+- Category: quality
+
+### naming: the completion canceller is the bare cancel beside cancel_hover at carat/adapters/json_rpc_language_gateway.rb:636 (sprint-32 sweep quality, note 72)
+- Location: carat/adapters/json_rpc_language_gateway.rb:636
+- Why: naming: the completion canceller is the bare cancel beside cancel_hover, cancel_definition, cancel_symbols, cancel_signature, and cancel_resolve
+- Fix: rename it cancel_completion
+- Category: quality
+
+### record internals written from outside: resolve and resolved (723-724) assign at carat/adapters/json_rpc_language_gateway.rb:700 (sprint-32 sweep quality, note 73)
+- Location: carat/adapters/json_rpc_language_gateway.rb:700
+- Why: record internals written from outside: resolve and resolved (723-724) assign docs.known[index] and docs.texts[index] directly instead of through CompletionDocs methods, so the record's states are spelled in the adapter
+- Fix: add CompletionDocs#asked(index) and #resolve_text(index, text) and call them
+- Category: quality

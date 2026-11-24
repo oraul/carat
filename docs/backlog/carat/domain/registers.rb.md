@@ -8,3 +8,9 @@
 - Also: test/editor_registers.rb
 - Category: editor
 - Added: 2026-11-22
+
+### Vim compatibility to verify: after an uppercase append the unnamed at carat/domain/registers.rb:83 (sprint-32 sweep quality, note 33)
+- Location: carat/domain/registers.rb:83
+- Why: Vim compatibility to verify: after an uppercase append the unnamed register holds only the appended piece (asserted in test/editor_registers.rb:33), while Vim's get_yank_register points the unnamed register at the written register, so p pastes the whole appended register
+- Fix: confirm against Neovim and, if it differs, store the joined entry as unnamed and update the test
+- Category: quality

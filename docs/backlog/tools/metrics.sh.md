@@ -101,3 +101,9 @@ none
 - Fix: mark names seen and, in END, fail each strict base name the current file did not hold
 - Category: pipeline
 - Added: 2026-11-23
+
+### compare reports only the names in the current measurement, so at tools/metrics.sh:105 (sprint-32 sweep quality, note 54)
+- Location: tools/metrics.sh:105
+- Why: compare reports only the names in the current measurement, so a strict allocs or rounds metric present in the base and missing from current (a dropped scenario) passes silently
+- Fix: in END, print a FAIL line for each strict base name that current did not hold
+- Category: quality

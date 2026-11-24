@@ -288,3 +288,9 @@ Location: `carat/use_cases/handle_key.rb:145`. Why: one way to do each thing; `H
 - Fix: one state.clear_message before the CR and Space check
 - Category: editor
 - Added: 2026-11-23
+
+### the signature trigger compares key codes with the bare numbers at carat/use_cases/handle_key.rb:430 (sprint-32 sweep quality, note 11)
+- Location: carat/use_cases/handle_key.rb:430
+- Why: the signature trigger compares key codes with the bare numbers 40 and 44 for ( and ,
+- Fix: private constants OPEN_PAREN and COMMA, as MAX_REPLAYS is
+- Category: quality

@@ -16,3 +16,9 @@
 - Fix: run the scan from the base's workflow reading the head only as data, or have the merge gate refuse a scan.yml change without the user's approval.
 - Category: security
 - Added: 2026-11-16
+
+### actions referenced by mutable tag (actions/checkout@v4, actions/cache@v4 in scan.yml, ci.yml at .github/workflows/scan.yml:25 (sprint-32 sweep security Low (5), note 1)
+- Location: .github/workflows/scan.yml:25
+- Why: actions referenced by mutable tag (actions/checkout@v4, actions/cache@v4 in scan.yml, ci.yml, main.yml) while open-pr.yml pins by commit, so a moved upstream tag runs unreviewed code in CI
+- Fix: pin every uses line to a full commit sha with the tag as a comment, as open-pr.yml does
+- Category: security

@@ -360,3 +360,15 @@ none
 - Category: pipeline
 - Added: 2026-11-23
 
+
+### toolchain-clean runs rm -rf tmp, which removes every lane worktree at Makefile:213 (sprint-32 sweep quality, note 4)
+- Location: Makefile:213
+- Why: toolchain-clean runs rm -rf tmp, which removes every lane worktree tmp/.lane-<change> (kept on a stop with its work), the review worktrees, and tmp/.merge-gates, leaving their git worktree entries dangling, and ignores the SPINEL_SRC and PREFIX overrides, while README.md:11 and docs/architecture.md:33 say it removes the two toolchain directories
+- Fix: rm -rf "$(SPINEL_SRC)" "$(PREFIX)" and correct the help line and the README table row
+- Category: quality
+
+### make doctor fails without node and checks neither git nor at Makefile:228 (sprint-32 sweep quality, note 16)
+- Location: Makefile:228
+- Why: make doctor fails without node and checks neither git nor curl, while CLAUDE.md Stack and docs/architecture.md:33 say a clone needs a C compiler, make, git, and curl
+- Fix: check git, curl, and make, and either document node as the tools-test js dependency or report it as optional
+- Category: quality

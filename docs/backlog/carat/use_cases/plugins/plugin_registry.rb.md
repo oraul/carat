@@ -15,3 +15,9 @@ None.
 - Fix: rename them to entry as plugin_router.rb and plugin_events.rb now do
 - Category: plugins
 - Added: 2026-11-23
+
+### wake_idle answers true when it tried to activate a plugin at carat/use_cases/plugins/plugin_registry.rb:285 (sprint-32 sweep quality, note 86)
+- Location: carat/use_cases/plugins/plugin_registry.rb:285
+- Why: wake_idle answers true when it tried to activate a plugin, even one whose activate raised and disabled it, while its comment says true when one was activated
+- Fix: set woke from activate's answer (woke = true if activate(e)) or reword the comment to tried
+- Category: quality

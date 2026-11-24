@@ -17,3 +17,9 @@
 - Also: carat/use_cases/operate.rb
 - Category: editor
 - Added: 2026-11-18
+
+### duplication: the linewise change branch (register, autoindent indent, set_lines, insert at carat/use_cases/visual/change_selection.rb:40 (sprint-32 sweep quality, note 27)
+- Location: carat/use_cases/visual/change_selection.rb:40
+- Why: duplication: the linewise change branch (register, autoindent indent, set_lines, insert mode, cursor) repeats Operate#change's linewise branch (carat/use_cases/operate.rb:195)
+- Fix: move the linewise change into one shared domain function both call
+- Category: quality

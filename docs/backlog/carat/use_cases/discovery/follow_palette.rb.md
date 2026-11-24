@@ -75,3 +75,9 @@ Simplicity: score and field each repeat the a >= b comparison. Fix: one if a >= 
 - Also: carat/plugins/finder/plugin.rb, carat/adapters/frame_presenter.rb
 - Category: editor
 - Added: 2026-11-23
+
+### char_count, a UTF-8 character count of a byte prefix, is at carat/use_cases/discovery/follow_palette.rb:290 (sprint-32 sweep quality, note 20)
+- Location: carat/use_cases/discovery/follow_palette.rb:290
+- Why: char_count, a UTF-8 character count of a byte prefix, is a text helper inside a use case beside Utf8, and pad (follow_palette.rb:314) is DisplayWidth.fit with a cut mark
+- Fix: move char_count to Domain::Utf8 and pad to a DisplayWidth method taking the mark, so the key hints and other floats can share them
+- Category: quality

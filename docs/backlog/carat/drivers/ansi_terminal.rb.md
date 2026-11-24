@@ -24,6 +24,10 @@
 - Also reported: sprint-22 sweep note 56 (ansi_terminal.rb:83)
 - Category: editor
 - Added: 2026-11-20
+- Merged: ### read_key awaits an OSC 11 answer for the whole session at carat/drivers/ansi_terminal.rb:79 (sprint-28 sweep quality, note 32)
+- Location: carat/drivers/ansi_terminal.rb:79
+- Why: a terminal that never answers leaves every later read scanned, so a later `ESC ]11;` in typed or pasted input is swallowed as an answer.
+- Fix: stop awaiting at the first empty timeout or a deadline, with a missing-answer test.
 
 ### An OSC 11 answer split inside its introducer reaches the keys (sprint-22 sweep quality)
 
@@ -39,14 +43,6 @@
 - Location: carat/drivers/ansi_terminal.rb:83
 - Why: a read that times out with no held reply leaves @awaiting true, so against a terminal that never answers OSC 11 every read for the whole session still scans for and strips \e]11; from the keys (a paste or key sequence starting with it would be eaten as a reply)
 - Fix: end the awaiting at the first timeout or after a fixed bound of reads or seconds, with a driver test of a terminal that never answers
-- Category: editor
-- Added: 2026-11-22
-
-### read_key awaits an OSC 11 answer for the whole session at carat/drivers/ansi_terminal.rb:79 (sprint-28 sweep quality, note 32)
-
-- Location: carat/drivers/ansi_terminal.rb:79
-- Why: a terminal that never answers leaves every later read scanned, so a later `ESC ]11;` in typed or pasted input is swallowed as an answer.
-- Fix: stop awaiting at the first empty timeout or a deadline, with a missing-answer test.
 - Category: editor
 - Added: 2026-11-22
 

@@ -170,3 +170,9 @@
 - Fix: node = node_at(mode, codes); return "" when its value is nil, else node.owner.
 - Category: editor
 - Added: 2026-11-22
+
+### name_group repeats bind_text's notation parse, empty-key, and MAX_KEYS checks (keymap.rb:165-168) at carat/domain/keymap.rb:283 (sprint-32 sweep quality, note 9)
+- Location: carat/domain/keymap.rb:283
+- Why: name_group repeats bind_text's notation parse, empty-key, and MAX_KEYS checks (keymap.rb:165-168), and the trie walk is written four times (holder_of, node_at, lookup, unbind)
+- Fix: one private parse_keys returning the codes or the problem, and one private walk returning the node or nil
+- Category: quality

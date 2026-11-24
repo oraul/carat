@@ -109,3 +109,9 @@
 - Also: test/editor_motions.rb
 - Category: editor
 - Added: 2026-11-23
+
+### the character classes are bare 0, 1, and 2, compared at carat/domain/motions.rb:156 (sprint-32 sweep quality, note 8)
+- Location: carat/domain/motions.rb:156
+- Why: the character classes are bare 0, 1, and 2, compared as numbers in Motions, Walker, TextObjects, and Runs and explained in four comments
+- Fix: name them (BLANK, PUNCTUATION, KEYWORD) on Motions and use the names
+- Category: quality

@@ -84,12 +84,15 @@ Docs currency: the styles comment (and FramePresenter#paint_float_row's at carat
 - Category: editor
 - Added: 2026-11-18
 
-### Buffer#icon may be unused after the tab icon is gone
-- Location: `carat/domain/buffer.rb` (`icon`, `Buffer.icon_of`), `test/domain_buffer.rb:92`.
-- Why: the tab row no longer draws the file icon, so `Buffer#icon` may be read by no production caller, and the field and its update in `path=` would be dead weight on a hot record.
-- Fix: search the adapters and plugins for a reader of `buffer.icon`; when none remains, remove the member, `icon_of`, and the test lines in one change.
 
-none
-- Also: test/domain_buffer.rb
-- Category: editor
-- Added: 2026-11-23
+### visibility: blanks is public though only first_nonblank and indent_of in at carat/domain/buffer.rb:538 (sprint-32 sweep quality, note 28)
+- Location: carat/domain/buffer.rb:538
+- Why: visibility: blanks is public though only first_nonblank and indent_of in the file use it
+- Fix: move it below private
+- Category: quality
+
+### duplication: detect_filetype repeats assign_filetype's two writes (line 291) at carat/domain/buffer.rb:255 (sprint-32 sweep quality, note 29)
+- Location: carat/domain/buffer.rb:255
+- Why: duplication: detect_filetype repeats assign_filetype's two writes (line 291)
+- Fix: detect_filetype calls assign_filetype(Filetype.detect(path, line(0)))
+- Category: quality

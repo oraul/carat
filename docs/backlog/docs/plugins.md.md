@@ -31,3 +31,9 @@
 - Fix: name SafeText.of and the bar mark
 - Category: plugins
 - Added: 2026-11-23
+
+### version history skips 2.16 (float_prompt, which the request table at at docs/plugins.md:23 (sprint-32 sweep quality, note 65)
+- Location: docs/plugins.md:23
+- Why: version history skips 2.16 (float_prompt, which the request table at line 111 dates 2.16) between 2.15 and 2.17
+- Fix: add a Version 2.16 sentence naming float_prompt
+- Category: quality

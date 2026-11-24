@@ -23,3 +23,9 @@
 - Fix: call start_of(row)
 - Category: editor
 - Added: 2026-11-23
+
+### lookup repeats start_of's expression at carat/domain/syntax_cache.rb:159 (sprint-32 sweep quality, note 42)
+- Location: carat/domain/syntax_cache.rb:159
+- Why: lookup repeats start_of's expression
+- Fix: start = start_of(row)
+- Category: quality

@@ -1,19 +1,7 @@
 # Backlog: carat/domain/message_history.rb
 
-## MessageHistory stores levels nothing outside the tests reads
-
-- Where: `carat/domain/message_history.rb` line 8, at the `feedback` change. Quality advisory of `feedback`.
-- Why it matters: speculative generality: levels are kept per entry, but only tests read `level_at`, since `:messages` is not colored (`docs/compatibility.md`).
-- Fix outline: drop the levels until `:messages` colors its listing, or use them for the listing's groups.
-- Also: docs/compatibility.md
-- Category: editor
-- Added: 2026-11-09
-
-## :messages drops the two-line unsaved-buffer refusal
-
-- Where: `carat/domain/message_history.rb` line 29 (`add` drops any text holding a line feed), against `Messages.unsaved_buffer` in `carat/domain/messages.rb`, shown by `carat/use_cases/files/quit.rb`, at 31919d9. Periodic quality. Queue item `messages-tidy`.
-- Why it matters: E37 with E162 is never kept, against `docs/compatibility.md` Messages and notifications (Error: Kept) and Neovim, whose `:messages` keeps both lines.
-- Fix outline: keep each line of a shown message in the history (output-only text stays out), with a `test/editor_messages.rb` row for `:q` over a modified hidden buffer followed by `:messages`.
-- Also: carat/domain/messages.rb, carat/use_cases/files/quit.rb, docs/compatibility.md, test/editor_messages.rb
-- Category: editor
-- Added: 2026-11-09
+### the levels INFO, WARNING, and ERROR stay on MessageHistory, which at carat/domain/message_history.rb:10 (sprint-32 sweep quality, note 5)
+- Location: carat/domain/message_history.rb:10
+- Why: the levels INFO, WARNING, and ERROR stay on MessageHistory, which no longer keeps a level since #332, and Notices, FloatPainter (float_painter.rb:237), and JsonRpcLanguageGateway (json_rpc_language_gateway.rb:1207) name them there
+- Fix: move the three constants to Notices, which stores levels, and update the callers
+- Category: quality

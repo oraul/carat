@@ -98,3 +98,9 @@
 - Fix: one private prelude both call, returning :cancel, :prompt, or nil.
 - Category: editor
 - Added: 2026-11-22
+
+### accept_visual repeats accept's opening (the want reset to :cancel, remember at carat/domain/command_grammar.rb:171 (sprint-32 sweep quality, note 10)
+- Location: carat/domain/command_grammar.rb:171
+- Why: accept_visual repeats accept's opening (the want reset to :cancel, remember, and the :search prompt, command_grammar.rb:144)
+- Fix: share it in one private step both call, keeping the typed return
+- Category: quality

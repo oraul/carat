@@ -19,7 +19,7 @@
 ## Findings of tab-close-d after its package step
 
 - quality advisory docs/queue-feature.md:30 docs currency: the merge resolution removed tab-close-d from the Sprint 17 list, but the decision still places tab-close-d and vim-folds-b at places 1 and 2 and vim-line-commands-c third, while the list now has vim-folds-b at 1 and vim-line-commands-c at 2; fix: say tab-close-d merged from place 1, vim-folds-b and vim-line-commands-c now at places 1 and 2
-- quality advisory docs/findings/tab-close-d.md:11 one clear way: the three new entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use; fix: backtick the locations and end each Location, Why, and Fix line with a period as above
+- quality advisory the removed findings file of tab-close-d one clear way: the three new entries drop the backticks around paths and the trailing periods the file's earlier entries (lines 1 to 10) use; fix: backtick the locations and end each Location, Why, and Fix line with a period as above
 - Category: pipeline
 - Added: 2026-11-18
 
@@ -55,3 +55,11 @@
 - Fix: the next feature-lane plan or the sprint records change rewrites the line to name `docs/backlog/`.
 - Category: pipeline
 - Added: 2026-11-21
+
+### A delivery's package step rewrote the feature queue to an older plan (tab-name-parent planner)
+
+- Location: `docs/queue-feature.md` at 69e59b6 (#330, explorer-rows), against 092d282; `build/plan/tab-focus-mark/queue-feature.md`.
+- Why: explorer-rows ran with no plan directory of its own, and its squash commit set the feature queue to the tab-focus-mark plan less its own line: `## Sprint 32` became `## Sprint 31`, the full `ui-groups-c` item and Pool 1 to 3 (`sidebar-head-tidy`, `tab-float-mark`, `explorer-look`) and the sprint-32 decisions were lost; only a later planner's diff against history caught it.
+- Fix: the backlog lane's `plan-apply-stale` (Pool 17): plan-apply refuses a lane queue from a plan directory not the change's own, or one whose base blob differs from the lane's HEAD; a tools-test case with a stale plan fails before.
+- Category: pipeline
+- Added: 2026-11-24

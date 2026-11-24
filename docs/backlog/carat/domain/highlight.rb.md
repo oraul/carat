@@ -40,3 +40,9 @@ None
 - Also: carat/use_cases/ex/set_command_handler.rb
 - Category: editor
 - Added: 2026-11-11
+
+### MESSAGE_WARNING (WarningMsg) is themed (themes.rb:134) but painted by nothing, the at carat/domain/highlight.rb:41 (sprint-32 sweep quality, note 40)
+- Location: carat/domain/highlight.rb:41
+- Why: MESSAGE_WARNING (WarningMsg) is themed (themes.rb:134) but painted by nothing, the state that got MoreMsg removed in #336
+- Fix: remove it with its theme row and docs, or paint it
+- Category: quality

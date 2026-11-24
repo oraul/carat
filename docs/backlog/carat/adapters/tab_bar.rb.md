@@ -1,22 +1,5 @@
 # Backlog: carat/adapters/tab_bar.rb
 
-## The [No Name] text is defined in both bars
-
-- Where: `NO_NAME` in `carat/adapters/tab_bar.rb` (line 23 at `bars`) and again in `carat/adapters/status_bar.rb` (line 46); at 7711421 also `carat/adapters/winbar.rb` line 17, `carat/use_cases/buffers/list_buffers.rb` line 20, and `carat/domain/messages.rb` line 16 (periodic quality note 33). Quality advisory of `bars`, raised twice.
-- Why it matters: one user-visible text has two owners that can drift apart.
-- Fix outline: keep one constant, for example beside `Buffer#display_name`, and reference it from both bars.
-- Also: carat/adapters/status_bar.rb, carat/adapters/winbar.rb, carat/use_cases/buffers/list_buffers.rb, carat/domain/messages.rb
-- Category: editor
-- Added: 2026-11-05
-
-## TabBar#icon_group scans every group name on each frame
-
-- Where: `icon_group` in `carat/adapters/tab_bar.rb` (line 136 at `bars`) calls `Highlight.token_id` over every syntax and icon name each time it draws the selected tab, while the `bars` design says the group is resolved once per name. Quality advisory of `bars`.
-- Why it matters: a linear scan per frame for a value that changes only with the buffer's icon, and the design text no longer matches the code.
-- Fix outline: resolve the group once per icon name (a small Hash, or an id kept beside `Buffer#icon`), or correct the design text, with the tab bar test rows unchanged.
-- Category: editor
-- Added: 2026-11-05
-
 ### Quality: the tab bar's modified-mark fallback cannot trigger, carat/adapters/tab_bar.rb:137
 
 - Why: speculative generality; the `mark(set)` fallback to the ASCII mark cannot trigger, since every shipped set's modified glyph is one cell and the sets are constants, yet it measures the glyph for each modified tab on every frame.
@@ -56,13 +39,6 @@
 - Category: editor
 - Added: 2026-11-23
 
-### Neighbouring tabs are three cells apart, not two
-- Location: `carat/adapters/tab_bar.rb`, `paint_tab` (`FRAME_CELLS`)
-- Why: removing the separator leaves the trailing space and the next tab's two leading spaces; the council's spec is two blank cells, with the icon gone and the padding space, name, space, mark, space.
-- Fix: in `one-accent`, which removes the icon, set the padding to the spec, `FRAME_CELLS` to 3, and update the expected rows of `adapters_tab_bar`, `editor_tabs`, and `editor_tab_flows`.
-- Category: editor
-- Added: 2026-11-23
-
 ### A narrow sidebar cuts the head silently
 - Location: `carat/adapters/tab_bar.rb`, `paint_head`
 - Why: below about 14 columns the project is cut at the sidebar's edge with no ellipsis, and the branch is dropped first; the council defers the rules for narrow widths.
@@ -84,3 +60,23 @@
 - Also: carat/domain/buffer.rb
 - Category: editor
 - Added: 2026-11-23
+
+### The tab bar re-scans the list for a shared name on every width
+- Location: `carat/adapters/tab_bar.rb`, `shares_name?` called by `tab_width` and `paint_tab`.
+- Why: each tab width compares its name with every other file tab, and the overflow loops call `span_width` repeatedly, so a row with many listed files costs about the cube of the tab count in byte compares per frame (most end on the length test); no allocation, but it grows with the buffer list.
+- Fix: compute once per paint a count of tabs per last segment, or cache a shared flag on `BufferList` flushed on open, close, and rename, and read it in `tab_width`.
+- Category: editor
+- Added: 2026-11-24
+
+### and carat/adapters/tab_bar.rb:14 comment lines left unwrapped by the last edits at carat/plugin_api.rb:422 (sprint-32 sweep quality, note 39)
+- Location: carat/plugin_api.rb:422
+- Why: and carat/adapters/tab_bar.rb:14 comment lines left unwrapped by the last edits amid 72-column text
+- Fix: rewrap them
+- Merged: sprint-32 sweep note 64, the same finding
+- Category: quality
+
+### shares_name? scans every buffer and runs from tab_width inside span_width's at carat/adapters/tab_bar.rb:213 (sprint-32 sweep quality, note 46)
+- Location: carat/adapters/tab_bar.rb:213
+- Why: shares_name? scans every buffer and runs from tab_width inside span_width's loops and again from paint_tab, so an overflowing row costs quadratic to cubic byte compares per frame
+- Fix: compute the shared-name flags once per paint
+- Category: quality

@@ -1496,3 +1496,20 @@ none
 - Fix: with no CI fix the package phase stays under 15,000 output tokens, or the run notes name the cause (a resume past the push rerunning the check and reviews); merge into `package-one-start` when a sprint draws it.
 - Category: pipeline
 - Added: 2026-11-23
+
+### A self-check mismatch recorded at stage none (explorer-rows notes 3, 4)
+
+- Location: `.claude/workflows/deliver-change.js` self-check comparison; explorer-rows notes 3, 4 at 2f2a0f8e5692.
+- Why: the check is said to have failed "at stage none", so an escalation is recorded with no failing stage, which `docs/goals.md` Escalation counts only for a failed stage of the contributor's own tree.
+- Fix: near `check-escape-lane-build` (Pool 15): no escalation without a named failing stage; accepted when a tools-test case with a refusal and no stage records no escalation.
+- Also: docs/goals.md
+- Category: pipeline
+- Added: 2026-11-24
+
+### A Low restating a recorded user decision starts a fix round (merge-git-unpin retro 4)
+
+- Location: `.claude/workflows/deliver-change.js`, the round start on a non-blocking security finding and the close-advisories start.
+- Why: merge-git-unpin's security Low (6) only restated the user's decision of 2026-11-23 ("Remove the pinned git only"), already in the removed findings file of merge-git-unpin, yet started a fix round and a close-advisories start (rework 1); 5 of the last 10 backlog rows had rework 1 or more.
+- Fix: a finding whose only fix reverses a recorded user decision already in the change's findings file starts neither; accepted when a tools-test case of such a finding ends with rework 0 and no extra contributor start, failing before.
+- Category: security
+- Added: 2026-11-24

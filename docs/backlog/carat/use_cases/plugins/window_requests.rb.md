@@ -120,3 +120,15 @@
 - Fix: return float_in(index, id).window.buffer.owner == name ? index : -1.
 - Category: plugins
 - Added: 2026-11-22
+
+### duplication: own_float_tab repeats float_in's lookup (floats.at(floats.index_of(target))) and window_or_current, and float_in at carat/use_cases/plugins/window_requests.rb:398 (sprint-32 sweep quality, note 68)
+- Location: carat/use_cases/plugins/window_requests.rb:398
+- Why: duplication: own_float_tab repeats float_in's lookup (floats.at(floats.index_of(target))) and window_or_current, and float_in then repeats it for every caller after own_float_tab or unlisted_float_tab
+- Fix: have own_float_tab call float_in(index, id) once the tab index is known
+- Category: quality
+
+### in_window, and open_in_split's hand-rolled copy at 204-212, put the tab at carat/use_cases/plugins/window_requests.rb:500 (sprint-32 sweep quality, note 69)
+- Location: carat/use_cases/plugins/window_requests.rb:500
+- Why: in_window, and open_in_split's hand-rolled copy at 204-212, put the tab page, current window, and float focus back only on a normal return, with no ensure, so an open that raises inside a guarded plugin call leaves the editor focused on the borrowed window
+- Fix: restore in an ensure and have open_in_split use in_window
+- Category: quality

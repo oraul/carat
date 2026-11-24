@@ -15,3 +15,11 @@
 - Fix: construct with the options' theme and background words (or have the constructor call use_theme) so one method decides the table
 - Category: editor
 - Added: 2026-11-22
+
+### NO_COLOR keeps every theme color in the bytes the terminal receives
+- Location: `carat/adapters/screen_presenter.rb`, `carat/adapters/sgr_table.rb` (`sequence`), `carat/drivers/ansi_terminal.rb` (`no_color?`)
+- Why: under NO_COLOR the editor changes glyphs and fills but still writes 256-color or 24-bit sequences (the smoke case in `test/smoke_editor.rb` shows `38;5;` in the bar under NO_COLOR); the no-color convention asks for no color sequences, and `docs/compatibility.md` and the specs say only that the groups are kept, so the smoke case proves the bold-versus-plain difference and not the absence of colors
+- Fix: give `SgrTable.from_theme` a plain mode that writes the attributes and no color, set from `terminal.no_color?` in `EditorAssembly#open`, and change the specs that say NO_COLOR keeps the groups to say it keeps the attributes
+- Also: carat/adapters/sgr_table.rb, carat/drivers/ansi_terminal.rb, test/smoke_editor.rb, docs/compatibility.md
+- Category: editor
+- Added: 2026-11-24

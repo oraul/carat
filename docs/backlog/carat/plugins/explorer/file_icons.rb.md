@@ -8,3 +8,9 @@
 - Also: carat/plugins/explorer/plugin.rb
 - Category: plugins
 - Added: 2026-11-05
+
+### comment says the buffer tabs share the file-icon table, but at carat/plugins/explorer/file_icons.rb:9 (sprint-32 sweep quality, note 38)
+- Location: carat/plugins/explorer/file_icons.rb:9
+- Why: comment says the buffer tabs share the file-icon table, but tabs draw no file icon since tab-name-parent (tab_bar.rb header, plugin_api.rb:422)
+- Fix: drop that clause
+- Category: quality

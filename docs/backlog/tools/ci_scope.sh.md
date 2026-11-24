@@ -8,6 +8,22 @@
 - Also: tools/tools_test.sh
 - Category: security
 - Added: 2026-11-03
+- Merged: ### PR-controlled file names are word-split and glob-expanded in for at tools/ci_scope.sh:99 (sprint-26 sweep security Low (4), note 17)
+- Location: tools/ci_scope.sh:99
+- Why: PR-controlled file names are word-split and glob-expanded in for path in $changed (and $since at 123), so a path with spaces or glob characters is classified by fragments or by other files' names when deciding to skip the checks
+- Fix: set -f and read the names line by line (while IFS= read -r path), or use git diff -z
+- Merged: ### the loops over changed (and since at line 123) at tools/ci_scope.sh:99 (sprint-30 sweep security Low (2), note 4)
+- Location: tools/ci_scope.sh:99
+- Why: the loops over changed (and since at line 123) word-split and glob-expand pull request paths; examined: a name with a space, a glob, or a newline splits into or quotes as a code word, or keeps a .rb ending, so no code path reads as documentation and no scope bypass was found
+- Fix: read the paths with while IFS= read -r for robustness
+- Merged: ### for path in $changed (and line 123, $since) splits at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 17)
+- Location: tools/ci_scope.sh:99
+- Why: for path in $changed (and line 123, $since) splits paths on whitespace and expands globs, so a changed path with a space or a glob character is judged in pieces
+- Fix: set -f with IFS set to a newline, or read the list with while IFS= read -r path; lines 80 and 81 also call gh api commits/SHA/pulls twice, fix: one call printing both fields
+- Merged: ### the unquoted for loops over changed (:99) and since at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 55)
+- Location: tools/ci_scope.sh:99
+- Why: quoting: the unquoted for loops over changed (:99) and since (:123) split the git path list on spaces and expand glob characters, so a path holding a space is judged by its pieces
+- Fix: read the list line by line with while IFS= read -r path, or set -f with IFS a newline (a possible security point, unexamined here)
 
 ## The CI scope reads a moved code file by its new path
 
@@ -173,14 +189,6 @@
 - Category: pipeline
 - Added: 2026-11-21
 
-### PR-controlled file names are word-split and glob-expanded in for at tools/ci_scope.sh:99 (sprint-26 sweep security Low (4), note 17)
-
-- Location: tools/ci_scope.sh:99
-- Why: PR-controlled file names are word-split and glob-expanded in for path in $changed (and $since at 123), so a path with spaces or glob characters is classified by fragments or by other files' names when deciding to skip the checks
-- Fix: set -f and read the names line by line (while IFS= read -r path), or use git diff -z
-- Category: security
-- Added: 2026-11-22
-
 ### ci_scope.sh repeats two API queries at tools/ci_scope.sh:80 (sprint-28 sweep quality, notes 12, 51)
 
 - Location: tools/ci_scope.sh:80, :81, :84, :117
@@ -201,27 +209,16 @@
 - Why: duplication: the push path calls gh api on commits/SHA/pulls twice (:80 and :81), once for the head sha and once for the number
 - Fix: one call whose jq prints both, split with read
 
-### the loops over changed (and since at line 123) at tools/ci_scope.sh:99 (sprint-30 sweep security Low (2), note 4)
 
+### the changed paths are iterated unquoted (for path in changed at tools/ci_scope.sh:99 (sprint-32 sweep security Low (3), note 3)
 - Location: tools/ci_scope.sh:99
-- Why: the loops over changed (and since at line 123) word-split and glob-expand pull request paths; examined: a name with a space, a glob, or a newline splits into or quotes as a code word, or keeps a .rb ending, so no code path reads as documentation and no scope bypass was found
-- Fix: read the paths with while IFS= read -r for robustness
+- Why: the changed paths are iterated unquoted (for path in changed and since at line 123), so each name is word split and glob expanded before documentation() classifies it, and a crafted name could be read as documentation fragments and skip the checks
+- Fix: read the names line by line with IFS set to a newline and set -f, or use git diff -z, and treat any quoted or unusual name as code
+- Merged: sprint-32 sweep note 50, the same finding
 - Category: security
-- Added: 2026-11-23
 
-### for path in $changed (and line 123, $since) splits at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 17)
-
-- Location: tools/ci_scope.sh:99
-- Why: for path in $changed (and line 123, $since) splits paths on whitespace and expands globs, so a changed path with a space or a glob character is judged in pieces
-- Fix: set -f with IFS set to a newline, or read the list with while IFS= read -r path; lines 80 and 81 also call gh api commits/SHA/pulls twice, fix: one call printing both fields
-- Category: pipeline
-- Added: 2026-11-23
-
-### the unquoted for loops over changed (:99) and since at tools/ci_scope.sh:99 (sprint-30 sweep quality, note 55)
-
-- Location: tools/ci_scope.sh:99
-- Why: quoting: the unquoted for loops over changed (:99) and since (:123) split the git path list on spaces and expand glob characters, so a path holding a space is judged by its pieces
-- Fix: read the list line by line with while IFS= read -r path, or set -f with IFS a newline (a possible security point, unexamined here)
-- Category: pipeline
-- Added: 2026-11-23
-
+### the push branch calls gh api repos/REPO/commits/SHA/pulls twice (lines 80 at tools/ci_scope.sh:80 (sprint-32 sweep quality, note 51)
+- Location: tools/ci_scope.sh:80
+- Why: the push branch calls gh api repos/REPO/commits/SHA/pulls twice (lines 80 and 81) for the head sha and the number
+- Fix: make one call that prints both fields and split them
+- Category: quality

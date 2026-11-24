@@ -136,3 +136,17 @@
 - Fix: trap 'rm -f "$REPORT"' EXIT after the mktemp, or make it inside per_key
 - Category: code-quality
 - Added: 2026-11-23
+
+### blocking: the default scenario list omits lh-winbar, n, and cmdline-tab at bench/run.sh:88 (sprint-32 sweep quality, note 34)
+- Location: bench/run.sh:88
+- Why: blocking: the default scenario list omits lh-winbar, n, and cmdline-tab, which bench/keys.rb:111 SCENARIOS declares, so make bench with no SCENARIOS (documented as every scenario) never measures them
+- Fix: keep one list (keys.rb prints its names on a list argument and run.sh reads them) or add the three names
+- Merged: sprint-32 sweep note 75, the same finding
+- Category: quality
+
+### mktemp runs before the BIN check with no trap, so at bench/run.sh:25 (sprint-32 sweep quality, note 47)
+- Location: bench/run.sh:25
+- Why: mktemp runs before the BIN check with no trap, so exit 2 or a failed run leaves the temp report
+- Fix: create it after the check with trap 'rm -f "$REPORT"' EXIT
+- Merged: sprint-32 sweep note 76, the same finding
+- Category: quality

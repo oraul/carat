@@ -98,3 +98,15 @@
 - Category: editor
 - Added: 2026-11-23
 
+
+### stale comment: output is said to be deterministic so spin at carat/testing.rb:4 (sprint-32 sweep quality, note 77)
+- Location: carat/testing.rb:4
+- Why: stale comment: output is said to be deterministic so spin can diff it, but spin test is forbidden and tools/run_tests.sh compares each output with its snapshot
+- Fix: name tools/run_tests.sh (make test-run) as the comparer
+- Category: quality
+
+### the private fail shadows Kernel#fail inside Testing, so a raise at carat/testing.rb:99 (sprint-32 sweep quality, note 80)
+- Location: carat/testing.rb:99
+- Why: the private fail shadows Kernel#fail inside Testing, so a raise spelled fail in a helper of the harness would record a failed assertion instead
+- Fix: rename it record_failure (and pass to record_pass for symmetry)
+- Category: quality
