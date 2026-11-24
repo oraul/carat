@@ -1784,6 +1784,27 @@ function planReview(line) {
   const m = /^needed: ((?:review|sprint)-[0-9][a-z0-9-]*) records a failing periodic security review at ([0-9a-f]{7,40}),/.exec(line || '')
   return m ? ` plan-needed: \`${m[1]}\` records a failing periodic security review at ${m[2]}; read \`sh tools/run_state.sh show ${m[1]}\` and apply your security-first step to its findings.` : ''
 }
+// The user's decision comes first (the user's of 2026-11-24, after a split
+// of a brief the user decided as one delivery): the planner's start carries
+// the rule and the brief's USER DECISIONS ahead of the rubric, and a plan
+// that splits a brief decided as one delivery stops the run.
+const USER_FIRST = 'User decision first: what the brief\'s or queue item\'s USER DECISIONS or the user\'s recorded request says (one delivery, no split, a split as the user says, the items, their order, a sprint\'s contents) you follow as written, before the tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user\'s decision overrode your rule, with the rule and its number, instead of acting on it.'
+function userDecisionsOf(text) {
+  const parts = String(text || '').split(/USER DECISIONS:|User decisions:/)
+  if (parts.length < 2) return ''
+  const found = parts[parts.length - 1].split(/\bRULES:/)[0].trim()
+  return /^none\.?$/i.test(found) ? '' : found
+}
+function userFirst(text) {
+  const found = userDecisionsOf(text)
+  return found ? `${USER_FIRST} The USER DECISIONS: ${found}` : USER_FIRST
+}
+function splitAgainstUser(text, plan) {
+  if (!/\b(one delivery|single delivery|no split|not (be )?split|never split|do not split|without a split)\b/i.test(userDecisionsOf(text))) return ''
+  const lines = (plan.decisions || []).map((d) => String(d.decision)).concat(plan.notes || [])
+  const split = lines.find((l) => /\b(split|splits|splitting)\b|queue the rest|deliver the first/i.test(l) && !/overr(ode|ide|iding)|\b(no|not|never) split/i.test(l))
+  return split ? `the planner split a brief the user decided as one delivery: ${split.slice(0, 160)}` : ''
+}
 const request = typeof input.brief === 'string' && input.brief.trim() !== '' && input.brief.trim() !== state.change
 const brief = request ? input.brief : resumeBrief(state.change, planLine)
 if (!stopped && planSkipped(state, planLine)) {
@@ -1801,7 +1822,7 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
   phase('Plan')
   planned = 1
   const p = await measured('plan', () => agent(
-    `${intro()} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}. Write your files under ${planDir(state.change)}, this delivery's own plan directory. Among your notes, give the locations the change edits, path:line each, which the contributor starts from (no scout runs).${planReview(planLine)}${capLine('planner')}`,
+    `${intro()} ${userFirst(brief)} Plan the queue for this delivery. Brief: ${input.brief || 'the existing OpenSpec change'}. Write your files under ${planDir(state.change)}, this delivery's own plan directory. Among your notes, give the locations the change edits, path:line each, which the contributor starts from (no scout runs).${planReview(planLine)}${capLine('planner')}`,
     calibrate('planner', { agentType: 'planner', schema: withCalls(PLAN) })), callCap('planner'))
   if (!p) stopped = 'the planner returned no result'
   else {
@@ -1814,7 +1835,9 @@ if (!stopped && !state.merged && !state['phase.plan'] && !state['phase.implement
     if (rule) { critical = rule.rule; note(`critical by rule ${rule.rule}: ${rule.path}`) }
     else if (String(p.critical || '').trim()) note(`plan: critical value not read: ${String(p.critical).trim().slice(0, 80)}`)
     if (p.records === 'skip') excludeRecords('the planner')
+    const against = splitAgainstUser(brief, p)
     if (p.security_first.length) stopped = `security first: deliver the fix of ${p.security_first.join('; ')} before this change`
+    else if (against) stopped = against
     else phaseDone('plan', head)
   }
 }

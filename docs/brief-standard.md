@@ -15,10 +15,10 @@ The header is one line, then each field starts a line of its own, in this order.
 - `ACCEPTED WHEN:` a test or snapshot that fails before the change and that the gate measures, such as a tools-test case or a test row.
 - `CONSTRAINTS:` only the repository rules that apply to this change.
 - `OUT OF SCOPE:` what the change leaves alone.
-- `USER DECISIONS:` the user's words, quoted, each as an outcome; `none` when there is none.
+- `USER DECISIONS:` the user's words, quoted, each as an outcome; `none` when there is none. The planner follows them first, before its tiers, sprint rule, and size check (`docs/goals.md`, The rubric).
 - `RULES:` the standard tail, the same for every brief, which `brief.sh` writes.
 
-One change per brief: a second `CHANGE:` line, or an ask of two independently testable parts, is split first.
+One change per brief: a second `CHANGE:` line, or an ask of two independently testable parts, is split first unless USER DECISIONS says one delivery, which the planner keeps whole.
 
 ## Queue entries
 
