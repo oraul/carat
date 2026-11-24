@@ -6603,6 +6603,38 @@ expect "workflow: the plan skip reads plan-needed alone, not the brief" 0 '^1$' 
 expect "workflow: the planner is told the failing review run plan-needed names" 0 '^\[true,""\]$' \
   js "$wf" "planReview" '[/show review-20261116` and apply your security-first step/.test(planReview("needed: review-20261116 records a failing periodic security review at abc1234def56, and no change merged since")), planReview("needed: c is not the head of docs/queue-backlog.md (b)")]'
 expect "workflow: the planner prompt carries the failing review" 0 '^1$' grep -c -F '${planReview(planLine)}${capLine('"'"'planner'"'"')}' "$wf"
+# user-decision-first: the user's decision is the planner's first rule. The
+# delivery's planner start and the sprint planner's start carry the rule, the
+# delivery's with the brief's USER DECISIONS, ahead of everything else; the
+# agent file states it before the size check; a plan that
+# splits a brief decided as one delivery is refused.
+udf_js() {
+  js "$wf" "USER_FIRST userDecisionsOf userFirst splitAgainstUser" "$1"
+}
+expect "workflow: the delivery planner prompt carries the user-decision-first rule and the brief's USER DECISIONS ahead of the plan request" 0 '^\[true,true,true,true\]$' \
+  udf_js "(t => [t.startsWith('User decision first:'), t.includes('after the security-first step and T0, which always go first, and before the other tiers, the sprint composition, and the size check'), t.includes('The USER DECISIONS: \"one delivery for all 202 entries\"'), t.indexOf('one delivery for') > t.indexOf('overrode your rule')])(userFirst('WHY: x USER DECISIONS: \"one delivery for all 202 entries\" RULES: no url'))"
+expect "workflow: a brief with no user decision gives the rule alone" 0 '^\[true,true,true\]$' \
+  udf_js "[userFirst('USER DECISIONS: none RULES: x') === USER_FIRST, userFirst('') === USER_FIRST, userDecisionsOf('USER DECISIONS: none') === '']"
+expect "workflow: the delivery planner start puts the rule and the decisions between the intro and the plan request" 0 '^1$' grep -c -F '`${intro()} ${userFirst(brief)} Plan the queue for this delivery. Brief:' "$wf"
+expect "workflow: the sprint planner start carries the same rule right after its mode" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c -F "\`Mode: sprint. \${USER_FIRST} \${sprint.sprint} closed with" "$1") $(grep -c "^const USER_FIRST = .User decision first: .*after the security-first step and T0, which always go first, and before the other tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user.\{1,2\}s decision overrode your rule, with the rule and its number" "$1")"' _ "$here/../.claude/workflows/sprint-planning.js"
+expect "workflow: a plan that splits a brief the user decided as one delivery is refused" 0 '^\[true,true\]$' \
+  udf_js "(b => [splitAgainstUser(b, { decisions: [{ decision: 'split into five changes, deliver the first', evidence: 'size check' }], notes: [] }).startsWith('the planner split a brief the user decided as one delivery'), splitAgainstUser(b, { decisions: [], notes: ['queue the rest as follow-ups'] }) !== ''])('WHY: x USER DECISIONS: \"one delivery, no split\" RULES: y')"
+expect "workflow: a plan that records the override, or a brief the user did not decide, is not refused" 0 '^\[true,true,true\]$' \
+  udf_js "[splitAgainstUser('USER DECISIONS: \"one delivery\" RULES: y', { decisions: [{ decision: 'one delivery: the user decision overrode the size check split rule, goals.md', evidence: 'x' }], notes: [] }) === '', splitAgainstUser('USER DECISIONS: none RULES: y', { decisions: [{ decision: 'split in two', evidence: 'x' }], notes: [] }) === '', splitAgainstUser('USER DECISIONS: \"one delivery\" RULES: y', { decisions: [{ decision: 'deliver as written', evidence: 'x' }], notes: ['finding at a.rb:1'] }) === '']"
+expect "workflow: the delivery stops on a plan that splits against the user's decision, after the security-first stop" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c -F "const against = splitAgainstUser(brief, p)" "$1") $(grep -c -x -F "    else if (against) stopped = against" "$1")"' _ "$wf"
+expect "agents: the planner's first rule is the user's decision, stated before the rubric step and the size check" 0 '^1 1 1$' \
+  sh -c 'f=$1; r=$(grep -n "^First rule: the user.s decision" "$f" | cut -d: -f1); d=$(grep -n "^2[.] Then decide by the rubric" "$f" | cut -d: -f1); z=$(grep -n "^3[.] Size check: where the user decided nothing" "$f" | cut -d: -f1); echo "$([ -n "$r" ] && [ "$r" -lt "$d" ] && echo 1) $([ "$d" -lt "$z" ] && echo 1) $(grep "^First rule:" "$f" | grep -c "overrode your rule, with its number")"' _ "$agents/planner.md"
+expect "claude: the planner bullet names the user's decision first, never split or reordered against" 0 '^1$' \
+  grep -c "^- .planner.: follows a brief.s USER DECISIONS after security-first and T0, never splitting or reordering against them, then orders the lane queues" "$here/../CLAUDE.md"
+# The user's decision applies after the security-first step and T0: every copy
+# of the rule says so, so a decided order never puts a blocking security fix
+# behind other items.
+expect "planner rule: the agent file states the user's decision after the security-first step and T0" 0 '^1$' \
+  sh -c 'grep "^First rule:" "$1" | grep -c -F "is followed as written, after the security-first step 4 and T0, ahead of the other tiers"' _ "$agents/planner.md"
+expect "planner rule: both planner starts carry the user's decision after the security-first step and T0" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$1") $(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$2")"' _ "$wf" "$here/../.claude/workflows/sprint-planning.js"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed securityBlocking narrowedFrom mergeRecords" "$1"
 }
