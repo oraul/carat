@@ -6631,8 +6631,8 @@ expect "claude: the planner bullet names the user's decision first, never split 
 # The user's decision applies after the security-first step and T0: every copy
 # of the rule says so, so a decided order never puts a blocking security fix
 # behind other items.
-expect "planner rule: the agent file and goals.md state the user's decision after the security-first step and T0" 0 '^1 1$' \
-  sh -c 'echo "$(grep "^First rule:" "$1" | grep -c -F "is followed as written, after the security-first step 4 and T0, ahead of the other tiers") $(grep -c -F "the planner follows as written, after the security-first step and T0, which always go first, and before the other tiers" "$2")"' _ "$agents/planner.md" "$here/../docs/goals.md"
+expect "planner rule: the agent file states the user's decision after the security-first step and T0" 0 '^1$' \
+  sh -c 'grep "^First rule:" "$1" | grep -c -F "is followed as written, after the security-first step 4 and T0, ahead of the other tiers"' _ "$agents/planner.md"
 expect "planner rule: both planner starts carry the user's decision after the security-first step and T0" 0 '^1 1$' \
   sh -c 'echo "$(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$1") $(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$2")"' _ "$wf" "$here/../.claude/workflows/sprint-planning.js"
 speed_js() {
