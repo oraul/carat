@@ -32,3 +32,7 @@
 
 - [x] 7.1 `squash_commit` and `merged_at` judge against BASE only; `moved` reruns the reviews when a merge kept the change's side of a file main edited; `lane_rows` reads lane files by name; `plan-apply` refuses a stale plan and `plan-apply` and `history` run only in the lane worktree; `lane_of` reads an exception paragraph; `groom` requires CHANGE; a scoped stage is decided again after a tests-only commit; `jobs_refusal` one pattern; `plan_needed` names every failing review; `push` refuses an untracked file; `file_entries` checks every target first (tests for each)
 - [x] 7.2 Quality review of the diff: two advisories recorded in `docs/findings/run-state-backlog.md`
+
+## 8. Fix round
+
+- [x] 8.1 `main_scan` exempts only regular files named build/NAME.log from the escape scan (`-type f`), so a link planted there is reported as escaped; tools-test case plants such a link and expects the failed check (security Low (5), tools/run_state.sh)
