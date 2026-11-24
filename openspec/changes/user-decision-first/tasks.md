@@ -20,3 +20,7 @@
 ## 4. Review fix
 
 - [x] 4.1 State in the agent file, `docs/goals.md`, both USER_FIRST prompts, and the `CLAUDE.md` planner bullet that the user's decision applies after the security-first step and T0, so T0 items always go first, and pin it in the agent file and both prompts with two tools-test cases (goals.md is recorded in the findings, since TOOLS_RE does not match it) (a trimmed few words in the agent file, `CLAUDE.md`, to stay within their budgets)
+
+## 5. Close advisories
+
+- [x] 5.1 Add "after the security-first step and T0" to the user-decision-first wording of `docs/brief-standard.md` and `README.md` so both match the agent file and `docs/goals.md`
