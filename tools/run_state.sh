@@ -1472,8 +1472,9 @@ new_lane_branches() {
 # The references of the common repository, name and object, less the
 # remote-tracking refs, which a fetch or push of any lane rewrites and the
 # next fetch restores, the lanes' branches at escape_mark or now
-# (lane_branches; new_lane_branches only for one absent at the mark), and from a lane the main checkout's branch, which the
-# merger fast-forwards (main_moved).
+# (lane_branches, and new_lane_branches for one absent at the mark), and from
+# a lane the main checkout's branch, which the merger fast-forwards
+# (main_moved).
 refs_view() {
   git -C "$top" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null |
     SKIP="$escape_lanes
@@ -1537,8 +1538,8 @@ main_view() {
   GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" ls-files -v 2> /dev/null | grep -v '^H '
 }
 
-# bounded COMMAND...: COMMAND with at most SCAN_TIMEOUT seconds (60) where timeout exists,
-# so a stalled connection or a prompt cannot hold a check.
+# bounded COMMAND...: COMMAND with at most SCAN_TIMEOUT seconds (60) where
+# timeout exists, so a stalled connection or a prompt cannot hold a check.
 bounded() {
   if command -v timeout > /dev/null 2>&1; then timeout "${SCAN_TIMEOUT:-60}" "$@"; else "$@"; fi
 }
@@ -1893,10 +1894,10 @@ runner_finish() {
   runner_wait "$1" finished
 }
 
-# runner_wait PID [finished]: waits, at most RUNNER_WAIT seconds (30) by the clock, for
-# the runner PID to exit; with "finished", only while its output already
-# ends in its verdict. The one wait runner_finish and the superseding of a
-# runner in check_wait share.
+# runner_wait PID [finished]: waits, at most RUNNER_WAIT seconds (30) by the
+# clock, for the runner PID to exit; with "finished", only while its output
+# already ends in its verdict. The one wait runner_finish and the superseding
+# of a runner in check_wait share.
 runner_wait() {
   began=$(date +%s)
   while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt "${RUNNER_WAIT:-30}" ]; do
