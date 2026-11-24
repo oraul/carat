@@ -1263,3 +1263,20 @@
 - Outcome: fixed. The lock is a directory made with mkdir holding a pid file; a stale one is renamed aside, its owner checked again, and made again when live; release and the rewrite's rename need the pid file to name this process.
 - Cases: "run_state: a writer that lost its lock to a third writer refuses and writes nothing", "the writer that lost its lock leaves the third writer's lock", "the lock a waiter moved aside and found live is back with its owner", and the take-over and refusal cases now on the lock directory: each fails at 1e292a28bef5 and passes at the head.
 - Residual: a third writer making the lock in the microseconds between the moved-aside check and the make-again displaces the live owner, which then refuses its write (fails closed) and retries; the entry "Two writers can both retake a stale run state lock" above is closed by this fix.
+
+none
+
+### escaped_revert deletes paths read one per line from main_scan's output (security Low (4))
+- Location: tools/run_state.sh:990 escaped_revert
+- Why: A planted file name containing a newline, a directory symlink in the path, or a legitimate write the main session makes under the main checkout's build/ during a check (for example a make build) can each make the voided check rm a file the stage did not plant.
+- Fix: Feed escaped_revert a NUL-separated list from tree_find -print0 instead of lines. Before removing, resolve each file's parent directory with cd -P and check it is still under the main checkout's build/. Remove only files whose ctime is newer than escape_since, and in the check log list each removal next to the voided verdict.
+
+### escaped_revert still removes a legitimate file written under the main checkout's build/ during a check (security Low (3))
+- Location: tools/run_state.sh:999 escaped_revert
+- Why: The newline and directory-symlink vectors are closed. But a file the main session or a concurrent lane writes under the main checkout's build/, outside build/pipeline, build/stages, build/plan, and build/spinel-cache and named in no LANE_WRITTEN path, has a change time newer than escape_since and resolves under build/, so the voided check deletes it. The ctime and cd -P conditions do not tell such a write apart from a planted one. The findings file says this commit supersedes the earlier advisory on this deletion, which effectively drops it.
+- Fix: Keep the earlier advisory open rather than superseded. By default, record in LANE_WRITTEN the paths the lane's own tools write under the main checkout's build/. Alternatively, move the planted files into a quarantine directory under build/stages/<change>/ instead of rm, so an unexplained file can be inspected and restored.
+
+### state_lock writes its pid unconditionally after winning mkdir (security Low (2))
+- Location: tools/run_state.sh:851 state_lock
+- Why: A writer stalled over a minute between mkdir and the echo has its empty lock taken over as stale, then overwrites the successor's pid, so if both lock_held checks interleave both writers rename their rewrite in and one record is lost (local run state only, no attacker boundary).
+- Fix: Make the lock appear with its pid already inside it: build a temporary directory holding the pid file and rename it to the lock name, failing when the lock exists; or have the final write check that the lock still exists and holds no pid, refusing otherwise.
