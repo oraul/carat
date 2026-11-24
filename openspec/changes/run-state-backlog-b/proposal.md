@@ -6,7 +6,7 @@
 
 ## What Changes
 
-- Run state writes: `write_key` and `drop_key` take a lock file beside the run state (`state_lock`), so the detached runner and a caller rewriting it at once lose no record; a live holder makes a write wait `STATE_LOCK_WAIT` seconds and refuse, a dead holder's lock is taken over.
+- Run state writes: `write_key` and `drop_key` take a lock directory holding a pid file beside the run state (`state_lock`, `state_unlock`), so the detached runner and a caller rewriting it at once lose no record; a live holder makes a write wait `STATE_LOCK_WAIT` seconds and refuse, a dead holder's lock is taken over.
 - Lost runner: `check_lost` stops the process group a dead runner left (`runner_group_stop`), only when no process holds the runner's pid, before a second runner starts.
 - Stage jobs: each stage job runs in its own session (`setsid`) and its group is killed when the job ends, so a process a stage leaves running writes nothing after the escape scan.
 - Escape scan: a branch of a worktree first seen at the scan is skipped only when it is new and its worktree lies at a `tmp/.lane-` path (`refs_view`, `new_lane_branches`); the escaped-path list is printed through `visible_text`; a regular file or link a stage planted under the main checkout's `build/`, not named by `LANE_WRITTEN`, is removed (`escaped_revert`); the scan's `ls-remote` limit is `SCAN_TIMEOUT` (60); the runner wait limit is `RUNNER_WAIT` (30).

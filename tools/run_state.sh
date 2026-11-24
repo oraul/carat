@@ -809,27 +809,38 @@ drop_key() {
   state_rewrite drop "$1"
 }
 
-# state_lock: takes the run state's lock, a file "FILE.lock" holding the
-# pid of its owner and created exclusively, so the runner and a caller
-# rewriting the run state at once do not lose a record; waits at most
-# STATE_LOCK_WAIT seconds (20) and stops with a message when a live process
-# still holds it. A lock whose owner is gone is taken over by renaming it to
-# a name of this process (one rename finds it): a lock moved that turns out
-# to have a live owner, another process having retaken it meanwhile, is
-# linked back, so no waiter removes a lock it did not judge stale.
+# state_lock: takes the run state's lock, a directory "FILE.lock" made with
+# mkdir (one process wins) holding a file "pid" with its owner's pid, so
+# the runner and a caller rewriting the run state at once do not lose a
+# record; waits at most STATE_LOCK_WAIT seconds (20) and stops with a
+# message when a live process still holds it. A lock whose owner is gone,
+# or that has held no pid for a minute, is taken over by renaming the
+# directory to a name of this process (one rename finds it) and checking its
+# owner again: a lock moved that proves live, another process having
+# retaken it meanwhile, is made again with mkdir. state_unlock removes the
+# lock only while its pid file still names this process, and the rewrite
+# renames its file in only then, so a process that lost its lock to a third
+# writer in the narrow gap writes nothing and removes nothing.
 state_lock() {
   lock_file="$file.lock"
   lock_tries=$(( ${STATE_LOCK_WAIT:-20} * 5 ))
-  while ! ( set -C; echo "$$" > "$lock_file" ) 2> /dev/null; do
-    lock_owner=$(cat "$lock_file" 2> /dev/null)
-    if [ -n "$lock_owner" ] && ! kill -0 "$lock_owner" 2> /dev/null; then
+  while ! mkdir "$lock_file" 2> /dev/null; do
+    lock_owner=$(cat "$lock_file/pid" 2> /dev/null)
+    lock_gone=no
+    if [ -n "$lock_owner" ]; then
+      kill -0 "$lock_owner" 2> /dev/null || lock_gone=yes
+    elif [ -n "$(find "$lock_file" -maxdepth 0 -mmin +1 2> /dev/null)" ]; then
+      lock_gone=yes
+    fi
+    if [ "$lock_gone" = yes ]; then
       lock_stale="$lock_file.stale.$$"
+      rm -rf "$lock_stale"
       if mv "$lock_file" "$lock_stale" 2> /dev/null; then
-        moved_owner=$(cat "$lock_stale" 2> /dev/null)
-        if [ -z "$moved_owner" ] || kill -0 "$moved_owner" 2> /dev/null; then
-          ln "$lock_stale" "$lock_file" 2> /dev/null
+        moved_owner=$(cat "$lock_stale/pid" 2> /dev/null)
+        if [ -n "$moved_owner" ] && kill -0 "$moved_owner" 2> /dev/null; then
+          mkdir "$lock_file" 2> /dev/null && mv "$lock_stale/pid" "$lock_file/pid"
         fi
-        rm -f "$lock_stale"
+        rm -rf "$lock_stale"
       fi
       continue
     fi
@@ -837,12 +848,24 @@ state_lock() {
     lock_tries=$(( lock_tries - 1 ))
     pause
   done
+  echo "$$" > "$lock_file/pid"
+}
+
+# lock_held: succeeds while the lock's pid file names this process.
+lock_held() {
+  [ "$(cat "$lock_file/pid" 2> /dev/null)" = "$$" ]
+}
+
+# state_unlock: removes the lock when this process still holds it.
+state_unlock() {
+  if lock_held; then rm -rf "$lock_file"; fi
 }
 
 # state_rewrite MODE KEY [VALUE]: the run state with KEY set to VALUE (MODE
 # set, added at the end when absent) or without it (MODE drop), written
-# through a temporary file and a rename under the lock (state_lock): the
-# one rewrite write_key and drop_key share.
+# through a temporary file and a rename under the lock (state_lock), the
+# rename only while the lock is still held: the one rewrite write_key and
+# drop_key share.
 state_rewrite() {
   state_lock
   K="$2" V=$(escape "${3:-}") MODE="$1" awk '
@@ -860,9 +883,13 @@ state_rewrite() {
       print "{"
       for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
       print "}"
-    }' "$file" > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+    }' "$file" > "$file.tmp.$$" && lock_held && mv "$file.tmp.$$" "$file"
   rewritten=$?
-  rm -f "$lock_file"
+  if [ "$rewritten" != 0 ] && ! lock_held; then
+    echo "run_state: the lock on the run state of $change was lost; try again" >&2
+  fi
+  rm -f "$file.tmp.$$"
+  state_unlock
   return "$rewritten"
 }
 

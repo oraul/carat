@@ -1167,19 +1167,21 @@ wait $!
 echo "$! $at" > build/stages/state/check.pid
 echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):" > build/stages/state/check.log
 expect "run_state: a check log ending on the escape heading holds no verdict" 0 "^the last check: check: stage none killed at $at; read " stop_check "settle"
-# run-state-backlog-b: the run state's writer takes a lock beside the
-# detached runner; a live holder makes a write wait and then refuse, a dead
-# one's lock is taken over, and a write leaves no lock behind.
+# run-state-backlog-b: the run state's writer takes a lock directory beside
+# the detached runner, holding a pid file; a live holder makes a write wait
+# and then refuse, a dead one's lock is taken over, and a write leaves no
+# lock behind.
+state_lock_dir=build/pipeline/state.json.lock
 sleep 30 &
 lock_holder=$!
-echo "$lock_holder" > build/pipeline/state.json.lock
+mkdir "$state_lock_dir"
+echo "$lock_holder" > "$state_lock_dir/pid"
 expect "run_state: a write refuses while a live process holds the run state's lock" 1 "run state of state is locked by pid $lock_holder" env STATE_LOCK_WAIT=1 sh "$here/run_state.sh" set state x.held v
 kill "$lock_holder"
 wait "$lock_holder" 2> /dev/null
-echo "$lock_holder" > build/pipeline/state.json.lock
 expect "run_state: a write takes over the lock of a process that is gone" 0 "^$" env STATE_LOCK_WAIT=1 sh "$here/run_state.sh" set state x.held v
 expect "run_state: the write took over keeps its record" 0 "^v$" state get state x.held
-expect "run_state: a write leaves no lock behind" 1 "^$" test -e build/pipeline/state.json.lock
+expect "run_state: a write leaves no lock behind" 1 "^$" test -e "$state_lock_dir"
 # run-state-backlog-b (security Low (3)): a waiter that read a dead owner
 # does not remove the lock another process took in between: the lock it
 # moved aside turns out to be live and goes back. The stand-in cat swaps a
@@ -1194,7 +1196,7 @@ real_cat=$(command -v cat)
 cat > "$work/catbin/cat" <<EOF
 #!/bin/sh
 case "\$1" in
-  *state.json.lock)
+  *state.json.lock/pid)
     if [ ! -e "$work/cat.swapped" ]; then
       $real_cat "\$1"
       echo "$lock_live" > "\$1"
@@ -1205,11 +1207,33 @@ esac
 exec $real_cat "\$@"
 EOF
 chmod +x "$work/catbin/cat"
-echo "$lock_dead" > build/pipeline/state.json.lock
+mkdir "$state_lock_dir"
+echo "$lock_dead" > "$state_lock_dir/pid"
 expect "run_state: a waiter does not take a lock a live process retook after it read the dead owner" 1 "run state of state is locked by pid $lock_live" env PATH="$work/catbin:$PATH" STATE_LOCK_WAIT=1 sh "$here/run_state.sh" set state x.race v
+expect "run_state: the lock a waiter moved aside and found live is back with its owner" 0 "^$lock_live$" cat "$state_lock_dir/pid"
+rm -rf "$state_lock_dir" "$work/cat.swapped"
+# run-state-backlog-b (security Low (2)): a writer whose lock a third writer
+# took in the gap neither renames its file in nor removes the third's lock.
+# The stand-in awk replaces the lock with the live process's after the
+# rewrite is built.
+mkdir -p "$work/awkbin"
+real_awk=$(command -v awk)
+cat > "$work/awkbin/awk" <<EOF
+#!/bin/sh
+$real_awk "\$@"
+awk_status=\$?
+rm -rf "$PWD/$state_lock_dir"
+mkdir "$PWD/$state_lock_dir"
+echo "$lock_live" > "$PWD/$state_lock_dir/pid"
+exit \$awk_status
+EOF
+chmod +x "$work/awkbin/awk"
+expect "run_state: a writer that lost its lock to a third writer refuses and writes nothing" 1 "lock on the run state of state was lost" env PATH="$work/awkbin:$PATH" sh "$here/run_state.sh" set state x.lost v
+expect "run_state: the writer that lost its lock leaves the third writer's lock" 0 "^$lock_live$" cat "$state_lock_dir/pid"
+expect "run_state: the writer that lost its lock left the record unset" 0 "^$" state get state x.lost
 kill "$lock_live"
 wait "$lock_live" 2> /dev/null
-rm -f build/pipeline/state.json.lock "$work/cat.swapped"
+rm -rf "$state_lock_dir"
 # A runner gone past its trap leaves the make it started in its process
 # group; the next check stops that group before it starts its own runner.
 lost_child() {

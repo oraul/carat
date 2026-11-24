@@ -234,3 +234,8 @@
 - [x] 7.2 test fails at the earlier commit, then fix: security Low (4), escaped_revert reads paths one per line: a planted name holding a newline lists as one removal and leaves the file its second line names; the voided check lists each removal in its log; the removal checks the directory with cd -P under the main checkout's build/ and the change time against escape_since
 - [x] 7.3 test fails at the earlier commit, then fix: security Low (5), new_lane_branches matches any path ending in tmp/.lane-NAME: a stage that forges a branch through a worktree at another checkout's tmp/.lane-NAME fails the check, and a lane at the main checkout's tmp/.lane-NAME leaves it passing
 - [x] 7.4 test fails at the earlier commit, then fix: security Low (3), state_lock takes over a stale lock without an atomic step: a waiter does not take a lock a live process retook after it read the dead owner (rename aside, recheck the owner, link back)
+
+## 8. Review round: the lock's takeover window
+
+- [x] 8.1 test fails at the earlier commit, then fix: security Low (2), state_lock's rename-and-link-back takeover leaves a narrow window: the lock is a directory made with mkdir holding a pid file, a stale one taken over by renaming it aside and checking its owner again, released only while its pid file names this process, and the rewrite renamed in only while the lock is held; cases: a live holder refuses, a dead one's lock is taken over, a lock moved aside that proves live is back with its owner, a writer whose lock a third writer took in the gap refuses and leaves that lock and the record
+- [x] 8.2 Two writers can both retake a stale run state lock (task 6.2): closed by 8.1
