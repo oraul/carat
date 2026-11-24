@@ -315,7 +315,7 @@ phase('Plan')
 // The user's decision first (the user's of 2026-11-24): the sprint planner
 // follows what the user recorded, a sprint's contents included, before the
 // tiers, the sprint composition, and the size check.
-const USER_FIRST = 'User decision first: what the user\'s recorded request or a brief\'s USER DECISIONS says (one delivery, no split, a split as the user says, the items, their order, a sprint\'s contents) you follow as written, before the tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user\'s decision overrode your rule, with the rule and its number, instead of acting on it.'
+const USER_FIRST = 'User decision first: what the user\'s recorded request or a brief\'s USER DECISIONS says (one delivery, no split, a split as the user says, the items, their order, a sprint\'s contents) you follow as written, after the security-first step and T0, which always go first, and before the other tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user\'s decision overrode your rule, with the rule and its number, instead of acting on it.'
 const listed = (xs) => (xs.length ? xs.map((x) => `- ${x}`).join('\n') : '- none')
 const securityLines = ran ? security.findings.map(findingLine) : []
 const plan = !reviewed ? null : await agent(

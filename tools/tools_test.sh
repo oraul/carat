@@ -6612,12 +6612,12 @@ udf_js() {
   js "$wf" "USER_FIRST userDecisionsOf userFirst splitAgainstUser" "$1"
 }
 expect "workflow: the delivery planner prompt carries the user-decision-first rule and the brief's USER DECISIONS ahead of the plan request" 0 '^\[true,true,true,true\]$' \
-  udf_js "(t => [t.startsWith('User decision first:'), t.includes('before the tiers, the sprint composition, and the size check'), t.includes('The USER DECISIONS: \"one delivery for all 202 entries\"'), t.indexOf('one delivery for') > t.indexOf('overrode your rule')])(userFirst('WHY: x USER DECISIONS: \"one delivery for all 202 entries\" RULES: no url'))"
+  udf_js "(t => [t.startsWith('User decision first:'), t.includes('after the security-first step and T0, which always go first, and before the other tiers, the sprint composition, and the size check'), t.includes('The USER DECISIONS: \"one delivery for all 202 entries\"'), t.indexOf('one delivery for') > t.indexOf('overrode your rule')])(userFirst('WHY: x USER DECISIONS: \"one delivery for all 202 entries\" RULES: no url'))"
 expect "workflow: a brief with no user decision gives the rule alone" 0 '^\[true,true,true\]$' \
   udf_js "[userFirst('USER DECISIONS: none RULES: x') === USER_FIRST, userFirst('') === USER_FIRST, userDecisionsOf('USER DECISIONS: none') === '']"
 expect "workflow: the delivery planner start puts the rule and the decisions between the intro and the plan request" 0 '^1$' grep -c -F '`${intro()} ${userFirst(brief)} Plan the queue for this delivery. Brief:' "$wf"
 expect "workflow: the sprint planner start carries the same rule right after its mode" 0 '^1 1$' \
-  sh -c 'echo "$(grep -c -F "\`Mode: sprint. \${USER_FIRST} \${sprint.sprint} closed with" "$1") $(grep -c "^const USER_FIRST = .User decision first: .*before the tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user.\{1,2\}s decision overrode your rule, with the rule and its number" "$1")"' _ "$here/../.claude/workflows/sprint-planning.js"
+  sh -c 'echo "$(grep -c -F "\`Mode: sprint. \${USER_FIRST} \${sprint.sprint} closed with" "$1") $(grep -c "^const USER_FIRST = .User decision first: .*after the security-first step and T0, which always go first, and before the other tiers, the sprint composition, and the size check, and never split, reorder, or drop against it; where you would have decided otherwise, record in a decision that the user.\{1,2\}s decision overrode your rule, with the rule and its number" "$1")"' _ "$here/../.claude/workflows/sprint-planning.js"
 expect "workflow: a plan that splits a brief the user decided as one delivery is refused" 0 '^\[true,true\]$' \
   udf_js "(b => [splitAgainstUser(b, { decisions: [{ decision: 'split into five changes, deliver the first', evidence: 'size check' }], notes: [] }).startsWith('the planner split a brief the user decided as one delivery'), splitAgainstUser(b, { decisions: [], notes: ['queue the rest as follow-ups'] }) !== ''])('WHY: x USER DECISIONS: \"one delivery, no split\" RULES: y')"
 expect "workflow: a plan that records the override, or a brief the user did not decide, is not refused" 0 '^\[true,true,true\]$' \
@@ -6627,7 +6627,14 @@ expect "workflow: the delivery stops on a plan that splits against the user's de
 expect "agents: the planner's first rule is the user's decision, stated before the rubric step and the size check" 0 '^1 1 1$' \
   sh -c 'f=$1; r=$(grep -n "^First rule: the user.s decision" "$f" | cut -d: -f1); d=$(grep -n "^2[.] Then decide by the rubric" "$f" | cut -d: -f1); z=$(grep -n "^3[.] Size check: where the user decided nothing" "$f" | cut -d: -f1); echo "$([ -n "$r" ] && [ "$r" -lt "$d" ] && echo 1) $([ "$d" -lt "$z" ] && echo 1) $(grep "^First rule:" "$f" | grep -c "overrode your rule, with its number")"' _ "$agents/planner.md"
 expect "claude: the planner bullet names the user's decision first, never split or reordered against" 0 '^1$' \
-  grep -c "^- .planner.: follows a brief.s USER DECISIONS first, never splitting or reordering against them, then orders the lane queues" "$here/../CLAUDE.md"
+  grep -c "^- .planner.: follows a brief.s USER DECISIONS after security-first and T0, never splitting or reordering against them, then orders the lane queues" "$here/../CLAUDE.md"
+# The user's decision applies after the security-first step and T0: every copy
+# of the rule says so, so a decided order never puts a blocking security fix
+# behind other items.
+expect "planner rule: the agent file and goals.md state the user's decision after the security-first step and T0" 0 '^1 1$' \
+  sh -c 'echo "$(grep "^First rule:" "$1" | grep -c -F "is followed as written, after the security-first step 4 and T0, ahead of the other tiers") $(grep -c -F "the planner follows as written, after the security-first step and T0, which always go first, and before the other tiers" "$2")"' _ "$agents/planner.md" "$here/../docs/goals.md"
+expect "planner rule: both planner starts carry the user's decision after the security-first step and T0" 0 '^1 1$' \
+  sh -c 'echo "$(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$1") $(grep -c "^const USER_FIRST = .*you follow as written, after the security-first step and T0, which always go first, and before the other tiers" "$2")"' _ "$wf" "$here/../.claude/workflows/sprint-planning.js"
 speed_js() {
   js "$wf" "COMMIT CLOSABLE noteText staleRed securityBlocking narrowedFrom mergeRecords" "$1"
 }

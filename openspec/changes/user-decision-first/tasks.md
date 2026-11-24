@@ -16,3 +16,7 @@
 
 - [x] 3.1 Review the diff by the quality reviewer's steps and settle each finding
 - [x] 3.2 Record the advisory finding of the duplicated rule text and the unpinned documents in `docs/findings/user-decision-first.md`
+
+## 4. Review fix
+
+- [x] 4.1 State in the agent file, `docs/goals.md`, both USER_FIRST prompts, and the `CLAUDE.md` planner bullet that the user's decision applies after the security-first step and T0, so T0 items always go first, and pin it with two tools-test cases (a trimmed few words in the agent file, `CLAUDE.md`, to stay within their budgets)
