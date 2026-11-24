@@ -529,7 +529,10 @@
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
 # (build/metrics/current.tsv, under tmp/.lane-CHANGE/ when run from the
 # main checkout while that lane exists), CHECK_WAIT (540, seconds check
-# waits), LANE_WRITTEN (none, the paths under the main checkout's build/
+# waits), STATE_LOCK_WAIT (20, seconds a write waits for the run state's
+# lock), RUNNER_WAIT (30, seconds check waits for a runner to exit),
+# SCAN_TIMEOUT (60, seconds the escape scan's ls-remote may take),
+# LANE_WRITTEN (none, the paths under the main checkout's build/
 # another lane writes, whose writes alone make a check read escaped),
 # BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
 # date groom files a findings entry with, else the UTC day),
@@ -806,11 +809,65 @@ drop_key() {
   state_rewrite drop "$1"
 }
 
+# state_lock: takes the run state's lock, a directory "FILE.lock" made with
+# mkdir (one process wins) holding a file "pid" with its owner's pid, so
+# the runner and a caller rewriting the run state at once do not lose a
+# record; waits at most STATE_LOCK_WAIT seconds (20) and stops with a
+# message when a live process still holds it. A lock whose owner is gone,
+# or that has held no pid for a minute, is taken over by renaming the
+# directory to a name of this process (one rename finds it) and checking its
+# owner again: a lock moved that proves live, another process having
+# retaken it meanwhile, is made again with mkdir. state_unlock removes the
+# lock only while its pid file still names this process, and the rewrite
+# renames its file in only then, so a process that lost its lock to a third
+# writer in the narrow gap writes nothing and removes nothing.
+state_lock() {
+  lock_file="$file.lock"
+  lock_tries=$(( ${STATE_LOCK_WAIT:-20} * 5 ))
+  while ! mkdir "$lock_file" 2> /dev/null; do
+    lock_owner=$(cat "$lock_file/pid" 2> /dev/null)
+    lock_gone=no
+    if [ -n "$lock_owner" ]; then
+      kill -0 "$lock_owner" 2> /dev/null || lock_gone=yes
+    elif [ -n "$(find "$lock_file" -maxdepth 0 -mmin +1 2> /dev/null)" ]; then
+      lock_gone=yes
+    fi
+    if [ "$lock_gone" = yes ]; then
+      lock_stale="$lock_file.stale.$$"
+      rm -rf "$lock_stale"
+      if mv "$lock_file" "$lock_stale" 2> /dev/null; then
+        moved_owner=$(cat "$lock_stale/pid" 2> /dev/null)
+        if [ -n "$moved_owner" ] && kill -0 "$moved_owner" 2> /dev/null; then
+          mkdir "$lock_file" 2> /dev/null && mv "$lock_stale/pid" "$lock_file/pid"
+        fi
+        rm -rf "$lock_stale"
+      fi
+      continue
+    fi
+    [ "$lock_tries" -gt 0 ] || die "the run state of $change is locked by pid ${lock_owner:-unknown}; try again"
+    lock_tries=$(( lock_tries - 1 ))
+    pause
+  done
+  echo "$$" > "$lock_file/pid"
+}
+
+# lock_held: succeeds while the lock's pid file names this process.
+lock_held() {
+  [ "$(cat "$lock_file/pid" 2> /dev/null)" = "$$" ]
+}
+
+# state_unlock: removes the lock when this process still holds it.
+state_unlock() {
+  if lock_held; then rm -rf "$lock_file"; fi
+}
+
 # state_rewrite MODE KEY [VALUE]: the run state with KEY set to VALUE (MODE
 # set, added at the end when absent) or without it (MODE drop), written
-# through a temporary file and a rename: the one rewrite write_key and
+# through a temporary file and a rename under the lock (state_lock), the
+# rename only while the lock is still held: the one rewrite write_key and
 # drop_key share.
 state_rewrite() {
+  state_lock
   K="$2" V=$(escape "${3:-}") MODE="$1" awk '
     /^  "/ {
       line = $0; sub(/,$/, "", line)
@@ -826,7 +883,14 @@ state_rewrite() {
       print "{"
       for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
       print "}"
-    }' "$file" > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+    }' "$file" > "$file.tmp.$$" && lock_held && mv "$file.tmp.$$" "$file"
+  rewritten=$?
+  if [ "$rewritten" != 0 ] && ! lock_held; then
+    echo "run_state: the lock on the run state of $change was lost; try again" >&2
+  fi
+  rm -f "$file.tmp.$$"
+  state_unlock
+  return "$rewritten"
 }
 
 utc_now() {
@@ -949,6 +1013,46 @@ escaped_note() {
     LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
 }
 
+# escaped_revert: removes each file a stage planted under the main
+# checkout's build/ that no LANE_WRITTEN path names (lane_written), a
+# regular file or a link only, so a forged log or binary there is not left
+# for a later reader to trust; the check is void either way. The paths come
+# from main_scan_raw, NUL-separated, so a name holding a newline is one
+# path; a file goes only when its directory resolved with cd -P still lies
+# under the main checkout's build/ and its own change time is newer than
+# escape_since, and each removal is listed in the check log. Nothing else
+# outside the clone is touched.
+escaped_revert() {
+  [ -n "$main_tree" ] || return 0
+  main_real=$(cd -P "$main_tree" 2> /dev/null && pwd -P) || return 0
+  main_scan_raw | MAIN="$main_tree/" OWNED="$lane_written_paths" awk -v RS='\001' -v ORS='\001' "$OWNED_AWK"' !lane_owned($0)' | tr '\001' '\000' |
+    ROOT="$main_tree" REAL="$main_real" SINCE="$escape_since" xargs -0 -r sh -c '
+      for planted do
+        case "$planted" in "$ROOT/build/"*) ;; *) continue ;; esac
+        case "$planted" in */../*|*/..|*/./*|*/.) continue ;; esac
+        { [ -f "$planted" ] || [ -L "$planted" ]; } || continue
+        planted_dir=$(cd -P -- "${planted%/*}" 2> /dev/null && pwd -P) || continue
+        case "$planted_dir" in "$REAL/build"|"$REAL/build/"*) ;; *) continue ;; esac
+        [ -n "$(find "$planted" -maxdepth 0 -newerct "$SINCE" -print 2> /dev/null)" ] || continue
+        rm -f -- "$planted" && printf "check: removed %s\n" "$(printf %s "$planted" | tr "\n" "?")"
+      done' sh | visible_text
+}
+
+# The awk text lane_written and escaped_revert share: lane_owned(PATH) is 1
+# when PATH is a path of OWNED (LANE_WRITTEN) under MAIN, or lies under one.
+OWNED_AWK='
+  BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
+  function lane_owned(path,   i, p, full) {
+    for (i = 1; i <= n; i++) {
+      p = owned[i]
+      if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
+      sub(/\/+$/, "", p)
+      full = ENVIRON["MAIN"] p
+      if (path == full || index(path, full "/") == 1) return 1
+    }
+    return 0
+  }'
+
 # lane_written PATHS: true when every escaped path, one per line, is a
 # path of LANE_WRITTEN under the main checkout seen from a lane, or lies
 # under one, which another lane's tools are known to write, so the
@@ -964,18 +1068,7 @@ escaped_note() {
 # build/ or naming a . or .. segment is ignored.
 lane_written() {
   [ -n "$main_tree" ] && [ -n "$lane_written_paths" ] || return 1
-  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk '
-    BEGIN { n = split(ENVIRON["OWNED"], owned, " ") }
-    { ok = 0
-      for (i = 1; i <= n; i++) {
-        p = owned[i]
-        if (p !~ /^build\/[A-Za-z0-9_.\/-]+$/ || p ~ /(^|\/)[.][.]?(\/|$)/) continue
-        sub(/\/+$/, "", p)
-        full = ENVIRON["MAIN"] p
-        if ($0 == full || index($0, full "/") == 1) ok = 1
-      }
-      if (!ok) other = 1 }
-    END { exit other }'
+  printf '%s\n' "$1" | MAIN="$main_tree/" OWNED="$lane_written_paths" awk "$OWNED_AWK"' !lane_owned($0) { other = 1 } END { exit other }'
 }
 
 # stage_launch NAME CMD...: starts CMD as a job in the background, its
@@ -993,8 +1086,14 @@ stage_launch() {
   stage_record "stage.$launch_name" "running 0s $launch_at $(utc_now)"
   (
     job_child=''
-    trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null' TERM
-    "$@" > "$launch_log" 2>&1 < /dev/null &
+    job_group=''
+    trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null; [ -z "$job_group" ] || kill -s TERM -- "-$job_group" 2> /dev/null' TERM
+    if command -v setsid > /dev/null 2>&1; then
+      setsid "$@" > "$launch_log" 2>&1 < /dev/null &
+      job_group=$!
+    else
+      "$@" > "$launch_log" 2>&1 < /dev/null &
+    fi
     job_child=$!
     wait "$job_child"
     job_status=$?
@@ -1002,6 +1101,9 @@ stage_launch() {
       wait "$job_child"
       job_status=$?
     done
+    # What the stage left running in its own process group (setsid) ends
+    # with it, so nothing writes after the escape scan.
+    [ -z "$job_group" ] || kill -s KILL -- "-$job_group" 2> /dev/null
     exit "$job_status"
   ) &
   job_table="$job_table
@@ -1244,8 +1346,9 @@ check_stages() {
   escaped=$(escaped_paths)
   if [ -n "$escaped" ]; then
     echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
-    printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
+    printf '%s\n' "$escaped" | head -n 20 | visible_text | sed 's/^/| /'
     escaped_note "$escaped"
+    escaped_revert
     escaped_records
     if lane_written "$escaped"; then
       echo "check: stage none escaped at $head; read $(check_log)"
@@ -1365,6 +1468,7 @@ escape_mark() {
   fi
   escape_config=$(config_view)
   escape_lanes=$(lane_branches)
+  escape_refs=''
   escape_refs=$(refs_view)
   escape_index=$(index_view "$top")
   escape_state=$(state_view)
@@ -1405,16 +1509,31 @@ lane_branches() {
     OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++ } /^branch / && n > 1 && $2 != ENVIRON["OWN"] { print $2 }'
 }
 
+# The branches of the linked worktrees lane-open makes (the path
+# MAIN/tmp/.lane-NAME of the main checkout, NAME holding no slash) among
+# lane_branches: the only ones a scan takes as a lane opened since the
+# mark, so a worktree a stage makes elsewhere, one ending in tmp/.lane-NAME
+# included, hides no branch.
+new_lane_branches() {
+  git -C "$top" worktree list --porcelain 2> /dev/null |
+    OWN=$(git -C "$top" symbolic-ref -q HEAD) LANES="${main_tree:-$top}/tmp/.lane-" awk '/^worktree / { n++; path = substr($0, 10) }
+      /^branch / && n > 1 && $2 != ENVIRON["OWN"] && index(path, ENVIRON["LANES"]) == 1 &&
+        length(path) > length(ENVIRON["LANES"]) && substr(path, length(ENVIRON["LANES"]) + 1) !~ /\// { print $2 }'
+}
+
 # The references of the common repository, name and object, less the
 # remote-tracking refs, which a fetch or push of any lane rewrites and the
 # next fetch restores, the lanes' branches at escape_mark or now
-# (lane_branches), and from a lane the main checkout's branch, which the
-# merger fast-forwards (main_moved).
+# (lane_branches, and new_lane_branches for one absent at the mark), and from
+# a lane the main checkout's branch, which the merger fast-forwards
+# (main_moved).
 refs_view() {
   git -C "$top" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null |
     SKIP="$escape_lanes
-$(lane_branches)
-$main_branch" awk 'BEGIN { n = split(ENVIRON["SKIP"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "") skip[l[i]] = 1 }
+$main_branch" NOW="$(new_lane_branches)" PRIOR="$escape_refs" awk 'BEGIN {
+      n = split(ENVIRON["SKIP"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "") skip[l[i]] = 1
+      n = split(ENVIRON["PRIOR"], p, "\n"); for (i = 1; i <= n; i++) { split(p[i], f, " "); known[f[1]] = 1 }
+      n = split(ENVIRON["NOW"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "" && !(l[i] in known)) skip[l[i]] = 1 }
       $1 !~ /^refs\/remotes\// && !($1 in skip)'
 }
 
@@ -1454,12 +1573,18 @@ tree_find() {
 # could forge text a later reader trusts there; a lane that owns one names
 # it in LANE_WRITTEN (lane_written) for an escaped verdict.
 main_scan() {
+  main_scan_raw | tr '\001' '\n'
+}
+
+# main_scan's paths ended by a byte 1 each, so a name holding a newline
+# stays one path (escaped_revert).
+main_scan_raw() {
   # Both lists NUL-separated, read by awk as records ended by a byte 1, so
   # a path holding a tab, newline, quote, or backslash, which git quotes
   # in its line form, still matches the one find prints.
   { git -C "$main_tree" ls-files -z 2> /dev/null | tr '\0' '\001' | MAIN="$main_tree" awk -v RS='\001' -v ORS='\001' '{ print "T " ENVIRON["MAIN"] "/" $0 }'
     tree_find "$main_tree" -print0 ! -type d | tr '\0' '\001' | awk -v RS='\001' -v ORS='\001' '{ print "F " $0 }'; } |
-    awk -v RS='\001' -v ORS='\n' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
+    awk -v RS='\001' -v ORS='\001' '/^T / { tracked[substr($0, 3)] = 1; next } !(substr($0, 3) in tracked) { print substr($0, 3) }'
 }
 
 # What the main checkout holds against its HEAD, which the merger's
@@ -1471,10 +1596,10 @@ main_view() {
   GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" ls-files -v 2> /dev/null | grep -v '^H '
 }
 
-# bounded COMMAND...: COMMAND with at most 60 seconds where timeout exists,
-# so a stalled connection or a prompt cannot hold a check.
+# bounded COMMAND...: COMMAND with at most SCAN_TIMEOUT seconds (60) where
+# timeout exists, so a stalled connection or a prompt cannot hold a check.
 bounded() {
-  if command -v timeout > /dev/null 2>&1; then timeout 60 "$@"; else "$@"; fi
+  if command -v timeout > /dev/null 2>&1; then timeout "${SCAN_TIMEOUT:-60}" "$@"; else "$@"; fi
 }
 
 # True when the main checkout's HEAD names another commit than at
@@ -1693,11 +1818,38 @@ check_signalled() {
   exit 1
 }
 
+# valid_pid WORD: prints WORD when it is a process id a group signal may
+# name (digits, no leading zero, above 1), nothing otherwise, so a pid file
+# a stage wrote cannot make a signal reach the waiter's own group (0) or
+# every process (1).
+valid_pid() {
+  case "$1" in ''|*[!0-9]*|0*|1) ;; *) printf '%s' "$1" ;; esac
+}
+
+# runner_group_stop PID: stops the processes the dead runner PID left in its
+# process group (the runner leads one: setsid), a make still running its
+# stages, so no second runner shares the clone's carry with it. Only when no
+# process holds the pid any more: a live one is another program's, never
+# signalled, and while a member stays in the group the kernel does not give
+# the pid to another process.
+runner_group_stop() {
+  [ -n "$(valid_pid "$1")" ] || return 0
+  group_state=$(ps -o stat= -p "$1" 2> /dev/null)
+  case "$group_state" in ''|Z*) ;; *) return 0 ;; esac
+  kill -s 0 -- "-$1" 2> /dev/null || return 0
+  kill -s TERM -- "-$1" 2> /dev/null
+  pause
+  kill -s KILL -- "-$1" 2> /dev/null
+  return 0
+}
+
 # A runner gone without a verdict (killed by a signal it cannot trap):
-# its running stage, if any, is recorded as killed and its log says so;
-# prints the verdict line and appends it to the runner's output.
+# its running stage, if any, is recorded as killed and its log says so, its
+# process group stopped (runner_group_stop); prints the verdict line and
+# appends it to the runner's output.
 check_lost() {
   at=$1
+  runner_group_stop "${2:-}"
   clone_lost
   lost=$(keys_under stage. | sed -n 's/^\([^=]*\)=running \(.*\)$/\1 \2/p')
   # Every stage the runner left running is recorded killed; the verdict
@@ -1742,6 +1894,7 @@ check_wait() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ < "$pid_file"
+  pid=$(valid_pid "$pid")
   runner_finish "$pid"
   joined=0
   if runner_alive "$pid" && [ "$at" = "$head" ]; then
@@ -1753,7 +1906,7 @@ check_wait() {
     runner_wait "$pid"
     echo "the superseded check: $(check_verdict)"
   elif [ -f "$pid_file" ]; then
-    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at")"
+    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at" "$pid")"
   fi
   if [ "$joined" = 0 ]; then
     rm -f "$pid_file"
@@ -1776,7 +1929,7 @@ check_wait() {
     elif [ -n "$pid" ] || [ "$seen" = 1 ] || [ $(( $(date +%s) - begun )) -ge 10 ]; then
       # Gone, or never started, without a verdict: the pid file holds
       # only the runner started or rejoined here.
-      [ -n "$(check_verdict)" ] || check_lost "$head" > /dev/null
+      [ -n "$(check_verdict)" ] || check_lost "$head" "$pid" > /dev/null
       rm -f "$pid_file"
       continue
     fi
@@ -1798,6 +1951,7 @@ read_pid() {
   pid=''
   at=''
   [ ! -f "$pid_file" ] || read -r pid at _ 2>/dev/null < "$pid_file" || true
+  pid=$(valid_pid "$pid")
 }
 
 # runner_finish PID: a runner prints its verdict, then drops its clone and
@@ -1808,13 +1962,13 @@ runner_finish() {
   runner_wait "$1" finished
 }
 
-# runner_wait PID [finished]: waits, at most 30 seconds by the clock, for
-# the runner PID to exit; with "finished", only while its output already
-# ends in its verdict. The one wait runner_finish and the superseding of a
-# runner in check_wait share.
+# runner_wait PID [finished]: waits, at most RUNNER_WAIT seconds (30) by the
+# clock, for the runner PID to exit; with "finished", only while its output
+# already ends in its verdict. The one wait runner_finish and the superseding
+# of a runner in check_wait share.
 runner_wait() {
   began=$(date +%s)
-  while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt 30 ]; do
+  while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt "${RUNNER_WAIT:-30}" ]; do
     pause
   done
 }
