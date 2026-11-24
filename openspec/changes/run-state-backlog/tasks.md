@@ -36,3 +36,7 @@
 ## 8. Fix round
 
 - [x] 8.1 `main_scan` exempts only regular files named build/NAME.log from the escape scan (`-type f`), so a link planted there is reported as escaped; tools-test case plants such a link and expects the failed check (security Low (5), tools/run_state.sh)
+
+## 9. Advisories closed
+
+- [x] 9.1 `main_scan` exempts only a regular file with one link named build/NAME.log (`-links 1`), so a hard link planted there is reported as escaped; tools-test case hard-links a file outside the main checkout to build/NAME.log and expects the failed check (security Low (4))

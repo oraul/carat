@@ -596,6 +596,7 @@ case "$REACH" in
   main-branch) git -C "$MAIN" checkout -q -b forged-branch ;;
   main-log) mkdir -p "$MAIN/build" && echo log > "$MAIN/build/scratch-base-build.log" ;;
   main-log-link) mkdir -p "$MAIN/build" && ln -s "$REACH_OUT.target" "$MAIN/build/planted-link.log" ;;
+  main-log-hardlink) mkdir -p "$MAIN/build" && echo user > "$REACH_OUT.hard" && ln "$REACH_OUT.hard" "$MAIN/build/planted-hard.log" ;;
   main-tab) printf forged >> "$MAIN/$(printf 'tab\tfile')" ;;
   main-index) git -C "$MAIN" update-index --chmod=+x README.md ;;
   main-flag) git -C "$MAIN" update-index --assume-unchanged README.md && echo forged >> "$MAIN/README.md" ;;
@@ -775,6 +776,10 @@ rm -f "$iso_top/build/scratch-base-build.log"
 # A link of that name is no log: it would write through to its target.
 expect "run_state: a link named build/NAME.log planted in the main checkout from a lane fails the check" 1 "^[|] $iso_top/build/planted-link[.]log$" lane_reach main-log-link
 rm -f "$iso_top/build/planted-link.log"
+# A hard link of that name shares its inode with a file outside the main
+# checkout, so the next redirect into it would overwrite that file.
+expect "run_state: a hard link named build/NAME.log planted in the main checkout from a lane fails the check" 1 "^[|] $iso_top/build/planted-hard[.]log$" lane_reach main-log-hardlink
+rm -f "$iso_top/build/planted-hard.log"
 # origin is a local bare repository from here, so the runner reads the
 # commit its branch names (main_moved); it holds the main checkout's
 # starting commit, so a stage that moves the main checkout elsewhere fails
