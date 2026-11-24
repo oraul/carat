@@ -529,7 +529,10 @@
 # PREFIX-feature.tsv and PREFIX-backlog.tsv), METRICS_OUT
 # (build/metrics/current.tsv, under tmp/.lane-CHANGE/ when run from the
 # main checkout while that lane exists), CHECK_WAIT (540, seconds check
-# waits), LANE_WRITTEN (none, the paths under the main checkout's build/
+# waits), STATE_LOCK_WAIT (20, seconds a write waits for the run state's
+# lock), RUNNER_WAIT (30, seconds check waits for a runner to exit),
+# SCAN_TIMEOUT (60, seconds the escape scan's ls-remote may take),
+# LANE_WRITTEN (none, the paths under the main checkout's build/
 # another lane writes, whose writes alone make a check read escaped),
 # BACKLOG_DIR (docs/backlog), FINDINGS_DIR (docs/findings), TODAY (the
 # date groom files a findings entry with, else the UTC day),
@@ -806,11 +809,32 @@ drop_key() {
   state_rewrite drop "$1"
 }
 
+# state_lock: takes the run state's lock, a file "FILE.lock" holding the
+# pid of its owner and created exclusively, so the runner and a caller
+# rewriting the run state at once do not lose a record; waits at most
+# STATE_LOCK_WAIT seconds (20), removes a lock whose owner is gone, and
+# stops with a message when a live process still holds it.
+state_lock() {
+  lock_file="$file.lock"
+  lock_tries=$(( ${STATE_LOCK_WAIT:-20} * 5 ))
+  while ! ( set -C; echo "$$" > "$lock_file" ) 2> /dev/null; do
+    lock_owner=$(cat "$lock_file" 2> /dev/null)
+    if [ -n "$lock_owner" ] && ! kill -0 "$lock_owner" 2> /dev/null; then
+      rm -f "$lock_file"
+      continue
+    fi
+    [ "$lock_tries" -gt 0 ] || die "the run state of $change is locked by pid ${lock_owner:-unknown}; try again"
+    lock_tries=$(( lock_tries - 1 ))
+    pause
+  done
+}
+
 # state_rewrite MODE KEY [VALUE]: the run state with KEY set to VALUE (MODE
 # set, added at the end when absent) or without it (MODE drop), written
-# through a temporary file and a rename: the one rewrite write_key and
-# drop_key share.
+# through a temporary file and a rename under the lock (state_lock): the
+# one rewrite write_key and drop_key share.
 state_rewrite() {
+  state_lock
   K="$2" V=$(escape "${3:-}") MODE="$1" awk '
     /^  "/ {
       line = $0; sub(/,$/, "", line)
@@ -827,6 +851,9 @@ state_rewrite() {
       for (i = 0; i < n; i++) print lines[i] (i < n - 1 ? "," : "")
       print "}"
     }' "$file" > "$file.tmp.$$" && mv "$file.tmp.$$" "$file"
+  rewritten=$?
+  rm -f "$lock_file"
+  return "$rewritten"
 }
 
 utc_now() {
@@ -949,6 +976,22 @@ escaped_note() {
     LC_ALL=C tr -c '[:print:]\n' '?' | awk 'NR > 1 { printf "; " } { printf "%s", $0 }')"
 }
 
+# escaped_revert PATHS: removes each escaped file, one path per line, that
+# a stage planted under the main checkout's build/ and no LANE_WRITTEN path
+# names (lane_written), a regular file or a link only, so a forged log or
+# binary there is not left for a later reader to trust; the check is void
+# either way. Nothing else outside the clone is touched.
+escaped_revert() {
+  [ -n "$main_tree" ] || return 0
+  printf '%s\n' "$1" | while IFS= read -r planted; do
+    case "$planted" in "$main_tree/build/"*) ;; *) continue ;; esac
+    case "$planted" in */../*|*/..) continue ;; esac
+    { [ -f "$planted" ] || [ -L "$planted" ]; } || continue
+    ! lane_written "$planted" || continue
+    rm -f "$planted"
+  done
+}
+
 # lane_written PATHS: true when every escaped path, one per line, is a
 # path of LANE_WRITTEN under the main checkout seen from a lane, or lies
 # under one, which another lane's tools are known to write, so the
@@ -993,8 +1036,14 @@ stage_launch() {
   stage_record "stage.$launch_name" "running 0s $launch_at $(utc_now)"
   (
     job_child=''
-    trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null' TERM
-    "$@" > "$launch_log" 2>&1 < /dev/null &
+    job_group=''
+    trap '[ -z "$job_child" ] || kill -TERM "$job_child" 2> /dev/null; [ -z "$job_group" ] || kill -s TERM -- "-$job_group" 2> /dev/null' TERM
+    if command -v setsid > /dev/null 2>&1; then
+      setsid "$@" > "$launch_log" 2>&1 < /dev/null &
+      job_group=$!
+    else
+      "$@" > "$launch_log" 2>&1 < /dev/null &
+    fi
     job_child=$!
     wait "$job_child"
     job_status=$?
@@ -1002,6 +1051,9 @@ stage_launch() {
       wait "$job_child"
       job_status=$?
     done
+    # What the stage left running in its own process group (setsid) ends
+    # with it, so nothing writes after the escape scan.
+    [ -z "$job_group" ] || kill -s KILL -- "-$job_group" 2> /dev/null
     exit "$job_status"
   ) &
   job_table="$job_table
@@ -1244,8 +1296,9 @@ check_stages() {
   escaped=$(escaped_paths)
   if [ -n "$escaped" ]; then
     echo "check: files outside its clone changed while every stage exited 0, so no pass counts (make toolchain reinstalls a changed toolchain):"
-    printf '%s\n' "$escaped" | head -n 20 | sed 's/^/| /'
+    printf '%s\n' "$escaped" | head -n 20 | visible_text | sed 's/^/| /'
     escaped_note "$escaped"
+    escaped_revert "$escaped"
     escaped_records
     if lane_written "$escaped"; then
       echo "check: stage none escaped at $head; read $(check_log)"
@@ -1365,6 +1418,7 @@ escape_mark() {
   fi
   escape_config=$(config_view)
   escape_lanes=$(lane_branches)
+  escape_refs=''
   escape_refs=$(refs_view)
   escape_index=$(index_view "$top")
   escape_state=$(state_view)
@@ -1405,16 +1459,28 @@ lane_branches() {
     OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++ } /^branch / && n > 1 && $2 != ENVIRON["OWN"] { print $2 }'
 }
 
+# The branches of the linked worktrees lane-open makes (a path ending in
+# tmp/.lane-NAME) among lane_branches: the only ones a scan takes as a
+# lane opened since the mark, so a worktree a stage makes elsewhere hides
+# no branch.
+new_lane_branches() {
+  git -C "$top" worktree list --porcelain 2> /dev/null |
+    OWN=$(git -C "$top" symbolic-ref -q HEAD) awk '/^worktree / { n++; path = substr($0, 10) }
+      /^branch / && n > 1 && $2 != ENVIRON["OWN"] && path ~ /\/tmp\/[.]lane-[^\/]+$/ { print $2 }'
+}
+
 # The references of the common repository, name and object, less the
 # remote-tracking refs, which a fetch or push of any lane rewrites and the
 # next fetch restores, the lanes' branches at escape_mark or now
-# (lane_branches), and from a lane the main checkout's branch, which the
+# (lane_branches; new_lane_branches only for one absent at the mark), and from a lane the main checkout's branch, which the
 # merger fast-forwards (main_moved).
 refs_view() {
   git -C "$top" for-each-ref --format='%(refname) %(objectname)' 2> /dev/null |
     SKIP="$escape_lanes
-$(lane_branches)
-$main_branch" awk 'BEGIN { n = split(ENVIRON["SKIP"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "") skip[l[i]] = 1 }
+$main_branch" NOW="$(new_lane_branches)" PRIOR="$escape_refs" awk 'BEGIN {
+      n = split(ENVIRON["SKIP"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "") skip[l[i]] = 1
+      n = split(ENVIRON["PRIOR"], p, "\n"); for (i = 1; i <= n; i++) { split(p[i], f, " "); known[f[1]] = 1 }
+      n = split(ENVIRON["NOW"], l, "\n"); for (i = 1; i <= n; i++) if (l[i] != "" && !(l[i] in known)) skip[l[i]] = 1 }
       $1 !~ /^refs\/remotes\// && !($1 in skip)'
 }
 
@@ -1471,10 +1537,10 @@ main_view() {
   GIT_OPTIONAL_LOCKS=0 git -C "$main_tree" ls-files -v 2> /dev/null | grep -v '^H '
 }
 
-# bounded COMMAND...: COMMAND with at most 60 seconds where timeout exists,
+# bounded COMMAND...: COMMAND with at most SCAN_TIMEOUT seconds (60) where timeout exists,
 # so a stalled connection or a prompt cannot hold a check.
 bounded() {
-  if command -v timeout > /dev/null 2>&1; then timeout 60 "$@"; else "$@"; fi
+  if command -v timeout > /dev/null 2>&1; then timeout "${SCAN_TIMEOUT:-60}" "$@"; else "$@"; fi
 }
 
 # True when the main checkout's HEAD names another commit than at
@@ -1693,11 +1759,30 @@ check_signalled() {
   exit 1
 }
 
+# runner_group_stop PID: stops the processes the dead runner PID left in its
+# process group (the runner leads one: setsid), a make still running its
+# stages, so no second runner shares the clone's carry with it. Only when no
+# process holds the pid any more: a live one is another program's, never
+# signalled, and while a member stays in the group the kernel does not give
+# the pid to another process.
+runner_group_stop() {
+  [ -n "$1" ] || return 0
+  group_state=$(ps -o stat= -p "$1" 2> /dev/null)
+  case "$group_state" in ''|Z*) ;; *) return 0 ;; esac
+  kill -s 0 -- "-$1" 2> /dev/null || return 0
+  kill -s TERM -- "-$1" 2> /dev/null
+  pause
+  kill -s KILL -- "-$1" 2> /dev/null
+  return 0
+}
+
 # A runner gone without a verdict (killed by a signal it cannot trap):
-# its running stage, if any, is recorded as killed and its log says so;
-# prints the verdict line and appends it to the runner's output.
+# its running stage, if any, is recorded as killed and its log says so, its
+# process group stopped (runner_group_stop); prints the verdict line and
+# appends it to the runner's output.
 check_lost() {
   at=$1
+  runner_group_stop "${2:-}"
   clone_lost
   lost=$(keys_under stage. | sed -n 's/^\([^=]*\)=running \(.*\)$/\1 \2/p')
   # Every stage the runner left running is recorded killed; the verdict
@@ -1753,7 +1838,7 @@ check_wait() {
     runner_wait "$pid"
     echo "the superseded check: $(check_verdict)"
   elif [ -f "$pid_file" ]; then
-    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at")"
+    [ -n "$(check_verdict)" ] || echo "the last check: $(check_lost "$at" "$pid")"
   fi
   if [ "$joined" = 0 ]; then
     rm -f "$pid_file"
@@ -1776,7 +1861,7 @@ check_wait() {
     elif [ -n "$pid" ] || [ "$seen" = 1 ] || [ $(( $(date +%s) - begun )) -ge 10 ]; then
       # Gone, or never started, without a verdict: the pid file holds
       # only the runner started or rejoined here.
-      [ -n "$(check_verdict)" ] || check_lost "$head" > /dev/null
+      [ -n "$(check_verdict)" ] || check_lost "$head" "$pid" > /dev/null
       rm -f "$pid_file"
       continue
     fi
@@ -1808,13 +1893,13 @@ runner_finish() {
   runner_wait "$1" finished
 }
 
-# runner_wait PID [finished]: waits, at most 30 seconds by the clock, for
+# runner_wait PID [finished]: waits, at most RUNNER_WAIT seconds (30) by the clock, for
 # the runner PID to exit; with "finished", only while its output already
 # ends in its verdict. The one wait runner_finish and the superseding of a
 # runner in check_wait share.
 runner_wait() {
   began=$(date +%s)
-  while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt 30 ]; do
+  while runner_alive "$1" && { [ "${2:-}" != finished ] || [ -n "$(check_verdict)" ]; } && [ $(( $(date +%s) - began )) -lt "${RUNNER_WAIT:-30}" ]; do
     pause
   done
 }
