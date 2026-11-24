@@ -40,3 +40,7 @@
 ## 9. Advisories closed
 
 - [x] 9.1 `main_scan` exempts only a regular file with one link named build/NAME.log (`-links 1`), so a hard link planted there is reported as escaped; tools-test case hard-links a file outside the main checkout to build/NAME.log and expects the failed check (security Low (4))
+
+## 10. Fix round: the build log exemption
+
+- [x] 10.1 `main_scan` no longer exempts any build/NAME.log of the main checkout: every log changed during a check is reported, and only a LANE_WRITTEN path ends in an escaped verdict (`lane_written`); tools-test cases plant a log with and without LANE_WRITTEN naming it and expect the failed and the escaped verdicts (security Low (3), tools/run_state.sh)

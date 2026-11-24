@@ -769,11 +769,17 @@ expect "run_state: a stage that writes a tracked file with a tab in its name fro
 tab_reported() { grep -c "/tab$(printf '\t')file" build/stages/isolated/check.log || true; }
 expect "run_state: a tracked path holding a tab is not reported as an untracked file" 0 "^0$" tab_reported
 (cd "$iso_top" && git rm -q -f -- "$tab_name")
-# A log another lane's benchmark agent writes in the main checkout's build/
-# is no escape of this lane's check; a file under build/bin still is.
-expect "run_state: a log written in the main checkout's build/ by another lane leaves a lane's check passing" 0 "every stage passed" lane_reach main-log
+# A log in the main checkout's build/ is reported like any other file, so a
+# stage cannot forge one a later reader trusts; it is another lane's write
+# (an escaped verdict, no fix round) only when LANE_WRITTEN names it.
+expect "run_state: a log written in the main checkout's build/ from a lane fails the check" 1 "^[|] $iso_top/build/scratch-base-build[.]log$" lane_reach main-log
+expect "run_state: a log in the main checkout's build/ outside LANE_WRITTEN ends in a failed verdict line" 0 "^check: stage none failed at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=build/scratch-base-build.log
+expect "run_state: a log named by LANE_WRITTEN in the main checkout's build/ from a lane ends in an escaped verdict line" 1 "^[|] $iso_top/build/scratch-base-build[.]log$" lane_reach main-log
+expect "run_state: a log named by LANE_WRITTEN in the main checkout's build/ ends in an escaped verdict" 0 "^check: stage none escaped at [0-9a-f]{12}; read " tail -1 build/stages/isolated/check.log
+REACH_OWNED=
 rm -f "$iso_top/build/scratch-base-build.log"
-# A link of that name is no log: it would write through to its target.
+# A link or hard link of that name stays reported whoever owns the path.
 expect "run_state: a link named build/NAME.log planted in the main checkout from a lane fails the check" 1 "^[|] $iso_top/build/planted-link[.]log$" lane_reach main-log-link
 rm -f "$iso_top/build/planted-link.log"
 # A hard link of that name shares its inode with a file outside the main

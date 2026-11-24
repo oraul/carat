@@ -1198,3 +1198,9 @@
 - Location: tools/run_state.sh file_entries, entries_awk
 - Why: the dry pass makes each backlog directory it checks, so a filing refused later leaves empty directories, no entry; harmless to the folder's entries but visible in git status of ignored paths only.
 - Fix: test the directory chain with test -d and test -L instead of mkdir in the dry pass
+
+### Correction: the build/NAME.log exemption of main_scan is removed (security Low (3), tools/run_state.sh)
+
+- Location: `main_scan` in `tools/run_state.sh`, tools-test cases for `build/NAME.log`. The exemption of a regular single-link `build/NAME.log` of the main checkout (added for the entries "A concurrent lane's benchmark log fails another lane's check", both copies) let a stage forge a log a later reader trusts without voiding the check.
+- Outcome: not fixed as exempted; the exemption is gone. Every log changed in the main checkout during a check is reported; a lane that owns one names it in `LANE_WRITTEN`, which ends the check in an escaped verdict with no fix round, as `build/metrics` does. The benchmark agent's own steps already run in the lane worktree, so its log lands under the lane's `build/`.
+- Why it matters: the two benchmark-log entries read as fixed by the exemption now stand closed by `LANE_WRITTEN` and the lane-local logs instead; a deployment that wants another lane's log tolerated must list its path.
