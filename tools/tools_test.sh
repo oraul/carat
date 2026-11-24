@@ -1409,12 +1409,13 @@ commit "feat: a code change for the stopped check"
 expect "run_state: a check stopped by a failing stage fails on it" 1 "stage test-build failed" compile_check STAGES="test-build dev-build" FAIL_TB=1 BUILD_SLEEP=0.1
 compile_check STAGES="dev-build" > "$work/compiled.out" 2>&1
 expect "run_state: a compile stage that passed while the check stopped is skipped on the same code" 0 "^stage dev-build: passed on the same code" cat "$work/compiled.out"
-# A check refused for its CHECK_JOBS leaves the compile records as they were:
+# A runner started with a CHECK_JOBS it refuses (check-run, which the waiter
+# only reaches past its own refusal) leaves the compile records as they were:
 # the refusal comes before any record is cleared.
 echo refused jobs > carat/x.rb
 commit "feat: code for the refused check"
-compile_check STAGES="dev-build" CHECK_JOBS=0 > /dev/null 2>&1
-expect "run_state: a check refused for its CHECK_JOBS leaves the compile records as they were" 0 "^1$" sh -c 'grep -c "^dev-build " build/pipeline/compiled'
+env STAGES="dev-build" CHECK_JOBS=0 MAKE="$work/bin/build-make" sh "$here/run_state.sh" check-run compiled > /dev/null 2>&1
+expect "run_state: a runner refusing its CHECK_JOBS leaves the compile records as they were" 0 "^1$" sh -c 'grep -c "^dev-build " build/pipeline/compiled'
 echo even more code > carat/x.rb
 commit "feat: even more code"
 expect "run_state: a compile stage can fail" 1 "stage test-build failed" compile_check FAIL_TB=1

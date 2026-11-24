@@ -547,7 +547,7 @@
 ### jobs_refusal has two arms for one message and runs twice (sprint-13 quality)
 
 - Location: tools/run_state.sh and its cases in tools/tools_test.sh; work list line 93 of run-state-backlog-b
-- Why: Fixed by the earlier change, now proved by behavior: case "run_state: a check refused for its CHECK_JOBS leaves the compile records as they were" fails at ce04c85 (the commit before it), passes at HEAD.
+- Why: Fixed by the earlier change, now proved by behavior: case "run_state: a runner refusing its CHECK_JOBS leaves the compile records as they were" fails at ce04c85 (the commit before it), passes at HEAD.
 - Fix: none left
 
 ### A doubled blank line before check_wait (sprint-13 quality)
@@ -1233,3 +1233,21 @@
 - Location: tools/run_state.sh and its cases in tools/tools_test.sh; work list line 207 of run-state-backlog-b
 - Why: Not fixed here: queued to run-state-backlog-e.
 - Fix: see the item named
+
+### Two writers can both retake a stale run state lock (quality advisory)
+
+- Location: tools/run_state.sh, state_lock
+- Why: two processes that both read a lock whose owner is gone can each remove it and create their own, so both rewrite the run state at once; the window needs a killed writer and two live writers at the same moment.
+- Fix: take a stale lock over with an atomic rename of the lock file to a name holding the taker's pid, so only one rename succeeds.
+
+### The removal of a planted file may delete a concurrent lane's build file (quality advisory)
+
+- Location: tools/run_state.sh, escaped_revert
+- Why: a regular file or link under the main checkout's build/ that a concurrent lane wrote and no LANE_WRITTEN path names is removed with the stage's planted ones; it is a build output the lane rewrites, and its own check is void for the same write.
+- Fix: record the files a lane's own tools write under the main checkout's build/ in LANE_WRITTEN by default, so only an unexplained file is removed.
+
+### A stage that starts its own session leaves the group kill (quality advisory)
+
+- Location: tools/run_state.sh, stage_launch
+- Why: the job's group is killed when the job ends, but a process a stage moves into a session of its own with setsid is no longer in it and can still write after the escape scan.
+- Fix: needs an operating-system sandbox or a cgroup per check; no shell-level fix closes it.
