@@ -11,6 +11,7 @@ The user decided on 2026-11-24 that `run-state-backlog-b` was one delivery for a
 - Sprint workflow: the sprint planner start carries the same rule right after its mode line.
 - `docs/goals.md`: the rubric opens with the user-decision-first rule; the size check and the sprint rule apply only where the user decided nothing.
 - `docs/brief-standard.md`: USER DECISIONS ties to the planner's first rule, and the split-first line is excepted by a one-delivery decision.
+- `README.md`: the pipeline's planner step names the rule.
 - `CLAUDE.md`: the planner bullet names the rule; two sentences of the Stack and Project sections are shortened to stay within its 30,720-byte budget.
 - tools-test cases for the agent file, `CLAUDE.md`, both prompts, and the plan validation; the two documents are not pinned, since `TOOLS_RE` does not match them and a `tools/rules.sh` edit goes first, alone (recorded in `docs/findings/user-decision-first.md`).
 
@@ -26,7 +27,6 @@ The user decided on 2026-11-24 that `run-state-backlog-b` was one delivery for a
 - Agents and docs: `.claude/agents/planner.md`, `docs/goals.md`, `docs/brief-standard.md`, `CLAUDE.md`.
 - Tests: `tools/tools_test.sh`.
 - Assumptions: a decision is read as a split by the words split, queue the rest, or deliver the first, unless it names the override; the check applies only to a brief given to the delivery (a resume reads the queue item and has no USER DECISIONS text in its prompt, so the rule alone applies there). `tools/rules.sh` is untouched.
-- README.md: unchanged, a process change whose behavior the README does not describe at this level.
 - docs/architecture.md: unchanged, no layer, port, or rule moves.
 - docs/codebase-map.md: unchanged, no file is added, moved, or removed.
 - docs/compatibility.md: unchanged, no Neovim command is touched.
